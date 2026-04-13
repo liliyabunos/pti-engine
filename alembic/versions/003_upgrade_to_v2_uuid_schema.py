@@ -171,11 +171,10 @@ def upgrade() -> None:
     # CREATE TABLE blocks will always run as needed.
     # ======================================================================
 
-    existing = set(sa.inspect(bind).get_table_names())
-
     # ------------------------------------------------------------------
     # entity_timeseries_daily (replaces entity_daily_snapshots)
     # ------------------------------------------------------------------
+    existing = set(sa.inspect(bind).get_table_names())
     if "entity_timeseries_daily" not in existing:
         op.create_table(
             "entity_timeseries_daily",
@@ -213,6 +212,8 @@ def upgrade() -> None:
                 name="uq_entity_timeseries_daily",
             ),
         )
+    existing = set(sa.inspect(bind).get_table_names())
+    if "entity_timeseries_daily" in existing:
         op.execute(
             "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_id "
             "ON entity_timeseries_daily (entity_id)"
@@ -233,6 +234,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     # signals (replaces market_signals)
     # ------------------------------------------------------------------
+    existing = set(sa.inspect(bind).get_table_names())
     if "signals" not in existing:
         op.create_table(
             "signals",
@@ -258,6 +260,8 @@ def upgrade() -> None:
                 name="uq_signal_entity_type_detected_at",
             ),
         )
+    existing = set(sa.inspect(bind).get_table_names())
+    if "signals" in existing:
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_id ON signals (entity_id)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_type ON signals (entity_type)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_signal_type ON signals (signal_type)")
@@ -270,6 +274,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     # brands (v2 UUID schema)
     # ------------------------------------------------------------------
+    existing = set(sa.inspect(bind).get_table_names())
     if "brands" not in existing:
         op.create_table(
             "brands",
@@ -292,6 +297,8 @@ def upgrade() -> None:
             sa.UniqueConstraint("slug", name="uq_brand_slug"),
             sa.UniqueConstraint("ticker", name="uq_brand_ticker"),
         )
+    existing = set(sa.inspect(bind).get_table_names())
+    if "brands" in existing:
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_name ON brands (name)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_slug ON brands (slug)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_ticker ON brands (ticker)")
@@ -299,6 +306,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     # perfumes (v2 UUID schema) — must come after brands (FK dependency)
     # ------------------------------------------------------------------
+    existing = set(sa.inspect(bind).get_table_names())
     if "perfumes" not in existing:
         op.create_table(
             "perfumes",
@@ -324,6 +332,8 @@ def upgrade() -> None:
             sa.UniqueConstraint("slug", name="uq_perfume_slug"),
             sa.UniqueConstraint("ticker", name="uq_perfume_ticker"),
         )
+    existing = set(sa.inspect(bind).get_table_names())
+    if "perfumes" in existing:
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_brand_id ON perfumes (brand_id)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_name ON perfumes (name)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_slug ON perfumes (slug)")
@@ -332,6 +342,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------
     # entity_mentions (v2 UUID schema)
     # ------------------------------------------------------------------
+    existing = set(sa.inspect(bind).get_table_names())
     if "entity_mentions" not in existing:
         op.create_table(
             "entity_mentions",
@@ -360,6 +371,8 @@ def upgrade() -> None:
             ),
             sa.PrimaryKeyConstraint("id"),
         )
+    existing = set(sa.inspect(bind).get_table_names())
+    if "entity_mentions" in existing:
         op.execute(
             "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_id "
             "ON entity_mentions (entity_id)"
