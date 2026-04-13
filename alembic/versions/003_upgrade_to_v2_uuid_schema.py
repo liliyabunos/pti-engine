@@ -213,8 +213,6 @@ def upgrade() -> None:
                 name="uq_entity_timeseries_daily",
             ),
         )
-
-    if "entity_timeseries_daily" in existing:
         op.execute(
             "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_id "
             "ON entity_timeseries_daily (entity_id)"
@@ -260,8 +258,6 @@ def upgrade() -> None:
                 name="uq_signal_entity_type_detected_at",
             ),
         )
-
-    if "signals" in existing:
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_id ON signals (entity_id)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_type ON signals (entity_type)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_signal_type ON signals (signal_type)")
@@ -296,8 +292,6 @@ def upgrade() -> None:
             sa.UniqueConstraint("slug", name="uq_brand_slug"),
             sa.UniqueConstraint("ticker", name="uq_brand_ticker"),
         )
-
-    if "brands" in existing:
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_name ON brands (name)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_slug ON brands (slug)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_ticker ON brands (ticker)")
@@ -330,8 +324,6 @@ def upgrade() -> None:
             sa.UniqueConstraint("slug", name="uq_perfume_slug"),
             sa.UniqueConstraint("ticker", name="uq_perfume_ticker"),
         )
-
-    if "perfumes" in existing:
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_brand_id ON perfumes (brand_id)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_name ON perfumes (name)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_slug ON perfumes (slug)")
@@ -368,8 +360,6 @@ def upgrade() -> None:
             ),
             sa.PrimaryKeyConstraint("id"),
         )
-
-    if "entity_mentions" in existing:
         op.execute(
             "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_id "
             "ON entity_mentions (entity_id)"
