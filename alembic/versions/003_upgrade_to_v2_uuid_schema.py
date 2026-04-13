@@ -17,64 +17,36 @@ THIS IS A BREAKING MIGRATION. READ CAREFULLY BEFORE APPLYING.
 2. entity_daily_snapshots → (DROP + CREATE as entity_timeseries_daily)
    - REASON: Integer PK and String entity_id cannot be safely cast to UUID.
      No lossless migration path exists. Data in this table is DISCARDED.
-   - NEW TABLE: entity_timeseries_daily with UUID PK, UUID entity_id,
-     added columns: entity_type, confidence_avg, search_index, retailer_score,
-     growth_rate, updated_at
-   - REMOVED columns: trend_score, source_diversity, mentions_prev_day, growth
-   - RENAMED column: (new) date is Date type (was String)
 
 3. market_signals → (DROP + CREATE as signals)
-   - REASON: same as above — Integer PK and String entity_id cannot be cast to UUID.
-     Data in this table is DISCARDED.
-   - NEW TABLE: signals with UUID PK, UUID entity_id, entity_type, strength
-     (was score), confidence, trigger_value, baseline_value, metadata_json JSON
-     (was details_json Text), detected_at DateTime(timezone=True) (was String)
+   - REASON: same as above.
 
 4. brands → (DROP + CREATE)
    - REASON: Integer PK cannot be safely cast to UUID. Data is DISCARDED.
-   - NEW TABLE: brands with UUID PK, name, slug, ticker, country, segment,
-     price_tier, description, created_at DateTime
 
 5. perfumes → (DROP + CREATE)
    - REASON: Integer PK and Integer brand_id FK cannot be safely cast to UUID.
-     Data is DISCARDED.
-   - NEW TABLE: perfumes with UUID PK, brand_id UUID FK, name, slug, ticker,
-     launch_year, gender_position, olfactive_family, price_band, concentration,
-     notes_summary, created_at DateTime
 
 6. entity_mentions → (DROP + CREATE)
    - REASON: Integer PK and String entity_id cannot be safely cast to UUID.
-     Data is DISCARDED.
-   - NEW TABLE: entity_mentions with UUID PK, UUID entity_id, entity_type,
-     source_type, source_platform, source_url, author_id, author_name,
-     mention_count, influence_score, sentiment Float (was String), confidence,
-     engagement, region, channel, occurred_at DateTime, metadata_json JSON,
-     created_at DateTime
 
 == Idempotency ==
 
-All DDL operations use IF NOT EXISTS / IF EXISTS guards so that this migration
-is safe to re-run after a partial failure (e.g. mid-deploy crash on Railway).
-Alembic will retry 003 until it succeeds and stamps the revision.
+upgrade() is structured in three explicit phases:
 
-== Why this migration is irreversible ==
+  Phase A — ALTER entity_market (ADD COLUMN IF NOT EXISTS, conditional PK swap)
+  Phase B — DROP all old/interim tables and indexes (all IF EXISTS)
+  Phase C — inspect() AFTER drops, then CREATE tables not yet present,
+             then CREATE INDEX IF NOT EXISTS
 
-- String → UUID casts have no safe path for arbitrary canonical name strings.
-- Table renames combined with type changes prevent column-level alter operations.
-- The downgrade() function recreates the old v1 tables but CANNOT restore
-  any data that was in them before this migration was applied.
-
-== Required indexes (new schema) ==
-
-- entity_mentions(entity_type, entity_id, occurred_at)      composite
-- entity_timeseries_daily(entity_type, entity_id, date)     composite
-- signals(entity_type, entity_id, signal_type, detected_at) composite
+By inspecting after the drops, the existence snapshot is always accurate
+regardless of how far a prior partial run got. This makes the migration safe
+to re-run on a fresh DB, a partially-applied DB, or after a mid-deploy crash.
 
 == PostgreSQL requirement ==
 
 This migration uses gen_random_uuid() and PostgreSQL-native UUID type.
-It is NOT compatible with SQLite. Test environments use SQLite via direct
-schema creation through MarketStore.init_schema(), not Alembic.
+It is NOT compatible with SQLite.
 """
 
 from __future__ import annotations
@@ -96,24 +68,21 @@ depends_on: Union[str, Sequence[str], None] = None
 # ---------------------------------------------------------------------------
 
 def _uuid_col(name: str, **kwargs) -> sa.Column:
-    """Shorthand for a UUID column."""
     return sa.Column(name, postgresql.UUID(as_uuid=True), **kwargs)
 
 
 # ---------------------------------------------------------------------------
-# Upgrade — fully idempotent via IF NOT EXISTS / IF EXISTS / DO $$ guards
+# Upgrade
 # ---------------------------------------------------------------------------
 
 def upgrade() -> None:
     bind = op.get_bind()
-    insp = sa.inspect(bind)
-    existing_tables = set(insp.get_table_names())
 
-    # ------------------------------------------------------------------
-    # 1. entity_market — add UUID PK, keep entity_id as unique String
-    # ------------------------------------------------------------------
+    # ======================================================================
+    # PHASE A — Alter entity_market in-place (idempotent column additions)
+    # ======================================================================
 
-    # Add UUID id column if it doesn't already exist.
+    # Add UUID id column if not already there.
     op.execute(
         "ALTER TABLE entity_market ADD COLUMN IF NOT EXISTS "
         "id UUID DEFAULT gen_random_uuid()"
@@ -121,8 +90,7 @@ def upgrade() -> None:
     op.execute("UPDATE entity_market SET id = gen_random_uuid() WHERE id IS NULL")
     op.execute("ALTER TABLE entity_market ALTER COLUMN id SET NOT NULL")
 
-    # Swap primary key from entity_id → id, but only when the current PK is
-    # still on entity_id (i.e. not yet swapped by a previous partial run).
+    # Swap primary key from entity_id → id only if still on entity_id.
     op.execute("""
         DO $$ BEGIN
             IF EXISTS (
@@ -140,7 +108,7 @@ def upgrade() -> None:
         END $$;
     """)
 
-    # Unique constraint on entity_id (idempotent via DO block).
+    # Unique constraint on entity_id (safe if already exists).
     op.execute("""
         DO $$ BEGIN
             IF NOT EXISTS (
@@ -159,7 +127,6 @@ def upgrade() -> None:
         "ON entity_market (entity_id)"
     )
 
-    # Add created_at if it doesn't already exist.
     op.execute(
         "ALTER TABLE entity_market ADD COLUMN IF NOT EXISTS "
         "created_at TIMESTAMPTZ"
@@ -167,14 +134,49 @@ def upgrade() -> None:
     op.execute("UPDATE entity_market SET created_at = NOW() WHERE created_at IS NULL")
     op.execute("ALTER TABLE entity_market ALTER COLUMN created_at SET NOT NULL")
 
-    # ------------------------------------------------------------------
-    # 2. entity_daily_snapshots → entity_timeseries_daily
-    #    DESTRUCTIVE: old data is discarded.
-    # ------------------------------------------------------------------
+    # ======================================================================
+    # PHASE B — Drop all old/interim tables and indexes (IF EXISTS throughout)
+    #
+    # Done before inspection so that Phase C sees accurate post-drop state.
+    # ======================================================================
+
+    # entity_daily_snapshots (old name for entity_timeseries_daily)
     op.execute("DROP INDEX IF EXISTS ix_entity_daily_snapshots_entity_id")
     op.execute("DROP TABLE IF EXISTS entity_daily_snapshots")
 
-    if "entity_timeseries_daily" not in existing_tables:
+    # market_signals (old name for signals)
+    op.execute("DROP INDEX IF EXISTS ix_market_signals_entity_id")
+    op.execute("DROP TABLE IF EXISTS market_signals")
+
+    # brands — CASCADE because perfumes may FK to it
+    op.execute("DROP INDEX IF EXISTS ix_brands_canonical_name")
+    op.execute("DROP TABLE IF EXISTS brands CASCADE")
+
+    # perfumes — CASCADE in case anything FKs to it
+    op.execute("DROP INDEX IF EXISTS ix_perfumes_brand_id")
+    op.execute("DROP INDEX IF EXISTS ix_perfumes_canonical_name")
+    op.execute("DROP TABLE IF EXISTS perfumes CASCADE")
+
+    # entity_mentions
+    op.execute("DROP INDEX IF EXISTS ix_entity_mentions_content_item_id")
+    op.execute("DROP INDEX IF EXISTS ix_entity_mentions_entity_type")
+    op.execute("DROP INDEX IF EXISTS ix_entity_mentions_entity_id")
+    op.execute("DROP TABLE IF EXISTS entity_mentions")
+
+    # ======================================================================
+    # PHASE C — Inspect AFTER drops, then CREATE missing tables + indexes
+    #
+    # Inspecting here (not at function start) gives us the true post-drop
+    # picture: tables dropped above will not appear in `existing`, so their
+    # CREATE TABLE blocks will always run as needed.
+    # ======================================================================
+
+    existing = set(sa.inspect(bind).get_table_names())
+
+    # ------------------------------------------------------------------
+    # entity_timeseries_daily (replaces entity_daily_snapshots)
+    # ------------------------------------------------------------------
+    if "entity_timeseries_daily" not in existing:
         op.create_table(
             "entity_timeseries_daily",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -230,13 +232,9 @@ def upgrade() -> None:
     )
 
     # ------------------------------------------------------------------
-    # 3. market_signals → signals
-    #    DESTRUCTIVE: old data is discarded.
+    # signals (replaces market_signals)
     # ------------------------------------------------------------------
-    op.execute("DROP INDEX IF EXISTS ix_market_signals_entity_id")
-    op.execute("DROP TABLE IF EXISTS market_signals")
-
-    if "signals" not in existing_tables:
+    if "signals" not in existing:
         op.create_table(
             "signals",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -272,13 +270,9 @@ def upgrade() -> None:
     )
 
     # ------------------------------------------------------------------
-    # 4. brands — DROP (Integer PK) + CREATE (UUID PK)
-    #    DESTRUCTIVE: old brand data is discarded.
+    # brands (v2 UUID schema)
     # ------------------------------------------------------------------
-    op.execute("DROP INDEX IF EXISTS ix_brands_canonical_name")
-    op.execute("DROP TABLE IF EXISTS brands CASCADE")
-
-    if "brands" not in existing_tables:
+    if "brands" not in existing:
         op.create_table(
             "brands",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -306,14 +300,9 @@ def upgrade() -> None:
     op.execute("CREATE INDEX IF NOT EXISTS ix_brand_ticker ON brands (ticker)")
 
     # ------------------------------------------------------------------
-    # 5. perfumes — DROP (Integer PK, Integer brand_id) + CREATE (UUID PK)
-    #    DESTRUCTIVE: old perfume data is discarded.
+    # perfumes (v2 UUID schema) — must come after brands (FK dependency)
     # ------------------------------------------------------------------
-    op.execute("DROP INDEX IF EXISTS ix_perfumes_brand_id")
-    op.execute("DROP INDEX IF EXISTS ix_perfumes_canonical_name")
-    op.execute("DROP TABLE IF EXISTS perfumes CASCADE")
-
-    if "perfumes" not in existing_tables:
+    if "perfumes" not in existing:
         op.create_table(
             "perfumes",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -345,15 +334,9 @@ def upgrade() -> None:
     op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_ticker ON perfumes (ticker)")
 
     # ------------------------------------------------------------------
-    # 6. entity_mentions — DROP (Integer PK, String entity_id) + CREATE
-    #    DESTRUCTIVE: old mention data is discarded.
+    # entity_mentions (v2 UUID schema)
     # ------------------------------------------------------------------
-    op.execute("DROP INDEX IF EXISTS ix_entity_mentions_content_item_id")
-    op.execute("DROP INDEX IF EXISTS ix_entity_mentions_entity_type")
-    op.execute("DROP INDEX IF EXISTS ix_entity_mentions_entity_id")
-    op.execute("DROP TABLE IF EXISTS entity_mentions")
-
-    if "entity_mentions" not in existing_tables:
+    if "entity_mentions" not in existing:
         op.create_table(
             "entity_mentions",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -427,13 +410,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     """
     Reverses the structural changes but CANNOT restore any data.
-
-    Data that existed in the v1 tables before this migration was applied
-    is permanently gone. After downgrading, the v1 tables will be empty.
     """
-    # ------------------------------------------------------------------
-    # 6. Restore entity_mentions (Integer PK, String entity_id)
-    # ------------------------------------------------------------------
+    # entity_mentions
     op.execute("DROP INDEX IF EXISTS ix_entity_mention_type_entity_occurred")
     op.execute("DROP INDEX IF EXISTS ix_entity_mention_occurred_at")
     op.execute("DROP INDEX IF EXISTS ix_entity_mention_channel")
@@ -461,9 +439,7 @@ def downgrade() -> None:
     op.create_index("ix_entity_mentions_entity_type", "entity_mentions", ["entity_type"])
     op.create_index("ix_entity_mentions_content_item_id", "entity_mentions", ["content_item_id"])
 
-    # ------------------------------------------------------------------
-    # 5. Restore perfumes (Integer PK, Integer brand_id FK)
-    # ------------------------------------------------------------------
+    # perfumes
     op.execute("DROP INDEX IF EXISTS ix_perfume_ticker")
     op.execute("DROP INDEX IF EXISTS ix_perfume_slug")
     op.execute("DROP INDEX IF EXISTS ix_perfume_name")
@@ -486,9 +462,7 @@ def downgrade() -> None:
     op.create_index("ix_perfumes_canonical_name", "perfumes", ["canonical_name"])
     op.create_index("ix_perfumes_brand_id", "perfumes", ["brand_id"])
 
-    # ------------------------------------------------------------------
-    # 4. Restore brands (Integer PK, canonical_name)
-    # ------------------------------------------------------------------
+    # brands
     op.execute("DROP INDEX IF EXISTS ix_brand_ticker")
     op.execute("DROP INDEX IF EXISTS ix_brand_slug")
     op.execute("DROP INDEX IF EXISTS ix_brand_name")
@@ -505,9 +479,7 @@ def downgrade() -> None:
     )
     op.create_index("ix_brands_canonical_name", "brands", ["canonical_name"])
 
-    # ------------------------------------------------------------------
-    # 3. Restore market_signals (Integer PK, String entity_id, score, details_json)
-    # ------------------------------------------------------------------
+    # signals
     op.execute("DROP INDEX IF EXISTS ix_signals_type_entity_signal_detected")
     op.execute("DROP INDEX IF EXISTS ix_signals_detected_at")
     op.execute("DROP INDEX IF EXISTS ix_signals_signal_type")
@@ -531,9 +503,7 @@ def downgrade() -> None:
     )
     op.create_index("ix_market_signals_entity_id", "market_signals", ["entity_id"])
 
-    # ------------------------------------------------------------------
-    # 2. Restore entity_daily_snapshots (Integer PK, String entity_id)
-    # ------------------------------------------------------------------
+    # entity_timeseries_daily
     op.execute("DROP INDEX IF EXISTS ix_entity_timeseries_daily_type_entity_date")
     op.execute("DROP INDEX IF EXISTS ix_entity_timeseries_daily_date")
     op.execute("DROP INDEX IF EXISTS ix_entity_timeseries_daily_entity_type")
@@ -564,10 +534,7 @@ def downgrade() -> None:
         "ix_entity_daily_snapshots_entity_id", "entity_daily_snapshots", ["entity_id"]
     )
 
-    # ------------------------------------------------------------------
-    # 1. Revert entity_market — restore String entity_id as primary key,
-    #    remove UUID id column and created_at.
-    # ------------------------------------------------------------------
+    # entity_market — restore entity_id as PK, drop UUID columns
     op.execute("DROP INDEX IF EXISTS ix_entity_market_entity_id")
     op.execute("""
         DO $$ BEGIN
@@ -581,6 +548,8 @@ def downgrade() -> None:
         END $$;
     """)
     op.execute("ALTER TABLE entity_market DROP CONSTRAINT entity_market_pkey")
-    op.execute("ALTER TABLE entity_market ADD CONSTRAINT entity_market_pkey PRIMARY KEY (entity_id)")
+    op.execute(
+        "ALTER TABLE entity_market ADD CONSTRAINT entity_market_pkey PRIMARY KEY (entity_id)"
+    )
     op.execute("ALTER TABLE entity_market DROP COLUMN IF EXISTS created_at")
     op.execute("ALTER TABLE entity_market DROP COLUMN IF EXISTS id")
