@@ -1,0 +1,32 @@
+app_name: perfume_trend_sdk
+environment: dev
+schema_version: "1.0"
+default_region: US
+logging:
+  level: INFO
+  format: json
+storage:
+  raw_backend: filesystem
+  normalized_backend: sqlite
+workflows:
+  ingest_social_content:
+    enabled: true
+  enrich_market_data:
+    enabled: false
+  build_weekly_report:
+    enabled: false
+
+ai:
+  enabled: true
+  engine: openai
+  provider: "openai"
+  model: "gpt-4o-mini"
+  temperature: 0
+
+youtube:
+  api_key: "${YOUTUBE_API_KEY}"
+  search_queries:
+    - "best perfumes 2026"
+    - "top fragrances"
+    - "perfume review"
+  max_results: 10

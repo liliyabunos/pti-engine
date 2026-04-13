@@ -1,0 +1,31 @@
+fragrance_id,brand_name,perfume_name,release_year,gender,source
+fr_001,Parfums de Marly,Delina,2017,women,kaggle
+fr_002,Maison Francis Kurkdjian,Baccarat Rouge 540,2015,unisex,kaggle
+fr_003,Byredo,Gypsy Water,2008,unisex,kaggle
+fr_004,Yves Saint Laurent,Libre,2019,women,kaggle
+fr_005,Xerjoff,Erba Pura,2015,unisex,kaggle
+fr_006,Parfums de Marly,Layton,2016,men,kaggle
+fr_007,Parfums de Marly,Pegasus,2011,men,kaggle
+fr_008,Maison Francis Kurkdjian,Grand Soir,2016,unisex,kaggle
+fr_009,Dior,Sauvage,2015,men,kaggle
+fr_010,Dior,Miss Dior Blooming Bouquet,2014,women,kaggle
+fr_011,Chanel,Bleu de Chanel,2010,men,kaggle
+fr_012,Chanel,Chance Eau Tendre,2002,women,kaggle
+fr_013,Tom Ford,Black Orchid,2006,unisex,kaggle
+fr_014,Tom Ford,Oud Wood,2007,unisex,kaggle
+fr_015,Lattafa,Ameer Al Oudh,2018,unisex,kaggle
+fr_016,Lattafa,Khamrah,2022,unisex,kaggle
+fr_017,Mancera,Cedrat Boise,2011,unisex,kaggle
+fr_018,Mancera,Red Tobacco,2016,unisex,kaggle
+fr_019,Initio,Atomic Rose,2019,unisex,kaggle
+fr_020,Initio,Oud for Greatness,2018,unisex,kaggle
+fr_021,Creed,Aventus,2010,men,kaggle
+fr_022,Creed,Green Irish Tweed,1985,men,kaggle
+fr_023,Versace,Eros,2012,men,kaggle
+fr_024,Versace,Bright Crystal,2006,women,kaggle
+fr_025,Giorgio Armani,Acqua di Gio,1996,men,kaggle
+fr_026,Giorgio Armani,Si,2013,women,kaggle
+fr_027,Gucci,Flora Gorgeous Gardenia,2021,women,kaggle
+fr_028,Gucci,Bloom,2017,women,kaggle
+fr_029,Viktor and Rolf,Flowerbomb,2005,women,kaggle
+fr_030,Maison Margiela,Replica Jazz Club,2013,unisex,kaggle

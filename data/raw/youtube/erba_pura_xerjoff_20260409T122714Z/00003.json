@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:16.619064+00:00",
+  "query": "erba pura xerjoff",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "L1vh0_8YIlkH1OA2iaQILoqweq0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "tMbfG9f25Ck"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T23:20:26Z",
+      "channelId": "UC7zUVWS7HyDDQbOcPXhYvNA",
+      "title": "CUADRO DE ERBA PURA 🖼️ 🍇 #erbapura #xerjoff #parfums #art #parfumaura",
+      "description": "perfume #arte #cuadro #destruir #destruction #perfumes #parfums #viral #fyp #foryou #parati #niche #contemporaryart #black ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Parfum Aura",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T23:20:26Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "QcCnSybk_rFJQdlP05NLrfZKxrs",
+    "id": "tMbfG9f25Ck",
+    "snippet": {
+      "publishedAt": "2026-04-08T23:20:26Z",
+      "channelId": "UC7zUVWS7HyDDQbOcPXhYvNA",
+      "title": "CUADRO DE ERBA PURA 🖼️ 🍇 #erbapura #xerjoff #parfums #art #parfumaura",
+      "description": "#perfume #arte #cuadro #destruir #destruction #perfumes #parfums #viral #fyp #foryou #parati #niche #contemporaryart #black #xerjoff #erbapura #amazing",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/tMbfG9f25Ck/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Parfum Aura",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "CUADRO DE ERBA PURA 🖼️ 🍇 #erbapura #xerjoff #parfums #art #parfumaura",
+        "description": "#perfume #arte #cuadro #destruir #destruction #perfumes #parfums #viral #fyp #foryou #parati #niche #contemporaryart #black #xerjoff #erbapura #amazing"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT29S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "119",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

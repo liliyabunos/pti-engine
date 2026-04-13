@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "H4aK7EnA-CG6fF1T9sZBFy6B4kQ",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "bhYtMkcPIC8"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T02:55:24Z",
+      "channelId": "UCUkp3idZw92G5r_r4F6nJDw",
+      "title": "This smells just like Baccarat Rouge which means it’s an immediate no for me 😂",
+      "description": "This smells just like Baccarat Rouge which means it's an immediate no for me.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Eliana Jalali",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T02:55:24Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Z2jIFR9Ll_XKD7wEiwxgWYSGtu4",
+    "id": "bhYtMkcPIC8",
+    "snippet": {
+      "publishedAt": "2026-04-11T02:55:24Z",
+      "channelId": "UCUkp3idZw92G5r_r4F6nJDw",
+      "title": "This smells just like Baccarat Rouge which means it’s an immediate no for me 😂",
+      "description": "This smells just like Baccarat Rouge which means it’s an immediate no for me 😂",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/bhYtMkcPIC8/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Eliana Jalali",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "This smells just like Baccarat Rouge which means it’s an immediate no for me 😂",
+        "description": "This smells just like Baccarat Rouge which means it’s an immediate no for me 😂"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT46S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "454",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

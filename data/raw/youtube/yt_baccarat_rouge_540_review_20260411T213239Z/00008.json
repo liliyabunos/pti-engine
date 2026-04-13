@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:39.656930+00:00",
+  "query": "baccarat rouge 540 review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "vzuCHSzrAYxKF5kiTGi21C5eve4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "1el7ApnCFYw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T07:00:37Z",
+      "channelId": "UC2-AlS4QCeH4c7JsaYHd0OA",
+      "title": "Don’t Go For Your Date Night Without This Fragrance! #fragrance #perfume #fragrancereview #armaf",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "DYLuxe Scents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T07:00:37Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "nLi867-T3xGjgLe3NrLXGi6cTF4",
+    "id": "1el7ApnCFYw",
+    "snippet": {
+      "publishedAt": "2026-04-08T07:00:37Z",
+      "channelId": "UC2-AlS4QCeH4c7JsaYHd0OA",
+      "title": "Don’t Go For Your Date Night Without This Fragrance! #fragrance #perfume #fragrancereview #armaf",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/1el7ApnCFYw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "DYLuxe Scents",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Don’t Go For Your Date Night Without This Fragrance! #fragrance #perfume #fragrancereview #armaf",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M39S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "232",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

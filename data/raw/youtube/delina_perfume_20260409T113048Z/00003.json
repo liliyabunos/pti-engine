@@ -1,0 +1,105 @@
+{
+  "fetched_at": "2026-04-09T11:30:51.345935+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "KdxEelnPp7wpC7kV3zfGBtG9vRA",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "PhHcfiHuDFo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T19:56:39Z",
+      "channelId": "UCTiLLNlldtbXHhqeEn2MMWw",
+      "title": "🚨 Se você é casada… NÃO use esse perfume 😳🔥",
+      "description": "Se você quer um cheiro marcante, elegante e que chama atenção de verdade… esse Body Splash vai te surpreender ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "OfertaHub",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T19:56:39Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "iMGV6BowgMMzntBhHOToiTVm0Ss",
+    "id": "PhHcfiHuDFo",
+    "snippet": {
+      "publishedAt": "2026-04-08T19:56:39Z",
+      "channelId": "UCTiLLNlldtbXHhqeEn2MMWw",
+      "title": "🚨 Se você é casada… NÃO use esse perfume 😳🔥",
+      "description": "Se você quer um cheiro marcante, elegante e que chama atenção de verdade… esse Body Splash vai te surpreender 😏✨\n\nInspirado no Delina perfume (aquele perfume de luxo caríssimo 💸), mas por um preço que cabe no bolso.\n\n💖 Cheiro de mulher rica\n🔥 Super marcante\n💰 Custa cerca de R$36\n🚨 Tá MUITO viralizado\n\nSério… é passar e receber elogio.\n\n👉 Tem promoção rolando agora:\nhttps://s.shopee.com.br/3fzY4BwgZZ\n\n👉 Só clicar no link abaixo e garantir o seu antes que acabe\nhttps://s.shopee.com.br/3fzY4BwgZZ\n\n#perfume #bodysplash #perfumefeminino #cheirobom #dicasfemininas #achadinhos #achados #viral #tiktokmademebuyit #promoção #ofertas #comprasonline #perfumeimportado #delina #mulhercheirosa",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/PhHcfiHuDFo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "OfertaHub",
+      "tags": [
+        "bodysplash",
+        "perfume mulher",
+        "Barbours"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-PT",
+      "localized": {
+        "title": "🚨 Se você é casada… NÃO use esse perfume 😳🔥",
+        "description": "Se você quer um cheiro marcante, elegante e que chama atenção de verdade… esse Body Splash vai te surpreender 😏✨\n\nInspirado no Delina perfume (aquele perfume de luxo caríssimo 💸), mas por um preço que cabe no bolso.\n\n💖 Cheiro de mulher rica\n🔥 Super marcante\n💰 Custa cerca de R$36\n🚨 Tá MUITO viralizado\n\nSério… é passar e receber elogio.\n\n👉 Tem promoção rolando agora:\nhttps://s.shopee.com.br/3fzY4BwgZZ\n\n👉 Só clicar no link abaixo e garantir o seu antes que acabe\nhttps://s.shopee.com.br/3fzY4BwgZZ\n\n#perfume #bodysplash #perfumefeminino #cheirobom #dicasfemininas #achadinhos #achados #viral #tiktokmademebuyit #promoção #ofertas #comprasonline #perfumeimportado #delina #mulhercheirosa"
+      },
+      "defaultAudioLanguage": "pt-PT"
+    },
+    "contentDetails": {
+      "duration": "PT1M7S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "0",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:10.364064+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "UoG9C6y-niAjbN5zL83pEYbXguw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "SW8admQHhcQ"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T05:56:56Z",
+      "channelId": "UCU_Qq2MUKfBd0lQtWEPw1sQ",
+      "title": "Delina by @P@ParfumsdeMarly🌸 #perfume #unboxing #perfumecollection #foryou #girlythoughts #shorts",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Sharmeen Auntu",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T05:56:56Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "UIi7XWuQYD_yDApJJR3ahBhBS2A",
+    "id": "SW8admQHhcQ",
+    "snippet": {
+      "publishedAt": "2026-04-09T05:56:56Z",
+      "channelId": "UCU_Qq2MUKfBd0lQtWEPw1sQ",
+      "title": "Delina by @P@ParfumsdeMarly🌸 #perfume #unboxing #perfumecollection #foryou #girlythoughts #shorts",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/SW8admQHhcQ/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Sharmeen Auntu",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Delina by @P@ParfumsdeMarly🌸 #perfume #unboxing #perfumecollection #foryou #girlythoughts #shorts",
+        "description": ""
+      },
+      "defaultAudioLanguage": "bn"
+    },
+    "contentDetails": {
+      "duration": "PT50S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "50",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

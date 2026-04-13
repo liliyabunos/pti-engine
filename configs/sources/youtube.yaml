@@ -1,0 +1,12 @@
+name: youtube_watchlist
+enabled: true
+connector: youtube_connector
+normalizer: social_content_normalizer
+cursor_strategy: published_after
+fetch_limit: 50
+watchlist_file: configs/watchlists/creators_us.yaml
+rate_limits:
+  requests_per_minute: 30
+retry:
+  max_attempts: 3
+  backoff_seconds: 5

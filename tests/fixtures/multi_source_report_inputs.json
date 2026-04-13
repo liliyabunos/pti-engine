@@ -1,0 +1,83 @@
+{
+  "content_items": [
+    {
+      "id": "yt_001",
+      "title": "Delina Review — Parfums de Marly",
+      "text_content": "Delina by Parfums de Marly is stunning. Rose and vanilla notes are incredible.",
+      "source_url": "https://youtube.com/watch?v=yt001",
+      "published_at": "2026-04-01T10:00:00",
+      "query": "delina perfume",
+      "source_platform": "youtube",
+      "source_account_handle": "perfume_channel",
+      "content_type": "video",
+      "engagement_json": "{\"views\": 80000, \"likes\": 4000, \"comments\": 120}",
+      "media_metadata_json": "{\"source_type\": \"influencer\", \"influence_score\": 80.0}"
+    },
+    {
+      "id": "yt_002",
+      "title": "Baccarat Rouge 540 vs Delina",
+      "text_content": "Comparing Baccarat Rouge 540 and Delina. Both have amber. Baccarat Rouge 540 is more synthetic.",
+      "source_url": "https://youtube.com/watch?v=yt002",
+      "published_at": "2026-04-02T12:00:00",
+      "query": "baccarat rouge 540",
+      "source_platform": "youtube",
+      "source_account_handle": "fragrance_reviews",
+      "content_type": "video",
+      "engagement_json": "{\"views\": 200000, \"likes\": 12000, \"comments\": 500}",
+      "media_metadata_json": "{\"source_type\": \"influencer\", \"influence_score\": 90.0}"
+    },
+    {
+      "id": "tt_001",
+      "title": null,
+      "text_content": "Obsessed with Delina by Parfums de Marly! Rose and musk is perfect.",
+      "source_url": "https://tiktok.com/@perfume_lover/video/12345",
+      "published_at": "2026-04-03T09:00:00",
+      "query": null,
+      "source_platform": "tiktok",
+      "source_account_handle": "perfume_lover_usa",
+      "content_type": "short",
+      "engagement_json": "{\"views\": 124300, \"likes\": 8900, \"comments\": 342}",
+      "media_metadata_json": "{\"source_type\": \"user\", \"influence_score\": 35.0, \"subreddit\": null}"
+    },
+    {
+      "id": "rd_001",
+      "title": "Delina — worth the hype?",
+      "text_content": "Delina worth the hype? The rose and vanilla combination is stunning. Comparing to Baccarat Rouge 540.",
+      "source_url": "https://reddit.com/r/fragrance/comments/abc123/",
+      "published_at": "2026-04-04T14:00:00",
+      "query": null,
+      "source_platform": "reddit",
+      "source_account_handle": "fragrance_nerd_us",
+      "content_type": "post",
+      "engagement_json": "{\"views\": null, \"likes\": 342, \"comments\": 87}",
+      "media_metadata_json": "{\"source_type\": \"community\", \"influence_score\": 265.5, \"subreddit\": \"fragrance\"}"
+    }
+  ],
+  "resolved_signals": [
+    {
+      "content_item_id": "yt_001",
+      "resolver_version": "1.0",
+      "resolved_entities_json": "[{\"entity_type\": \"perfume\", \"canonical_name\": \"Parfums de Marly Delina\", \"entity_id\": \"1\", \"matched_from\": \"delina parfums de marly\", \"confidence\": 1.0, \"match_type\": \"exact\"}]"
+    },
+    {
+      "content_item_id": "yt_002",
+      "resolver_version": "1.0",
+      "resolved_entities_json": "[{\"entity_type\": \"perfume\", \"canonical_name\": \"Maison Francis Kurkdjian Baccarat Rouge 540\", \"entity_id\": \"2\", \"matched_from\": \"baccarat rouge 540\", \"confidence\": 1.0, \"match_type\": \"exact\"}, {\"entity_type\": \"perfume\", \"canonical_name\": \"Parfums de Marly Delina\", \"entity_id\": \"1\", \"matched_from\": \"delina\", \"confidence\": 1.0, \"match_type\": \"exact\"}]"
+    },
+    {
+      "content_item_id": "tt_001",
+      "resolver_version": "1.0",
+      "resolved_entities_json": "[{\"entity_type\": \"perfume\", \"canonical_name\": \"Parfums de Marly Delina\", \"entity_id\": \"1\", \"matched_from\": \"delina parfums de marly\", \"confidence\": 1.0, \"match_type\": \"exact\"}]"
+    },
+    {
+      "content_item_id": "rd_001",
+      "resolver_version": "1.0",
+      "resolved_entities_json": "[{\"entity_type\": \"perfume\", \"canonical_name\": \"Parfums de Marly Delina\", \"entity_id\": \"1\", \"matched_from\": \"delina\", \"confidence\": 1.0, \"match_type\": \"exact\"}, {\"entity_type\": \"perfume\", \"canonical_name\": \"Maison Francis Kurkdjian Baccarat Rouge 540\", \"entity_id\": \"2\", \"matched_from\": \"baccarat rouge 540\", \"confidence\": 1.0, \"match_type\": \"exact\"}]"
+    }
+  ],
+  "emerging_entities": [
+    {"text": "lattafa khamrah", "count": 4, "sources": 2},
+    {"text": "arabians oud", "count": 3, "sources": 1},
+    {"text": "nishane hacivat", "count": 2, "sources": 2}
+  ]
+}

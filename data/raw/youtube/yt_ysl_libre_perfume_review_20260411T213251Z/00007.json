@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:51.659281+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "0zodWVhBL_KdfVJcjA0P_rQJBkw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Zxpau4tPzfQ"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T02:48:49Z",
+      "channelId": "UCPpr61t9Qa8Qg5zECGxvF4Q",
+      "title": "YSL Libre perfume review #ysllibre #yslperfume #perfumetok",
+      "description": "YSL Libre perfume review #ysllibre #yslperfume #perfumetok.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "MartinkarBella ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T02:48:49Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "z4lVlLNlZdo3ST6g6hNvCEu8eRw",
+    "id": "Zxpau4tPzfQ",
+    "snippet": {
+      "publishedAt": "2026-04-07T02:48:49Z",
+      "channelId": "UCPpr61t9Qa8Qg5zECGxvF4Q",
+      "title": "YSL Libre perfume review #ysllibre #yslperfume #perfumetok",
+      "description": "YSL Libre perfume review #ysllibre #yslperfume #perfumetok",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Zxpau4tPzfQ/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "MartinkarBella ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "YSL Libre perfume review #ysllibre #yslperfume #perfumetok",
+        "description": "YSL Libre perfume review #ysllibre #yslperfume #perfumetok"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT32S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1190",
+      "likeCount": "10",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

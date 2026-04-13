@@ -1,0 +1,99 @@
+{
+  "fetched_at": "2026-04-11T21:33:45.406153+00:00",
+  "query": "montale velvet fantasy perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "GY6dGQmTUzK-CX_zydK3o0zMzrs",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "XhuFefcOoYU"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T19:00:38Z",
+      "channelId": "UCXAo3OGuKeUoX_9vKw5eXEQ",
+      "title": "Discovery set by Montale. Gifted by Twisted Lily. #montale #nichefragrance #perfume #fragrance",
+      "description": "Use code SCENTCHECKBYANGIE10 to save 10% on twistedlily.com.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Scentcheckbyangie",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T19:00:38Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "a5hAtrXfGCo2vWo4YTKPiitQnYo",
+    "id": "XhuFefcOoYU",
+    "snippet": {
+      "publishedAt": "2026-04-10T19:00:38Z",
+      "channelId": "UCXAo3OGuKeUoX_9vKw5eXEQ",
+      "title": "Discovery set by Montale. Gifted by Twisted Lily. #montale #nichefragrance #perfume #fragrance",
+      "description": "Use code SCENTCHECKBYANGIE10 to save 10% on twistedlily.com",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/XhuFefcOoYU/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Scentcheckbyangie",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Discovery set by Montale. Gifted by Twisted Lily. #montale #nichefragrance #perfume #fragrance",
+        "description": "Use code SCENTCHECKBYANGIE10 to save 10% on twistedlily.com"
+      }
+    },
+    "contentDetails": {
+      "duration": "PT2M56S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "16",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

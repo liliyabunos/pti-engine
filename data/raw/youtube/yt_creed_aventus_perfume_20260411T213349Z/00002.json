@@ -1,0 +1,112 @@
+{
+  "fetched_at": "2026-04-11T21:33:49.264952+00:00",
+  "query": "creed aventus perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "MGlTBCP9NkiAKB5SJEXsZ_PiRi4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "DGUJ9sdJUKc"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T17:19:35Z",
+      "channelId": "UCiEXKm2pe0RwkTVv1jOYbxQ",
+      "title": "MEJOR que CREED AVENTUS? | LOEWE ESENCIA EAU DE PARFUM",
+      "description": "LOEWE ESENCIA EAU DE PARFUM, ES LA MEJOR INSPIRACIÓN DE CREED AVENTUS???",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Guille Scent Lover",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T17:19:35Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "8JN8AVW25SayxO3EDbWg2GDGTkI",
+    "id": "DGUJ9sdJUKc",
+    "snippet": {
+      "publishedAt": "2026-04-11T17:19:35Z",
+      "channelId": "UCiEXKm2pe0RwkTVv1jOYbxQ",
+      "title": "MEJOR que CREED AVENTUS? | LOEWE ESENCIA EAU DE PARFUM",
+      "description": "LOEWE ESENCIA EAU DE PARFUM, ES LA MEJOR INSPIRACIÓN DE CREED AVENTUS???",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/DGUJ9sdJUKc/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Guille Scent Lover",
+      "tags": [
+        "perfumes loewe",
+        "loewe",
+        "perfumes",
+        "perfume",
+        "loewe esencia",
+        "loewe esencia eau de parfum",
+        "creed aventus",
+        "aventus",
+        "perfume de diseñador",
+        "guille scent lover"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es-419",
+      "localized": {
+        "title": "MEJOR que CREED AVENTUS? | LOEWE ESENCIA EAU DE PARFUM",
+        "description": "LOEWE ESENCIA EAU DE PARFUM, ES LA MEJOR INSPIRACIÓN DE CREED AVENTUS???"
+      },
+      "defaultAudioLanguage": "es-419"
+    },
+    "contentDetails": {
+      "duration": "PT1M36S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1304",
+      "likeCount": "102",
+      "favoriteCount": "0",
+      "commentCount": "28"
+    }
+  }
+}

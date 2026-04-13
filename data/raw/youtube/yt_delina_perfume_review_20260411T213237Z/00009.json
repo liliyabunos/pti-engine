@@ -1,0 +1,114 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "zrlEjL4OfBVuHGV6z7GBtW3mqXs",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "VGsL34jwSes"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-01T06:00:00Z",
+      "channelId": "UClyVGe97yqoyaTLRZxrAvyg",
+      "title": "5 niche parfémů na letošní jaro #nichefragrance #fragrance #fragrancereview",
+      "description": "Vzorečky více jak 700 parfémů najdete na czechfragranceclub.cz a na eshopu fragranza.cz nezapomeňte na můj slevový kód ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Jaroslav_Parfum",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-01T06:00:00Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Z8NvZBgDeTpYr-p0zaGmqrDHtwg",
+    "id": "VGsL34jwSes",
+    "snippet": {
+      "publishedAt": "2026-04-01T06:00:00Z",
+      "channelId": "UClyVGe97yqoyaTLRZxrAvyg",
+      "title": "5 niche parfémů na letošní jaro #nichefragrance #fragrance #fragrancereview",
+      "description": "Vzorečky více jak 700 parfémů najdete na czechfragranceclub.cz \na na eshopu fragranza.cz nezapomeňte na můj slevový kód 15JAROSLAV",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/VGsL34jwSes/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Jaroslav_Parfum",
+      "tags": [
+        "niche fragrance",
+        "luxusní parfémy",
+        "jaroslav parfum",
+        "drahé parfémy",
+        "pánské parfémy",
+        "unisex parfémy",
+        "fragrance review",
+        "fragrances¨",
+        "perfumes",
+        "fragrance collection",
+        "arabské parfémy",
+        "levné parfémy"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "cs",
+      "localized": {
+        "title": "5 niche parfémů na letošní jaro #nichefragrance #fragrance #fragrancereview",
+        "description": "Vzorečky více jak 700 parfémů najdete na czechfragranceclub.cz \na na eshopu fragranza.cz nezapomeňte na můj slevový kód 15JAROSLAV"
+      },
+      "defaultAudioLanguage": "cs"
+    },
+    "contentDetails": {
+      "duration": "PT2M56S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "624",
+      "likeCount": "38",
+      "favoriteCount": "0",
+      "commentCount": "4"
+    }
+  }
+}

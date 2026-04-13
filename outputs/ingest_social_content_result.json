@@ -1,0 +1,202 @@
+{
+  "run_id": "ingest_20260408T144901",
+  "source": "youtube",
+  "fetched_count": 30,
+  "normalized_count": 30,
+  "extracted_count": 30,
+  "resolved_count": 30,
+  "brand_extracted_count": 30,
+  "unified_count": 30,
+  "trend_summary": {
+    "total_items": 30,
+    "total_mentions": 1.8,
+    "mention_counts": {
+      "Dior": 0.9,
+      "Sauvage": 0.9
+    }
+  },
+  "source_results": [
+    {
+      "source_type": "influencer",
+      "channel_name": "Gents Scents",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Sharida M",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Alex Costa",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Gents Scents",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "The Perfume Guy",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Real Men Real Style",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Sharida M",
+      "influence_score": 40.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "KatesBeautyStation",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Sharida M",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Cal Cologne",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Rotten Rebel",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Tanya Sway",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Alex Costa",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Redolessence",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Hamza Saab",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Sharida M",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Redolessence",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Jeremy Fragrance",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "FBFragrances",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "CurlyFragrance",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Noel Deyzel",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "School of Scent",
+      "influence_score": 70.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Finnolya",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Redolessence",
+      "influence_score": 40.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "TheCherysTv",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Olivia Olfactory",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Redolessence",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Cubaknow",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Curly Scents",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    },
+    {
+      "source_type": "influencer",
+      "channel_name": "Cal Cologne",
+      "influence_score": 90.0,
+      "credibility_score": 0.8
+    }
+  ],
+  "ai_results": [],
+  "status": "ok"
+}

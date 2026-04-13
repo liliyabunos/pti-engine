@@ -1,0 +1,108 @@
+{
+  "fetched_at": "2026-04-11T21:33:35.231749+00:00",
+  "query": "byredo gypsy water perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "wRZ5XRZ35qBz4yHn0oWwKc395VE",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "cT5TEAzQU8I"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T04:00:44Z",
+      "channelId": "UCOYSZuH-RDgJhm70CQ9KCLQ",
+      "title": "Fragrance Friday: Spring/Summer Vanillas",
+      "description": "Sharing 10 vanilla fragrances from my collection that I will be wearing this spring/summer season. What's your favorite vanilla ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "A Little Bit Laura",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T04:00:44Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "KZ6R-H2p1SdzV33Sbrj1Ns9tQwg",
+    "id": "cT5TEAzQU8I",
+    "snippet": {
+      "publishedAt": "2026-04-10T04:00:44Z",
+      "channelId": "UCOYSZuH-RDgJhm70CQ9KCLQ",
+      "title": "Fragrance Friday: Spring/Summer Vanillas",
+      "description": "Sharing 10 vanilla fragrances from my collection that I will be wearing this spring/summer season. What's your favorite vanilla fragrance for spring and summer?\n\n♥️ Laura\n\nSpring/Summer Vanillas: Amazon associate links below\nDiptyque Eau Duelle: https://amzn.to/4sj6Y3p\nByredo Gypsy Water: https://amzn.to/3Okn4M3\nCommodity Gold: https://amzn.to/48qvDvw\nGuerlain Angelique Noire\nChloe Vanilla Planifolia\nYSL Libre: https://amzn.to/41Lxfwh\nYSL Libre Flowers & Flames: https://amzn.to/4shV3CO\nMaison Francis Kirkdjian Gentle Fluidity Gold: https://amzn.to/3NUiHY1\nCeline Dans Paris\nMizensir Tres Chere: https://amzn.to/4sS94YU\nVan Cleef & Arpels Orchidee Vanille",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/cT5TEAzQU8I/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        }
+      },
+      "channelTitle": "A Little Bit Laura",
+      "tags": [
+        "Fragrance Friday",
+        "Spring/Summer Vanillas",
+        "Diptyque",
+        "Byredo",
+        "Commodity",
+        "Guerlain",
+        "Chloe",
+        "YSL",
+        "Celine",
+        "Maison Francis Kirkdjian",
+        "Mizensir",
+        "Van Cleef & Arpels"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Fragrance Friday: Spring/Summer Vanillas",
+        "description": "Sharing 10 vanilla fragrances from my collection that I will be wearing this spring/summer season. What's your favorite vanilla fragrance for spring and summer?\n\n♥️ Laura\n\nSpring/Summer Vanillas: Amazon associate links below\nDiptyque Eau Duelle: https://amzn.to/4sj6Y3p\nByredo Gypsy Water: https://amzn.to/3Okn4M3\nCommodity Gold: https://amzn.to/48qvDvw\nGuerlain Angelique Noire\nChloe Vanilla Planifolia\nYSL Libre: https://amzn.to/41Lxfwh\nYSL Libre Flowers & Flames: https://amzn.to/4shV3CO\nMaison Francis Kirkdjian Gentle Fluidity Gold: https://amzn.to/3NUiHY1\nCeline Dans Paris\nMizensir Tres Chere: https://amzn.to/4sS94YU\nVan Cleef & Arpels Orchidee Vanille"
+      }
+    },
+    "contentDetails": {
+      "duration": "PT9M5S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "828",
+      "likeCount": "93",
+      "favoriteCount": "0",
+      "commentCount": "8"
+    }
+  }
+}

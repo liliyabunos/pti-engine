@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:01.063948+00:00",
+  "query": "creed aventus perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "bwD8OOa9_6LyTR-Lof6hoaHi-kI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "tiAClfNaZjo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T17:05:35Z",
+      "channelId": "UCEgayPQ7xgI2KhMvqfgLKOg",
+      "title": "Hot Today in Ohio… Creed Virgin Island Water Was the Only Choice 🌴",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Grim G Has $cents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T17:05:35Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "1ylfSPQq0Q_cTX0FvpuOXdDiJqA",
+    "id": "tiAClfNaZjo",
+    "snippet": {
+      "publishedAt": "2026-04-10T17:05:35Z",
+      "channelId": "UCEgayPQ7xgI2KhMvqfgLKOg",
+      "title": "Hot Today in Ohio… Creed Virgin Island Water Was the Only Choice 🌴",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/tiAClfNaZjo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Grim G Has $cents",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Hot Today in Ohio… Creed Virgin Island Water Was the Only Choice 🌴",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT14S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1332",
+      "likeCount": "23",
+      "favoriteCount": "0",
+      "commentCount": "11"
+    }
+  }
+}

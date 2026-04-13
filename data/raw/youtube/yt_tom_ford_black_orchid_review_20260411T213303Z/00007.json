@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:03.381477+00:00",
+  "query": "tom ford black orchid review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "OXcWxXjMSNFncOLbL0ppUlpIO7g",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "3uhfo0WBpdk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-02T05:35:00Z",
+      "channelId": "UCDSG_jI1cYFQjD039pXhwDg",
+      "title": "Tom Ford Black Orchid ",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "FabScents Perfume",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-02T05:35:00Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "o8It7yzIIW4fXuXJKu3PZL1uKZM",
+    "id": "3uhfo0WBpdk",
+    "snippet": {
+      "publishedAt": "2026-04-02T05:35:00Z",
+      "channelId": "UCDSG_jI1cYFQjD039pXhwDg",
+      "title": "Tom Ford Black Orchid ",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/3uhfo0WBpdk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "FabScents Perfume",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Tom Ford Black Orchid ",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT4M54S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "16",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

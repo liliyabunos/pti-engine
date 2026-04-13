@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:41.651821+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "dmPXVqF9FwBJMjW_oNTHimms3s4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "q8meWfBPJrc"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T13:52:25Z",
+      "channelId": "UC-D-VjqLtQLqo2NmwBrtcag",
+      "title": "Best perfume for office | YSL libre intense review #perfume",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Julia Singlong",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T13:52:25Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "rTlfKbA1Meqo8_I1EhE0E25XEuk",
+    "id": "q8meWfBPJrc",
+    "snippet": {
+      "publishedAt": "2026-04-08T13:52:25Z",
+      "channelId": "UC-D-VjqLtQLqo2NmwBrtcag",
+      "title": "Best perfume for office | YSL libre intense review #perfume",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/q8meWfBPJrc/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Julia Singlong",
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Best perfume for office | YSL libre intense review #perfume",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M26S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "152",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

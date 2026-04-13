@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "0BFVJrODk3TMUmoKqM4fkSwk1ek",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "2J_aPh5rf0Y"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T16:43:55Z",
+      "channelId": "UC4ehffWZfQAaPhqiPESlOtQ",
+      "title": "Ihr könnt sagen was ihr wollt! Ich liebe „Baccarat Rouge“ auch als Kerze! #baccaratrouge540 #parfum",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "DerDuftDude",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T16:43:55Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "v4xXI4kZ_OPyJSbkyNaUe1CHWkk",
+    "id": "2J_aPh5rf0Y",
+    "snippet": {
+      "publishedAt": "2026-04-10T16:43:55Z",
+      "channelId": "UC4ehffWZfQAaPhqiPESlOtQ",
+      "title": "Ihr könnt sagen was ihr wollt! Ich liebe „Baccarat Rouge“ auch als Kerze! #baccaratrouge540 #parfum",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/2J_aPh5rf0Y/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "DerDuftDude",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "de",
+      "localized": {
+        "title": "Ihr könnt sagen was ihr wollt! Ich liebe „Baccarat Rouge“ auch als Kerze! #baccaratrouge540 #parfum",
+        "description": ""
+      },
+      "defaultAudioLanguage": "de"
+    },
+    "contentDetails": {
+      "duration": "PT12S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "2238",
+      "likeCount": "29",
+      "favoriteCount": "0",
+      "commentCount": "6"
+    }
+  }
+}

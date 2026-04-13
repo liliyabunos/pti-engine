@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:10.364064+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "wQTWxM136NXLo6aRsIAOV_A6Ndw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "ofzqXC9Ty-k"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T22:37:42Z",
+      "channelId": "UCTEe_ULHbgXVd9nTprm7Tkg",
+      "title": "DELINA PARFUMS de marly",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Só u ouro perfumes ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T22:37:42Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "wMWhxeCV815MZq6ECVDt3eYqw78",
+    "id": "ofzqXC9Ty-k",
+    "snippet": {
+      "publishedAt": "2026-04-08T22:37:42Z",
+      "channelId": "UCTEe_ULHbgXVd9nTprm7Tkg",
+      "title": "DELINA PARFUMS de marly",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/ofzqXC9Ty-k/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Só u ouro perfumes ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-PT",
+      "localized": {
+        "title": "DELINA PARFUMS de marly",
+        "description": ""
+      },
+      "defaultAudioLanguage": "pt-PT"
+    },
+    "contentDetails": {
+      "duration": "PT1M16S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "357",
+      "likeCount": "49",
+      "favoriteCount": "0",
+      "commentCount": "13"
+    }
+  }
+}

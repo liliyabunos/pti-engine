@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:12.381868+00:00",
+  "query": "baccarat rouge 540",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "N-tkMvVqZ3yff29dNisHnt2VcS4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "gJ4UPY8CZWY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T03:41:37Z",
+      "channelId": "UCmQtnhQS0eBihbFV_oC-Reg",
+      "title": "Buying baccarat rouge 540 #cologne #perfume #decants #fragrance #perfumecollection #perfumelovers",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "The Fragrance House",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T03:41:37Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "AYeP7YXMKmItwmOo3TgjGkY76Mw",
+    "id": "gJ4UPY8CZWY",
+    "snippet": {
+      "publishedAt": "2026-04-09T03:41:37Z",
+      "channelId": "UCmQtnhQS0eBihbFV_oC-Reg",
+      "title": "Buying baccarat rouge 540 #cologne #perfume #decants #fragrance #perfumecollection #perfumelovers",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/gJ4UPY8CZWY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "The Fragrance House",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Buying baccarat rouge 540 #cologne #perfume #decants #fragrance #perfumecollection #perfumelovers",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT16S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "241",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

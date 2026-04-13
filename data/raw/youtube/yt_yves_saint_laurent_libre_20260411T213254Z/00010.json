@@ -1,0 +1,109 @@
+{
+  "fetched_at": "2026-04-11T21:32:54.626672+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "nyHrLxgNID-o7CxZOm_PcPM-igk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "JOQhRPubh6k"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T10:29:24Z",
+      "channelId": "UCWAV1oyeNvz4by_EK2G5CTQ",
+      "title": "YSL Perfume #scent #perfumecollection #shorts",
+      "description": "ysl #yslbeauty #ysllibre #yslblackopium #libreperfume #blackopium #luxuryfragrance #perfumetok #fragrancelover ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Yousafzai Lifestyle",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T10:29:24Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "eBNa_6Gx9CNj2tko89Gx3vk2x64",
+    "id": "JOQhRPubh6k",
+    "snippet": {
+      "publishedAt": "2026-04-10T10:29:24Z",
+      "channelId": "UCWAV1oyeNvz4by_EK2G5CTQ",
+      "title": "YSL Perfume #scent #perfumecollection #shorts",
+      "description": "#ysl #yslbeauty #ysllibre #yslblackopium #libreperfume #blackopium #luxuryfragrance #perfumetok #fragrancelover #smellgoodfeelgood #scentoftheday #signature scent #feminineenergy #glamvibes #richgirlvibes #date night fragrance #vanillaperfume #floralperfume #viralbeauty",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/JOQhRPubh6k/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Yousafzai Lifestyle",
+      "tags": [
+        "Ysl Libre",
+        "YSL Black Opium",
+        "shorts",
+        "viral",
+        "trending",
+        "sephora",
+        "sephora middleeast"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "YSL Perfume #scent #perfumecollection #shorts",
+        "description": "#ysl #yslbeauty #ysllibre #yslblackopium #libreperfume #blackopium #luxuryfragrance #perfumetok #fragrancelover #smellgoodfeelgood #scentoftheday #signature scent #feminineenergy #glamvibes #richgirlvibes #date night fragrance #vanillaperfume #floralperfume #viralbeauty"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT6S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "52",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:51.659281+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "GOyI96tzN4PCg9KeH-HF_Wd2e7w",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "-HgtcjcKjMs"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T14:54:04Z",
+      "channelId": "UCqTWnqwddA2X0kLKQY8wOQg",
+      "title": "This Perfume Makes Me Feel EXPENSIVE 💎 | YSL Libre Review",
+      "description": "If confidence had a scent… this would be it. Today I'm sharing my honest thoughts on YSL Libre Eau de Parfum — one of the most ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Haya_arsh",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T14:54:04Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "sbPXYQ5j0ePy-OABXtqKe6vfNcI",
+    "id": "-HgtcjcKjMs",
+    "snippet": {
+      "publishedAt": "2026-04-08T14:54:04Z",
+      "channelId": "UCqTWnqwddA2X0kLKQY8wOQg",
+      "title": "This Perfume Makes Me Feel EXPENSIVE 💎 | YSL Libre Review",
+      "description": "If confidence had a scent… this would be it.\n\nToday I’m sharing my honest thoughts on YSL Libre Eau de Parfum — one of the most hyped luxury fragrances right now. From first spray to dry down, this perfume gives bold, feminine, and powerful energy.\n\n✨ Why I love it:\n • Long-lasting and perfect for day & night\n • A mix of fresh + warm notes (lavender, orange blossom, vanilla)\n • Gives that “effortlessly expensive” vibe\n\nThis is the kind of fragrance that gets compliments EVERY time. If you love scents that feel confident, sexy, and unforgettable… this might be your next signature.\n\n💬 Let me know in the comments:\nHave you tried YSL Libre? Is it worth the hype?\n\n👍 Don’t forget to like & subscribe for more beauty + fragrance content!\n\n#ysllibre #yslbeauty #perfumereview #fragrancelover #luxuryperfume #beautycontent #ugccreator #femininenergy #glowup #thatgirl",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/-HgtcjcKjMs/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Haya_arsh",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "This Perfume Makes Me Feel EXPENSIVE 💎 | YSL Libre Review",
+        "description": "If confidence had a scent… this would be it.\n\nToday I’m sharing my honest thoughts on YSL Libre Eau de Parfum — one of the most hyped luxury fragrances right now. From first spray to dry down, this perfume gives bold, feminine, and powerful energy.\n\n✨ Why I love it:\n • Long-lasting and perfect for day & night\n • A mix of fresh + warm notes (lavender, orange blossom, vanilla)\n • Gives that “effortlessly expensive” vibe\n\nThis is the kind of fragrance that gets compliments EVERY time. If you love scents that feel confident, sexy, and unforgettable… this might be your next signature.\n\n💬 Let me know in the comments:\nHave you tried YSL Libre? Is it worth the hype?\n\n👍 Don’t forget to like & subscribe for more beauty + fragrance content!\n\n#ysllibre #yslbeauty #perfumereview #fragrancelover #luxuryperfume #beautycontent #ugccreator #femininenergy #glowup #thatgirl"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT13S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1947",
+      "likeCount": "27",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

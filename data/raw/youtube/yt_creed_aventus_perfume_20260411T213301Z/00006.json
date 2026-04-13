@@ -1,0 +1,105 @@
+{
+  "fetched_at": "2026-04-11T21:33:01.063948+00:00",
+  "query": "creed aventus perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "LBEEJ3yA3xUeRz3QSv_uyyxA2Ys",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "IsT5TNlYDmU"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T03:47:25Z",
+      "channelId": "UC7y5PYvjo34mec6J1K1CSzw",
+      "title": "10ml Creed Aventus Order",
+      "description": "10ml Creed Aventus Order! Buy now before creed raises their prices!! #decant #fragrance #FragranceTok #LuxuryScent #cologne ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "ScentHive",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T03:47:25Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "qyko53JbETsH-ePriuyU_z2Y9_M",
+    "id": "IsT5TNlYDmU",
+    "snippet": {
+      "publishedAt": "2026-04-11T03:47:25Z",
+      "channelId": "UC7y5PYvjo34mec6J1K1CSzw",
+      "title": "10ml Creed Aventus Order",
+      "description": "10ml Creed Aventus Order! Buy now before creed raises their prices!! #decant #fragrance #FragranceTok #LuxuryScent #cologne #fragrancetok #perfume #argosfragrances #fragrance #lab8fragrances #cologne #skincare #decants #science",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/IsT5TNlYDmU/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "ScentHive",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "10ml Creed Aventus Order",
+        "description": "10ml Creed Aventus Order! Buy now before creed raises their prices!! #decant #fragrance #FragranceTok #LuxuryScent #cologne #fragrancetok #perfume #argosfragrances #fragrance #lab8fragrances #cologne #skincare #decants #science"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT12S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "regionRestriction": {
+        "blocked": [
+          "RU"
+        ]
+      },
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1405",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

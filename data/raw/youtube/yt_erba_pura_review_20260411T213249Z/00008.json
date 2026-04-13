@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:49.227234+00:00",
+  "query": "erba pura review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "840AmkDAb3_W-_268EtymqJjoSM",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "q5WUTkaFcic"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-01T07:39:50Z",
+      "channelId": "UC6uGkcU5B5J6eG8iuBni9RQ",
+      "title": "La Rive Saffira perfume review, an inspiration of Xerjoff Erba Pura 😊🍋🍊🍑🍐🍏",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Daria W",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-01T07:39:50Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "3m2wC4907-MCjcwOYHo5f5Yo1ns",
+    "id": "q5WUTkaFcic",
+    "snippet": {
+      "publishedAt": "2026-04-01T07:39:50Z",
+      "channelId": "UC6uGkcU5B5J6eG8iuBni9RQ",
+      "title": "La Rive Saffira perfume review, an inspiration of Xerjoff Erba Pura 😊🍋🍊🍑🍐🍏",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/q5WUTkaFcic/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Daria W",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "La Rive Saffira perfume review, an inspiration of Xerjoff Erba Pura 😊🍋🍊🍑🍐🍏",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M30S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "191",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

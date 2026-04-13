@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:35.068785+00:00",
+  "query": "parfums de marly delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "FVDpqsE5EWbeUQZNkqtqXn7qrp0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Zjox5MYHVaw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T18:26:25Z",
+      "channelId": "UCz5q5flGSLjvFeBU-vBQgTA",
+      "title": "These spring perfumes are bangers ☀️💖 #springperfumes #top10perfumes #fragrance",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Little Miss Aroma",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T18:26:25Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "0sATnOK5cG9S_qOPaCtggf8o0nY",
+    "id": "Zjox5MYHVaw",
+    "snippet": {
+      "publishedAt": "2026-04-10T18:26:25Z",
+      "channelId": "UCz5q5flGSLjvFeBU-vBQgTA",
+      "title": "These spring perfumes are bangers ☀️💖 #springperfumes #top10perfumes #fragrance",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Zjox5MYHVaw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Little Miss Aroma",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "These spring perfumes are bangers ☀️💖 #springperfumes #top10perfumes #fragrance",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT3M",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "542",
+      "likeCount": "23",
+      "favoriteCount": "0",
+      "commentCount": "3"
+    }
+  }
+}

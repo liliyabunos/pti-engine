@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:18.674588+00:00",
+  "query": "best niche perfumes 2026",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "YOjQW230cL6EJ4fY3Bz1BWBku1o",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "ewa9GXvdVdM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T23:18:52Z",
+      "channelId": "UC4nuAdUw5vHzM29Y6LNHR5Q",
+      "title": "The BEST Niche Fragrances For Beginners 😤🔥",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Jay Scents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T23:18:52Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "rmZloDti43J21yumposiojuJhrw",
+    "id": "ewa9GXvdVdM",
+    "snippet": {
+      "publishedAt": "2026-04-07T23:18:52Z",
+      "channelId": "UC4nuAdUw5vHzM29Y6LNHR5Q",
+      "title": "The BEST Niche Fragrances For Beginners 😤🔥",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/ewa9GXvdVdM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Jay Scents",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "The BEST Niche Fragrances For Beginners 😤🔥",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M32S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "686",
+      "likeCount": "13",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:46.727635+00:00",
+  "query": "xerjoff erba pura perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "M_g5SEBI7c59WwkFzkBes_FlOQk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "-VwaWzPXvys"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T12:57:43Z",
+      "channelId": "UCvRwGdAhLbLpXtoK8v3p83w",
+      "title": "Сравниваем самые популярные и лучшие ароматы от брендов...✨️",
+      "description": "Что выбрать: то, что носят все, или настоящий шедевр? Сравниваю самые хайповые ароматы с теми, которые ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Helen Perfume",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T12:57:43Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "_1Byu0fhxrjw9bgzHjYV3cTAjn8",
+    "id": "-VwaWzPXvys",
+    "snippet": {
+      "publishedAt": "2026-04-09T12:57:43Z",
+      "channelId": "UCvRwGdAhLbLpXtoK8v3p83w",
+      "title": "Сравниваем самые популярные и лучшие ароматы от брендов...✨️",
+      "description": "Что выбрать: то, что носят все, или настоящий шедевр? 🤔 \n\nСравниваю самые хайповые ароматы с теми, которые действительно заслуживают звания «Лучший».\n\n​В этом видео:\n\n​Louis Vuitton: Imagination или Ombre Nomade? ☕️🌙\n\n​Xerjoff: Erba Pura против медового Naxos 🍯\n\n​Ex Nihilo: Классический Blue Talisman или новый Extrait? 💎\n\n​Parfums de Marly: Layton vs Althaïr 🍎🍦\n\n​Creed: Легендарный Aventus или лимитка Absolu? 🍍🔥\n\n​А на чьей стороне ты? Пиши в комментариях👇\n\n​Цены и наличие в моем ТГ-канале:\n✨️ @helenperfumevld ✨️",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/-VwaWzPXvys/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Helen Perfume",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "ru",
+      "localized": {
+        "title": "Сравниваем самые популярные и лучшие ароматы от брендов...✨️",
+        "description": "Что выбрать: то, что носят все, или настоящий шедевр? 🤔 \n\nСравниваю самые хайповые ароматы с теми, которые действительно заслуживают звания «Лучший».\n\n​В этом видео:\n\n​Louis Vuitton: Imagination или Ombre Nomade? ☕️🌙\n\n​Xerjoff: Erba Pura против медового Naxos 🍯\n\n​Ex Nihilo: Классический Blue Talisman или новый Extrait? 💎\n\n​Parfums de Marly: Layton vs Althaïr 🍎🍦\n\n​Creed: Легендарный Aventus или лимитка Absolu? 🍍🔥\n\n​А на чьей стороне ты? Пиши в комментариях👇\n\n​Цены и наличие в моем ТГ-канале:\n✨️ @helenperfumevld ✨️"
+      },
+      "defaultAudioLanguage": "ru"
+    },
+    "contentDetails": {
+      "duration": "PT17S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1505",
+      "likeCount": "7",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

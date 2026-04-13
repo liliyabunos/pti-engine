@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:31:55.041459+00:00",
+  "query": "parfums de marly delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "o2DdSVNsy8_I_kX3BH2SZ0P_Nos",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "lnT_mgYiYwE"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T19:15:47Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "What if your perfume had a skincare routine? 🌸✨#skincare",
+      "description": "Step into a world of pure luxury with this cinematic ASMR close-up of the iconic blush-pink Parfums de Marly Delina. Watch as she ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T19:15:47Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "9rNxZMUd_O1jqKbKk6oKh8-5XsU",
+    "id": "lnT_mgYiYwE",
+    "snippet": {
+      "publishedAt": "2026-04-10T19:15:47Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "What if your perfume had a skincare routine? 🌸✨#skincare",
+      "description": "Step into a world of pure luxury with this cinematic ASMR close-up of the iconic blush-pink Parfums de Marly Delina. Watch as she gets her own elegant pampering session, complete with tiny silk gloves, pearl-drop serum, and a rose-gold morning glow.\n\nSometimes, luxury just starts with self-care—even for your favorite fragrance. 🤍\n\nDrop a 🎀 in the comments if Delina is on your wish list, and let me know which perfume needs a spa day next!\n\n👇 Don't forget to like, subscribe, and turn on notifications for more aesthetic beauty ASMR!\nViral Hashtags\n\n#ParfumsDeMarly #Delina #PerfumeASMR #LuxuryBeauty #FragranceLover #ASMRBeauty #PerfumeCollection #CoquetteAesthetic #LuxuryLifestyle #PerfumeTok #FragranceCommunity #PinkAesthetic #SelfCareRoutine",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/lnT_mgYiYwE/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "What if your perfume had a skincare routine? 🌸✨#skincare",
+        "description": "Step into a world of pure luxury with this cinematic ASMR close-up of the iconic blush-pink Parfums de Marly Delina. Watch as she gets her own elegant pampering session, complete with tiny silk gloves, pearl-drop serum, and a rose-gold morning glow.\n\nSometimes, luxury just starts with self-care—even for your favorite fragrance. 🤍\n\nDrop a 🎀 in the comments if Delina is on your wish list, and let me know which perfume needs a spa day next!\n\n👇 Don't forget to like, subscribe, and turn on notifications for more aesthetic beauty ASMR!\nViral Hashtags\n\n#ParfumsDeMarly #Delina #PerfumeASMR #LuxuryBeauty #FragranceLover #ASMRBeauty #PerfumeCollection #CoquetteAesthetic #LuxuryLifestyle #PerfumeTok #FragranceCommunity #PinkAesthetic #SelfCareRoutine"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT9S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1913",
+      "likeCount": "16",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

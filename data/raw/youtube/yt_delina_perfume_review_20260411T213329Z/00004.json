@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:29.196903+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "IKqYFJ7tPz0By_nhINypWouAxLI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "fTiYlX5CMwo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-05T06:54:25Z",
+      "channelId": "UC6uGkcU5B5J6eG8iuBni9RQ",
+      "title": "Precious sunset by la rive perfume review 😊 another inspection for Delina by PDM",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Daria W",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-05T06:54:25Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "EKVHragzpVu_5g9ka09TkhRLGWA",
+    "id": "fTiYlX5CMwo",
+    "snippet": {
+      "publishedAt": "2026-04-05T06:54:25Z",
+      "channelId": "UC6uGkcU5B5J6eG8iuBni9RQ",
+      "title": "Precious sunset by la rive perfume review 😊 another inspection for Delina by PDM",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/fTiYlX5CMwo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Daria W",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Precious sunset by la rive perfume review 😊 another inspection for Delina by PDM",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M4S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "218",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

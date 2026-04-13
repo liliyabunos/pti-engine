@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:58.788233+00:00",
+  "query": "creed aventus review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "i9PNumZu9EZKJNaFqZsbSOdDzQ4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "OHqtIC2OOxA"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T06:20:53Z",
+      "channelId": "UCK71kFS9i_blUcJ0p8bvD1w",
+      "title": "Creed Aventus Review | King of Perfumes ya Overrated? 👑🔥",
+      "description": "Creed Aventus Review – Kya yeh sach mein King of Perfumes hai ya sirf hype? Is video mein main aapko Creed Aventus ka ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Scent in sky",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T06:20:53Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "N7AwI4zDW1xjQBpKpbQuvUHEGEQ",
+    "id": "OHqtIC2OOxA",
+    "snippet": {
+      "publishedAt": "2026-04-11T06:20:53Z",
+      "channelId": "UCK71kFS9i_blUcJ0p8bvD1w",
+      "title": "Creed Aventus Review | King of Perfumes ya Overrated? 👑🔥",
+      "description": "👑 Creed Aventus Review – Kya yeh sach mein King of Perfumes hai ya sirf hype?\n\nIs video mein main aapko Creed Aventus ka complete honest review dunga:\n✔️ Scent profile (opening, mid, dry down)\n✔️ Performance (lasting & projection)\n✔️ Compliments miltay hain ya nahi?\n✔️ Pakistan mein worth it hai ya nahi?\n\nAgar aap luxury perfumes ke shaukeen hain ya Aventus lene ka soch rahe hain, yeh video zaroor dekhein!\n\n🔥 My Rating: 9/10\n🔥 Best for: Parties, Events, Signature scent\n\n👇 Aapka kya opinion hai? Comment mein zaroor batayein!\n\n#CreedAventus #PerfumeReview #ScentInSky #LuxuryFragrance #MensPerfume #BeastMode",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/OHqtIC2OOxA/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Scent in sky",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Creed Aventus Review | King of Perfumes ya Overrated? 👑🔥",
+        "description": "👑 Creed Aventus Review – Kya yeh sach mein King of Perfumes hai ya sirf hype?\n\nIs video mein main aapko Creed Aventus ka complete honest review dunga:\n✔️ Scent profile (opening, mid, dry down)\n✔️ Performance (lasting & projection)\n✔️ Compliments miltay hain ya nahi?\n✔️ Pakistan mein worth it hai ya nahi?\n\nAgar aap luxury perfumes ke shaukeen hain ya Aventus lene ka soch rahe hain, yeh video zaroor dekhein!\n\n🔥 My Rating: 9/10\n🔥 Best for: Parties, Events, Signature scent\n\n👇 Aapka kya opinion hai? Comment mein zaroor batayein!\n\n#CreedAventus #PerfumeReview #ScentInSky #LuxuryFragrance #MensPerfume #BeastMode"
+      },
+      "defaultAudioLanguage": "hi"
+    },
+    "contentDetails": {
+      "duration": "PT3M17S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "11",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

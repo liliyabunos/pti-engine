@@ -1,0 +1,13 @@
+accounts:
+  - platform: youtube
+    account_handle: "example_creator"
+    account_type: creator
+    priority: high
+    region: US
+    active: true
+  - platform: tiktok
+    account_handle: "example_tiktok_creator"
+    account_type: creator
+    priority: medium
+    region: US
+    active: false

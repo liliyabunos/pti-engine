@@ -1,0 +1,23 @@
+# TikTok Research API — keyword search queries
+# Aligned with the same 8 entities tracked by YouTube ingestion.
+# Each query is sent to POST /v2/research/video/query/ as a keyword search.
+# Edit this file to add or remove queries without touching code.
+queries:
+  # Parfums de Marly Delina
+  - "parfums de marly delina"
+  - "delina perfume"
+  # Maison Francis Kurkdjian Baccarat Rouge 540
+  - "baccarat rouge 540"
+  - "maison francis kurkdjian"
+  # Byredo Gypsy Water
+  - "byredo gypsy water"
+  # Xerjoff Erba Pura
+  - "xerjoff erba pura"
+  # Yves Saint Laurent Libre
+  - "ysl libre perfume"
+  # Montale Velvet Fantasy
+  - "montale velvet fantasy"
+  # Creed Aventus
+  - "creed aventus"
+  # Tom Ford Black Orchid
+  - "tom ford black orchid"

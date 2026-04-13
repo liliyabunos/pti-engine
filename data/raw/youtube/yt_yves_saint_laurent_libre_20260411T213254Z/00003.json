@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:54.626672+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "_ek6i2aPVwgsNdLK-lNDNnMc_Io",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "xA0K7vb-ee0"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T20:16:56Z",
+      "channelId": "UCnAzIYiPbNz_qiabkz_Gyjw",
+      "title": "The perfume that makes this outfit feel elegant (Libre YSL)",
+      "description": "Okay babe… same dress, different energy. ✨ With the lace… this look became softer, more delicate… so the perfume had to ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Stéphanie Marier",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T20:16:56Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "kCEPnepg1mfptmmJHEtu6g7wmyg",
+    "id": "xA0K7vb-ee0",
+    "snippet": {
+      "publishedAt": "2026-04-10T20:16:56Z",
+      "channelId": "UCnAzIYiPbNz_qiabkz_Gyjw",
+      "title": "The perfume that makes this outfit feel elegant (Libre YSL)",
+      "description": "Okay babe… same dress, different energy. ✨\n\nWith the lace… this look became softer, more delicate…\nso the perfume had to match.\n\nLibre by Yves Saint Laurent is THAT scent for me.\nElegant. Feminine. A little bit bold… but still soft.\n\nThe kind of scent that doesn’t need attention…\nbut gets it anyway.\n\nMom of eight… and I’m choosing to feel like THAT woman again.\n\nBecause styling isn’t just what you wear…\nit’s the energy you step into.\n\nDon’t just wear it… style it. 🖤✨\n\n#ysllibre #perfumepairing #signature scent #feminineenergy #elegantstyle #softpower #momofeight #luxurylifestyle #fragranceoftheday #beautyroutine #confidenceenergy #dontjustwearitstyleit",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/xA0K7vb-ee0/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Stéphanie Marier",
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en-CA",
+      "localized": {
+        "title": "The perfume that makes this outfit feel elegant (Libre YSL)",
+        "description": "Okay babe… same dress, different energy. ✨\n\nWith the lace… this look became softer, more delicate…\nso the perfume had to match.\n\nLibre by Yves Saint Laurent is THAT scent for me.\nElegant. Feminine. A little bit bold… but still soft.\n\nThe kind of scent that doesn’t need attention…\nbut gets it anyway.\n\nMom of eight… and I’m choosing to feel like THAT woman again.\n\nBecause styling isn’t just what you wear…\nit’s the energy you step into.\n\nDon’t just wear it… style it. 🖤✨\n\n#ysllibre #perfumepairing #signature scent #feminineenergy #elegantstyle #softpower #momofeight #luxurylifestyle #fragranceoftheday #beautyroutine #confidenceenergy #dontjustwearitstyleit"
+      },
+      "defaultAudioLanguage": "en-CA"
+    },
+    "contentDetails": {
+      "duration": "PT28S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "49",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

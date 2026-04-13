@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:39.656930+00:00",
+  "query": "baccarat rouge 540 review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "vh4AP14Sff1zXheXr4oX4ctaHfU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "qGR7lGJxRyA"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T04:14:28Z",
+      "channelId": "UCZVy6BsFB-frf1nRJYOhoxw",
+      "title": "Bakkarat rouge 540 fragrance review! ",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Corey gaming ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T04:14:28Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "RLij5xaUOBZYG-INXscaPFCLcIk",
+    "id": "qGR7lGJxRyA",
+    "snippet": {
+      "publishedAt": "2026-04-10T04:14:28Z",
+      "channelId": "UCZVy6BsFB-frf1nRJYOhoxw",
+      "title": "Bakkarat rouge 540 fragrance review! ",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/qGR7lGJxRyA/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Corey gaming ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Bakkarat rouge 540 fragrance review! ",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT10M20S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "9",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

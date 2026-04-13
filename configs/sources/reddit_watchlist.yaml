@@ -1,0 +1,12 @@
+name: reddit_watchlist
+enabled: true
+connector: reddit_watchlist_connector
+normalizer: social_content_normalizer
+cursor_strategy: created_after
+fetch_limit: 25
+watchlist_file: configs/watchlists/reddit_watchlist.yaml
+retry:
+  max_attempts: 3
+  backoff_seconds: 5
+http:
+  timeout_seconds: 20

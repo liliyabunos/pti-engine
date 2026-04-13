@@ -1,0 +1,106 @@
+{
+  "fetched_at": "2026-04-11T21:32:58.788233+00:00",
+  "query": "creed aventus review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "GL1gTFQASFjBUc5RZTT_3MU7EFc",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Yv68nN0fOwQ"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T06:47:23Z",
+      "channelId": "UCgWIrpE68vcImA0ADT5ZAFg",
+      "title": "the top 10 fragrances to wear in spring 2026 edition",
+      "description": "springtime is already here and with that i bring you guys my top 10 best fragrances to wear for spring additionally with some ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "the fragrance guy",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T06:47:23Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "iImBkYEVPlU2cw1UikLCwwUHZTM",
+    "id": "Yv68nN0fOwQ",
+    "snippet": {
+      "publishedAt": "2026-04-10T06:47:23Z",
+      "channelId": "UCgWIrpE68vcImA0ADT5ZAFg",
+      "title": "the top 10 fragrances to wear in spring 2026 edition",
+      "description": "springtime is already here and with that i bring you guys my top 10 best fragrances to wear for spring additionally with some honorable mentions there's something for everyone in this list\n\n\nfollow my socials:\nTikTok https://www.tiktok.com/@the.fragance.guy0\nInstagram https://www.instagram.com/just_pibe",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Yv68nN0fOwQ/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "the fragrance guy",
+      "tags": [
+        "best cologne",
+        "fragrances",
+        "cologne",
+        "perfume"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en-US",
+      "localized": {
+        "title": "the top 10 fragrances to wear in spring 2026 edition",
+        "description": "springtime is already here and with that i bring you guys my top 10 best fragrances to wear for spring additionally with some honorable mentions there's something for everyone in this list\n\n\nfollow my socials:\nTikTok https://www.tiktok.com/@the.fragance.guy0\nInstagram https://www.instagram.com/just_pibe"
+      },
+      "defaultAudioLanguage": "en-US"
+    },
+    "contentDetails": {
+      "duration": "PT9M20S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "195",
+      "likeCount": "14",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

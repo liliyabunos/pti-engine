@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:43.621586+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "HjINWy5TsWGsWPuu46lF28L13-Q",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "1XKqCXB28iM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T17:15:55Z",
+      "channelId": "UCVTaiPawyDd6sa7d0gfUudQ",
+      "title": "S&amp;S Series Vol.1 🥂 For Direct Outfit &amp; Fragrance 🔗’s COMMENT “Need Link” for details Ive been",
+      "description": "S&S Series Vol.1 For Direct Outfit & Fragrance 's COMMENT “Need Link” for details Ive been collecting some elevated ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Love Reesie",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T17:15:55Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "wABBgjZre52wrLRlQr6JjUFk9XA",
+    "id": "1XKqCXB28iM",
+    "snippet": {
+      "publishedAt": "2026-04-10T17:15:55Z",
+      "channelId": "UCVTaiPawyDd6sa7d0gfUudQ",
+      "title": "S&S Series Vol.1 🥂 For Direct Outfit & Fragrance 🔗’s COMMENT “Need Link” for details Ive been",
+      "description": "S&S Series Vol.1 🥂\n\nFor Direct Outfit & Fragrance 🔗’s COMMENT “Need Link” for details\n\nIve been collecting some elevated pieces all year, and now I want to share them with you and some fragrances that I feel matches each outfit for the occasion.\n\nScents: \nmiss dior \nysl libre platine \nromance \n\nOutfit 1: & \nOutfit 2: \nOutfit 3: \n\nDirect Outfit & Accessories are 🔗 on my LTK\n\nFollow to continue the series. \n\n#falloutfitinspo #winteroutfitideas",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/1XKqCXB28iM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Love Reesie",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "S&S Series Vol.1 🥂 For Direct Outfit & Fragrance 🔗’s COMMENT “Need Link” for details Ive been",
+        "description": "S&S Series Vol.1 🥂\n\nFor Direct Outfit & Fragrance 🔗’s COMMENT “Need Link” for details\n\nIve been collecting some elevated pieces all year, and now I want to share them with you and some fragrances that I feel matches each outfit for the occasion.\n\nScents: \nmiss dior \nysl libre platine \nromance \n\nOutfit 1: & \nOutfit 2: \nOutfit 3: \n\nDirect Outfit & Accessories are 🔗 on my LTK\n\nFollow to continue the series. \n\n#falloutfitinspo #winteroutfitideas"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT20S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "63",
+      "likeCount": "9",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

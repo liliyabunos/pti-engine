@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:54.626672+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "0-BsPC_XU4mBizX6tR7kKHhP3Yo",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Dn7sL3bnJmY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T20:12:07Z",
+      "channelId": "UCs2ueOVvEmyiZGCBBmg5REg",
+      "title": "Libre Berry Crush Yves Saint Laurent",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "kaknastya",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T20:12:07Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "V6WK7Zg8smPXji7bH2bYCVG5ZM4",
+    "id": "Dn7sL3bnJmY",
+    "snippet": {
+      "publishedAt": "2026-04-10T20:12:07Z",
+      "channelId": "UCs2ueOVvEmyiZGCBBmg5REg",
+      "title": "Libre Berry Crush Yves Saint Laurent",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Dn7sL3bnJmY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "kaknastya",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Libre Berry Crush Yves Saint Laurent",
+        "description": ""
+      },
+      "defaultAudioLanguage": "ru"
+    },
+    "contentDetails": {
+      "duration": "PT2M59S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "128",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

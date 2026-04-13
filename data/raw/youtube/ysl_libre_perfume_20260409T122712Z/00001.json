@@ -1,0 +1,125 @@
+{
+  "fetched_at": "2026-04-09T12:27:14.609426+00:00",
+  "query": "ysl libre perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "WZ3tseOQBoHoj40NHqYToSM5VhI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "qDA0olH3E2Q"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T11:32:49Z",
+      "channelId": "UCvUgUSfL31HkiRLkrChWoTg",
+      "title": "My All-Time Favorite Perfume Collection! ✨ (Luxe &amp; Budget)",
+      "description": "Sharing my current perfume rotation! From high-end luxury scents like YSL Black Opium and Valentino Donna Born in Roma to ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Simply Prerna",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T11:32:49Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "S8weKNHM6Ve5axNkuU6tlt6DT-Q",
+    "id": "qDA0olH3E2Q",
+    "snippet": {
+      "publishedAt": "2026-04-09T11:32:49Z",
+      "channelId": "UCvUgUSfL31HkiRLkrChWoTg",
+      "title": "My All-Time Favorite Perfume Collection! ✨ (Luxe & Budget)",
+      "description": "Sharing my current perfume rotation! From high-end luxury scents like YSL Black Opium and Valentino Donna Born in Roma to affordable favorites from Zara and Miniso. Which scent profile is your favorite? Let me know in the comments!\n\nFeatured in this video:\n\n• YSL Libre & Black Opium\n\n• Valentino Donna Born in Roma\n\n• Zara Nuit\n\n• Michael Kors Extreme Rush\n\n• Miniso Romantic Verse\n\n• Bella Vita White Oud\n\n#perfumecollection  #fragrancetiktok  #beautyshorts  #yslperfume  #valentino  #budgetbeauty  #perfumereview  #aestheticshorts  #scentoftheday #minisoindia #michaelkors #bellavitaperfume",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/qDA0olH3E2Q/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Simply Prerna",
+      "tags": [
+        "YSL Perfume",
+        "YSL Black Opium",
+        "Valentino Donna Born In Roma",
+        "YSL Libre",
+        "Michael Kors Fragrance",
+        "Zara Nuit",
+        "Zara Perfumes",
+        "Miniso Perfume",
+        "Bella Vita Luxury",
+        "Perfume Collection",
+        "Fragrance Lover",
+        "Luxury Fragrance",
+        "Scent Of The Day",
+        "Aesthetic Perfumes",
+        "Vanity Goals",
+        "Best Perfumes For Women",
+        "Budget Vs Luxury",
+        "Long Lasting Perfumes",
+        "Signature Scent",
+        "Affordable Luxury",
+        "Beauty Shorts",
+        "Trending Shorts",
+        "Prerna Verma",
+        "Simple Prerna"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "My All-Time Favorite Perfume Collection! ✨ (Luxe & Budget)",
+        "description": "Sharing my current perfume rotation! From high-end luxury scents like YSL Black Opium and Valentino Donna Born in Roma to affordable favorites from Zara and Miniso. Which scent profile is your favorite? Let me know in the comments!\n\nFeatured in this video:\n\n• YSL Libre & Black Opium\n\n• Valentino Donna Born in Roma\n\n• Zara Nuit\n\n• Michael Kors Extreme Rush\n\n• Miniso Romantic Verse\n\n• Bella Vita White Oud\n\n#perfumecollection  #fragrancetiktok  #beautyshorts  #yslperfume  #valentino  #budgetbeauty  #perfumereview  #aestheticshorts  #scentoftheday #minisoindia #michaelkors #bellavitaperfume"
+      }
+    },
+    "contentDetails": {
+      "duration": "PT28S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

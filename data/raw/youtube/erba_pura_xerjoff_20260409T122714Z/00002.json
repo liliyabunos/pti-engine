@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:16.619064+00:00",
+  "query": "erba pura xerjoff",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "HNF_TqhcRpbF0C24uMyutfdrlzk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Xyu4AB7UMSk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T00:59:16Z",
+      "channelId": "UCaQgpOwNx9bPAvUPCp9bnQA",
+      "title": "Erba Pura el aroma que las hace querer quedarse pegadas a ti. Dulce, envolvente y adictivo 😏🔥",
+      "description": "fragancias #perfume #top #perfumesmasculinos #tendencia #viralshorts #peru.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Élite Essence",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T00:59:16Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "gKKKjSMmpV2v1Qn2hWCkstH-Zh4",
+    "id": "Xyu4AB7UMSk",
+    "snippet": {
+      "publishedAt": "2026-04-09T00:59:16Z",
+      "channelId": "UCaQgpOwNx9bPAvUPCp9bnQA",
+      "title": "Erba Pura el aroma que las hace querer quedarse pegadas a ti. Dulce, envolvente y adictivo 😏🔥",
+      "description": "#fragancias #perfume #top #perfumesmasculinos #tendencia #viralshorts #peru",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Xyu4AB7UMSk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Élite Essence",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "Erba Pura el aroma que las hace querer quedarse pegadas a ti. Dulce, envolvente y adictivo 😏🔥",
+        "description": "#fragancias #perfume #top #perfumesmasculinos #tendencia #viralshorts #peru"
+      },
+      "defaultAudioLanguage": "es"
+    },
+    "contentDetails": {
+      "duration": "PT38S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "678",
+      "likeCount": "35",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

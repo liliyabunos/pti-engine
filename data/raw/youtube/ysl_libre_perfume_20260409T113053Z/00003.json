@@ -1,0 +1,112 @@
+{
+  "fetched_at": "2026-04-09T11:30:55.423298+00:00",
+  "query": "ysl libre perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "TdqsEL3wz1dnAqBr8PcIrzKtzCU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "B6saOFLbqME"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T16:33:18Z",
+      "channelId": "UC1tv9Or9hjWIauGgWdn3aZw",
+      "title": "Libre Berry Crush YSL NUEVO Perfume #perfumada #perfume #perfumes",
+      "description": "Nuevo Berry Crush de YSL CUMPLIÓ LAS EXPECTATIVAS #perfumes #perfumada #fragancias #perfumetok.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "AndreaBloom",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T16:33:18Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "ypBjnp-xqZS2IAsaCJodYtHlIE4",
+    "id": "B6saOFLbqME",
+    "snippet": {
+      "publishedAt": "2026-04-08T16:33:18Z",
+      "channelId": "UC1tv9Or9hjWIauGgWdn3aZw",
+      "title": "Libre Berry Crush YSL NUEVO Perfume #perfumada #perfume #perfumes",
+      "description": "Nuevo Berry Crush de YSL CUMPLIÓ LAS EXPECTATIVAS #perfumes #perfumada #fragancias #perfumetok",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/B6saOFLbqME/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "AndreaBloom",
+      "tags": [
+        "perfumes",
+        "perfume",
+        "fragancias",
+        "fragancias de mujer",
+        "perfumetok",
+        "perfume de mujer",
+        "perfume de diseñador",
+        "perfumes nuevos",
+        "los mejores perfumes",
+        "YSL"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "Libre Berry Crush YSL NUEVO Perfume #perfumada #perfume #perfumes",
+        "description": "Nuevo Berry Crush de YSL CUMPLIÓ LAS EXPECTATIVAS #perfumes #perfumada #fragancias #perfumetok"
+      },
+      "defaultAudioLanguage": "es"
+    },
+    "contentDetails": {
+      "duration": "PT55S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "6",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

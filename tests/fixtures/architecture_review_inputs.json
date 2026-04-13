@@ -1,0 +1,28 @@
+{
+  "enabled_sources": ["youtube", "tiktok", "reddit"],
+  "scheduled_workflows": [],
+  "run_frequency": "manual",
+  "storage_backend": "sqlite",
+  "environment_mode": "local",
+  "report_stack": ["markdown", "csv", "multi_source"],
+  "workflow_stack": [
+    "ingest_youtube_to_signals",
+    "ingest_tiktok_to_signals",
+    "ingest_reddit_to_signals",
+    "build_weekly_report",
+    "build_multi_source_report",
+    "enrich_from_fragrantica",
+    "aggregate_candidates",
+    "promote_candidates"
+  ],
+  "concurrent_writes_expected": false,
+  "ui_or_api_planned": false,
+  "vps_deployment_planned": false,
+  "local_vps_parity_painful": false,
+  "multiple_services_planned": false,
+  "long_running_workflows": false,
+  "raw_item_count_estimate": 500,
+  "normalized_item_count_estimate": 480,
+  "signal_item_count_estimate": 450,
+  "notes": "Post-Phase-4C state. Three sources active. Reports working. All workflows run manually from venv. No VPS yet. No API or UI planned for v1."
+}

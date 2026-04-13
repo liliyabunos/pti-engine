@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:31:55.041459+00:00",
+  "query": "parfums de marly delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "PpUqPFQ2kIwZJd_wGT6nmHELIAM",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "c5OTpxYM8Uk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T17:52:18Z",
+      "channelId": "UCMs5LgsJLVtmuBMgM9QLlXQ",
+      "title": "Happy Saturday fragrance fam! Breakfast with my son this morning and dinner and drinks tonight —",
+      "description": "Happy Saturday fragrance fam! Breakfast with my son this morning and dinner and drinks tonight — this combo had to show up ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Tamika Monelle Fragrance & Finds",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T17:52:18Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "59yfEbJoROFDYbz3uZBe5ZXS-Zg",
+    "id": "c5OTpxYM8Uk",
+    "snippet": {
+      "publishedAt": "2026-04-11T17:52:18Z",
+      "channelId": "UCMs5LgsJLVtmuBMgM9QLlXQ",
+      "title": "Happy Saturday fragrance fam! Breakfast with my son this morning and dinner and drinks tonight —",
+      "description": "Happy Saturday fragrance fam! Breakfast with my son this morning and dinner and drinks tonight — this combo had to show up and show OUT for a full day out. Dark cherry, rose, and pure luxury from top to bottom. This is the kind of combo that gets better as the day goes on. By the time dinner hits? I’m going to be DANGEROUS. This is what I’m wearing today. Shower: Bath & Body Works Sweetheart Cherry Body Wash Moisturize: Bath & Body Works Sweetheart Cherry Body Cream Seal it in: Mikas Aromas Drunken Cherry Body Oil Brown Sugar Babe Rich Aunty Body Oil Perfume Oil: Oakcha Sinful Perfume Oil Perfume: Oakcha Rosalina Perfume: Parfums de Marly Delina Exclusif",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/c5OTpxYM8Uk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Tamika Monelle Fragrance & Finds",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Happy Saturday fragrance fam! Breakfast with my son this morning and dinner and drinks tonight —",
+        "description": "Happy Saturday fragrance fam! Breakfast with my son this morning and dinner and drinks tonight — this combo had to show up and show OUT for a full day out. Dark cherry, rose, and pure luxury from top to bottom. This is the kind of combo that gets better as the day goes on. By the time dinner hits? I’m going to be DANGEROUS. This is what I’m wearing today. Shower: Bath & Body Works Sweetheart Cherry Body Wash Moisturize: Bath & Body Works Sweetheart Cherry Body Cream Seal it in: Mikas Aromas Drunken Cherry Body Oil Brown Sugar Babe Rich Aunty Body Oil Perfume Oil: Oakcha Sinful Perfume Oil Perfume: Oakcha Rosalina Perfume: Parfums de Marly Delina Exclusif"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT9S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "36",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "fetched_at": "2026-04-09T12:27:14.609426+00:00",
+  "query": "ysl libre perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "7l2_VSZoI8RY31RXHgQQ6OkqT7Y",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "6eV_PT4kVpQ"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T05:51:45Z",
+      "channelId": "UC7kELAeie-lRVIko2GRGmfg",
+      "title": "✨ NEW ARRIVAL ALERT ✨",
+      "description": "Fresh from Sephora USA YSL Libre Eau de Parfum Sample Vials IN STOCK NOW! ✓ 500+ units available ✓ Wholesale & bulk ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Chitra Willy",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T05:51:45Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "U07wC32lwiAdxLSLBfgfhjROGPg",
+    "id": "6eV_PT4kVpQ",
+    "snippet": {
+      "publishedAt": "2026-04-09T05:51:45Z",
+      "channelId": "UC7kELAeie-lRVIko2GRGmfg",
+      "title": "✨ NEW ARRIVAL ALERT ✨",
+      "description": "Fresh from Sephora USA\nYSL Libre Eau de Parfum Sample Vials IN STOCK NOW!\n✅ 500+ units available\n✅ Wholesale & bulk orders get BIG discounts\nPerfect for retailers, beauty shops & resellers 💄\nDM for price list & shipping details 📦\n#ysllibre  #yslperfume   #wholesalebeauty  #wholesale  #sephorausa  #perfumecollection  #beautybusiness  #yslbeauty  #perfumesamples  #newarrivals  #instock",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/6eV_PT4kVpQ/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Chitra Willy",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "✨ NEW ARRIVAL ALERT ✨",
+        "description": "Fresh from Sephora USA\nYSL Libre Eau de Parfum Sample Vials IN STOCK NOW!\n✅ 500+ units available\n✅ Wholesale & bulk orders get BIG discounts\nPerfect for retailers, beauty shops & resellers 💄\nDM for price list & shipping details 📦\n#ysllibre  #yslperfume   #wholesalebeauty  #wholesale  #sephorausa  #perfumecollection  #beautybusiness  #yslbeauty  #perfumesamples  #newarrivals  #instock"
+      }
+    },
+    "contentDetails": {
+      "duration": "PT10S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "0",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

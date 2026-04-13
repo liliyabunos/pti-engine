@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:54.626672+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "gwP4TXpd_iQN-YVOcQ-aSTbSWRo",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "VEnpT5JjGl0"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T13:33:57Z",
+      "channelId": "UCLNMJfWSlz_CuZt5LCz5rWg",
+      "title": "Eleganță care persistă – parfum irezistibil",
+      "description": "Yves Saint Laurent Libre Eau de Parfum este un parfum femei original care exprimă independență, claritate și siguranță de ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Amuleto Parfumuri",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T13:33:57Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "SAOb6nJVr0_D4DrjzL4YMV2aEwY",
+    "id": "VEnpT5JjGl0",
+    "snippet": {
+      "publishedAt": "2026-04-10T13:33:57Z",
+      "channelId": "UCLNMJfWSlz_CuZt5LCz5rWg",
+      "title": "Eleganță care persistă – parfum irezistibil",
+      "description": "Yves Saint Laurent Libre Eau de Parfum este un parfum femei original care exprimă independență, claritate și siguranță de sine. Creat pentru femeia care își asumă deciziile și nu caută validare, Libre combină eleganța florală cu o bază profundă, caldă și stabilă.\n\nDeschiderea este luminoasă și energică, cu accente de petitgrain, ulei de portocală amară, coacăze negre, ulei de lavandă franțuzească și ulei de mandarină. Inima aduce un echilibru între senzualitate și rafinament prin iasomie Sambac, floare de portocal, iasomie de India și lavandă. Baza construiește persistența prin lemn de cedru, ambră, mosc și vanilie Madagascar, oferind un fond cald, sofisticat.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/VEnpT5JjGl0/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Amuleto Parfumuri",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "ro",
+      "localized": {
+        "title": "Eleganță care persistă – parfum irezistibil",
+        "description": "Yves Saint Laurent Libre Eau de Parfum este un parfum femei original care exprimă independență, claritate și siguranță de sine. Creat pentru femeia care își asumă deciziile și nu caută validare, Libre combină eleganța florală cu o bază profundă, caldă și stabilă.\n\nDeschiderea este luminoasă și energică, cu accente de petitgrain, ulei de portocală amară, coacăze negre, ulei de lavandă franțuzească și ulei de mandarină. Inima aduce un echilibru între senzualitate și rafinament prin iasomie Sambac, floare de portocal, iasomie de India și lavandă. Baza construiește persistența prin lemn de cedru, ambră, mosc și vanilie Madagascar, oferind un fond cald, sofisticat."
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT11S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "257",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

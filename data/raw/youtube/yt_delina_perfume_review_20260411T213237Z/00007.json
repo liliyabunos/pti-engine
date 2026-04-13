@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "djt1ik8Hzrks9HVwTIP72CECEnU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "ULAkX2d-Cmc"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-02T23:48:43Z",
+      "channelId": "UCgV_-Q4zU_1d41PEL3j_65Q",
+      "title": "Top, 5 Parfum De marly !",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Saneury Perfumes",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-02T23:48:43Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "djyxhZU1WTzKFJn15HaV6QvAjH8",
+    "id": "ULAkX2d-Cmc",
+    "snippet": {
+      "publishedAt": "2026-04-02T23:48:43Z",
+      "channelId": "UCgV_-Q4zU_1d41PEL3j_65Q",
+      "title": "Top, 5 Parfum De marly !",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/ULAkX2d-Cmc/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Saneury Perfumes",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es-419",
+      "localized": {
+        "title": "Top, 5 Parfum De marly !",
+        "description": ""
+      },
+      "defaultAudioLanguage": "es-419"
+    },
+    "contentDetails": {
+      "duration": "PT1M54S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1042",
+      "likeCount": "5",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

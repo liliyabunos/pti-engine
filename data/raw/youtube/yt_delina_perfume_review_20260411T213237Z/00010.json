@@ -1,0 +1,105 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "9-D9yrpn1KPcMKQ7V5nszUxKA2U",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "8e-5vj_KtqU"
+    },
+    "snippet": {
+      "publishedAt": "2026-03-31T22:00:00Z",
+      "channelId": "UCwEshhEImjhvqqtBTtxvP1g",
+      "title": "Creed’s Wild Vetiver is FIRE",
+      "description": "Wild Vetiver by Creed is the best the house has released in years. And it's not even close #fragrance #fragrancetiktok #wildvetiver ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Mr. Burger",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-03-31T22:00:00Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "q8Zg4W7n25y0L8NXhOZmRnWXOvw",
+    "id": "8e-5vj_KtqU",
+    "snippet": {
+      "publishedAt": "2026-03-31T22:00:00Z",
+      "channelId": "UCwEshhEImjhvqqtBTtxvP1g",
+      "title": "Creed’s Wild Vetiver is FIRE",
+      "description": "Wild Vetiver by Creed is the best the house has released in years. And it's not even close #fragrance #fragrancetiktok #wildvetiver #creed #delina",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/8e-5vj_KtqU/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Mr. Burger",
+      "tags": [
+        "Fragrance",
+        "Creed",
+        "Wild Vetiver"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Creed’s Wild Vetiver is FIRE",
+        "description": "Wild Vetiver by Creed is the best the house has released in years. And it's not even close #fragrance #fragrancetiktok #wildvetiver #creed #delina"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT40S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "683",
+      "likeCount": "17",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

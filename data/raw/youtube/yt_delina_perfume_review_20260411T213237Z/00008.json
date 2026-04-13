@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "k6jmyEoxC2xY4B8wzgFcun9o4Ws",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "_IM7QenYFhw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-01T19:36:04Z",
+      "channelId": "UCYifxw47s8UqDNxibGXxLxQ",
+      "title": "Brand Colletion 151 #perfume #delina #brandcollection",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Brasilio Scent",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-01T19:36:04Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "-on5BUdSLVuLDzD3jGB-ymG7i4E",
+    "id": "_IM7QenYFhw",
+    "snippet": {
+      "publishedAt": "2026-04-01T19:36:04Z",
+      "channelId": "UCYifxw47s8UqDNxibGXxLxQ",
+      "title": "Brand Colletion 151 #perfume #delina #brandcollection",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/_IM7QenYFhw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Brasilio Scent",
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-PT",
+      "localized": {
+        "title": "Brand Colletion 151 #perfume #delina #brandcollection",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT56S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "3",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

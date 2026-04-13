@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:12.381868+00:00",
+  "query": "baccarat rouge 540",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "bIJLugYR23wj9ISs1_YHxAEUUiU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "WWNBSl08A6k"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T02:36:43Z",
+      "channelId": "UCjicQOWLG8kfwZMrt-OdguQ",
+      "title": "Baccarat Rouge 540  Overhyped or Worth It #cologne #bacarrat #fragrancecollection #fragrancereview",
+      "description": "I'm not going to lie, it was a fragrance I had to have, but now I regret my purchase.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "T3 The Fragrance Guy",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T02:36:43Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "JdiZVNM9s7rl-tG_At2AIJAAHCk",
+    "id": "WWNBSl08A6k",
+    "snippet": {
+      "publishedAt": "2026-04-09T02:36:43Z",
+      "channelId": "UCjicQOWLG8kfwZMrt-OdguQ",
+      "title": "Baccarat Rouge 540  Overhyped or Worth It #cologne #bacarrat #fragrancecollection #fragrancereview",
+      "description": "I’m not going to lie, it was a fragrance I had to have, but now I regret my purchase.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/WWNBSl08A6k/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "T3 The Fragrance Guy",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Baccarat Rouge 540  Overhyped or Worth It #cologne #bacarrat #fragrancecollection #fragrancereview",
+        "description": "I’m not going to lie, it was a fragrance I had to have, but now I regret my purchase."
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT55S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "53",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

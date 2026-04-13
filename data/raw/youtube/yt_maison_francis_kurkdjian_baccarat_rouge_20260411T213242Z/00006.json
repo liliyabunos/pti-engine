@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "jahAxBF6-oWT5ap8FwXYK6XUpms",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "AyPZdNIFNsE"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T19:30:07Z",
+      "channelId": "UCA6_pXbgUDt3zOft0jZLHzQ",
+      "title": "Historia del perfume Baccarat Rouge 540 #perfume #historia",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Ray Fragrance",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T19:30:07Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "1nsGAIRcmMomLQ3usSG3h8gMwFk",
+    "id": "AyPZdNIFNsE",
+    "snippet": {
+      "publishedAt": "2026-04-10T19:30:07Z",
+      "channelId": "UCA6_pXbgUDt3zOft0jZLHzQ",
+      "title": "Historia del perfume Baccarat Rouge 540 #perfume #historia",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/AyPZdNIFNsE/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Ray Fragrance",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "Historia del perfume Baccarat Rouge 540 #perfume #historia",
+        "description": ""
+      },
+      "defaultAudioLanguage": "es"
+    },
+    "contentDetails": {
+      "duration": "PT2M1S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "794",
+      "likeCount": "26",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

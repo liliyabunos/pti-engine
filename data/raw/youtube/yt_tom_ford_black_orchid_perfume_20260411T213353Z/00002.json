@@ -1,0 +1,117 @@
+{
+  "fetched_at": "2026-04-11T21:33:53.284242+00:00",
+  "query": "tom ford black orchid perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "ryDa_kWLpiZzEtejqggk7VUSeXg",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "BvhRIrrH8AA"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T21:15:31Z",
+      "channelId": "UC7RSI_-mORXwIpM2ZyfO2Ug",
+      "title": "Tom Ford Black Orchid  Rivals That Actually Last #fragrance #perfume #dupes",
+      "description": "Tom Ford Black Orchid Dupes That Actually Last #fragrance #perfume #dupes Www.BestBrandsPerfume.Com Buy Something ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Best Brands Perfume",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T21:15:31Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Psn8Vxk6wTHZ5V8uq20csnzYssE",
+    "id": "BvhRIrrH8AA",
+    "snippet": {
+      "publishedAt": "2026-04-10T21:15:31Z",
+      "channelId": "UC7RSI_-mORXwIpM2ZyfO2Ug",
+      "title": "Tom Ford Black Orchid  Rivals That Actually Last #fragrance #perfume #dupes",
+      "description": "Tom Ford Black Orchid Dupes That Actually Last #fragrance #perfume #dupes\nWww.BestBrandsPerfume.Com Buy Something and Support More Collaborations and Videos..\nWe are doing a fragrance review today of a scent that lasts 24 hours, smelling just like Tom Ford Orchid after an hour dry down. This perfume is a fantastic option for the ladies and for spring fragrances. I'm also looking at Kenneth Cole Black, another great cologne for the springtime. Let me know your favorite perfumes for spring in the comments below!",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/BvhRIrrH8AA/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Best Brands Perfume",
+      "tags": [
+        "Best Mens Fragrances",
+        "Reviewing the BEST FRAGRANCES FOR MEN",
+        "Best Fragrance Clones of expensive fragrances",
+        "reviewing fragrance hidden gems for enthusiasts",
+        "longest lasting strongest fragrances",
+        "beast mode colognes on a budget",
+        "Top 10 Fragrances",
+        "top 10 fragrances",
+        "Versace Dylan Blue",
+        "Bvlgari Aqva",
+        "fragrance review",
+        "perfume",
+        "tom ford orchid",
+        "cologne",
+        "perfume review"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Tom Ford Black Orchid  Rivals That Actually Last #fragrance #perfume #dupes",
+        "description": "Tom Ford Black Orchid Dupes That Actually Last #fragrance #perfume #dupes\nWww.BestBrandsPerfume.Com Buy Something and Support More Collaborations and Videos..\nWe are doing a fragrance review today of a scent that lasts 24 hours, smelling just like Tom Ford Orchid after an hour dry down. This perfume is a fantastic option for the ladies and for spring fragrances. I'm also looking at Kenneth Cole Black, another great cologne for the springtime. Let me know your favorite perfumes for spring in the comments below!"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT17S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "2243",
+      "likeCount": "38",
+      "favoriteCount": "0",
+      "commentCount": "3"
+    }
+  }
+}

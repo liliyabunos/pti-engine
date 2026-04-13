@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-08T19:00:41.338218+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "W1UJuzA_82_VTYIMOctkp7YeKwA",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "jX1ijFnsT0o"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T16:48:22Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "Welcome to a magical dusk in the Dubai desert! 🌅✨",
+      "description": "Watch as the iconic pink bottle of Parfums de Marly's Delina Royal Essence comes to life, gracefully gliding across the golden ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T16:48:22Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "-DzFeWyxHOPvIPniv7YJ-ZRGB38",
+    "id": "jX1ijFnsT0o",
+    "snippet": {
+      "publishedAt": "2026-04-08T16:48:22Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "Welcome to a magical dusk in the Dubai desert! 🌅✨",
+      "description": "Watch as the iconic pink bottle of Parfums de Marly's Delina Royal Essence comes to life, gracefully gliding across the golden sand dunes under a starry night sky.\n\nCarrying a glowing Arabic lantern and leaving a trail of rose gold dust and soft pink petals, this cinematic journey captures the true essence of luxury, romance, and elegance.\n\nDo you love the scent of Delina? Let me know your favorite notes in the comments below! 👇\n\nDon't forget to LIKE, SUBSCRIBE, and hit the bell for more magical luxury content. 🔔💖\n\n\n#ParfumsDeMarly #Delina #DelinaExclusif #LuxuryPerfume #FragranceLovers #PerfumeCollection #NichePerfume #ScentOfTheDay #PerfumeAddict\n\n\n#DubaiDesert #DubaiLife #Cinematic #DesertVibes #AestheticVideos #LuxuryLifestyle\n#Shorts #Viral #Trending #Animation #3DArt #Satisfying",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/jX1ijFnsT0o/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Welcome to a magical dusk in the Dubai desert! 🌅✨",
+        "description": "Watch as the iconic pink bottle of Parfums de Marly's Delina Royal Essence comes to life, gracefully gliding across the golden sand dunes under a starry night sky.\n\nCarrying a glowing Arabic lantern and leaving a trail of rose gold dust and soft pink petals, this cinematic journey captures the true essence of luxury, romance, and elegance.\n\nDo you love the scent of Delina? Let me know your favorite notes in the comments below! 👇\n\nDon't forget to LIKE, SUBSCRIBE, and hit the bell for more magical luxury content. 🔔💖\n\n\n#ParfumsDeMarly #Delina #DelinaExclusif #LuxuryPerfume #FragranceLovers #PerfumeCollection #NichePerfume #ScentOfTheDay #PerfumeAddict\n\n\n#DubaiDesert #DubaiLife #Cinematic #DesertVibes #AestheticVideos #LuxuryLifestyle\n#Shorts #Viral #Trending #Animation #3DArt #Satisfying"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT9S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "156",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,26 @@
+# Tracked entity queries — aligned with entity_market catalog
+# Edit this file to add or remove search queries for YouTube ingestion.
+# Each query maps to at least one entity in the market engine.
+queries:
+  # Parfums de Marly Delina
+  - "parfums de marly delina perfume"
+  - "delina perfume review"
+  # Maison Francis Kurkdjian Baccarat Rouge 540
+  - "baccarat rouge 540 review"
+  - "maison francis kurkdjian baccarat rouge"
+  # Byredo Gypsy Water
+  - "byredo gypsy water perfume"
+  # Xerjoff Erba Pura
+  - "xerjoff erba pura perfume"
+  - "erba pura review"
+  # Yves Saint Laurent Libre
+  - "ysl libre perfume review"
+  - "yves saint laurent libre"
+  # Montale Velvet Fantasy
+  - "montale velvet fantasy perfume"
+  # Creed Aventus
+  - "creed aventus review"
+  - "creed aventus perfume"
+  # Tom Ford Black Orchid
+  - "tom ford black orchid review"
+  - "tom ford black orchid perfume"

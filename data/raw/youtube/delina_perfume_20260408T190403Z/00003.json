@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-08T19:04:05.031707+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "hmAAM5hiMC3YisK2ooiLSmH1lG0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "qZxSVIIU_Iw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T16:55:00Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "Delina’s London Night Out. 🎀🇬🇧",
+      "description": "Neon lights, rain-slicked streets, and the ultimate luxury accessory. Who knew a perfume bottle could have this much main ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T16:55:00Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "T-4IqlkWesxpUgTKHgFN4Badsw8",
+    "id": "qZxSVIIU_Iw",
+    "snippet": {
+      "publishedAt": "2026-04-08T16:55:00Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "Delina’s London Night Out. 🎀🇬🇧",
+      "description": "Neon lights, rain-slicked streets, and the ultimate luxury accessory. Who knew a perfume bottle could have this much main character energy? 💅✨\n\n#ParfumsDeMarly #Delina #LuxuryFragrance #LondonNight #CinematicVideo\n\n#Cinematic #LondonNight #RainyAesthetic #MainCharacterEnergy #CGIAnimation #SurrealArt #LuxuryLifestyle\n\n#Shorts #ViralShorts #AestheticVideos #MarketingCreative #VisualStorytelling #TrendingAudio",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/qZxSVIIU_Iw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Delina’s London Night Out. 🎀🇬🇧",
+        "description": "Neon lights, rain-slicked streets, and the ultimate luxury accessory. Who knew a perfume bottle could have this much main character energy? 💅✨\n\n#ParfumsDeMarly #Delina #LuxuryFragrance #LondonNight #CinematicVideo\n\n#Cinematic #LondonNight #RainyAesthetic #MainCharacterEnergy #CGIAnimation #SurrealArt #LuxuryLifestyle\n\n#Shorts #ViralShorts #AestheticVideos #MarketingCreative #VisualStorytelling #TrendingAudio"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT9S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "912",
+      "likeCount": "6",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

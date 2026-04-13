@@ -1,0 +1,2 @@
+class PerfumeTrendSDKError(Exception):
+    pass

@@ -1,0 +1,112 @@
+{
+  "fetched_at": "2026-04-11T21:33:35.231749+00:00",
+  "query": "byredo gypsy water perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "BEFQR7-283RONcxPe-kf50Th_w4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "sWGIhYU8PTg"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T21:11:07Z",
+      "channelId": "UC6fJ-uGokHAR_QuJT_FU6sg",
+      "title": "Same House Layering That Just Works #perfumetok #fragrance #perfumecollection #usashorts #asake #fyp",
+      "description": "Layering within the same house just hits different. Same DNA. Better blend. No guesswork. Try these combinations: ✨ Eilish 1 + ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Ayo K | Fragrance Tastemaker",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T21:11:07Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "j3hc9a9e5iienbIFKoP9frdV9qc",
+    "id": "sWGIhYU8PTg",
+    "snippet": {
+      "publishedAt": "2026-04-07T21:11:07Z",
+      "channelId": "UC6fJ-uGokHAR_QuJT_FU6sg",
+      "title": "Same House Layering That Just Works #perfumetok #fragrance #perfumecollection #usashorts #asake #fyp",
+      "description": "Layering within the same house just hits different.\n\nSame DNA. Better blend. No guesswork.\n\nTry these combinations:\n\n✨ Eilish 1 + Eilish 2\n✨ Rose of No Man’s Land Absolu + Gypsy Water\n✨ Hibiscus Mahajad + Lys Sølaberg\n✨ Dark Rose + Midnight Orchard\n✨ Uomo Purple Melancholia + Donna Purple Melancholia\n✨ Si Parfum + Si\n✨ Florae Nebulae + Oud Nebula\n\nIf you’ve been unsure about layering fragrances, this is the easiest way to start.\n\nFragrance layering, perfume combinations, same house layering, niche and designer fragrances.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/sWGIhYU8PTg/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Ayo K | Fragrance Tastemaker",
+      "tags": [
+        "perfume layering",
+        "fragrance layering",
+        "layering fragrances",
+        "perfume combos",
+        "niche fragrance",
+        "designer perfume",
+        "luxury fragrance",
+        "fragrance ideas",
+        "perfume routine",
+        "layering tips"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Same House Layering That Just Works #perfumetok #fragrance #perfumecollection #usashorts #asake #fyp",
+        "description": "Layering within the same house just hits different.\n\nSame DNA. Better blend. No guesswork.\n\nTry these combinations:\n\n✨ Eilish 1 + Eilish 2\n✨ Rose of No Man’s Land Absolu + Gypsy Water\n✨ Hibiscus Mahajad + Lys Sølaberg\n✨ Dark Rose + Midnight Orchard\n✨ Uomo Purple Melancholia + Donna Purple Melancholia\n✨ Si Parfum + Si\n✨ Florae Nebulae + Oud Nebula\n\nIf you’ve been unsure about layering fragrances, this is the easiest way to start.\n\nFragrance layering, perfume combinations, same house layering, niche and designer fragrances."
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT18S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "138",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

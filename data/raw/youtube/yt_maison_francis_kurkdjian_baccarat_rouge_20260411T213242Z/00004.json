@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "XDBerJJfwHLuBeNTRmWr-cJgIUI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "lzixr1qTLuo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T02:50:21Z",
+      "channelId": "UC7y5PYvjo34mec6J1K1CSzw",
+      "title": "Baccarat Rouge 540 Extrait 😍",
+      "description": "Baccarat Rouge 540 Extrait #decant #fragrance #FragranceTok #LuxuryScent #cologne #fragrancetok #perfume ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "ScentHive",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T02:50:21Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "dMTRYfH4M5yaFdY76G0ayGGsfvQ",
+    "id": "lzixr1qTLuo",
+    "snippet": {
+      "publishedAt": "2026-04-11T02:50:21Z",
+      "channelId": "UC7y5PYvjo34mec6J1K1CSzw",
+      "title": "Baccarat Rouge 540 Extrait 😍",
+      "description": "Baccarat Rouge 540 Extrait 😍 #decant #fragrance #FragranceTok #LuxuryScent #cologne #fragrancetok #perfume #argosfragrances #fragrance #lab8fragrances #cologne #skincare #decants #science",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/lzixr1qTLuo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "ScentHive",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Baccarat Rouge 540 Extrait 😍",
+        "description": "Baccarat Rouge 540 Extrait 😍 #decant #fragrance #FragranceTok #LuxuryScent #cologne #fragrancetok #perfume #argosfragrances #fragrance #lab8fragrances #cologne #skincare #decants #science"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT8S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1140",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "immW80p2z49GJcxJ0gZBrAU8wEY",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "z09j0toOVew"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T12:01:54Z",
+      "channelId": "UCKhaVQr6liKCoVQw73VGmQQ",
+      "title": "5 Fragrances That Get You Respect (Not Just Compliments)",
+      "description": "Fragrances That Smell Like Success | 5 Scents That Change How People Perceive You Most people wear fragrance to smell ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "The Fragrant Lawyer",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T12:01:54Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "7Av_5gdVxlqIQBC9w0Tv_Kgbvt0",
+    "id": "z09j0toOVew",
+    "snippet": {
+      "publishedAt": "2026-04-10T12:01:54Z",
+      "channelId": "UCKhaVQr6liKCoVQw73VGmQQ",
+      "title": "5 Fragrances That Get You Respect (Not Just Compliments)",
+      "description": "Fragrances That Smell Like Success | 5 Scents That Change How People Perceive You\n\nMost people wear fragrance to smell good.\nBut the right fragrance can do much more than that — it can shape how you’re perceived.\n\nIn professional environments, presence matters. Whether you’re walking into a boardroom, courtroom, or high-level meeting, small details influence first impressions. Scent is one of the most overlooked.\n\nIn this video, I break down 5 fragrances that go beyond compliments — fragrances that project confidence, refinement, and success.\n\nThese are not loud or overpowering scents.\nThey are intentional, controlled, and aligned with a professional image.\n\nFeatured Fragrances:\n\nCreed Aventus\nTom Ford Oud Wood\nMaison Francis Kurkdjian Baccarat Rouge 540\nRoja Parfums Elysium\nAmouage Reflection Man\n\nIf you’re building a strong personal brand, details matter.\nFragrance is one of them.\n\nLet me know in the comments:\nDo you think scent plays a role in professional perception?\n\nSubscribe for more content on:\n\nLuxury fragrances\nPersonal presence\nProfessional image\n\n#mensfragrance #luxuryfragrance #smellsuccessful #nichefragrance #cologne",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/z09j0toOVew/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "The Fragrant Lawyer",
+      "tags": [
+        "Fragrances",
+        "Cologne",
+        "Scent",
+        "Scent Review",
+        "Parfum",
+        "Perfume"
+      ],
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "5 Fragrances That Get You Respect (Not Just Compliments)",
+        "description": "Fragrances That Smell Like Success | 5 Scents That Change How People Perceive You\n\nMost people wear fragrance to smell good.\nBut the right fragrance can do much more than that — it can shape how you’re perceived.\n\nIn professional environments, presence matters. Whether you’re walking into a boardroom, courtroom, or high-level meeting, small details influence first impressions. Scent is one of the most overlooked.\n\nIn this video, I break down 5 fragrances that go beyond compliments — fragrances that project confidence, refinement, and success.\n\nThese are not loud or overpowering scents.\nThey are intentional, controlled, and aligned with a professional image.\n\nFeatured Fragrances:\n\nCreed Aventus\nTom Ford Oud Wood\nMaison Francis Kurkdjian Baccarat Rouge 540\nRoja Parfums Elysium\nAmouage Reflection Man\n\nIf you’re building a strong personal brand, details matter.\nFragrance is one of them.\n\nLet me know in the comments:\nDo you think scent plays a role in professional perception?\n\nSubscribe for more content on:\n\nLuxury fragrances\nPersonal presence\nProfessional image\n\n#mensfragrance #luxuryfragrance #smellsuccessful #nichefragrance #cologne"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M2S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "926",
+      "likeCount": "47",
+      "favoriteCount": "0",
+      "commentCount": "4"
+    }
+  }
+}

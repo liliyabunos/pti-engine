@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:44.282559+00:00",
+  "query": "byredo gypsy water perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "LWJvdfqgTvYCYlnRO4t-MpNJ9h8",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "XpeYpI90p6E"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-04T17:19:29Z",
+      "channelId": "UCcju-j3cdlI4WnfjPZ6FL6w",
+      "title": "restocking my gypsy water💜 #perfume #perfumecollection #scent #perfumeaddict  #fragrance",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "jennifer andrade",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-04T17:19:29Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "fyfVMKqQN7drVJv4kFh8AZX8fPg",
+    "id": "XpeYpI90p6E",
+    "snippet": {
+      "publishedAt": "2026-04-04T17:19:29Z",
+      "channelId": "UCcju-j3cdlI4WnfjPZ6FL6w",
+      "title": "restocking my gypsy water💜 #perfume #perfumecollection #scent #perfumeaddict  #fragrance",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/XpeYpI90p6E/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "jennifer andrade",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "restocking my gypsy water💜 #perfume #perfumecollection #scent #perfumeaddict  #fragrance",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT26S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "214",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

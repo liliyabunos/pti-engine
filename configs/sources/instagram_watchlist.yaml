@@ -1,0 +1,11 @@
+name: instagram_watchlist
+enabled: false
+connector: instagram_watchlist_connector
+normalizer: social_content_normalizer
+fetch_limit: 50
+watchlist_file: configs/watchlists/creators_us.yaml
+rate_limits:
+  requests_per_minute: 20
+retry:
+  max_attempts: 3
+  backoff_seconds: 5

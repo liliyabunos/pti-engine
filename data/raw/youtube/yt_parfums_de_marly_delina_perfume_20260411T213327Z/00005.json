@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:27.100430+00:00",
+  "query": "parfums de marly delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "9SBBiEaI-Rf365B4Tdneygl5WDw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "gMg9tKEK_QU"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T23:08:05Z",
+      "channelId": "UCJ241ClZCQ8pXa_XHypOjaA",
+      "title": "pdm tier list! #foryou #perfume #cologne #fragrance #edit #pdm #menscologne #jeremyfragrance #cooly",
+      "description": "just ranked parfums de marly from worst to best this house does not miss but some are way better than others… had to be ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "st_fragrances",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T23:08:05Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "sKDMKeEY0mc2gqjmt_-V5J6Ekzg",
+    "id": "gMg9tKEK_QU",
+    "snippet": {
+      "publishedAt": "2026-04-10T23:08:05Z",
+      "channelId": "UCJ241ClZCQ8pXa_XHypOjaA",
+      "title": "pdm tier list! #foryou #perfume #cologne #fragrance #edit #pdm #menscologne #jeremyfragrance #cooly",
+      "description": "just ranked parfums de marly from worst to best 👀 this house does not miss but some are way better than others… had to be honest on this one 😤 which ones did i get right and which ones am i trippin on??\n\n#pdm #parfumsdemarly #cologne #fragrance #fragrancetiktok #fragrancecommunity #mensfragrance #scentoftheday #luxuryfragrance #nichefragrance #fragrancelover #fragranceaddict #perfume #colognereview #fragrancereview #scent #smellgood #smellamazing #mensstyle #style #fyp #foryou #foryoupage #viral #trending #youtube #ytshorts #review #tierlist #fragrancetips #bestfragrances #topfragrances #layton #delina #percival #herod #carlisle #haltane #pegasus #oajan #greenley",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/gMg9tKEK_QU/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "st_fragrances",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "pdm tier list! #foryou #perfume #cologne #fragrance #edit #pdm #menscologne #jeremyfragrance #cooly",
+        "description": "just ranked parfums de marly from worst to best 👀 this house does not miss but some are way better than others… had to be honest on this one 😤 which ones did i get right and which ones am i trippin on??\n\n#pdm #parfumsdemarly #cologne #fragrance #fragrancetiktok #fragrancecommunity #mensfragrance #scentoftheday #luxuryfragrance #nichefragrance #fragrancelover #fragranceaddict #perfume #colognereview #fragrancereview #scent #smellgood #smellamazing #mensstyle #style #fyp #foryou #foryoupage #viral #trending #youtube #ytshorts #review #tierlist #fragrancetips #bestfragrances #topfragrances #layton #delina #percival #herod #carlisle #haltane #pegasus #oajan #greenley"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT11S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1872",
+      "likeCount": "48",
+      "favoriteCount": "0",
+      "commentCount": "8"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T11:30:55.423298+00:00",
+  "query": "ysl libre perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "dcYfLEMcNlB1sHBBuOOoz5es_Sw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "SKcojs4yaPw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T20:13:07Z",
+      "channelId": "UCxNynuSdOc17s00dxTUCNiA",
+      "title": "Get your hands on the iconic YSL Libre during the Sephora Sale 🖤✨",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Miki Yue",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T20:13:07Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Zjk_AwWuMRU8dWNMKBDvpJdzMaA",
+    "id": "SKcojs4yaPw",
+    "snippet": {
+      "publishedAt": "2026-04-08T20:13:07Z",
+      "channelId": "UCxNynuSdOc17s00dxTUCNiA",
+      "title": "Get your hands on the iconic YSL Libre during the Sephora Sale 🖤✨",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/SKcojs4yaPw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Miki Yue",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Get your hands on the iconic YSL Libre during the Sephora Sale 🖤✨",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT29S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1391",
+      "likeCount": "28",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

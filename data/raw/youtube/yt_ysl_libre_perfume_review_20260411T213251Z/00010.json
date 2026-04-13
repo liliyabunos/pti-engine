@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:51.659281+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "bea5sqYz3GuG6-FhQ2zpe72V6aI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Mku0PVXSZVM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-06T06:44:17Z",
+      "channelId": "UC6uGkcU5B5J6eG8iuBni9RQ",
+      "title": "Zara Golden Decade perfume review 😊, similar to YSL Libre 🤔",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Daria W",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-06T06:44:17Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "VAojC8baaaxt5V82xrj8ugk5VT0",
+    "id": "Mku0PVXSZVM",
+    "snippet": {
+      "publishedAt": "2026-04-06T06:44:17Z",
+      "channelId": "UC6uGkcU5B5J6eG8iuBni9RQ",
+      "title": "Zara Golden Decade perfume review 😊, similar to YSL Libre 🤔",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Mku0PVXSZVM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Daria W",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Zara Golden Decade perfume review 😊, similar to YSL Libre 🤔",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M44S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "96",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

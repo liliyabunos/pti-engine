@@ -1,0 +1,35 @@
+[
+  {
+    "brand": "Gucci",
+    "perfume": "Gucci Flora Gorgeous Gardenia",
+    "mention_count": 1,
+    "trend_score": 5.0,
+    "avg_confidence": 1.0,
+    "mentions_last_24h": 1,
+    "mentions_prev_24h": 0,
+    "growth": 1.0,
+    "first_seen": "2026-04-08 14:49:06"
+  },
+  {
+    "brand": "Rasasi",
+    "perfume": "Hawas",
+    "mention_count": 1,
+    "trend_score": 5.0,
+    "avg_confidence": 1.0,
+    "mentions_last_24h": 1,
+    "mentions_prev_24h": 0,
+    "growth": 1.0,
+    "first_seen": "2026-04-08 14:49:06"
+  },
+  {
+    "brand": "Lattafa",
+    "perfume": "Lattafa Love",
+    "mention_count": 1,
+    "trend_score": 3.529,
+    "avg_confidence": 1.0,
+    "mentions_last_24h": 1,
+    "mentions_prev_24h": 0,
+    "growth": 1.0,
+    "first_seen": "2026-04-08 14:49:06"
+  }
+]

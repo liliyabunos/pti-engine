@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:51.272132+00:00",
+  "query": "tom ford black orchid review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "lmhrL6STP5eTf_buFeilC7fydGs",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "0pjauPHC6PM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-05T22:46:16Z",
+      "channelId": "UCKJJPZZVTdNnQZ5jiNKEHOA",
+      "title": "top 10 designer fragrances #perfume #fragrance #top10  #perfumecollection #fragrancecollection",
+      "description": "lifeisbutadream #fragrancereview #sotd #boldscent #fragrancelaunch #freshscent #freshfragrance #summerscents ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Phatboyfragrances ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-05T22:46:16Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "T-usUIpVUQxol06mzNkzXmCwUzo",
+    "id": "0pjauPHC6PM",
+    "snippet": {
+      "publishedAt": "2026-04-05T22:46:16Z",
+      "channelId": "UCKJJPZZVTdNnQZ5jiNKEHOA",
+      "title": "top 10 designer fragrances #perfume #fragrance #top10  #perfumecollection #fragrancecollection",
+      "description": "#lifeisbutadream #fragrancereview #sotd #boldscent #fragrancelaunch #freshscent #freshfragrance #summerscents #summerperfume #richscent #wonderfulscents #scentfromabove #floralscent#designer  #topten  #tomfordbeauty #top10  #tomford #dolcegabbana #sauvage #dior",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/0pjauPHC6PM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Phatboyfragrances ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "top 10 designer fragrances #perfume #fragrance #top10  #perfumecollection #fragrancecollection",
+        "description": "#lifeisbutadream #fragrancereview #sotd #boldscent #fragrancelaunch #freshscent #freshfragrance #summerscents #summerperfume #richscent #wonderfulscents #scentfromabove #floralscent#designer  #topten  #tomfordbeauty #top10  #tomford #dolcegabbana #sauvage #dior"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M57S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "193",
+      "likeCount": "4",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "fetched_at": "2026-04-11T21:33:29.196903+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "4Wv-0zEI7ZWovp9JnD_XxwP8Eto",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "QPIkzzf3U24"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-05T16:17:14Z",
+      "channelId": "UCwZiQm3c1msph20VWZJ8kWg",
+      "title": "DELINA EXCLUSIF The Subtle Notes You Does It For Me A Must See Review #perfume",
+      "description": "Buy it here (affiliate link): https://geni.us/mWvt6 https://geni.us/Rg90S6L PARFUMS DE MARLY Delina Exclusif ABOUT OUR ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Joey And Kris Reviews",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-05T16:17:14Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "WK8REehTjctUykW4Dsl7GwykEZs",
+    "id": "QPIkzzf3U24",
+    "snippet": {
+      "publishedAt": "2026-04-05T16:17:14Z",
+      "channelId": "UCwZiQm3c1msph20VWZJ8kWg",
+      "title": "DELINA EXCLUSIF The Subtle Notes You Does It For Me A Must See Review #perfume",
+      "description": "Buy it here (affiliate link): https://geni.us/mWvt6\nhttps://geni.us/Rg90S6L\n\nPARFUMS DE MARLY Delina Exclusif\n\nABOUT OUR CHANNEL\n\nWe review things. These are typically things that we like. We hope you like them, too.\n\nWe often include links to buy products we use. As an Amazon Associate, I earn commissions from qualifying purchases. Thank you!",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/QPIkzzf3U24/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Joey And Kris Reviews",
+      "tags": [
+        "Beauty & Personal Care"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "DELINA EXCLUSIF The Subtle Notes You Does It For Me A Must See Review #perfume",
+        "description": "Buy it here (affiliate link): https://geni.us/mWvt6\nhttps://geni.us/Rg90S6L\n\nPARFUMS DE MARLY Delina Exclusif\n\nABOUT OUR CHANNEL\n\nWe review things. These are typically things that we like. We hope you like them, too.\n\nWe often include links to buy products we use. As an Amazon Associate, I earn commissions from qualifying purchases. Thank you!"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M4S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "87",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

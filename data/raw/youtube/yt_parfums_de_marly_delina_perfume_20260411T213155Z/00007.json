@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:31:55.041459+00:00",
+  "query": "parfums de marly delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "i1vtjNemg_FycdqVQ4l_FTs3cvI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "yDiffI6LBdk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T19:20:41Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "She doesn’t check the price... she just knows. 💸✨ #shopping#dubaimall",
+      "description": "The most complimented fragrance for a reason. Experience Delina. #Delina #ParfumsDeMarly #LuxuryFragrance #DubaiMall ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T19:20:41Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "8nBErBC92slPYKY5tR5Z0vXrWvs",
+    "id": "yDiffI6LBdk",
+    "snippet": {
+      "publishedAt": "2026-04-10T19:20:41Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "She doesn’t check the price... she just knows. 💸✨ #shopping#dubaimall",
+      "description": "The most complimented fragrance for a reason. Experience Delina. 🎀\n\n#Delina #ParfumsDeMarly #LuxuryFragrance #DubaiMall #PerfumeCollection #LuxuryLifestyle #SOTD #FragranceLover #DubaiLuxury #Shorts #ViralPerfume #PinkAesthetic #BaccaratRouge540 #LuxuryBeauty",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/yDiffI6LBdk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "She doesn’t check the price... she just knows. 💸✨ #shopping#dubaimall",
+        "description": "The most complimented fragrance for a reason. Experience Delina. 🎀\n\n#Delina #ParfumsDeMarly #LuxuryFragrance #DubaiMall #PerfumeCollection #LuxuryLifestyle #SOTD #FragranceLover #DubaiLuxury #Shorts #ViralPerfume #PinkAesthetic #BaccaratRouge540 #LuxuryBeauty"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT9S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "211",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

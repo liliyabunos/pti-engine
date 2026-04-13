@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:03.381477+00:00",
+  "query": "tom ford black orchid review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "jmOpPYVPkk-SBEJunCXiymRQltc",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "FDfHvYQnPmM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-02T01:32:02Z",
+      "channelId": "UCaHe4rMuItzt_T0lyaDekGw",
+      "title": "Tom Ford - the architect of designer to niche",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Fragrance Photos ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-02T01:32:02Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "7AWar9RH5cLDlpCK8mndQuTbULA",
+    "id": "FDfHvYQnPmM",
+    "snippet": {
+      "publishedAt": "2026-04-02T01:32:02Z",
+      "channelId": "UCaHe4rMuItzt_T0lyaDekGw",
+      "title": "Tom Ford - the architect of designer to niche",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/FDfHvYQnPmM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Fragrance Photos ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Tom Ford - the architect of designer to niche",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M55S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "12",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:37.327641+00:00",
+  "query": "xerjoff erba pura perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "-AFkNZwQBnZLgo-0jaoCWjhLUDU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "VzC3q1NFDTc"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T03:19:33Z",
+      "channelId": "UCgcsml8tiaPds7n_gxwCX2Q",
+      "title": "Xerjoff Erba Pura for much less $.Amber Oud Gold Edition #perfume #shorts #fragrance #tiktok #review",
+      "description": "Luxury in a bottle ✨ Al Haramain Amber Oud Gold Edition = sweet, fruity, and straight-up addictive. This one gets compliments ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "CWScents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T03:19:33Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "AwZ3UNNxu8UoQXb66bTE4TJzxY0",
+    "id": "VzC3q1NFDTc",
+    "snippet": {
+      "publishedAt": "2026-04-11T03:19:33Z",
+      "channelId": "UCgcsml8tiaPds7n_gxwCX2Q",
+      "title": "Xerjoff Erba Pura for much less $.Amber Oud Gold Edition #perfume #shorts #fragrance #tiktok #review",
+      "description": "Luxury in a bottle 🔥✨\nAl Haramain Amber Oud Gold Edition = sweet, fruity, and straight-up addictive.\nThis one gets compliments EVERY time 🍍💛\n#shorts #tiktok #perfume #fragrance #sotd #mensfragrance #luxuryfragrance #amberoud #complimentgetter",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/VzC3q1NFDTc/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "CWScents",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Xerjoff Erba Pura for much less $.Amber Oud Gold Edition #perfume #shorts #fragrance #tiktok #review",
+        "description": "Luxury in a bottle 🔥✨\nAl Haramain Amber Oud Gold Edition = sweet, fruity, and straight-up addictive.\nThis one gets compliments EVERY time 🍍💛\n#shorts #tiktok #perfume #fragrance #sotd #mensfragrance #luxuryfragrance #amberoud #complimentgetter"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M27S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "87",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

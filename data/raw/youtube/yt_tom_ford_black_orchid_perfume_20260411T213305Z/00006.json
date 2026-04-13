@@ -1,0 +1,105 @@
+{
+  "fetched_at": "2026-04-11T21:33:05.747621+00:00",
+  "query": "tom ford black orchid perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "PTnYTdLMkx10B6SEBenxgN1pizg",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "CqsYdFNUrhk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T21:40:54Z",
+      "channelId": "UCyiEdTdssW8_z7M19L5qJHw",
+      "title": "Top 3 perfumes de mujer que hacen que los hombres se acerquen demasiado",
+      "description": "Top 3 perfumes de mujer que hacen que los hombres se acerquen demasiado cuando te abrazan: 3️⃣ Burberry Her Dulce, ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Perfumería Musa",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T21:40:54Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "FGeo9GqG4WwtOnoF5h-laXP65qo",
+    "id": "CqsYdFNUrhk",
+    "snippet": {
+      "publishedAt": "2026-04-09T21:40:54Z",
+      "channelId": "UCyiEdTdssW8_z7M19L5qJHw",
+      "title": "Top 3 perfumes de mujer que hacen que los hombres se acerquen demasiado",
+      "description": "🔥🧴 Top 3 perfumes de mujer que hacen que los hombres se acerquen demasiado cuando te abrazan:\n\n3️⃣ Burberry Her\nDulce, frutal y muy adictivo. 👀\n\n2️⃣ Flowerbomb – Viktor & Rolf\nFloral, dulce y con una estela que no pasa desapercibida. 💥\n\n1️⃣ Tom Ford Black Orchid\nOscuro, elegante y extremadamente sensual. 🔥\n\n—\n\nEl problema:\n\nestos perfumes suelen costar una fortuna. 💸\n\nPor eso existe Club Musa.\n\nTodos los meses recibís frasquitos de 5 ml 🧴\npara probar perfumes así\nsin gastar 300 mil pesos.\n\n🔗 Link en bio.\n\n#perfumes #clubmusa #fragancias #perfumelovers #decants",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/CqsYdFNUrhk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Perfumería Musa",
+      "tags": [
+        "decant",
+        "fragancias",
+        "perfumes"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "Top 3 perfumes de mujer que hacen que los hombres se acerquen demasiado",
+        "description": "🔥🧴 Top 3 perfumes de mujer que hacen que los hombres se acerquen demasiado cuando te abrazan:\n\n3️⃣ Burberry Her\nDulce, frutal y muy adictivo. 👀\n\n2️⃣ Flowerbomb – Viktor & Rolf\nFloral, dulce y con una estela que no pasa desapercibida. 💥\n\n1️⃣ Tom Ford Black Orchid\nOscuro, elegante y extremadamente sensual. 🔥\n\n—\n\nEl problema:\n\nestos perfumes suelen costar una fortuna. 💸\n\nPor eso existe Club Musa.\n\nTodos los meses recibís frasquitos de 5 ml 🧴\npara probar perfumes así\nsin gastar 300 mil pesos.\n\n🔗 Link en bio.\n\n#perfumes #clubmusa #fragancias #perfumelovers #decants"
+      },
+      "defaultAudioLanguage": "es"
+    },
+    "contentDetails": {
+      "duration": "PT34S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "743",
+      "likeCount": "30",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

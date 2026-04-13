@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:49.227234+00:00",
+  "query": "erba pura review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "r2hpm40i6gCtvnCagTxXpq_bpTk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "iIXCIOgkn2Q"
+    },
+    "snippet": {
+      "publishedAt": "2026-03-28T20:10:01Z",
+      "channelId": "UClGu0-eKdaF9q7IsfHAtLrQ",
+      "title": "Parfume murah vs mahal #shorts",
+      "description": "Parfume murah vs mahal #shorts #parfume #murah #mahal #parfum #jakartaselatan #jakarta #vlog #dokterkecantikan #food ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Ranung Family",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-03-28T20:10:01Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "L0PmxbSuQwYAfaAk9pNoycEm7cg",
+    "id": "iIXCIOgkn2Q",
+    "snippet": {
+      "publishedAt": "2026-03-28T20:10:01Z",
+      "channelId": "UClGu0-eKdaF9q7IsfHAtLrQ",
+      "title": "Parfume murah vs mahal #shorts",
+      "description": "Parfume murah vs mahal #shorts \n\n#parfume \n#murah \n#mahal \n#parfum \n#jakartaselatan \n#jakarta \n#vlog \n#dokterkecantikan \n#food \n#parfüm \n#parfumcewekpalinglaris \n#parfumwanita \n#parfumrecommended \n#parfumcewekpalinglaris \n#liburan \n#liburankeluarga",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/iIXCIOgkn2Q/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Ranung Family",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "id",
+      "localized": {
+        "title": "Parfume murah vs mahal #shorts",
+        "description": "Parfume murah vs mahal #shorts \n\n#parfume \n#murah \n#mahal \n#parfum \n#jakartaselatan \n#jakarta \n#vlog \n#dokterkecantikan \n#food \n#parfüm \n#parfumcewekpalinglaris \n#parfumwanita \n#parfumrecommended \n#parfumcewekpalinglaris \n#liburan \n#liburankeluarga"
+      },
+      "defaultAudioLanguage": "id"
+    },
+    "contentDetails": {
+      "duration": "PT1M27S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "7883",
+      "likeCount": "771",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

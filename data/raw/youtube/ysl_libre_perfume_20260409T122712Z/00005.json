@@ -1,0 +1,120 @@
+{
+  "fetched_at": "2026-04-09T12:27:14.609426+00:00",
+  "query": "ysl libre perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "hJLT3W0kV9YmaMoa2T044KkcxYE",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "4uPyS3gAJMc"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T19:00:04Z",
+      "channelId": "UCfurda3NUbyd6vg0kTxSdcA",
+      "title": "Finishing touches for a night out #grwm #gdwm",
+      "description": "YSL Libre Le Parfum is my fragrance of choice tonight as we put the finishing touches on my outfit. Adding some statement jewelry ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Sarah Michelle",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T19:00:04Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "pza8k5HR8xvdN1kFsWVefy3bHdE",
+    "id": "4uPyS3gAJMc",
+    "snippet": {
+      "publishedAt": "2026-04-08T19:00:04Z",
+      "channelId": "UCfurda3NUbyd6vg0kTxSdcA",
+      "title": "Finishing touches for a night out #grwm #gdwm",
+      "description": "YSL Libre Le Parfum is my fragrance of choice tonight as we put the finishing touches on my outfit. Adding some statement jewelry and the look is good to go!\n\nYSL Libre Le Parfum: https://go.shopmy.us/p-51025684\nJulie Vos Jewelry: https://www.luxuoire.com/collections/julie-vos-jewelry\n\n💌 Subscribe for more beauty, fashion, and lifestyle content\n\nShop more of my favorite products here: https://shopmy.us/sarahmichellehoffman\n\n🛍️ Shop my boutique: www.luxuoire.com\n\nConnect with me:\nInstagram: https://www.instagram.com/sarahmichellehoffman/\nTikTok: https://www.tiktok.com/@sarahmichellehoffman\n\nEmail: sarah@sarahmhoffman.com\n\nThis video is NOT sponsored. Some product links are affiliate links, meaning if you choose to purchase from the link, I will receive a small commission.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/4uPyS3gAJMc/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Sarah Michelle",
+      "tags": [
+        "get ready with me",
+        "gdwm",
+        "grwm",
+        "outfit ideas",
+        "outfit idea",
+        "get dressed with me",
+        "black outfits",
+        "statement jewellery",
+        "statement jewelry",
+        "ysl libre",
+        "ysl libre le parfum",
+        "julie vos jewelry",
+        "gold jewelry",
+        "night out outfit",
+        "ysl",
+        "perfume",
+        "fragrances",
+        "ysl libre perfume review"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Finishing touches for a night out #grwm #gdwm",
+        "description": "YSL Libre Le Parfum is my fragrance of choice tonight as we put the finishing touches on my outfit. Adding some statement jewelry and the look is good to go!\n\nYSL Libre Le Parfum: https://go.shopmy.us/p-51025684\nJulie Vos Jewelry: https://www.luxuoire.com/collections/julie-vos-jewelry\n\n💌 Subscribe for more beauty, fashion, and lifestyle content\n\nShop more of my favorite products here: https://shopmy.us/sarahmichellehoffman\n\n🛍️ Shop my boutique: www.luxuoire.com\n\nConnect with me:\nInstagram: https://www.instagram.com/sarahmichellehoffman/\nTikTok: https://www.tiktok.com/@sarahmichellehoffman\n\nEmail: sarah@sarahmhoffman.com\n\nThis video is NOT sponsored. Some product links are affiliate links, meaning if you choose to purchase from the link, I will receive a small commission."
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M15S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "7",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

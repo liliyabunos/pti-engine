@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:12.381868+00:00",
+  "query": "baccarat rouge 540",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "gxsjAZWuBIwqF1Vq-Zu1CZhONls",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "_zFq4Fgz62A"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T10:31:16Z",
+      "channelId": "UCKkMrjmALAgA3ppefzTxf0g",
+      "title": "Rouge Fusion by Ahuja",
+      "description": "Ahuja Fragrances, I have never been a fan of Baccarat Rouge 540 or the hype it and all of its dupes receive. That is, until I smelled ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Ahuja Brands",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T10:31:16Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "vC0sT1yVlaOabJPFF24LgwaSz7o",
+    "id": "_zFq4Fgz62A",
+    "snippet": {
+      "publishedAt": "2026-04-09T10:31:16Z",
+      "channelId": "UCKkMrjmALAgA3ppefzTxf0g",
+      "title": "Rouge Fusion by Ahuja",
+      "description": "@Ahuja Fragrances, I have never been a fan of Baccarat Rouge 540 or the hype it and all of its dupes receive. That is, until I smelled Rouge Fusion by Ahuja. This inspiration amps up the citrus and vanilla in a way to pull whatever it was in the 540 DNA that I found off-putting, and has now made it a must-have for me. And just like with all of this brand’s fragrances? It has insane longevity for my skin and pH.\n#rougefusion #br540 #ahujacontest #perfumetiktok #perfumes",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/_zFq4Fgz62A/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Ahuja Brands",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Rouge Fusion by Ahuja",
+        "description": "@Ahuja Fragrances, I have never been a fan of Baccarat Rouge 540 or the hype it and all of its dupes receive. That is, until I smelled Rouge Fusion by Ahuja. This inspiration amps up the citrus and vanilla in a way to pull whatever it was in the 540 DNA that I found off-putting, and has now made it a must-have for me. And just like with all of this brand’s fragrances? It has insane longevity for my skin and pH.\n#rougefusion #br540 #ahujacontest #perfumetiktok #perfumes"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT35S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "3",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:51.659281+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "LZel4bgDeCmt6pd0CKz9tTHC0LI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "v6-2XYzrNJk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-06T07:56:58Z",
+      "channelId": "UCZLMWqnmHee1kqHBEmjJpNg",
+      "title": "Myslf ysl review.",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "savvy guy",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-06T07:56:58Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "0CYkA7J2jdZUY2l-omH4PTSpChc",
+    "id": "v6-2XYzrNJk",
+    "snippet": {
+      "publishedAt": "2026-04-06T07:56:58Z",
+      "channelId": "UCZLMWqnmHee1kqHBEmjJpNg",
+      "title": "Myslf ysl review.",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/v6-2XYzrNJk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "savvy guy",
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Myslf ysl review.",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT10M12S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "762",
+      "likeCount": "42",
+      "favoriteCount": "0",
+      "commentCount": "26"
+    }
+  }
+}

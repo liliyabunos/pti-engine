@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:58.788233+00:00",
+  "query": "creed aventus review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "UdDMcjdVBsfnd4H1MW_7XNrI5ZU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "mTUwFd6wqzY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T16:55:34Z",
+      "channelId": "UCD_PF735xEfbswd6ZjaxUrw",
+      "title": "🎁 Luxury Fragrance Unboxing | Creed Aventus, SMW, Roja Elysium + More",
+      "description": "Luxury Fragrance Unboxing | Creed Aventus, SMW, Roja Elysium + More Description: Unboxing a huge luxury fragrance haul ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Mason DaVinci",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T16:55:34Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "1rKO4Vuz3lxQjGPy2qbSBSuY3jE",
+    "id": "mTUwFd6wqzY",
+    "snippet": {
+      "publishedAt": "2026-04-09T16:55:34Z",
+      "channelId": "UCD_PF735xEfbswd6ZjaxUrw",
+      "title": "🎁 Luxury Fragrance Unboxing | Creed Aventus, SMW, Roja Elysium + More",
+      "description": "🎁 Luxury Fragrance Unboxing | Creed Aventus, SMW, Roja Elysium + More\n\nDescription:\nUnboxing a huge luxury fragrance haul from BeautyHouse! 😎📦\n\nInside the package:\n • Creed Aventus\n • Creed Silver Mountain Water\n • Mancera Cedrat Boise Intense\n • Versace Dylan Blue\n • Roja Elysium\n\nWhy I love BeautyHouse:\n✅ Fast shipping\n✅ Great prices\n✅ Authentic, high-quality fragrances\n\nUse my code DAVINCI at checkout to save 5% 💸\n\nIf you’re into luxury fragrances, Creed, Roja, Mancera, or Versace, this haul is for you! Don’t miss out on this unboxing and fragrance review.\n\n#LuxuryFragrance #FragranceUnboxing #CreedAventus #RojaElysium #SilverMountainWater #MensFragrance #BeautyHouse #FragranceCollection #ScentCollection",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/mTUwFd6wqzY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Mason DaVinci",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "🎁 Luxury Fragrance Unboxing | Creed Aventus, SMW, Roja Elysium + More",
+        "description": "🎁 Luxury Fragrance Unboxing | Creed Aventus, SMW, Roja Elysium + More\n\nDescription:\nUnboxing a huge luxury fragrance haul from BeautyHouse! 😎📦\n\nInside the package:\n • Creed Aventus\n • Creed Silver Mountain Water\n • Mancera Cedrat Boise Intense\n • Versace Dylan Blue\n • Roja Elysium\n\nWhy I love BeautyHouse:\n✅ Fast shipping\n✅ Great prices\n✅ Authentic, high-quality fragrances\n\nUse my code DAVINCI at checkout to save 5% 💸\n\nIf you’re into luxury fragrances, Creed, Roja, Mancera, or Versace, this haul is for you! Don’t miss out on this unboxing and fragrance review.\n\n#LuxuryFragrance #FragranceUnboxing #CreedAventus #RojaElysium #SilverMountainWater #MensFragrance #BeautyHouse #FragranceCollection #ScentCollection"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT59S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "119",
+      "likeCount": "6",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

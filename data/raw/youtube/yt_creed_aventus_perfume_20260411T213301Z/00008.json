@@ -1,0 +1,109 @@
+{
+  "fetched_at": "2026-04-11T21:33:01.063948+00:00",
+  "query": "creed aventus perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "eQDopXxvCqHBQzyKn3xQI9SSrjk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "2KhmsrhuO1E"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T21:27:21Z",
+      "channelId": "UCjR085iYKtCGtb_sFY23AXg",
+      "title": "ABSOLU Inspired By: Absolu Aventus by Creed.",
+      "description": "The scent that turns heads… without the luxury price tag. Introducing Absolu Inspired by Creed Absolu Aventus — a bold, ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Synced Scents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T21:27:21Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "dO2mSUIMvA7NQQaquYJd6e98ee8",
+    "id": "2KhmsrhuO1E",
+    "snippet": {
+      "publishedAt": "2026-04-10T21:27:21Z",
+      "channelId": "UCjR085iYKtCGtb_sFY23AXg",
+      "title": "ABSOLU Inspired By: Absolu Aventus by Creed.",
+      "description": "🔥 The scent that turns heads… without the luxury price tag.\n\nIntroducing Absolu Inspired by Creed Absolu Aventus — a bold, masculine fragrance crafted for confidence, power, and everyday luxury.\n\n💎 Why you’ll love it:\n• Long-lasting premium scent\n• Perfect for daily wear & special occasions\n• Luxury vibe at an affordable price\n\n💥 Smell expensive. Pay smart.\n\n👉 Shop now: https://syncedscents.com/collections/all/products/absolu-inspired-by-creed-absolu-aventus\n\n⚡ Limited stock — don’t miss out!\n\n#mensfragrance #luxuryscent #aventusinspired #fragranceaddict #smellgoodfeelgood #mensstyle #perfumeusa #fragrancelover #affordableluxury #viralproducts",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/2KhmsrhuO1E/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Synced Scents",
+      "tags": [
+        "#mensfragrance",
+        "#luxuryscent",
+        "#aventusinspired",
+        "#fragranceaddict",
+        "#mensstyle",
+        "#fragrancelover",
+        "#affordableluxury"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "ABSOLU Inspired By: Absolu Aventus by Creed.",
+        "description": "🔥 The scent that turns heads… without the luxury price tag.\n\nIntroducing Absolu Inspired by Creed Absolu Aventus — a bold, masculine fragrance crafted for confidence, power, and everyday luxury.\n\n💎 Why you’ll love it:\n• Long-lasting premium scent\n• Perfect for daily wear & special occasions\n• Luxury vibe at an affordable price\n\n💥 Smell expensive. Pay smart.\n\n👉 Shop now: https://syncedscents.com/collections/all/products/absolu-inspired-by-creed-absolu-aventus\n\n⚡ Limited stock — don’t miss out!\n\n#mensfragrance #luxuryscent #aventusinspired #fragranceaddict #smellgoodfeelgood #mensstyle #perfumeusa #fragrancelover #affordableluxury #viralproducts"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT17S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "127",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

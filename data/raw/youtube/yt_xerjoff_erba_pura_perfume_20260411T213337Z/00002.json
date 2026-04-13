@@ -1,0 +1,131 @@
+{
+  "fetched_at": "2026-04-11T21:33:37.327641+00:00",
+  "query": "xerjoff erba pura perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "hYHE2dtecm02S64_fDCgMayvnYk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "T3jRjPX4bhQ"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T18:33:50Z",
+      "channelId": "UCfBGAHJNdjkQIpegAPa0BOg",
+      "title": "Xerjoff Erba Gold #xerjoff #erbapura #fragrance #fragrancereview #parfum #perfume #scent #beauty",
+      "description": "If sunshine had a scent, it would be Xerjoff Erba Gold. It opens with a massive burst of Mediterranean citrus and spicy ginger that ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "DylanFragrance",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T18:33:50Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "tRyFtVeXZ200-_J2CWmUICTS6oY",
+    "id": "T3jRjPX4bhQ",
+    "snippet": {
+      "publishedAt": "2026-04-11T18:33:50Z",
+      "channelId": "UCfBGAHJNdjkQIpegAPa0BOg",
+      "title": "Xerjoff Erba Gold #xerjoff #erbapura #fragrance #fragrancereview #parfum #perfume #scent #beauty",
+      "description": "If sunshine had a scent, it would be Xerjoff Erba Gold. It opens with a massive burst of Mediterranean citrus and spicy ginger that instantly boosts your mood. What I love most is how it settles into a smooth, creamy blend of green apple and warm vanilla. It’s vibrant, luxurious, and honestly smells like a golden summer day in a bottle.\n\nSubscribe for more fragrance content!\n\n#Xerjoff\n#niche \n#nichefragrance",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/T3jRjPX4bhQ/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "DylanFragrance",
+      "tags": [
+        "Xerjoff",
+        "ErbaGold",
+        "FragranceReview",
+        "NichePerfume",
+        "Nice",
+        "Luxury",
+        "SOTD",
+        "LuxuryScent",
+        "PerfumeLover",
+        "XerjoffErbaGold",
+        "SummerFragrance",
+        "Shorts",
+        "ScentOfTheDay",
+        "PerfumeTikTok",
+        "Tiktok",
+        "Viral",
+        "Sound",
+        "Review",
+        "Geur",
+        "Italy",
+        "Uk",
+        "Usa",
+        "Dutch",
+        "France",
+        "Spain",
+        "Summer",
+        "Uae",
+        "Dubai",
+        "Nichehouse"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Xerjoff Erba Gold #xerjoff #erbapura #fragrance #fragrancereview #parfum #perfume #scent #beauty",
+        "description": "If sunshine had a scent, it would be Xerjoff Erba Gold. It opens with a massive burst of Mediterranean citrus and spicy ginger that instantly boosts your mood. What I love most is how it settles into a smooth, creamy blend of green apple and warm vanilla. It’s vibrant, luxurious, and honestly smells like a golden summer day in a bottle.\n\nSubscribe for more fragrance content!\n\n#Xerjoff\n#niche \n#nichefragrance"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT23S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "172",
+      "likeCount": "111",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

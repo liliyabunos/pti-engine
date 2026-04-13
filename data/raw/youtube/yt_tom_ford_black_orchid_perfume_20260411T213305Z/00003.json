@@ -1,0 +1,117 @@
+{
+  "fetched_at": "2026-04-11T21:33:05.747621+00:00",
+  "query": "tom ford black orchid perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "QjEF4xKYTCJtSfbpK8Otn1kXH2M",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "gZO93xOF5Vw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T16:23:42Z",
+      "channelId": "UCVc7bLM-eYDYWiigyRnLznA",
+      "title": "Louis Aura Velvet Orchid Perfume Video",
+      "description": "Louis Aura Velvet Orchid | JNTUH Road Kukatpally | ₹449 Only Bold yet elegant. Floral yet irresistibly seductive. A luxurious ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Louis Aura Perfumes",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T16:23:42Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "umGNuxRhSS1maRv8SqxKceLBY-g",
+    "id": "gZO93xOF5Vw",
+    "snippet": {
+      "publishedAt": "2026-04-10T16:23:42Z",
+      "channelId": "UCVc7bLM-eYDYWiigyRnLznA",
+      "title": "Louis Aura Velvet Orchid Perfume Video",
+      "description": "Louis Aura Velvet Orchid | JNTUH Road Kukatpally | ₹449 Only\n\nBold yet elegant. Floral yet irresistibly seductive.\nA luxurious fragrance that blends rich florals with creamy warmth for a glamorous and unforgettable presence.\n\nTop Notes: Rum, Honey, Jasmine Sambac\nMiddle Notes: Rose Oil from Turkey, Orchid, Amber, Spices \nBase Notes: Sandalwood, Benzoin, Vanilla\n\nLong-lasting | Floral & Creamy | Sensual Luxury | IFRA Compliant\n\nJust ₹449 for 50ml\nAvailable now at Louis Aura Store – KPHB Colony\nDM to order or visit our store today.\n400+ inspired perfumes for men, women & unisex.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/gZO93xOF5Vw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Louis Aura Perfumes",
+      "tags": [
+        "LouisAura",
+        "VelvetOrchid",
+        "WomensPerfume",
+        "FloralFragrance",
+        "LuxuryPerfume",
+        "SensualScent",
+        "LongLastingPerfume",
+        "HyderabadPerfumes",
+        "Kukatpally",
+        "AffordableLuxury",
+        "PerfumeLovers",
+        "FragranceAddict",
+        "SignatureScent",
+        "PerfumeStoreHyderabad",
+        "LouisAuraPerfumes"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Louis Aura Velvet Orchid Perfume Video",
+        "description": "Louis Aura Velvet Orchid | JNTUH Road Kukatpally | ₹449 Only\n\nBold yet elegant. Floral yet irresistibly seductive.\nA luxurious fragrance that blends rich florals with creamy warmth for a glamorous and unforgettable presence.\n\nTop Notes: Rum, Honey, Jasmine Sambac\nMiddle Notes: Rose Oil from Turkey, Orchid, Amber, Spices \nBase Notes: Sandalwood, Benzoin, Vanilla\n\nLong-lasting | Floral & Creamy | Sensual Luxury | IFRA Compliant\n\nJust ₹449 for 50ml\nAvailable now at Louis Aura Store – KPHB Colony\nDM to order or visit our store today.\n400+ inspired perfumes for men, women & unisex."
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT15S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "38",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

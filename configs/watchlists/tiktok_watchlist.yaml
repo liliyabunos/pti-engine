@@ -1,0 +1,13 @@
+accounts:
+  - platform: tiktok
+    account_handle: "example_perfume_creator"
+    account_type: creator
+    priority: high
+    region: US
+    active: true
+  - platform: tiktok
+    account_handle: "fragrancereview_us"
+    account_type: creator
+    priority: medium
+    region: US
+    active: true

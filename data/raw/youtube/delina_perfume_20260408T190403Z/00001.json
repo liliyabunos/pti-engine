@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-08T19:04:05.031707+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "gznG2ub6gCmYsLWR1DbpZD2-Q_0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "PLfRPNG_ij0"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T17:14:48Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "A woman does not wear Delina. She becomes it.🌹🏔️",
+      "description": "Watch as a breathtaking cloud of blush-pink snow transforms a moment of movement into an eternal icon. The tailored rose-petal ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T17:14:48Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "xEtNy3OuVl2U4PgshN-5JmP0Bx0",
+    "id": "PLfRPNG_ij0",
+    "snippet": {
+      "publishedAt": "2026-04-08T17:14:48Z",
+      "channelId": "UCH9y9T_Ho35I8LO1AEHTGeA",
+      "title": "A woman does not wear Delina. She becomes it.🌹🏔️",
+      "description": "Watch as a breathtaking cloud of blush-pink snow transforms a moment of movement into an eternal icon. The tailored rose-petal pink, the silver chrome accents, and the delicate braided tassels of the **Parfums de Marly** signature bottle are brought to life in this 8-second luxury experience.\n\nThe Luxury Tier (High Volume)**\n#ParfumsDeMarly #Delina #LuxuryFragrance #PerfumeLover #NichePerfume #BeautyTransformation #LuxuryLifestyle #SwissAlps #CinematicVideo\n\n#OldMoneyAesthetic #PinkAesthetic #GoldenHour #SoftGirlEra #QuietLuxury #VisualStorytelling #35mmFilm #DreamyVibes\n\n#SOTD (Scent of the Day) #FragranceReview #LuxuryCommercial #WinterElegance #PerfumeCollection #DelinaExclusif #HighEndBeauty",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/PLfRPNG_ij0/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Paradise scent ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "A woman does not wear Delina. She becomes it.🌹🏔️",
+        "description": "Watch as a breathtaking cloud of blush-pink snow transforms a moment of movement into an eternal icon. The tailored rose-petal pink, the silver chrome accents, and the delicate braided tassels of the **Parfums de Marly** signature bottle are brought to life in this 8-second luxury experience.\n\nThe Luxury Tier (High Volume)**\n#ParfumsDeMarly #Delina #LuxuryFragrance #PerfumeLover #NichePerfume #BeautyTransformation #LuxuryLifestyle #SwissAlps #CinematicVideo\n\n#OldMoneyAesthetic #PinkAesthetic #GoldenHour #SoftGirlEra #QuietLuxury #VisualStorytelling #35mmFilm #DreamyVibes\n\n#SOTD (Scent of the Day) #FragranceReview #LuxuryCommercial #WinterElegance #PerfumeCollection #DelinaExclusif #HighEndBeauty"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT9S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "16",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

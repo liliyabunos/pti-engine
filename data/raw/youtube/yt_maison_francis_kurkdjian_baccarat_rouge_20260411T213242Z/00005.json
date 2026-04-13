@@ -1,0 +1,122 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "KW6kvmCFari0-aQUjfvOowFUiVk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "vHMzmco371Q"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T21:42:22Z",
+      "channelId": "UCyzt3j6xkbKa3-R9P6JK-Ew",
+      "title": "BR540 Extrait x Creed Absolu Aventus ASMR",
+      "description": "Baccarat Rouge 540 Extrait. Creed Absolu Aventus. Two of the most iconic fragrances ever made — $1000 and $610 full bottle ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Prime Decants",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T21:42:22Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "uLsb8pdDx4snB1rnN8VXddeSsXs",
+    "id": "vHMzmco371Q",
+    "snippet": {
+      "publishedAt": "2026-04-10T21:42:22Z",
+      "channelId": "UCyzt3j6xkbKa3-R9P6JK-Ew",
+      "title": "BR540 Extrait x Creed Absolu Aventus ASMR",
+      "description": "Baccarat Rouge 540 Extrait. Creed Absolu Aventus. Two of the most iconic fragrances ever made — $1,000 and $610 full bottle respectively. Both decanted fresh.\nBR540 Extrait hits harder than the EDP — deeper, richer, more resinous. Absolu Aventus is the pinnacle of the Aventus line. Pineapple, birch, musk — refined to its absolute best.\nDecants available now at primedecants.com\n\n#fragrance #baccarat rouge540 #creed #aventus #asmr #fragranceasmr #baccaratrouge540extrait #absolvaventus #luxuryfragrance #cologne #decant #fragrancedecant #mensfragrance #fragrancecommunity #niche fragrance",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/vHMzmco371Q/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Prime Decants",
+      "tags": [
+        "Baccarat Rouge 540 Extrait",
+        "Baccarat Rouge 540 decant",
+        "BR540 Extrait decant",
+        "Creed Absolu Aventus",
+        "Creed Absolu Aventus decant",
+        "Creed Aventus decant",
+        "luxury fragrance ASMR",
+        "decant ASMR",
+        "BR540 vs Aventus",
+        "best niche fragrance",
+        "Maison Francis Kurkdjian",
+        "MFK fragrance",
+        "best Creed fragrance",
+        "Aventus review",
+        "Baccarat Rouge review",
+        "fragrance decant",
+        "PrimeDecants",
+        "expensive fragrance decant",
+        "niche fragrance community",
+        "designer fragrance ASMR"
+      ],
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "BR540 Extrait x Creed Absolu Aventus ASMR",
+        "description": "Baccarat Rouge 540 Extrait. Creed Absolu Aventus. Two of the most iconic fragrances ever made — $1,000 and $610 full bottle respectively. Both decanted fresh.\nBR540 Extrait hits harder than the EDP — deeper, richer, more resinous. Absolu Aventus is the pinnacle of the Aventus line. Pineapple, birch, musk — refined to its absolute best.\nDecants available now at primedecants.com\n\n#fragrance #baccarat rouge540 #creed #aventus #asmr #fragranceasmr #baccaratrouge540extrait #absolvaventus #luxuryfragrance #cologne #decant #fragrancedecant #mensfragrance #fragrancecommunity #niche fragrance"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT29S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1461",
+      "likeCount": "20",
+      "favoriteCount": "0",
+      "commentCount": "8"
+    }
+  }
+}

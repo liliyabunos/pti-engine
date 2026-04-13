@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:54.626672+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "8XEIX9YySJUPxY_QniaHgCaEBT0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "gM4Xo80CEhM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T07:12:30Z",
+      "channelId": "UCwmeBw928JSmwqbN_8OWz1Q",
+      "title": "YSL Libre Berry Crush 💘 #yslbeauty #parfum #highendmakeup #ysl #parfum #itgirlenergy",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Beauty Crush",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T07:12:30Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "xUUwCQxx9OeraBcpQwni--kRXy4",
+    "id": "gM4Xo80CEhM",
+    "snippet": {
+      "publishedAt": "2026-04-11T07:12:30Z",
+      "channelId": "UCwmeBw928JSmwqbN_8OWz1Q",
+      "title": "YSL Libre Berry Crush 💘 #yslbeauty #parfum #highendmakeup #ysl #parfum #itgirlenergy",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/gM4Xo80CEhM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Beauty Crush",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "de",
+      "localized": {
+        "title": "YSL Libre Berry Crush 💘 #yslbeauty #parfum #highendmakeup #ysl #parfum #itgirlenergy",
+        "description": ""
+      },
+      "defaultAudioLanguage": "de"
+    },
+    "contentDetails": {
+      "duration": "PT53S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "2003",
+      "likeCount": "33",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+accounts:
+  - platform: instagram
+    account_handle: "example_brand"
+    account_type: brand
+    priority: high
+    region: US
+    active: false

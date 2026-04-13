@@ -1,0 +1,17 @@
+subreddits:
+  - name: fragrance
+    priority: high
+    region: US
+    active: true
+  - name: FemFragLab
+    priority: medium
+    region: US
+    active: true
+  - name: Colognes
+    priority: medium
+    region: US
+    active: true
+  - name: Perfumes
+    priority: low
+    region: US
+    active: false

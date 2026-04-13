@@ -1,0 +1,7 @@
+accounts:
+  - platform: youtube
+    account_handle: "example_retailer"
+    account_type: retailer
+    priority: medium
+    region: US
+    active: false

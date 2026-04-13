@@ -1,0 +1,95 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "K1KFF1_38yBMpeyoOqBQiqOQdgk",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "jCHwg1RHcIE"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T17:52:19Z",
+      "channelId": "UCzgIQqXHN61hlxDW-IM0mlg",
+      "title": "8 DUPES💫DEL PERFUME BACCARAT ROUGE 540",
+      "description": "En este video te muestro 8 Dupes del perfume Baccarat Rouge 540 te digo cuales tengo dentro de mi colección. Sonido creado ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Maritza Nussa",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T17:52:19Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "8uaRbuGLIP07Vl2_saEzhL1HTWQ",
+    "id": "jCHwg1RHcIE",
+    "snippet": {
+      "publishedAt": "2026-04-10T17:52:19Z",
+      "channelId": "UCzgIQqXHN61hlxDW-IM0mlg",
+      "title": "8 DUPES💫DEL PERFUME BACCARAT ROUGE 540",
+      "description": "En este video te muestro 8 Dupes del perfume Baccarat Rouge 540  te digo cuales tengo dentro de mi colección.\n\nSonido creado por mí y para mí: Maritza Nussa de la Aplicación: (Beat Machine by Uminate)\n\n#topperfumes #baccarat #dupes #perfumesfemininos #perfumesmaritza #perfumes #perfumesdemujer #perfume #maisonfranciskurkdjian #perfumelovers #540 #MFK #perfumada #famosos #baccarat",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/jCHwg1RHcIE/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        }
+      },
+      "channelTitle": "Maritza Nussa",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es-US",
+      "localized": {
+        "title": "8 DUPES💫DEL PERFUME BACCARAT ROUGE 540",
+        "description": "En este video te muestro 8 Dupes del perfume Baccarat Rouge 540  te digo cuales tengo dentro de mi colección.\n\nSonido creado por mí y para mí: Maritza Nussa de la Aplicación: (Beat Machine by Uminate)\n\n#topperfumes #baccarat #dupes #perfumesfemininos #perfumesmaritza #perfumes #perfumesdemujer #perfume #maisonfranciskurkdjian #perfumelovers #540 #MFK #perfumada #famosos #baccarat"
+      },
+      "defaultAudioLanguage": "es-US"
+    },
+    "contentDetails": {
+      "duration": "PT20M53S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "15",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

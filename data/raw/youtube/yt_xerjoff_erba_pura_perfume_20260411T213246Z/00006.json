@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:46.727635+00:00",
+  "query": "xerjoff erba pura perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "vQS_dbo1TlYM-onDlxakyo6Cu6I",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "T7m_VEBxkmo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T16:51:59Z",
+      "channelId": "UCqJ00UYc7RxFdczfRpYO2pg",
+      "title": "Xerjoff: Top 35 Primeras impresiones @FragranceLab #xerjoff #naxos #torino21 #perfumes #erbapura",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Fragrance Lab",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T16:51:59Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "1FtsXUVdnQDQ87xMtYr9HjRTG84",
+    "id": "T7m_VEBxkmo",
+    "snippet": {
+      "publishedAt": "2026-04-09T16:51:59Z",
+      "channelId": "UCqJ00UYc7RxFdczfRpYO2pg",
+      "title": "Xerjoff: Top 35 Primeras impresiones @FragranceLab #xerjoff #naxos #torino21 #perfumes #erbapura",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/T7m_VEBxkmo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Fragrance Lab",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es-ES",
+      "localized": {
+        "title": "Xerjoff: Top 35 Primeras impresiones @FragranceLab #xerjoff #naxos #torino21 #perfumes #erbapura",
+        "description": ""
+      },
+      "defaultAudioLanguage": "es-ES"
+    },
+    "contentDetails": {
+      "duration": "PT17S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1815",
+      "likeCount": "9",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+name: fragrantica
+enabled: true
+mode: enrichment
+fetch_limit: 20
+retry:
+  max_attempts: 3
+  backoff_seconds: 3
+http:
+  timeout_seconds: 20
+  user_agent: "PTI-SDK/1.0"

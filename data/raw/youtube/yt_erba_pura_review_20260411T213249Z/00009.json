@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:49.227234+00:00",
+  "query": "erba pura review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "AgF2QvvZBd1x4Jkdtr9wGGOQoT4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "J-4_HS3ZbXc"
+    },
+    "snippet": {
+      "publishedAt": "2026-03-30T12:00:24Z",
+      "channelId": "UCtXq_9iT0nXY0OcZhito9KQ",
+      "title": "3 alternativas a Erba Pura de Xerjoff #perfumesarabes #erbapura #xerjoff #perfume",
+      "description": "Erba Pura es uno de los aromas más masificados dentro del mundo de los dupes árabes, y hoy te traigo 3 que valen la pena por ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Un Koala Perfumado",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-03-30T12:00:24Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "cSDzJaG6uQGHiPwZDmxynlsSeTU",
+    "id": "J-4_HS3ZbXc",
+    "snippet": {
+      "publishedAt": "2026-03-30T12:00:24Z",
+      "channelId": "UCtXq_9iT0nXY0OcZhito9KQ",
+      "title": "3 alternativas a Erba Pura de Xerjoff #perfumesarabes #erbapura #xerjoff #perfume",
+      "description": "Erba Pura es uno de los aromas más masificados dentro del mundo de los dupes árabes, y hoy te traigo 3 que valen la pena por su precio/calidad.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/J-4_HS3ZbXc/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Un Koala Perfumado",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "3 alternativas a Erba Pura de Xerjoff #perfumesarabes #erbapura #xerjoff #perfume",
+        "description": "Erba Pura es uno de los aromas más masificados dentro del mundo de los dupes árabes, y hoy te traigo 3 que valen la pena por su precio/calidad."
+      },
+      "defaultAudioLanguage": "es"
+    },
+    "contentDetails": {
+      "duration": "PT1M42S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "277",
+      "likeCount": "17",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

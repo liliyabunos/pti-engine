@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:33.136329+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "bQ9AuN00Z_flsR37CmU3plTpYog",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "HFWfKlOghWA"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T11:32:34Z",
+      "channelId": "UChzEQykUEHSeUGyo0TMKCXw",
+      "title": "Deep dive into one of the most famous fragrance houses #maisonfranciskurkdjian",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Krish",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T11:32:34Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Mt7naa9MPuNaR4JaDtuFB5gvUO8",
+    "id": "HFWfKlOghWA",
+    "snippet": {
+      "publishedAt": "2026-04-11T11:32:34Z",
+      "channelId": "UChzEQykUEHSeUGyo0TMKCXw",
+      "title": "Deep dive into one of the most famous fragrance houses #maisonfranciskurkdjian",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/HFWfKlOghWA/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Krish",
+      "categoryId": "20",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Deep dive into one of the most famous fragrance houses #maisonfranciskurkdjian",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M37S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "612",
+      "likeCount": "16",
+      "favoriteCount": "0",
+      "commentCount": "3"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:39.656930+00:00",
+  "query": "baccarat rouge 540 review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "R9pZmnIT-npyknSfdU7Jy0P8IWI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "KP0n8Vux1Vg"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T03:01:21Z",
+      "channelId": "UC2-AlS4QCeH4c7JsaYHd0OA",
+      "title": "What’s The ONE Fragrance For This Evening! #fragrance #perfume #fragrancereview #armaf #review",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "DYLuxe Scents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T03:01:21Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "gy5o5u_w-jCI30sxUs4B6FuZGS0",
+    "id": "KP0n8Vux1Vg",
+    "snippet": {
+      "publishedAt": "2026-04-08T03:01:21Z",
+      "channelId": "UC2-AlS4QCeH4c7JsaYHd0OA",
+      "title": "What’s The ONE Fragrance For This Evening! #fragrance #perfume #fragrancereview #armaf #review",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/KP0n8Vux1Vg/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "DYLuxe Scents",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "What’s The ONE Fragrance For This Evening! #fragrance #perfume #fragrancereview #armaf #review",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M16S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "398",
+      "likeCount": "8",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

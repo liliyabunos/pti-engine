@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T12:27:18.674588+00:00",
+  "query": "best niche perfumes 2026",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "E00atztA6tCoFCbFAv1t_NxpfTI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "jaCv1Xt2U3U"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T12:58:39Z",
+      "channelId": "UCnpXiwHJbfmno3k1R2YBXcw",
+      "title": "Beating the heat never smelled so good!",
+      "description": "If you're looking to stay fresh and sophisticated this season, I've rounded up my Top 5 Summer Fresh Perfumes that actually last.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "fragrance view By Saleem",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T12:58:39Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Mu8Yjlig_Eq-9JNLWLpP6i48wgg",
+    "id": "jaCv1Xt2U3U",
+    "snippet": {
+      "publishedAt": "2026-04-08T12:58:39Z",
+      "channelId": "UCnpXiwHJbfmno3k1R2YBXcw",
+      "title": "Beating the heat never smelled so good!",
+      "description": "If you’re looking to stay fresh and sophisticated this season, I’ve rounded up my Top 5 Summer Fresh Perfumes that actually last.\n\n[best summer perfumes for men 2026, fresh long lasting fragrances, Matiere Premiere Neroli Oranger review, niche summer scents, citrus floral perfumes, summer fragrance collection, fresh perfumes for hot weather]\n\n#Fragrance #SummerScents #PerfumeCollection #FreshFragrance",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/jaCv1Xt2U3U/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "fragrance view By Saleem",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Beating the heat never smelled so good!",
+        "description": "If you’re looking to stay fresh and sophisticated this season, I’ve rounded up my Top 5 Summer Fresh Perfumes that actually last.\n\n[best summer perfumes for men 2026, fresh long lasting fragrances, Matiere Premiere Neroli Oranger review, niche summer scents, citrus floral perfumes, summer fragrance collection, fresh perfumes for hot weather]\n\n#Fragrance #SummerScents #PerfumeCollection #FreshFragrance"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M16S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "123",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

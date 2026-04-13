@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-08T19:04:05.031707+00:00",
+  "query": "delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "_Bb_dzN19QGznSGXm9Q8eL-PIGw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "lKrkPJz5vIw"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T12:01:32Z",
+      "channelId": "UCNCza3W7C6CpfGmDoyR48Bg",
+      "title": "How To Get A Birkin • 5 Summer Scents You Need NOW! ",
+      "description": "Hi honeys! Enjoy the vlog! I'll link fragrances below! Xo, Nikki G. Acne Studio x Frédéric Malle: Delina Exclusif: Miu Miu: Red ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Nikki Griffin (HelloNikkiG)",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T12:01:32Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "V4c9r0yTH_UFL7IWLiAqOHN2CEY",
+    "id": "lKrkPJz5vIw",
+    "snippet": {
+      "publishedAt": "2026-04-08T12:01:32Z",
+      "channelId": "UCNCza3W7C6CpfGmDoyR48Bg",
+      "title": "How To Get A Birkin • 5 Summer Scents You Need NOW! ",
+      "description": "Hi honeys! \nEnjoy the vlog! I’ll link fragrances below! \nXo,\nNikki G. \n\nAcne Studio x Frédéric Malle:\nDelina Exclusif:\nMiu Miu:\nRed Roses:\nCuir Beluga:",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/lKrkPJz5vIw/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Nikki Griffin (HelloNikkiG)",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "How To Get A Birkin • 5 Summer Scents You Need NOW! ",
+        "description": "Hi honeys! \nEnjoy the vlog! I’ll link fragrances below! \nXo,\nNikki G. \n\nAcne Studio x Frédéric Malle:\nDelina Exclusif:\nMiu Miu:\nRed Roses:\nCuir Beluga:"
+      },
+      "defaultAudioLanguage": "en-US"
+    },
+    "contentDetails": {
+      "duration": "PT28M44S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "452",
+      "likeCount": "55",
+      "favoriteCount": "0",
+      "commentCount": "8"
+    }
+  }
+}

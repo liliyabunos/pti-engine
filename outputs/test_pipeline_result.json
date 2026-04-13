@@ -1,0 +1,290 @@
+{
+  "run_id": "run_test_001",
+  "source": "youtube",
+  "fetched_count": 30,
+  "normalized_count": 30,
+  "extracted_count": 30,
+  "resolved_count": 30,
+  "resolved_results": [
+    {
+      "item_id": "ibRIg58-oIA",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "0JlIbjyFuKo",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "B6d_ZFXFnZY",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "sX63QPTRW_c",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "rYTs0xE6YAY",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "pOGf9xDXxIg",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "iAfKPCvXeeY",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "IOr_mE1ldJA",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "xGKD7v7Waxg",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "6BpcXm-uHyw",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "qYZtfZucXhw",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "V47ndyp89fU",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "0JlIbjyFuKo",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "rYTs0xE6YAY",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "leHn28rGNUo",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "6M1Wh7hUQ8U",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "9YGSQNUBCKM",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "CaK8ZF6wnjk",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "xKVljiUVgf8",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "0CklIUMmLS8",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "Wwj5bh9Ly_0",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "VccZ8LE22mE",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "I2UCLegztMo",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "O79I-IC2xYs",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "LMWoK4jvFTM",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "hJGDWCvEj8o",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "qKlJaB_p8cc",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "UMg1Qzk5jaQ",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "cS3D3Q0Z4Xg",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    },
+    {
+      "item_id": "_STuMXLOpBM",
+      "resolved_perfumes": [],
+      "unresolved_mentions": []
+    }
+  ],
+  "brand_extracted_count": 30,
+  "unified_count": 30,
+  "brand_results": [
+    {
+      "item_id": "ibRIg58-oIA",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "0JlIbjyFuKo",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "B6d_ZFXFnZY",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "sX63QPTRW_c",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "rYTs0xE6YAY",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "pOGf9xDXxIg",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "iAfKPCvXeeY",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "IOr_mE1ldJA",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "xGKD7v7Waxg",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "6BpcXm-uHyw",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "qYZtfZucXhw",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "V47ndyp89fU",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "0JlIbjyFuKo",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "rYTs0xE6YAY",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "leHn28rGNUo",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "6M1Wh7hUQ8U",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "9YGSQNUBCKM",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "CaK8ZF6wnjk",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "xKVljiUVgf8",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "0CklIUMmLS8",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "Wwj5bh9Ly_0",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "VccZ8LE22mE",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "I2UCLegztMo",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "O79I-IC2xYs",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "LMWoK4jvFTM",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "hJGDWCvEj8o",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "qKlJaB_p8cc",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "UMg1Qzk5jaQ",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "cS3D3Q0Z4Xg",
+      "brand_mentions": []
+    },
+    {
+      "item_id": "_STuMXLOpBM",
+      "brand_mentions": []
+    }
+  ],
+  "trend_summary": {
+    "total_items": 30,
+    "total_mentions": 0,
+    "mention_counts": {}
+  },
+  "status": "ok"
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T11:30:57.352983+00:00",
+  "query": "erba pura xerjoff",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "W1XyyOF_cKbrN2z0bWTasjCYBTc",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "CiJtLNi6zLY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T15:00:18Z",
+      "channelId": "UCp5Dt2Dt3xdARMBdtMHFhWQ",
+      "title": "AGORA podemos TER o PERFUME das RICAS mais FAMOSO !",
+      "description": "Saffira La Rive https://s.shopee.com.br/9paDeByf1u Inspirados Erba Pura: - Royal Amber Orientica - Philos Pura.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Suzy - perfumandose",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T15:00:18Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "8koiLGRycA04AujiQbcjouYrY48",
+    "id": "CiJtLNi6zLY",
+    "snippet": {
+      "publishedAt": "2026-04-08T15:00:18Z",
+      "channelId": "UCp5Dt2Dt3xdARMBdtMHFhWQ",
+      "title": "AGORA podemos TER o PERFUME das RICAS mais FAMOSO !",
+      "description": "Saffira La Rive https://s.shopee.com.br/9paDeByf1u\n\nInspirados\nErba Pura:\n\n- Royal Amber Orientica\n- Philos Pura",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/CiJtLNi6zLY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Suzy - perfumandose",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-BR",
+      "localized": {
+        "title": "AGORA podemos TER o PERFUME das RICAS mais FAMOSO !",
+        "description": "Saffira La Rive https://s.shopee.com.br/9paDeByf1u\n\nInspirados\nErba Pura:\n\n- Royal Amber Orientica\n- Philos Pura"
+      },
+      "defaultAudioLanguage": "pt-BR"
+    },
+    "contentDetails": {
+      "duration": "PT11M50S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1034",
+      "likeCount": "213",
+      "favoriteCount": "0",
+      "commentCount": "25"
+    }
+  }
+}

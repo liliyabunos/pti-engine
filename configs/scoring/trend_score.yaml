@@ -1,0 +1,10 @@
+trend_score:
+  mention_weight: 1.0
+  engagement_weight: 0.5
+  creator_weight: 0.8
+  recency_weight: 0.7
+  novelty_weight: 0.3
+creator_weights:
+  high: 1.5
+  medium: 1.0
+  low: 0.7

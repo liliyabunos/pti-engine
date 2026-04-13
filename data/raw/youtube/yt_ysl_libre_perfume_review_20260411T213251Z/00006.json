@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:51.659281+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "Wu9OmWToNmmDxVG1uiNZVJght88",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "m12YD1vfxqk"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T21:05:33Z",
+      "channelId": "UC8Xa6aENTklwwN304SWaLNA",
+      "title": "This YSL Perfume Smells AMAZING 😍 Honest Review",
+      "description": "Libre Flowers & Flames (Full Size) https://urlve.com/r/1rezhaf39-B0DF2X6JR3 Mini version (Perfect for travel) ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Nicol Amaranto",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T21:05:33Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "kURZArCrc_uI6GHx4i16jXlC_I4",
+    "id": "m12YD1vfxqk",
+    "snippet": {
+      "publishedAt": "2026-04-07T21:05:33Z",
+      "channelId": "UC8Xa6aENTklwwN304SWaLNA",
+      "title": "This YSL Perfume Smells AMAZING 😍 Honest Review",
+      "description": "🌸 Libre Flowers & Flames (Full Size)\n🔗 https://urlve.com/r/1rezhaf39-B0DF2X6JR3\n\n💼 Mini version (Perfect for travel)\n🔗 https://urlve.com/r/mry91f0jdv-B0DCXMG7S6\n\n🔥 Classic Libre Flowers & Flames\n🔗 https://urlve.com/r/dpqymkf35t-B0DDY4RWFK\n\nI tested them so you don’t have to.\nQuick review. Honest opinion.\n\nPerfect for:\n• Date nights\n• Everyday wear\n• Feminine, warm vibe\n\n💬 Which one would you pick?\n\n*This video may contain Amazon affiliate links.*",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/m12YD1vfxqk/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Nicol Amaranto",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "This YSL Perfume Smells AMAZING 😍 Honest Review",
+        "description": "🌸 Libre Flowers & Flames (Full Size)\n🔗 https://urlve.com/r/1rezhaf39-B0DF2X6JR3\n\n💼 Mini version (Perfect for travel)\n🔗 https://urlve.com/r/mry91f0jdv-B0DCXMG7S6\n\n🔥 Classic Libre Flowers & Flames\n🔗 https://urlve.com/r/dpqymkf35t-B0DDY4RWFK\n\nI tested them so you don’t have to.\nQuick review. Honest opinion.\n\nPerfect for:\n• Date nights\n• Everyday wear\n• Feminine, warm vibe\n\n💬 Which one would you pick?\n\n*This video may contain Amazon affiliate links.*"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT33S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "9",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

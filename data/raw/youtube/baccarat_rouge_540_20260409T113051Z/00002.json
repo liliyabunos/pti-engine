@@ -1,0 +1,107 @@
+{
+  "fetched_at": "2026-04-09T11:30:53.340690+00:00",
+  "query": "baccarat rouge 540",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "S2ook5-tlWV-e_UPdMO3VygfnvY",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "JNMQvJzXhGY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T07:04:58Z",
+      "channelId": "UC1IBTwdKgjRCJN9F8iB0bPw",
+      "title": "Le Male → Baccarat Rouge 540. Same nose, Francis Kurkdjian! 🤯👑 Which would you choose? 🔥👇#perfume",
+      "description": "2/30 days 30 perfume challange 2/30 days 30 perfume challange Did you know that the same nose behind the 90s ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Âme_offical.1",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T07:04:58Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "-I7YTgJKG0REP0HbcEnjrdLXjqk",
+    "id": "JNMQvJzXhGY",
+    "snippet": {
+      "publishedAt": "2026-04-09T07:04:58Z",
+      "channelId": "UC1IBTwdKgjRCJN9F8iB0bPw",
+      "title": "Le Male → Baccarat Rouge 540. Same nose, Francis Kurkdjian! 🤯👑 Which would you choose? 🔥👇#perfume",
+      "description": "2/30 days 🙂 30 perfume challange 🍋 2/30 days 🙂 30 perfume challange 🍋 Did you know that the same nose behind the 90s legend Le Male is the creator of the iconic Baccarat Rouge 540? 🤯✨\nFrancis Kurkdjian really went from defining an era to creating the scent of the decade. A true master at work! 👑👃\nDrop a \"🔥\" in the comments if you knew this, or let me know which one you’d choose! 👇\n.\n.\n.\n#ScentOfTheDay #NichePerfume #PerfumeCollection#PerfumeCommunity #franciskurkdjian\n.\n.\n[Fragrance Trivia | Perfume Community | Francis Kurkdjian | Scent Check | Luxury Fragrance | Perfume Tok | Fragrance Lover | Scent Of The Day | Niche Perfume | Perfume Collection | Fragrance Addict | Baccarat Rouge 540 | Le Male | Scent Story | Fragrance Army ]",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/JNMQvJzXhGY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Âme_offical.1",
+      "tags": [
+        "#ScentOfTheDay",
+        "#NichePerfume",
+        "#PerfumeCollection",
+        "#PerfumeCommunity",
+        "#franciskurkdjian"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Le Male → Baccarat Rouge 540. Same nose, Francis Kurkdjian! 🤯👑 Which would you choose? 🔥👇#perfume",
+        "description": "2/30 days 🙂 30 perfume challange 🍋 2/30 days 🙂 30 perfume challange 🍋 Did you know that the same nose behind the 90s legend Le Male is the creator of the iconic Baccarat Rouge 540? 🤯✨\nFrancis Kurkdjian really went from defining an era to creating the scent of the decade. A true master at work! 👑👃\nDrop a \"🔥\" in the comments if you knew this, or let me know which one you’d choose! 👇\n.\n.\n.\n#ScentOfTheDay #NichePerfume #PerfumeCollection#PerfumeCommunity #franciskurkdjian\n.\n.\n[Fragrance Trivia | Perfume Community | Francis Kurkdjian | Scent Check | Luxury Fragrance | Perfume Tok | Fragrance Lover | Scent Of The Day | Niche Perfume | Perfume Collection | Fragrance Addict | Baccarat Rouge 540 | Le Male | Scent Story | Fragrance Army ]"
+      },
+      "defaultAudioLanguage": "hi"
+    },
+    "contentDetails": {
+      "duration": "PT48S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "148",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

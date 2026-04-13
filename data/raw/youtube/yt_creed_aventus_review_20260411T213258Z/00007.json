@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:58.788233+00:00",
+  "query": "creed aventus review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "1x8Wjre4_UBcTShLu0MnKrj55EY",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "KEmms19liKE"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T21:48:36Z",
+      "channelId": "UCrHAvonU9OVxfPYzdmaswFw",
+      "title": "Rating My Creed Collection 🙌 #perfumes #fragrance #perfume #fragrancereview #creed #cologne",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Fragrance Felon",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T21:48:36Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "8QwB5jIMccDY-soRn7LkHxZMiBI",
+    "id": "KEmms19liKE",
+    "snippet": {
+      "publishedAt": "2026-04-09T21:48:36Z",
+      "channelId": "UCrHAvonU9OVxfPYzdmaswFw",
+      "title": "Rating My Creed Collection 🙌 #perfumes #fragrance #perfume #fragrancereview #creed #cologne",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/KEmms19liKE/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Fragrance Felon",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Rating My Creed Collection 🙌 #perfumes #fragrance #perfume #fragrancereview #creed #cologne",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M42S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1113",
+      "likeCount": "49",
+      "favoriteCount": "0",
+      "commentCount": "14"
+    }
+  }
+}

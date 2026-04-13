@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:49.227234+00:00",
+  "query": "erba pura review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "xronFYh22-4LRp1ZrneHahZepmQ",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "LeSIRbv3Als"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-04T00:28:57Z",
+      "channelId": "UCYATpTRLlUccbraJ2xUKZnw",
+      "title": "Minha coleção Brand Collection #brandcollection #perfumereview #perfume #perfumes",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Dicas do Rick",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-04T00:28:57Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "OGSI93emdrTpGijQFED-SrtNVpE",
+    "id": "LeSIRbv3Als",
+    "snippet": {
+      "publishedAt": "2026-04-04T00:28:57Z",
+      "channelId": "UCYATpTRLlUccbraJ2xUKZnw",
+      "title": "Minha coleção Brand Collection #brandcollection #perfumereview #perfume #perfumes",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/LeSIRbv3Als/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Dicas do Rick",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-PT",
+      "localized": {
+        "title": "Minha coleção Brand Collection #brandcollection #perfumereview #perfume #perfumes",
+        "description": ""
+      },
+      "defaultAudioLanguage": "pt-PT"
+    },
+    "contentDetails": {
+      "duration": "PT1M27S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1136",
+      "likeCount": "20",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

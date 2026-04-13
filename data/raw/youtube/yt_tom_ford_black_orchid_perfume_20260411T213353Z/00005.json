@@ -1,0 +1,125 @@
+{
+  "fetched_at": "2026-04-11T21:33:53.284242+00:00",
+  "query": "tom ford black orchid perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "WWWoN2m1K2gb4LUZ43yhwhlYSA8",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "sZOWeN3S2ic"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T02:04:37Z",
+      "channelId": "UC2SVGwxHC0KUybV8xoFO7Lg",
+      "title": "My First Impressions of &#39;Noir de Noir&#39; by Tom Ford | The Gothic Vampire Valentines Day Scent Review.",
+      "description": "This is one of the more interesting and complex fragrances i've tried. What do you think of this smell? . . . . #fragrance #cologne ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Feramones",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T02:04:37Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "6OXTOoOZJufkiEiYCNnSBFqZp1w",
+    "id": "sZOWeN3S2ic",
+    "snippet": {
+      "publishedAt": "2026-04-10T02:04:37Z",
+      "channelId": "UC2SVGwxHC0KUybV8xoFO7Lg",
+      "title": "My First Impressions of 'Noir de Noir' by Tom Ford | The Gothic Vampire Valentines Day Scent Review.",
+      "description": "This is one of the more interesting and complex fragrances i've tried. \nWhat do you think of this smell?\n\n.\n.\n.\n.\n\n#fragrance #cologne #fragrancecollection #fragranceworld #fragranceaddict #fragranceoftheday #fragrancearmy #fragrancelovers #fragrancecollector #fragrancereviews #fragrancereview #fragrancecommunity #fragranceworld #fragranceobsessed #fragrancehaul #fragranceforwomen #fragranceformen #fragrancecontent #nichefragrance #jeremyfragrance #designerfragrance #dior #chanel",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/sZOWeN3S2ic/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Feramones",
+      "tags": [
+        "fragrance",
+        "fragrancecollection",
+        "fragrancereviews",
+        "nichefragrance",
+        "jeremyfragrance",
+        "scentoftheday",
+        "cologne",
+        "perfume",
+        "perfume collection",
+        "tiktok",
+        "jpg",
+        "#bestfragrances",
+        "cologne collection",
+        "fragrance haul",
+        "mens fragrances",
+        "womens fragrances",
+        "halloween fragrances",
+        "gym scents",
+        "perfume haul",
+        "unique fragrance",
+        "new fragrance",
+        "cologne ideas",
+        "2025 cologne for men"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "My First Impressions of 'Noir de Noir' by Tom Ford | The Gothic Vampire Valentines Day Scent Review.",
+        "description": "This is one of the more interesting and complex fragrances i've tried. \nWhat do you think of this smell?\n\n.\n.\n.\n.\n\n#fragrance #cologne #fragrancecollection #fragranceworld #fragranceaddict #fragranceoftheday #fragrancearmy #fragrancelovers #fragrancecollector #fragrancereviews #fragrancereview #fragrancecommunity #fragranceworld #fragranceobsessed #fragrancehaul #fragranceforwomen #fragranceformen #fragrancecontent #nichefragrance #jeremyfragrance #designerfragrance #dior #chanel"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT12M42S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "163",
+      "likeCount": "21",
+      "favoriteCount": "0",
+      "commentCount": "18"
+    }
+  }
+}

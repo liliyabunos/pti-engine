@@ -1,0 +1,117 @@
+{
+  "fetched_at": "2026-04-11T21:33:03.381477+00:00",
+  "query": "tom ford black orchid review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "ixIL9_5I0jlnWl2I4Tg06Pl1PEo",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "QQg0fbITiPY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-01T13:00:15Z",
+      "channelId": "UCTChXBXI9vrLESQ-Wob41xQ",
+      "title": "Review Tom Ford Black Orchid #nuochoa #perfume #fragrance #reviewnuochoa #tomford #shorts",
+      "description": "Review Tom Ford Black Orchid Đăng ký kênh để tiếp thêm động lực cho mình nhé: ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Ryan Perfume ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-01T13:00:15Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "6p7cCsemtKDEWah4VY5Cf5_K_68",
+    "id": "QQg0fbITiPY",
+    "snippet": {
+      "publishedAt": "2026-04-01T13:00:15Z",
+      "channelId": "UCTChXBXI9vrLESQ-Wob41xQ",
+      "title": "Review Tom Ford Black Orchid #nuochoa #perfume #fragrance #reviewnuochoa #tomford #shorts",
+      "description": "Review Tom Ford Black Orchid\n\nĐăng ký kênh để tiếp thêm động lực cho mình nhé: https://www.youtube.com/channel/UCTChXBXI9vrLESQ-Wob41xQ/?sub_confirmation=1\n\nFollow để nhận thêm giá trị:\n▶️ Tiktok: https://www.tiktok.com/@ryanperfume\n▶️ Email for Work: ryanthoi.work@gmail.com\n\n#nuochoa #perfume #fragrance",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/QQg0fbITiPY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Ryan Perfume ",
+      "tags": [
+        "nước hoa",
+        "perfume",
+        "scent",
+        "fragrance",
+        "review nước hoa",
+        "đánh giá nước hoa",
+        "gợi ý nước hoa",
+        "nước hoa tom ford",
+        "tom ford black orchid",
+        "review tom ford perfume",
+        "review nước hoa tom ford",
+        "đánh giá nước hoa tom ford",
+        "review tom ford black orchid",
+        "nước hoa nữ",
+        "woman perfume"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en-US",
+      "localized": {
+        "title": "Review Tom Ford Black Orchid #nuochoa #perfume #fragrance #reviewnuochoa #tomford #shorts",
+        "description": "Review Tom Ford Black Orchid\n\nĐăng ký kênh để tiếp thêm động lực cho mình nhé: https://www.youtube.com/channel/UCTChXBXI9vrLESQ-Wob41xQ/?sub_confirmation=1\n\nFollow để nhận thêm giá trị:\n▶️ Tiktok: https://www.tiktok.com/@ryanperfume\n▶️ Email for Work: ryanthoi.work@gmail.com\n\n#nuochoa #perfume #fragrance"
+      },
+      "defaultAudioLanguage": "vi"
+    },
+    "contentDetails": {
+      "duration": "PT1M16S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "873",
+      "likeCount": "8",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "fetched_at": "2026-04-11T21:32:39.656930+00:00",
+  "query": "baccarat rouge 540 review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "4tRR-BfZ2clUD7yt0LkDtBvUtNU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "hucIzrEROj8"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T19:04:27Z",
+      "channelId": "UCOMan5IqwYB-qevxtZYRK-Q",
+      "title": "8-10 ঘণ্টা লাস্টিং পারফিউম যা সবাইকে মুগ্ধ করবে #baccaratrouge #attarreview #fragrance",
+      "description": "Baccarat Rouge 540 ekta premium perfume — sweet & woody, long-lasting 8–10 ghonta, projection strong. Compliment ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Al-Mashhur BD",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T19:04:27Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "WFyt5AO49iquM1bq3xdqpMCVgUc",
+    "id": "hucIzrEROj8",
+    "snippet": {
+      "publishedAt": "2026-04-07T19:04:27Z",
+      "channelId": "UCOMan5IqwYB-qevxtZYRK-Q",
+      "title": "8-10 ঘণ্টা লাস্টিং পারফিউম যা সবাইকে মুগ্ধ করবে #baccaratrouge #attarreview #fragrance",
+      "description": "Baccarat Rouge 540 ekta premium perfume — sweet & woody, long-lasting 8–10 ghonta, projection strong. Compliment guaranteed! Inbox korun for original perfume oil: 01878224820”",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/hucIzrEROj8/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Al-Mashhur BD",
+      "tags": [
+        "* BaccaratRouge540",
+        "* LuxuryPerfume",
+        "* AttarBD",
+        "* PerfumeReview",
+        "* LongLasting",
+        "* FragranceReview",
+        "baccarat rouge 540",
+        "best perfumes for women",
+        "baccarat rouge 540 review",
+        "long lasting perfumes",
+        "perfume collection",
+        "baccarat rouge"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en-US",
+      "localized": {
+        "title": "8-10 ঘণ্টা লাস্টিং পারফিউম যা সবাইকে মুগ্ধ করবে #baccaratrouge #attarreview #fragrance",
+        "description": "Baccarat Rouge 540 ekta premium perfume — sweet & woody, long-lasting 8–10 ghonta, projection strong. Compliment guaranteed! Inbox korun for original perfume oil: 01878224820”"
+      },
+      "defaultAudioLanguage": "bn"
+    },
+    "contentDetails": {
+      "duration": "PT1M14S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "699",
+      "likeCount": "3",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:01.063948+00:00",
+  "query": "creed aventus perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "UyBakj1AvmrQhoVMINMW4w_dxgs",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "JOIjhBEQhws"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T16:39:01Z",
+      "channelId": "UCUyr-EByO0L2qToKEXSEeNw",
+      "title": "Creed aventus luzi",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Масла Духи оптом и в розницу ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T16:39:01Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "mvjnt332yeE-ONXLqVAtcdqZmvY",
+    "id": "JOIjhBEQhws",
+    "snippet": {
+      "publishedAt": "2026-04-10T16:39:01Z",
+      "channelId": "UCUyr-EByO0L2qToKEXSEeNw",
+      "title": "Creed aventus luzi",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/JOIjhBEQhws/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Масла Духи оптом и в розницу ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "tr",
+      "localized": {
+        "title": "Creed aventus luzi",
+        "description": ""
+      },
+      "defaultAudioLanguage": "ru"
+    },
+    "contentDetails": {
+      "duration": "PT44S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1400",
+      "likeCount": "9",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

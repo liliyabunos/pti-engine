@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "y7IYp2nKk8KrVRGlN48WRgzLgVo",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "BfD14Ho9QQo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-04T18:51:14Z",
+      "channelId": "UCNrJ8eqhHZAlTEENgGEUx7g",
+      "title": "Top 5 Women’s Fragrances Men Can’t Resist #fragrance",
+      "description": "The list: 5️⃣ Dior Hypnotic Poison 4️⃣ YSL Libre Intense 3️⃣ YSL Libre Le Parfum 2️⃣ Amouage Guidance 46 1️⃣ ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "AROMAGIC by AA",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-04T18:51:14Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "HBV4CSO4PjDWQ5etX1dVv82ZmwI",
+    "id": "BfD14Ho9QQo",
+    "snippet": {
+      "publishedAt": "2026-04-04T18:51:14Z",
+      "channelId": "UCNrJ8eqhHZAlTEENgGEUx7g",
+      "title": "Top 5 Women’s Fragrances Men Can’t Resist #fragrance",
+      "description": "The list:\n5️⃣ Dior Hypnotic Poison\n4️⃣ YSL Libre Intense\n3️⃣ YSL Libre Le Parfum\n2️⃣ Amouage Guidance 46\n1️⃣ Parfums de Marly Delina\n#fragrance #perfume",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/BfD14Ho9QQo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "AROMAGIC by AA",
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "fr",
+      "localized": {
+        "title": "Top 5 Women’s Fragrances Men Can’t Resist #fragrance",
+        "description": "The list:\n5️⃣ Dior Hypnotic Poison\n4️⃣ YSL Libre Intense\n3️⃣ YSL Libre Le Parfum\n2️⃣ Amouage Guidance 46\n1️⃣ Parfums de Marly Delina\n#fragrance #perfume"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M30S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "2259",
+      "likeCount": "64",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

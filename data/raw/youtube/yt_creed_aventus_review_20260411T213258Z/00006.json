@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:58.788233+00:00",
+  "query": "creed aventus review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "C0vnTZLFvssMhkD1QwAOwHEYiRo",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "ZN5ap3krqa4"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T01:55:07Z",
+      "channelId": "UCcWyUtGoed9yyIDyKb33_Gg",
+      "title": "Which Aventus Absolu Clone Should you Get? 🤔 #fragrance #fypシ #fragrancetiktok #fragrancetok",
+      "description": "Which Aventus Absolu Clone Should you Get? #fragrance #fypシ #fragrancetiktok #fragrancetok #colognetiktok.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Seductive Excellence",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T01:55:07Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "NZH2oBbT4RCGlDn1GtrlTSn4qmA",
+    "id": "ZN5ap3krqa4",
+    "snippet": {
+      "publishedAt": "2026-04-10T01:55:07Z",
+      "channelId": "UCcWyUtGoed9yyIDyKb33_Gg",
+      "title": "Which Aventus Absolu Clone Should you Get? 🤔 #fragrance #fypシ #fragrancetiktok #fragrancetok",
+      "description": "Which Aventus Absolu Clone Should you Get? 🤔 #fragrance #fypシ #fragrancetiktok #fragrancetok #colognetiktok",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/ZN5ap3krqa4/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Seductive Excellence",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Which Aventus Absolu Clone Should you Get? 🤔 #fragrance #fypシ #fragrancetiktok #fragrancetok",
+        "description": "Which Aventus Absolu Clone Should you Get? 🤔 #fragrance #fypシ #fragrancetiktok #fragrancetok #colognetiktok"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M57S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "2945",
+      "likeCount": "195",
+      "favoriteCount": "0",
+      "commentCount": "15"
+    }
+  }
+}

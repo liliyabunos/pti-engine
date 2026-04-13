@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:05.747621+00:00",
+  "query": "tom ford black orchid perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "EM8INLvxWIEnDSrY-Wb4eSmEruI",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "NFVIchrVsEs"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T09:08:49Z",
+      "channelId": "UCUjdhbKM8OuXNwbtpnLkt0A",
+      "title": "Indulge in the allure of Black Orchid long-lasting fragrance that stays with you all day. ✨",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "LUX Pakistan",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T09:08:49Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "rqN_sBMTRF7vOgsll1SdXYcdlpY",
+    "id": "NFVIchrVsEs",
+    "snippet": {
+      "publishedAt": "2026-04-08T09:08:49Z",
+      "channelId": "UCUjdhbKM8OuXNwbtpnLkt0A",
+      "title": "Indulge in the allure of Black Orchid long-lasting fragrance that stays with you all day. ✨",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/NFVIchrVsEs/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "LUX Pakistan",
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Indulge in the allure of Black Orchid long-lasting fragrance that stays with you all day. ✨",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT8S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "122",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

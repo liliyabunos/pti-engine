@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T11:30:55.423298+00:00",
+  "query": "ysl libre perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "MlGZgKyJ43O8HkvnvzdlhJYKl-c",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "J_YYPQOSufA"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T08:04:06Z",
+      "channelId": "UC1WnHB4FnOK6LocYxjAfFag",
+      "title": "Yves Saint Laurent Libre Intense Eau de Parfum | Amber Floral Women’s Fragrance",
+      "description": "Yves Saint Laurent Libre Intense Eau de Parfum | Amber Floral Women's Fragrance Notes: Lavender, Orange Blossom, Vanilla, ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "scentbyte",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T08:04:06Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "zcoyqXH1ahT-9vSZzUK9fyJY-H0",
+    "id": "J_YYPQOSufA",
+    "snippet": {
+      "publishedAt": "2026-04-09T08:04:06Z",
+      "channelId": "UC1WnHB4FnOK6LocYxjAfFag",
+      "title": "Yves Saint Laurent Libre Intense Eau de Parfum | Amber Floral Women’s Fragrance",
+      "description": "Yves Saint Laurent Libre Intense Eau de Parfum | Amber Floral Women’s Fragrance  \n\nNotes: Lavender, Orange Blossom, Vanilla, Amber.  \nA bold amber floral with rich warmth, sensual depth, and powerful presence.  \n\nWould you wear this daily or for special occasions?  \nSubscribe for more perfume ASMR & reviews.\n\n#ysl #libreintense #fragranceasmr #womensfragrance",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/J_YYPQOSufA/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "scentbyte",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Yves Saint Laurent Libre Intense Eau de Parfum | Amber Floral Women’s Fragrance",
+        "description": "Yves Saint Laurent Libre Intense Eau de Parfum | Amber Floral Women’s Fragrance  \n\nNotes: Lavender, Orange Blossom, Vanilla, Amber.  \nA bold amber floral with rich warmth, sensual depth, and powerful presence.  \n\nWould you wear this daily or for special occasions?  \nSubscribe for more perfume ASMR & reviews.\n\n#ysl #libreintense #fragranceasmr #womensfragrance"
+      },
+      "defaultAudioLanguage": "ar"
+    },
+    "contentDetails": {
+      "duration": "PT17S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "68",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

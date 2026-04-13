@@ -1,0 +1,30 @@
+{
+  "id": "7234567890123456789",
+  "desc": "Obsessed with Delina by Parfums de Marly \ud83c\udf38 This is my new signature scent! #perfume #fragrance #niche #delina #pdm",
+  "createTime": 1712345678,
+  "author": {
+    "id": "user_123456",
+    "uniqueId": "perfume_lover_usa",
+    "nickname": "Perfume Lover USA",
+    "followerCount": 48200,
+    "verified": false
+  },
+  "stats": {
+    "playCount": 124300,
+    "diggCount": 8900,
+    "commentCount": 342,
+    "shareCount": 1200
+  },
+  "video": {
+    "duration": 47,
+    "width": 1080,
+    "height": 1920
+  },
+  "challenges": [
+    {"title": "perfume"},
+    {"title": "fragrance"},
+    {"title": "niche"},
+    {"title": "delina"},
+    {"title": "pdm"}
+  ]
+}

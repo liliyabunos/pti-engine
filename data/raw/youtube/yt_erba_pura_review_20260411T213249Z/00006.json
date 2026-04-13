@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:49.227234+00:00",
+  "query": "erba pura review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "Al-gPrWMgq8BoHAat7tCTS4SNKE",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "2x9OxLOl7ds"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T00:46:57Z",
+      "channelId": "UCfEX3BtzkBN6LQDDmupiuTw",
+      "title": "2 Perfumes sem GÊNEROS| para receber muitos elogios.",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Dr. Cheirozin ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T00:46:57Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "2sXUVxg8QNYALR3zO6V6DFJYQfY",
+    "id": "2x9OxLOl7ds",
+    "snippet": {
+      "publishedAt": "2026-04-07T00:46:57Z",
+      "channelId": "UCfEX3BtzkBN6LQDDmupiuTw",
+      "title": "2 Perfumes sem GÊNEROS| para receber muitos elogios.",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/2x9OxLOl7ds/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Dr. Cheirozin ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-PT",
+      "localized": {
+        "title": "2 Perfumes sem GÊNEROS| para receber muitos elogios.",
+        "description": ""
+      },
+      "defaultAudioLanguage": "pt-PT"
+    },
+    "contentDetails": {
+      "duration": "PT21M19S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "254",
+      "likeCount": "32",
+      "favoriteCount": "0",
+      "commentCount": "11"
+    }
+  }
+}

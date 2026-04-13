@@ -1,0 +1,113 @@
+{
+  "fetched_at": "2026-04-11T21:33:37.327641+00:00",
+  "query": "xerjoff erba pura perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "vKhfAj03pTsZqmvr1Wj-8XIsy-0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "KlPCEJOwjf8"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T20:05:49Z",
+      "channelId": "UCV5dsQLP5Gts16l9_mCXE5g",
+      "title": "LATTAFA | ANA ABIYADH | PERFUME #shorts #shortsfeed #trending #viral #@MotoXxXx @RahulSidwan",
+      "description": "LATTAFA. ANA ABIYADH clone XERJOFF ERBA PURA BEST SUMMER PERFUME FRESH OFFICE COLLEGE fragrances with ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Gen-Z Perfumes",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T20:05:49Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "R_rqsZoBQ_vgEC6jpM8oY0zDBGg",
+    "id": "KlPCEJOwjf8",
+    "snippet": {
+      "publishedAt": "2026-04-11T20:05:49Z",
+      "channelId": "UCV5dsQLP5Gts16l9_mCXE5g",
+      "title": "LATTAFA | ANA ABIYADH | PERFUME #shorts #shortsfeed #trending #viral #@MotoXxXx @RahulSidwan",
+      "description": "LATTAFA.  ANA ABIYADH clone XERJOFF ERBA PURA\nBEST SUMMER PERFUME FRESH \nOFFICE COLLEGE \n\nfragrances with honest reviews and  passionate about scents. I share my thoughts on perfumes. colognes, and everything in between. All opinions are my own,\n\n💬 On this channel, you'll find:\n• Honest perfume reviews\n• Fragrance recommendations for every budget\n• Picks from Indian, Middle Eastern & international houses\n• Seasonal and occasion-based guide\n\n\nChannel ko subscribe kare video ko like kare\nTHANKS FOR WATCHING 🙏🏻❤️\n\n\n\n\n\n\n\n\n\n#shortvideos \n#ytshorts\n#trending\n#viral\n#shortsfeed\n#viralvideo\n#perfume \n#fragrance\n#fragrancereview\n#beautytips",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/KlPCEJOwjf8/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Gen-Z Perfumes",
+      "tags": [
+        "summer perfume",
+        "best colognes for summer",
+        "men summer fragrance 500",
+        "men office perfume 1000",
+        "middle eastern fragrance",
+        "ARABIAN FRAGRANCES",
+        "attar",
+        "itr",
+        "itar",
+        "daily wear perfumes man 500",
+        "perfume 500 boys"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en-IN",
+      "localized": {
+        "title": "LATTAFA | ANA ABIYADH | PERFUME #shorts #shortsfeed #trending #viral #@MotoXxXx @RahulSidwan",
+        "description": "LATTAFA.  ANA ABIYADH clone XERJOFF ERBA PURA\nBEST SUMMER PERFUME FRESH \nOFFICE COLLEGE \n\nfragrances with honest reviews and  passionate about scents. I share my thoughts on perfumes. colognes, and everything in between. All opinions are my own,\n\n💬 On this channel, you'll find:\n• Honest perfume reviews\n• Fragrance recommendations for every budget\n• Picks from Indian, Middle Eastern & international houses\n• Seasonal and occasion-based guide\n\n\nChannel ko subscribe kare video ko like kare\nTHANKS FOR WATCHING 🙏🏻❤️\n\n\n\n\n\n\n\n\n\n#shortvideos \n#ytshorts\n#trending\n#viral\n#shortsfeed\n#viralvideo\n#perfume \n#fragrance\n#fragrancereview\n#beautytips"
+      },
+      "defaultAudioLanguage": "hi"
+    },
+    "contentDetails": {
+      "duration": "PT1M",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "16",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

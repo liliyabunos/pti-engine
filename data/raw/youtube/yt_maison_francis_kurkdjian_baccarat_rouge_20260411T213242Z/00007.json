@@ -1,0 +1,111 @@
+{
+  "fetched_at": "2026-04-11T21:32:42.024665+00:00",
+  "query": "maison francis kurkdjian baccarat rouge",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "FfDsnKKVVGwkUGdvY_pUvS8VA4A",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "7pdL9LRY6T8"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T19:18:10Z",
+      "channelId": "UCLoTMTHOqTYbIWbnJ2bpFkw",
+      "title": "Ten zapach ma głębszy sens… ✨Baccarat Rouge ✨",
+      "description": "Ten zapach ma głębszy sens… Baccarat Rouge #perfume #baccarat #baccaratrouge540 #baccaratrouge #ciekawostki #moda ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Hrabina Pachnideł ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T19:18:10Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "zvLSAiRD5I-6Oac5oLB7vtsiTN4",
+    "id": "7pdL9LRY6T8",
+    "snippet": {
+      "publishedAt": "2026-04-10T19:18:10Z",
+      "channelId": "UCLoTMTHOqTYbIWbnJ2bpFkw",
+      "title": "Ten zapach ma głębszy sens… ✨Baccarat Rouge ✨",
+      "description": "Ten zapach ma głębszy sens… Baccarat Rouge \n#perfume #baccarat #baccaratrouge540 #baccaratrouge #ciekawostki #moda #ciekawostkihistoryczne #ciekawostkiświata #kryształy #perfumy #historia #historiaperfum #zapachy",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/7pdL9LRY6T8/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Hrabina Pachnideł ",
+      "tags": [
+        "Perfumy",
+        "Baccarat",
+        "Baccarat Rouge",
+        "Baccarat Rouge 540",
+        "Ciekawostki",
+        "Zapachy",
+        "Historia perfum",
+        "Moda",
+        "Uroda"
+      ],
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pl",
+      "localized": {
+        "title": "Ten zapach ma głębszy sens… ✨Baccarat Rouge ✨",
+        "description": "Ten zapach ma głębszy sens… Baccarat Rouge \n#perfume #baccarat #baccaratrouge540 #baccaratrouge #ciekawostki #moda #ciekawostkihistoryczne #ciekawostkiświata #kryształy #perfumy #historia #historiaperfum #zapachy"
+      },
+      "defaultAudioLanguage": "pl"
+    },
+    "contentDetails": {
+      "duration": "PT1M18S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "912",
+      "likeCount": "12",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

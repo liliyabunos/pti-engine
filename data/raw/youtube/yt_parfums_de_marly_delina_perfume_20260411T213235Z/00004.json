@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:35.068785+00:00",
+  "query": "parfums de marly delina perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "NVLH6CtpTChWszlxZUi1wxhXR98",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "NkUes4G2Tbo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T02:15:38Z",
+      "channelId": "UCGAdHIXoPi2AVLSw9JDjrMg",
+      "title": "Parfums de Marly unboxing…for a steal 👀 #perfume #parfum #parfumsdemarly #perfumeunboxing",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "ALLY Baker",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T02:15:38Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "K0HnuJeDLmeQka9tBs1m8KuC1Pg",
+    "id": "NkUes4G2Tbo",
+    "snippet": {
+      "publishedAt": "2026-04-11T02:15:38Z",
+      "channelId": "UCGAdHIXoPi2AVLSw9JDjrMg",
+      "title": "Parfums de Marly unboxing…for a steal 👀 #perfume #parfum #parfumsdemarly #perfumeunboxing",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/NkUes4G2Tbo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "ALLY Baker",
+      "categoryId": "24",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Parfums de Marly unboxing…for a steal 👀 #perfume #parfum #parfumsdemarly #perfumeunboxing",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M51S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "94",
+      "likeCount": "1",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

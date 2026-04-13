@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:01.063948+00:00",
+  "query": "creed aventus perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "1__9nn7tTFRZh8kXyeNTAmClTGE",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "YQeGSiCGrVY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-11T14:09:21Z",
+      "channelId": "UCLx-IpWGFCmHl9PISqu5xqw",
+      "title": "6 Fragrances That Would Be 10/10s  #cologne #fragrance #fragrancereview #colognes #fragrances",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Jake Smells",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-11T14:09:21Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "A4QYYpV59aBQ6iRyncPrgd0H8Aw",
+    "id": "YQeGSiCGrVY",
+    "snippet": {
+      "publishedAt": "2026-04-11T14:09:21Z",
+      "channelId": "UCLx-IpWGFCmHl9PISqu5xqw",
+      "title": "6 Fragrances That Would Be 10/10s  #cologne #fragrance #fragrancereview #colognes #fragrances",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/YQeGSiCGrVY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Jake Smells",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "6 Fragrances That Would Be 10/10s  #cologne #fragrance #fragrancereview #colognes #fragrances",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M10S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1260",
+      "likeCount": "73",
+      "favoriteCount": "0",
+      "commentCount": "2"
+    }
+  }
+}

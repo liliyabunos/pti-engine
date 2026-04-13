@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-09T11:30:53.340690+00:00",
+  "query": "baccarat rouge 540",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "pfHkREr255cGqfjUFw8ovjUfN4g",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "cs1WXPiQbRY"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T02:54:26Z",
+      "channelId": "UCgcGgGl0ZNbAG-ztgkmx2yA",
+      "title": "MFK Baccarat Rouge 540 Broken Bottle Art #art #artist #cologne #fragrance #satisfying #diy",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Splintered Scents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T02:54:26Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "oq6QIBvlyeU3aByLiiySqFqLENw",
+    "id": "cs1WXPiQbRY",
+    "snippet": {
+      "publishedAt": "2026-04-09T02:54:26Z",
+      "channelId": "UCgcGgGl0ZNbAG-ztgkmx2yA",
+      "title": "MFK Baccarat Rouge 540 Broken Bottle Art #art #artist #cologne #fragrance #satisfying #diy",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/cs1WXPiQbRY/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Splintered Scents",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "MFK Baccarat Rouge 540 Broken Bottle Art #art #artist #cologne #fragrance #satisfying #diy",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M1S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "576",
+      "likeCount": "13",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

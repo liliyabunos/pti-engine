@@ -1,0 +1,116 @@
+{
+  "fetched_at": "2026-04-11T21:32:39.656930+00:00",
+  "query": "baccarat rouge 540 review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "5SAt-izr1aGRjHLOKcGWZEu_WXE",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "rPtDY5H0aRg"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T14:00:00Z",
+      "channelId": "UCBu7GjWF3AWedeyQZe39cxw",
+      "title": "NEW AL Haramain Amber Oud Gold Lux and Gold Mine Reviews!",
+      "description": "In-depth reviews of the newest releases from the House of Al Haramain in their Amber Oud line. Amber Oud Gold Lux, a clone of ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Fragrance Therapy",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T14:00:00Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "jyaoWDbj3TGo3VPO-xl3EcOjpOY",
+    "id": "rPtDY5H0aRg",
+    "snippet": {
+      "publishedAt": "2026-04-09T14:00:00Z",
+      "channelId": "UCBu7GjWF3AWedeyQZe39cxw",
+      "title": "NEW AL Haramain Amber Oud Gold Lux and Gold Mine Reviews!",
+      "description": "In-depth reviews of the newest releases from the House of Al Haramain in their Amber Oud line.  Amber Oud Gold Lux, a clone of MFK Baccarat Rouge 540 Extrait and Amber Oud Gold Mine, a clone of Xerjoff Erba Pura.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/rPtDY5H0aRg/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Fragrance Therapy",
+      "tags": [
+        "Fragrance Therapy",
+        "clone fragrance",
+        "Middle Eastern",
+        "best clone fragrances",
+        "most complimented fragrances",
+        "best cheap clone fragrances",
+        "best fragrance clones",
+        "top 10 clone fragrances",
+        "best cheap fragrances",
+        "cheap clone fragrances",
+        "most complimented colognes",
+        "best clone fragrances for men",
+        "fragrance clones",
+        "best clone fragrances 2025"
+      ],
+      "categoryId": "26",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "NEW AL Haramain Amber Oud Gold Lux and Gold Mine Reviews!",
+        "description": "In-depth reviews of the newest releases from the House of Al Haramain in their Amber Oud line.  Amber Oud Gold Lux, a clone of MFK Baccarat Rouge 540 Extrait and Amber Oud Gold Mine, a clone of Xerjoff Erba Pura."
+      },
+      "defaultAudioLanguage": "en-US"
+    },
+    "contentDetails": {
+      "duration": "PT7M",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1732",
+      "likeCount": "147",
+      "favoriteCount": "0",
+      "commentCount": "40"
+    }
+  }
+}

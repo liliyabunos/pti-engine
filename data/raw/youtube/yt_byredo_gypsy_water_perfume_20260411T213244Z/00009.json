@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:44.282559+00:00",
+  "query": "byredo gypsy water perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "JEV8V0E0NzYiAoAR2Tdi6xm75rw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Bfji6el6vM4"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-05T02:17:10Z",
+      "channelId": "UCA88Z57f--s5vCv_KogJrVw",
+      "title": "1st impressions of Gypsy Water from Byredo #fragrance #cologne #sotd #review #byredo",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Yohan",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-05T02:17:10Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "A5PXpkzZ6IBRgG0jiSK6OAZpsPE",
+    "id": "Bfji6el6vM4",
+    "snippet": {
+      "publishedAt": "2026-04-05T02:17:10Z",
+      "channelId": "UCA88Z57f--s5vCv_KogJrVw",
+      "title": "1st impressions of Gypsy Water from Byredo #fragrance #cologne #sotd #review #byredo",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Bfji6el6vM4/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Yohan",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "1st impressions of Gypsy Water from Byredo #fragrance #cologne #sotd #review #byredo",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT2M59S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "130",
+      "likeCount": "2",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

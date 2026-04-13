@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:56.826765+00:00",
+  "query": "montale velvet fantasy perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "lrx7wEuByGz_H9djc9RTeqglEG4",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "TvYkvJrtDCg"
+    },
+    "snippet": {
+      "publishedAt": "2026-03-28T21:47:54Z",
+      "channelId": "UCXdcSUbi7C8-uXb_1xASvHQ",
+      "title": "grwm besties let’s do my finishing touches ✨ shop.afrm cultofcoquette Montale Paris US DIBSBEAUTY",
+      "description": "grwm besties let's do my finishing touches ✨ shop.afrm cultofcoquette Montale Paris US DIBSBEAUTY Cartier Amazon Fashion ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Sayna Sheikh",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-03-28T21:47:54Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "h4Y7hZjEc2FjJnXbK6GWVuI_JYo",
+    "id": "TvYkvJrtDCg",
+    "snippet": {
+      "publishedAt": "2026-03-28T21:47:54Z",
+      "channelId": "UCXdcSUbi7C8-uXb_1xASvHQ",
+      "title": "grwm besties let’s do my finishing touches ✨ shop.afrm cultofcoquette Montale Paris US DIBSBEAUTY",
+      "description": "grwm besties let’s do my finishing touches ✨ shop.afrm cultofcoquette Montale Paris US DIBSBEAUTY Cartier Amazon Fashion #grwm",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/TvYkvJrtDCg/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Sayna Sheikh",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "grwm besties let’s do my finishing touches ✨ shop.afrm cultofcoquette Montale Paris US DIBSBEAUTY",
+        "description": "grwm besties let’s do my finishing touches ✨ shop.afrm cultofcoquette Montale Paris US DIBSBEAUTY Cartier Amazon Fashion #grwm"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M6S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1881",
+      "likeCount": "87",
+      "favoriteCount": "0",
+      "commentCount": "5"
+    }
+  }
+}

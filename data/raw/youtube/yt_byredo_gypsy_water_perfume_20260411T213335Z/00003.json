@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:35.231749+00:00",
+  "query": "byredo gypsy water perfume",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "yazRmnIta-CDuaiOioR483ZOyX0",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "4bwr1U9S9sM"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-09T21:02:15Z",
+      "channelId": "UCb_EI63TtNc-RH87fIWcBnw",
+      "title": "Find Your New Signature Scent #shorts",
+      "description": "Love Coco Mademoiselle? Try Baccarat Rouge 540 for sophisticated mystery. Into Gypsy Water? Santal 33 offers grounding ...",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Mixperfume",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-09T21:02:15Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "szTB8JcCRuWRY7O9qudThtUCSF0",
+    "id": "4bwr1U9S9sM",
+    "snippet": {
+      "publishedAt": "2026-04-09T21:02:15Z",
+      "channelId": "UCb_EI63TtNc-RH87fIWcBnw",
+      "title": "Find Your New Signature Scent #shorts",
+      "description": "Love Coco Mademoiselle? Try Baccarat Rouge 540 for sophisticated mystery. Into Gypsy Water? Santal 33 offers grounding woody notes. Chanel No. 5 fan? J'Adore Dior is softer, sweeter. YSL Black Opium lover? Eilish is cozy vanilla coffee. Discover your next favorite. #Perfume #Fragrance #Scent #Beauty",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/4bwr1U9S9sM/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Mixperfume",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Find Your New Signature Scent #shorts",
+        "description": "Love Coco Mademoiselle? Try Baccarat Rouge 540 for sophisticated mystery. Into Gypsy Water? Santal 33 offers grounding woody notes. Chanel No. 5 fan? J'Adore Dior is softer, sweeter. YSL Black Opium lover? Eilish is cozy vanilla coffee. Discover your next favorite. #Perfume #Fragrance #Scent #Beauty"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT54S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "334",
+      "likeCount": "5",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

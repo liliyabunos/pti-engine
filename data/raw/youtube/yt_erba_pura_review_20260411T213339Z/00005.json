@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:39.426259+00:00",
+  "query": "erba pura review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "gtB4ZZ87WpdamoP4vA3PnUy4rJw",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "b9sVEoUGBBE"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-07T13:44:31Z",
+      "channelId": "UCYXfouLKnoXWkYu1q_nCuhw",
+      "title": "Oakcha Sarang: Xerjoff Erba Pura Dupe For Fruity Vanilla Compliments 👇",
+      "description": "Oakcha Sarang: Xerjoff Erba Pura Dupe For Fruity Vanilla Compliments Sarang by Oakcha is inspired by Xerjoff Erba Pura.",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "SEAN 50+ UGC creator GEN-X",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-07T13:44:31Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "jyrduGxMms3qOvWVSSNgqXzef60",
+    "id": "b9sVEoUGBBE",
+    "snippet": {
+      "publishedAt": "2026-04-07T13:44:31Z",
+      "channelId": "UCYXfouLKnoXWkYu1q_nCuhw",
+      "title": "Oakcha Sarang: Xerjoff Erba Pura Dupe For Fruity Vanilla Compliments 👇",
+      "description": "Oakcha Sarang: Xerjoff Erba Pura Dupe For Fruity Vanilla Compliments 👇\n\nSarang by Oakcha is inspired by Xerjoff Erba Pura. Starts with a zesty blend of bergamot, orange and lemon, moves into a juicy mixed fruits accord, settles into a base of amber, bourbon vanilla and white musk. The effect is a big, bright, fruity vanilla cloud that feels playful and luxurious at the same time. It gives that Erba Pura style expensive shampoo plus creamy vanilla aura that people notice from across the room, but at a fraction of niche pricing. This is one of those scents that gets compliments from strangers constantly because it projects well and smells expensive without being polarizing. If you want a fruity vanilla that feels elevated and not like basic body spray, this is an easy way to test that vibe without dropping three hundred dollars on a bottle of Xerjoff. It's loud, it's sweet, it's unapologetically fruity, and it works. Follow for more fragrance dupe reviews where I break down how clones compare to the real thing and whether they're actually worth your money or just hype.\n\n#oakchasarang #erbapuradupe #fruityvanilla #xerjoffdupe #complimentgetter",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/b9sVEoUGBBE/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "SEAN 50+ UGC creator GEN-X",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Oakcha Sarang: Xerjoff Erba Pura Dupe For Fruity Vanilla Compliments 👇",
+        "description": "Oakcha Sarang: Xerjoff Erba Pura Dupe For Fruity Vanilla Compliments 👇\n\nSarang by Oakcha is inspired by Xerjoff Erba Pura. Starts with a zesty blend of bergamot, orange and lemon, moves into a juicy mixed fruits accord, settles into a base of amber, bourbon vanilla and white musk. The effect is a big, bright, fruity vanilla cloud that feels playful and luxurious at the same time. It gives that Erba Pura style expensive shampoo plus creamy vanilla aura that people notice from across the room, but at a fraction of niche pricing. This is one of those scents that gets compliments from strangers constantly because it projects well and smells expensive without being polarizing. If you want a fruity vanilla that feels elevated and not like basic body spray, this is an easy way to test that vibe without dropping three hundred dollars on a bottle of Xerjoff. It's loud, it's sweet, it's unapologetically fruity, and it works. Follow for more fragrance dupe reviews where I break down how clones compare to the real thing and whether they're actually worth your money or just hype.\n\n#oakchasarang #erbapuradupe #fruityvanilla #xerjoffdupe #complimentgetter"
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT30S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

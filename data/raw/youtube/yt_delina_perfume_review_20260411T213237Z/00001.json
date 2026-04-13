@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "RkbtPxYX5Y-BLd3gFG3CGN7_EkU",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "JjsNP0-0HFo"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-05T21:00:15Z",
+      "channelId": "UCQuI8E2LgHPFDxq-0OsATQQ",
+      "title": "if you’ve been wanting the Delina perfume, try this first! #Shorts",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Angela Chalet",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-05T21:00:15Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "E_9NVpIextEVSbTE5Smc08hU0Lg",
+    "id": "JjsNP0-0HFo",
+    "snippet": {
+      "publishedAt": "2026-04-05T21:00:15Z",
+      "channelId": "UCQuI8E2LgHPFDxq-0OsATQQ",
+      "title": "if you’ve been wanting the Delina perfume, try this first! #Shorts",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/JjsNP0-0HFo/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Angela Chalet",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "if you’ve been wanting the Delina perfume, try this first! #Shorts",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT47S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "38528",
+      "likeCount": "1121",
+      "favoriteCount": "0",
+      "commentCount": "25"
+    }
+  }
+}

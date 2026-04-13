@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:03.381477+00:00",
+  "query": "tom ford black orchid review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "p2y3ElC8HmCUEKtJDVNmFF3YVL8",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "WWlKGuTXL8Y"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-04T07:06:08Z",
+      "channelId": "UCo0cXIY4LPGjba5LHOcppOg",
+      "title": "No pruebes Black Orchid sin ver esto 🛑 #perfume #ytshorts #perfumada #tomford #blackorchid",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Andylittletalks ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-04T07:06:08Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "RdOjBVz2aOPzfkrjKTswjqsfFYE",
+    "id": "WWlKGuTXL8Y",
+    "snippet": {
+      "publishedAt": "2026-04-04T07:06:08Z",
+      "channelId": "UCo0cXIY4LPGjba5LHOcppOg",
+      "title": "No pruebes Black Orchid sin ver esto 🛑 #perfume #ytshorts #perfumada #tomford #blackorchid",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/WWlKGuTXL8Y/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Andylittletalks ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "es",
+      "localized": {
+        "title": "No pruebes Black Orchid sin ver esto 🛑 #perfume #ytshorts #perfumada #tomford #blackorchid",
+        "description": ""
+      },
+      "defaultAudioLanguage": "es"
+    },
+    "contentDetails": {
+      "duration": "PT1M5S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "712",
+      "likeCount": "29",
+      "favoriteCount": "0",
+      "commentCount": "6"
+    }
+  }
+}

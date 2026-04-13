@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:37.413896+00:00",
+  "query": "delina perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "Z9oQlno96y9c5hhzPBpJmCEJ180",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "6Y4oZ-nB9tg"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-04T15:49:19Z",
+      "channelId": "UCWZ8UdlVzKlfg3Rc-Q5NqTQ",
+      "title": "#oboticario #perfumada #perfumecollection #perfumesfemininos #perfumarianacional #perfumaria #parfum",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Eudora Ceilândia ",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-04T15:49:19Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "V1La2qoK5ExYaAjKUFd7oq87GYc",
+    "id": "6Y4oZ-nB9tg",
+    "snippet": {
+      "publishedAt": "2026-04-04T15:49:19Z",
+      "channelId": "UCWZ8UdlVzKlfg3Rc-Q5NqTQ",
+      "title": "#oboticario #perfumada #perfumecollection #perfumesfemininos #perfumarianacional #perfumaria #parfum",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/6Y4oZ-nB9tg/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Eudora Ceilândia ",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "pt-PT",
+      "localized": {
+        "title": "#oboticario #perfumada #perfumecollection #perfumesfemininos #perfumarianacional #perfumaria #parfum",
+        "description": ""
+      },
+      "defaultAudioLanguage": "pt-PT"
+    },
+    "contentDetails": {
+      "duration": "PT1M50S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": true,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "1530",
+      "likeCount": "142",
+      "favoriteCount": "0",
+      "commentCount": "1"
+    }
+  }
+}

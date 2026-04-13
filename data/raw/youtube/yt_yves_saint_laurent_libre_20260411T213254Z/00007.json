@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:32:54.626672+00:00",
+  "query": "yves saint laurent libre",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "nTeU4XMJySKs1DiRe1yNEBbGCgQ",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Of6CnE0chus"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-10T15:22:13Z",
+      "channelId": "UCk8Unx7zOs_cUFeo-H9hhew",
+      "title": "Libre Vanille Couture Yves Saint Laurent #sotd #ysllibre",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "My Lavish Habits",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-10T15:22:13Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "wXHR1_k7W7yAW7O_TuPNx2eLzVY",
+    "id": "Of6CnE0chus",
+    "snippet": {
+      "publishedAt": "2026-04-10T15:22:13Z",
+      "channelId": "UCk8Unx7zOs_cUFeo-H9hhew",
+      "title": "Libre Vanille Couture Yves Saint Laurent #sotd #ysllibre",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Of6CnE0chus/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "My Lavish Habits",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "Libre Vanille Couture Yves Saint Laurent #sotd #ysllibre",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT6S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "17",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}

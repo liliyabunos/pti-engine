@@ -1,0 +1,100 @@
+{
+  "fetched_at": "2026-04-11T21:33:41.651821+00:00",
+  "query": "ysl libre perfume review",
+  "search_item": {
+    "kind": "youtube#searchResult",
+    "etag": "GSVgxOesBFAcvXkSgfJu2HYvHLM",
+    "id": {
+      "kind": "youtube#video",
+      "videoId": "Q2VVBYVBLQg"
+    },
+    "snippet": {
+      "publishedAt": "2026-04-08T09:43:48Z",
+      "channelId": "UCATzl2MMYjv_bWoriiF8I-Q",
+      "title": "One of the Best cool weather fragrances from YSL. #fragrance #parfum #ysl",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        }
+      },
+      "channelTitle": "Sean Scents",
+      "liveBroadcastContent": "none",
+      "publishTime": "2026-04-08T09:43:48Z"
+    }
+  },
+  "video_details": {
+    "kind": "youtube#video",
+    "etag": "Dk7E1lwDZBdFkz47FHc1nvUcFwc",
+    "id": "Q2VVBYVBLQg",
+    "snippet": {
+      "publishedAt": "2026-04-08T09:43:48Z",
+      "channelId": "UCATzl2MMYjv_bWoriiF8I-Q",
+      "title": "One of the Best cool weather fragrances from YSL. #fragrance #parfum #ysl",
+      "description": "",
+      "thumbnails": {
+        "default": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/default.jpg",
+          "width": 120,
+          "height": 90
+        },
+        "medium": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/mqdefault.jpg",
+          "width": 320,
+          "height": 180
+        },
+        "high": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/hqdefault.jpg",
+          "width": 480,
+          "height": 360
+        },
+        "standard": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/sddefault.jpg",
+          "width": 640,
+          "height": 480
+        },
+        "maxres": {
+          "url": "https://i.ytimg.com/vi/Q2VVBYVBLQg/maxresdefault.jpg",
+          "width": 1280,
+          "height": 720
+        }
+      },
+      "channelTitle": "Sean Scents",
+      "categoryId": "22",
+      "liveBroadcastContent": "none",
+      "defaultLanguage": "en",
+      "localized": {
+        "title": "One of the Best cool weather fragrances from YSL. #fragrance #parfum #ysl",
+        "description": ""
+      },
+      "defaultAudioLanguage": "en"
+    },
+    "contentDetails": {
+      "duration": "PT1M8S",
+      "dimension": "2d",
+      "definition": "hd",
+      "caption": "false",
+      "licensedContent": false,
+      "contentRating": {},
+      "projection": "rectangular"
+    },
+    "statistics": {
+      "viewCount": "2",
+      "likeCount": "0",
+      "favoriteCount": "0",
+      "commentCount": "0"
+    }
+  }
+}
