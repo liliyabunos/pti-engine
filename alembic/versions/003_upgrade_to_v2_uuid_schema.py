@@ -214,22 +214,23 @@ def upgrade() -> None:
             ),
         )
 
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_id "
-        "ON entity_timeseries_daily (entity_id)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_type "
-        "ON entity_timeseries_daily (entity_type)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_date "
-        "ON entity_timeseries_daily (date)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_type_entity_date "
-        "ON entity_timeseries_daily (entity_type, entity_id, date)"
-    )
+    if "entity_timeseries_daily" in existing:
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_id "
+            "ON entity_timeseries_daily (entity_id)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_type "
+            "ON entity_timeseries_daily (entity_type)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_date "
+            "ON entity_timeseries_daily (date)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_type_entity_date "
+            "ON entity_timeseries_daily (entity_type, entity_id, date)"
+        )
 
     # ------------------------------------------------------------------
     # signals (replaces market_signals)
@@ -260,14 +261,15 @@ def upgrade() -> None:
             ),
         )
 
-    op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_id ON signals (entity_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_type ON signals (entity_type)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_signals_signal_type ON signals (signal_type)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_signals_detected_at ON signals (detected_at)")
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_signals_type_entity_signal_detected "
-        "ON signals (entity_type, entity_id, signal_type, detected_at)"
-    )
+    if "signals" in existing:
+        op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_id ON signals (entity_id)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_type ON signals (entity_type)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_signals_signal_type ON signals (signal_type)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_signals_detected_at ON signals (detected_at)")
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_signals_type_entity_signal_detected "
+            "ON signals (entity_type, entity_id, signal_type, detected_at)"
+        )
 
     # ------------------------------------------------------------------
     # brands (v2 UUID schema)
@@ -295,9 +297,10 @@ def upgrade() -> None:
             sa.UniqueConstraint("ticker", name="uq_brand_ticker"),
         )
 
-    op.execute("CREATE INDEX IF NOT EXISTS ix_brand_name ON brands (name)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_brand_slug ON brands (slug)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_brand_ticker ON brands (ticker)")
+    if "brands" in existing:
+        op.execute("CREATE INDEX IF NOT EXISTS ix_brand_name ON brands (name)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_brand_slug ON brands (slug)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_brand_ticker ON brands (ticker)")
 
     # ------------------------------------------------------------------
     # perfumes (v2 UUID schema) — must come after brands (FK dependency)
@@ -328,10 +331,11 @@ def upgrade() -> None:
             sa.UniqueConstraint("ticker", name="uq_perfume_ticker"),
         )
 
-    op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_brand_id ON perfumes (brand_id)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_name ON perfumes (name)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_slug ON perfumes (slug)")
-    op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_ticker ON perfumes (ticker)")
+    if "perfumes" in existing:
+        op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_brand_id ON perfumes (brand_id)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_name ON perfumes (name)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_slug ON perfumes (slug)")
+        op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_ticker ON perfumes (ticker)")
 
     # ------------------------------------------------------------------
     # entity_mentions (v2 UUID schema)
@@ -365,42 +369,43 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
         )
 
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_id "
-        "ON entity_mentions (entity_id)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_type "
-        "ON entity_mentions (entity_type)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_source_type "
-        "ON entity_mentions (source_type)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_source_platform "
-        "ON entity_mentions (source_platform)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_author_id "
-        "ON entity_mentions (author_id)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_region "
-        "ON entity_mentions (region)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_channel "
-        "ON entity_mentions (channel)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_occurred_at "
-        "ON entity_mentions (occurred_at)"
-    )
-    op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_entity_mention_type_entity_occurred "
-        "ON entity_mentions (entity_type, entity_id, occurred_at)"
-    )
+    if "entity_mentions" in existing:
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_id "
+            "ON entity_mentions (entity_id)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_type "
+            "ON entity_mentions (entity_type)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_source_type "
+            "ON entity_mentions (source_type)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_source_platform "
+            "ON entity_mentions (source_platform)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_author_id "
+            "ON entity_mentions (author_id)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_region "
+            "ON entity_mentions (region)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_channel "
+            "ON entity_mentions (channel)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_occurred_at "
+            "ON entity_mentions (occurred_at)"
+        )
+        op.execute(
+            "CREATE INDEX IF NOT EXISTS ix_entity_mention_type_entity_occurred "
+            "ON entity_mentions (entity_type, entity_id, occurred_at)"
+        )
 
 
 # ---------------------------------------------------------------------------
