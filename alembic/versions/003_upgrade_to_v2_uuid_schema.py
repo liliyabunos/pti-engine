@@ -15,38 +15,26 @@ THIS IS A BREAKING MIGRATION. READ CAREFULLY BEFORE APPLYING.
    - BREAKING: primary key changes from String `entity_id` to UUID `id`
 
 2. entity_daily_snapshots → (DROP + CREATE as entity_timeseries_daily)
-   - REASON: Integer PK and String entity_id cannot be safely cast to UUID.
-     No lossless migration path exists. Data in this table is DISCARDED.
-
 3. market_signals → (DROP + CREATE as signals)
-   - REASON: same as above.
-
-4. brands → (DROP + CREATE)
-   - REASON: Integer PK cannot be safely cast to UUID. Data is DISCARDED.
-
-5. perfumes → (DROP + CREATE)
-   - REASON: Integer PK and Integer brand_id FK cannot be safely cast to UUID.
-
-6. entity_mentions → (DROP + CREATE)
-   - REASON: Integer PK and String entity_id cannot be safely cast to UUID.
+4. brands → (DROP + CREATE, UUID PK)
+5. perfumes → (DROP + CREATE, UUID PK)
+6. entity_mentions → (DROP + CREATE, UUID PK)
 
 == Idempotency ==
 
-upgrade() is structured in three explicit phases:
+All existence checks use direct SQL against information_schema.tables.
+This avoids SQLAlchemy Inspector caching issues that occur when the same
+connection object is reused across multiple inspect() calls within one
+Alembic transactional DDL context.
 
-  Phase A — ALTER entity_market (ADD COLUMN IF NOT EXISTS, conditional PK swap)
-  Phase B — DROP all old/interim tables and indexes (all IF EXISTS)
-  Phase C — inspect() AFTER drops, then CREATE tables not yet present,
-             then CREATE INDEX IF NOT EXISTS
-
-By inspecting after the drops, the existence snapshot is always accurate
-regardless of how far a prior partial run got. This makes the migration safe
-to re-run on a fresh DB, a partially-applied DB, or after a mid-deploy crash.
+Pattern for every table in Phase C:
+  1. Check information_schema — if table absent, CREATE TABLE
+  2. Check information_schema again — if table present, CREATE INDEX IF NOT EXISTS
 
 == PostgreSQL requirement ==
 
-This migration uses gen_random_uuid() and PostgreSQL-native UUID type.
-It is NOT compatible with SQLite.
+Uses gen_random_uuid() (built-in since PostgreSQL 13).
+Not compatible with SQLite.
 """
 
 from __future__ import annotations
@@ -71,6 +59,17 @@ def _uuid_col(name: str, **kwargs) -> sa.Column:
     return sa.Column(name, postgresql.UUID(as_uuid=True), **kwargs)
 
 
+def _table_exists(bind, table_name: str) -> bool:
+    """Check live DB state via SQL — never uses SQLAlchemy Inspector cache."""
+    result = bind.execute(sa.text(
+        "SELECT EXISTS ("
+        "  SELECT 1 FROM information_schema.tables"
+        "  WHERE table_schema = 'public' AND table_name = :name"
+        ")"
+    ), {"name": table_name})
+    return bool(result.scalar())
+
+
 # ---------------------------------------------------------------------------
 # Upgrade
 # ---------------------------------------------------------------------------
@@ -79,10 +78,9 @@ def upgrade() -> None:
     bind = op.get_bind()
 
     # ======================================================================
-    # PHASE A — Alter entity_market in-place (idempotent column additions)
+    # PHASE A — Alter entity_market in-place (idempotent)
     # ======================================================================
 
-    # Add UUID id column if not already there.
     op.execute(
         "ALTER TABLE entity_market ADD COLUMN IF NOT EXISTS "
         "id UUID DEFAULT gen_random_uuid()"
@@ -90,7 +88,7 @@ def upgrade() -> None:
     op.execute("UPDATE entity_market SET id = gen_random_uuid() WHERE id IS NULL")
     op.execute("ALTER TABLE entity_market ALTER COLUMN id SET NOT NULL")
 
-    # Swap primary key from entity_id → id only if still on entity_id.
+    # Swap PK from entity_id → id only if still on entity_id
     op.execute("""
         DO $$ BEGIN
             IF EXISTS (
@@ -108,7 +106,7 @@ def upgrade() -> None:
         END $$;
     """)
 
-    # Unique constraint on entity_id (safe if already exists).
+    # Unique constraint on entity_id
     op.execute("""
         DO $$ BEGIN
             IF NOT EXISTS (
@@ -128,54 +126,48 @@ def upgrade() -> None:
     )
 
     op.execute(
-        "ALTER TABLE entity_market ADD COLUMN IF NOT EXISTS "
-        "created_at TIMESTAMPTZ"
+        "ALTER TABLE entity_market ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ"
     )
     op.execute("UPDATE entity_market SET created_at = NOW() WHERE created_at IS NULL")
     op.execute("ALTER TABLE entity_market ALTER COLUMN created_at SET NOT NULL")
 
     # ======================================================================
-    # PHASE B — Drop all old/interim tables and indexes (IF EXISTS throughout)
-    #
-    # Done before inspection so that Phase C sees accurate post-drop state.
+    # PHASE B — Drop old tables / indexes (all IF EXISTS)
     # ======================================================================
 
-    # entity_daily_snapshots (old name for entity_timeseries_daily)
     op.execute("DROP INDEX IF EXISTS ix_entity_daily_snapshots_entity_id")
     op.execute("DROP TABLE IF EXISTS entity_daily_snapshots")
 
-    # market_signals (old name for signals)
     op.execute("DROP INDEX IF EXISTS ix_market_signals_entity_id")
     op.execute("DROP TABLE IF EXISTS market_signals")
 
-    # brands — CASCADE because perfumes may FK to it
     op.execute("DROP INDEX IF EXISTS ix_brands_canonical_name")
     op.execute("DROP TABLE IF EXISTS brands CASCADE")
 
-    # perfumes — CASCADE in case anything FKs to it
     op.execute("DROP INDEX IF EXISTS ix_perfumes_brand_id")
     op.execute("DROP INDEX IF EXISTS ix_perfumes_canonical_name")
     op.execute("DROP TABLE IF EXISTS perfumes CASCADE")
 
-    # entity_mentions
     op.execute("DROP INDEX IF EXISTS ix_entity_mentions_content_item_id")
     op.execute("DROP INDEX IF EXISTS ix_entity_mentions_entity_type")
     op.execute("DROP INDEX IF EXISTS ix_entity_mentions_entity_id")
     op.execute("DROP TABLE IF EXISTS entity_mentions")
 
     # ======================================================================
-    # PHASE C — Inspect AFTER drops, then CREATE missing tables + indexes
+    # PHASE C — CREATE new tables + indexes
     #
-    # Inspecting here (not at function start) gives us the true post-drop
-    # picture: tables dropped above will not appear in `existing`, so their
-    # CREATE TABLE blocks will always run as needed.
+    # Each block:
+    #   1. _table_exists() before  → CREATE TABLE if absent
+    #   2. _table_exists() after   → CREATE INDEX IF NOT EXISTS if present
+    #
+    # _table_exists() queries information_schema directly every call —
+    # no SQLAlchemy Inspector caching involved.
     # ======================================================================
 
     # ------------------------------------------------------------------
-    # entity_timeseries_daily (replaces entity_daily_snapshots)
+    # entity_timeseries_daily
     # ------------------------------------------------------------------
-    existing = set(sa.inspect(bind).get_table_names())
-    if "entity_timeseries_daily" not in existing:
+    if not _table_exists(bind, "entity_timeseries_daily"):
         op.create_table(
             "entity_timeseries_daily",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -212,8 +204,8 @@ def upgrade() -> None:
                 name="uq_entity_timeseries_daily",
             ),
         )
-    existing = set(sa.inspect(bind).get_table_names())
-    if "entity_timeseries_daily" in existing:
+
+    if _table_exists(bind, "entity_timeseries_daily"):
         op.execute(
             "CREATE INDEX IF NOT EXISTS ix_entity_timeseries_daily_entity_id "
             "ON entity_timeseries_daily (entity_id)"
@@ -232,10 +224,9 @@ def upgrade() -> None:
         )
 
     # ------------------------------------------------------------------
-    # signals (replaces market_signals)
+    # signals
     # ------------------------------------------------------------------
-    existing = set(sa.inspect(bind).get_table_names())
-    if "signals" not in existing:
+    if not _table_exists(bind, "signals"):
         op.create_table(
             "signals",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -260,8 +251,8 @@ def upgrade() -> None:
                 name="uq_signal_entity_type_detected_at",
             ),
         )
-    existing = set(sa.inspect(bind).get_table_names())
-    if "signals" in existing:
+
+    if _table_exists(bind, "signals"):
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_id ON signals (entity_id)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_entity_type ON signals (entity_type)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_signals_signal_type ON signals (signal_type)")
@@ -272,10 +263,9 @@ def upgrade() -> None:
         )
 
     # ------------------------------------------------------------------
-    # brands (v2 UUID schema)
+    # brands
     # ------------------------------------------------------------------
-    existing = set(sa.inspect(bind).get_table_names())
-    if "brands" not in existing:
+    if not _table_exists(bind, "brands"):
         op.create_table(
             "brands",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -297,17 +287,16 @@ def upgrade() -> None:
             sa.UniqueConstraint("slug", name="uq_brand_slug"),
             sa.UniqueConstraint("ticker", name="uq_brand_ticker"),
         )
-    existing = set(sa.inspect(bind).get_table_names())
-    if "brands" in existing:
+
+    if _table_exists(bind, "brands"):
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_name ON brands (name)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_slug ON brands (slug)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_brand_ticker ON brands (ticker)")
 
     # ------------------------------------------------------------------
-    # perfumes (v2 UUID schema) — must come after brands (FK dependency)
+    # perfumes (must follow brands — FK dependency)
     # ------------------------------------------------------------------
-    existing = set(sa.inspect(bind).get_table_names())
-    if "perfumes" not in existing:
+    if not _table_exists(bind, "perfumes"):
         op.create_table(
             "perfumes",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -332,18 +321,17 @@ def upgrade() -> None:
             sa.UniqueConstraint("slug", name="uq_perfume_slug"),
             sa.UniqueConstraint("ticker", name="uq_perfume_ticker"),
         )
-    existing = set(sa.inspect(bind).get_table_names())
-    if "perfumes" in existing:
+
+    if _table_exists(bind, "perfumes"):
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_brand_id ON perfumes (brand_id)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_name ON perfumes (name)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_slug ON perfumes (slug)")
         op.execute("CREATE INDEX IF NOT EXISTS ix_perfume_ticker ON perfumes (ticker)")
 
     # ------------------------------------------------------------------
-    # entity_mentions (v2 UUID schema)
+    # entity_mentions
     # ------------------------------------------------------------------
-    existing = set(sa.inspect(bind).get_table_names())
-    if "entity_mentions" not in existing:
+    if not _table_exists(bind, "entity_mentions"):
         op.create_table(
             "entity_mentions",
             _uuid_col("id", nullable=False, server_default=sa.text("gen_random_uuid()")),
@@ -371,8 +359,8 @@ def upgrade() -> None:
             ),
             sa.PrimaryKeyConstraint("id"),
         )
-    existing = set(sa.inspect(bind).get_table_names())
-    if "entity_mentions" in existing:
+
+    if _table_exists(bind, "entity_mentions"):
         op.execute(
             "CREATE INDEX IF NOT EXISTS ix_entity_mention_entity_id "
             "ON entity_mentions (entity_id)"
@@ -416,10 +404,8 @@ def upgrade() -> None:
 # ---------------------------------------------------------------------------
 
 def downgrade() -> None:
-    """
-    Reverses the structural changes but CANNOT restore any data.
-    """
-    # entity_mentions
+    """Reverses structural changes. Data is NOT restored."""
+
     op.execute("DROP INDEX IF EXISTS ix_entity_mention_type_entity_occurred")
     op.execute("DROP INDEX IF EXISTS ix_entity_mention_occurred_at")
     op.execute("DROP INDEX IF EXISTS ix_entity_mention_channel")
@@ -447,7 +433,6 @@ def downgrade() -> None:
     op.create_index("ix_entity_mentions_entity_type", "entity_mentions", ["entity_type"])
     op.create_index("ix_entity_mentions_content_item_id", "entity_mentions", ["content_item_id"])
 
-    # perfumes
     op.execute("DROP INDEX IF EXISTS ix_perfume_ticker")
     op.execute("DROP INDEX IF EXISTS ix_perfume_slug")
     op.execute("DROP INDEX IF EXISTS ix_perfume_name")
@@ -470,7 +455,6 @@ def downgrade() -> None:
     op.create_index("ix_perfumes_canonical_name", "perfumes", ["canonical_name"])
     op.create_index("ix_perfumes_brand_id", "perfumes", ["brand_id"])
 
-    # brands
     op.execute("DROP INDEX IF EXISTS ix_brand_ticker")
     op.execute("DROP INDEX IF EXISTS ix_brand_slug")
     op.execute("DROP INDEX IF EXISTS ix_brand_name")
@@ -487,7 +471,6 @@ def downgrade() -> None:
     )
     op.create_index("ix_brands_canonical_name", "brands", ["canonical_name"])
 
-    # signals
     op.execute("DROP INDEX IF EXISTS ix_signals_type_entity_signal_detected")
     op.execute("DROP INDEX IF EXISTS ix_signals_detected_at")
     op.execute("DROP INDEX IF EXISTS ix_signals_signal_type")
@@ -511,7 +494,6 @@ def downgrade() -> None:
     )
     op.create_index("ix_market_signals_entity_id", "market_signals", ["entity_id"])
 
-    # entity_timeseries_daily
     op.execute("DROP INDEX IF EXISTS ix_entity_timeseries_daily_type_entity_date")
     op.execute("DROP INDEX IF EXISTS ix_entity_timeseries_daily_date")
     op.execute("DROP INDEX IF EXISTS ix_entity_timeseries_daily_entity_type")
@@ -542,7 +524,6 @@ def downgrade() -> None:
         "ix_entity_daily_snapshots_entity_id", "entity_daily_snapshots", ["entity_id"]
     )
 
-    # entity_market — restore entity_id as PK, drop UUID columns
     op.execute("DROP INDEX IF EXISTS ix_entity_market_entity_id")
     op.execute("""
         DO $$ BEGIN

@@ -19,4 +19,4 @@ EXPOSE 8000
 
 # Railway injects $PORT at runtime. The CMD is the fallback when
 # railway.toml startCommand is not set (e.g. local docker run).
-CMD ["sh", "-c", "alembic upgrade head && uvicorn perfume_trend_sdk.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["sh", "-c", "alembic upgrade head 2>&1 && uvicorn perfume_trend_sdk.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
