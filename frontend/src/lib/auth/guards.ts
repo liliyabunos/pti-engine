@@ -89,28 +89,3 @@ export async function isApprovedUser(email: string): Promise<boolean> {
   return user?.access_status === "approved";
 }
 
-/**
- * Get the current Supabase session's email and verify approval.
- * Used in Server Components and Route Handlers.
- *
- * Returns null if:
- *   - no active session
- *   - env vars missing
- *   - email not found in app_users
- *   - access_status !== 'approved'
- *   - API unreachable or timed out
- */
-export async function getApprovedSessionUser(): Promise<AppUser | null> {
-  // Inline import to avoid bundling server-only code into client chunks
-  const { createClient } = await import("./server");
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user?.email) return null;
-
-  const appUser = await getAppUser(user.email);
-  return appUser?.access_status === "approved" ? appUser : null;
-}
