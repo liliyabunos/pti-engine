@@ -3,7 +3,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "alembic upgrade head 2>&1 && uvicorn perfume_trend_sdk.api.main:app --host 0.0.0.0 --port $PORT"
+startCommand = "alembic upgrade head 2>&1 || true && uvicorn perfume_trend_sdk.api.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
