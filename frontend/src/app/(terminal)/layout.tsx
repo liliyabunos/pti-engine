@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { StatusBar } from "@/components/shell/StatusBar";
-import { getApprovedSessionUser } from "@/lib/auth/guards";
+import { getApprovedSessionUser } from "@/lib/auth/guards.server";
 
 /**
  * Terminal shell layout — Server Component.
