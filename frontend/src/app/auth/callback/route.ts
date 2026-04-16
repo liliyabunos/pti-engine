@@ -23,7 +23,21 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+
+  // Derive the public-facing origin from Railway's reverse-proxy headers.
+  // request.url contains the internal address (localhost:PORT) — never use its origin.
+  // x-forwarded-proto and x-forwarded-host carry the real external URL.
+  const proto =
+    request.headers.get("x-forwarded-proto")?.split(",")[0].trim() ?? "https";
+  const host =
+    request.headers.get("x-forwarded-host") ??
+    request.headers.get("host") ??
+    "";
+  const origin = host
+    ? `${proto}://${host}`
+    : process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
 
