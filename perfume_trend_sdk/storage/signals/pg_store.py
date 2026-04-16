@@ -40,6 +40,13 @@ class PgSignalStore:
                 unresolved_mentions_json  = EXCLUDED.unresolved_mentions_json,
                 alias_candidates_json     = EXCLUDED.alias_candidates_json
         """
+        # Deduplicate by content_item_id within this batch (keep last occurrence).
+        # execute_batch sends rows in the same transaction; if the same content_item_id
+        # appears twice, Postgres cannot resolve the ON CONFLICT within the batch and
+        # crashes on the autoincrement PK instead.
+        seen: dict = {}
+        for item in items:
+            seen[item["content_item_id"]] = item
         rows = [
             (
                 item["content_item_id"],
@@ -48,7 +55,7 @@ class PgSignalStore:
                 json.dumps(item.get("unresolved_mentions", []), ensure_ascii=False),
                 json.dumps(item.get("alias_candidates", []), ensure_ascii=False),
             )
-            for item in items
+            for item in seen.values()
         ]
         import psycopg2.extras
         conn = self._connect()
