@@ -247,7 +247,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--resolver-db",
-        default="outputs/pti.db",
+        default="data/resolver/pti.db",
         help="SQLite path for PerfumeResolver (fragrance_master / aliases).",
     )
     p.add_argument(

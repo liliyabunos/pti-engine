@@ -14,6 +14,9 @@ COPY start_pipeline.sh .
 COPY scripts/ scripts/
 COPY configs/ configs/
 
+# Resolver catalog (fragrance_master + aliases) — static prebuilt artifact
+COPY data/resolver/pti.db data/resolver/pti.db
+
 # Install the package and all declared dependencies
 RUN pip install --no-cache-dir .
 
