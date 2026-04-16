@@ -47,10 +47,30 @@ from perfume_trend_sdk.connectors.youtube.connector import YouTubeConnector
 from perfume_trend_sdk.normalizers.social_content.normalizer import SocialContentNormalizer
 from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import PerfumeResolver
 from perfume_trend_sdk.storage.normalized.sqlite_store import NormalizedContentStore
+from perfume_trend_sdk.storage.normalized.pg_store import PgNormalizedContentStore
 from perfume_trend_sdk.storage.raw.filesystem import FilesystemRawStorage
 from perfume_trend_sdk.storage.signals.sqlite_store import SignalStore
+from perfume_trend_sdk.storage.signals.pg_store import PgSignalStore
 from perfume_trend_sdk.analysis.source_intelligence.analyzer import classify_source
 from perfume_trend_sdk.analysis.source_intelligence.scoring import compute_influence
+
+
+def _make_stores(market_db: str):
+    """Return (normalized_store, signal_store) for the right backend.
+
+    If DATABASE_URL is set in the environment, write to Railway Postgres.
+    Otherwise fall back to local SQLite (market_db path).
+    """
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url:
+        print(f"[ingest_youtube] backend     = postgres ({database_url.split('@')[-1]})")
+        return PgNormalizedContentStore(database_url), PgSignalStore(database_url)
+    print(f"[ingest_youtube] backend     = sqlite ({market_db})")
+    ns = NormalizedContentStore(market_db)
+    ss = SignalStore(market_db)
+    ns.init_schema()
+    ss.init_schema()
+    return ns, ss
 
 
 # ---------------------------------------------------------------------------
@@ -113,13 +133,9 @@ def run(
     raw_storage = FilesystemRawStorage(base_dir=raw_dir)
     normalizer = SocialContentNormalizer()
 
-    # Market DB — receives normalized content and resolved signals
-    normalized_store = NormalizedContentStore(market_db)
-    signal_store = SignalStore(market_db)
-    normalized_store.init_schema()
-    signal_store.init_schema()
+    normalized_store, signal_store = _make_stores(market_db)
 
-    # Resolver DB — read-only, provides fragrance_master aliases
+    # Resolver DB — always local SQLite (read-only fragrance_master aliases)
     resolver = PerfumeResolver(resolver_db)
     resolver.store.init_schema()
 

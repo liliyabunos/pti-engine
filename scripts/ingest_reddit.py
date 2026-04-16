@@ -56,12 +56,28 @@ from perfume_trend_sdk.connectors.reddit_watchlist.connector import RedditWatchl
 from perfume_trend_sdk.normalizers.social_content.normalizer import SocialContentNormalizer
 from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import PerfumeResolver
 from perfume_trend_sdk.storage.normalized.sqlite_store import NormalizedContentStore
+from perfume_trend_sdk.storage.normalized.pg_store import PgNormalizedContentStore
 from perfume_trend_sdk.storage.raw.filesystem import FilesystemRawStorage
 from perfume_trend_sdk.storage.signals.sqlite_store import SignalStore
+from perfume_trend_sdk.storage.signals.pg_store import PgSignalStore
 from perfume_trend_sdk.workflows.ingest_reddit_to_signals import (
     _classify_reddit_source,
     _compute_reddit_influence,
 )
+
+
+def _make_stores(market_db: str):
+    """Return (normalized_store, signal_store) for the right backend."""
+    database_url = os.environ.get("DATABASE_URL", "")
+    if database_url:
+        print(f"[ingest_reddit] backend     = postgres ({database_url.split('@')[-1]})")
+        return PgNormalizedContentStore(database_url), PgSignalStore(database_url)
+    print(f"[ingest_reddit] backend     = sqlite ({market_db})")
+    ns = NormalizedContentStore(market_db)
+    ss = SignalStore(market_db)
+    ns.init_schema()
+    ss.init_schema()
+    return ns, ss
 
 
 # ---------------------------------------------------------------------------
@@ -142,10 +158,7 @@ def run(
     raw_storage = FilesystemRawStorage(base_dir=raw_dir)
     normalizer = SocialContentNormalizer()
 
-    normalized_store = NormalizedContentStore(market_db)
-    signal_store = SignalStore(market_db)
-    normalized_store.init_schema()
-    signal_store.init_schema()
+    normalized_store, signal_store = _make_stores(market_db)
 
     resolver = PerfumeResolver(resolver_db)
     resolver.store.init_schema()
