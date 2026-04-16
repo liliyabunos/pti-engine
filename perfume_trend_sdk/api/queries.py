@@ -83,24 +83,32 @@ def fetch_latest_signal_map(
 ) -> Dict[uuid.UUID, Tuple[str, Optional[float]]]:
     """Return {entity_uuid: (signal_type, strength)} for the most-recent signal
     per entity.  Only entities that have at least one signal appear in the map.
+    Returns {} on any query failure so callers always get a safe value.
     """
-    sub = (
-        db.query(
-            Signal.entity_id,
-            func.max(Signal.detected_at).label("max_dt"),
+    import logging
+    try:
+        sub = (
+            db.query(
+                Signal.entity_id,
+                func.max(Signal.detected_at).label("max_dt"),
+            )
+            .group_by(Signal.entity_id)
+            .subquery()
         )
-        .group_by(Signal.entity_id)
-        .subquery()
-    )
-    rows = (
-        db.query(Signal)
-        .join(
-            sub,
-            (Signal.entity_id == sub.c.entity_id)
-            & (Signal.detected_at == sub.c.max_dt),
+        rows = (
+            db.query(Signal)
+            .join(
+                sub,
+                (Signal.entity_id == sub.c.entity_id)
+                & (Signal.detected_at == sub.c.max_dt),
+            )
+            .all()
         )
-        .all()
-    )
+    except Exception as exc:
+        logging.getLogger(__name__).error(
+            "[PTI] fetch_latest_signal_map failed: %s", exc
+        )
+        return {}
     # If two signals share the exact same detected_at timestamp, keep highest strength.
     result: Dict[uuid.UUID, Tuple[str, Optional[float]]] = {}
     for r in rows:

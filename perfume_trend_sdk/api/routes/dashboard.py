@@ -84,11 +84,25 @@ def get_dashboard(
     signal_days: int = Query(7, ge=1, le=30),
     db: Session = Depends(get_db_session),
 ) -> DashboardResponse:
-    # Batch loads — one query each, no N+1
-    rows = fetch_latest_rows(db)
-    signal_rows = _fetch_recent_signals(db, days=signal_days)
-    brand_name_map = fetch_brand_name_map(db)
-    latest_signal_map = fetch_latest_signal_map(db)
+    import logging
+    _log = logging.getLogger(__name__)
+
+    # Each query is isolated: on failure, rollback so subsequent queries can still run.
+    def _safe(fn, fallback, label):
+        try:
+            return fn()
+        except Exception as exc:
+            _log.error("[PTI] dashboard query failed (%s): %s", label, exc)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            return fallback
+
+    rows = _safe(lambda: fetch_latest_rows(db), [], "fetch_latest_rows")
+    signal_rows = _safe(lambda: _fetch_recent_signals(db, days=signal_days), [], "fetch_recent_signals")
+    brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "fetch_brand_name_map")
+    latest_signal_map = _safe(lambda: fetch_latest_signal_map(db), {}, "fetch_latest_signal_map")
 
     # Headline KPIs (computed from raw rows before collapsing — preserves full entity counts)
     kpis_dict = fetch_dashboard_kpis(db, rows, signal_rows, brand_name_map=brand_name_map)
@@ -183,9 +197,23 @@ def get_screener(
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db_session),
 ) -> ScreenerResponse:
-    rows = fetch_latest_rows(db)
-    brand_name_map = fetch_brand_name_map(db)
-    latest_signal_map = fetch_latest_signal_map(db)
+    import logging
+    _log = logging.getLogger(__name__)
+
+    def _safe(fn, fallback, label):
+        try:
+            return fn()
+        except Exception as exc:
+            _log.error("[PTI] screener query failed (%s): %s", label, exc)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            return fallback
+
+    rows = _safe(lambda: fetch_latest_rows(db), [], "fetch_latest_rows")
+    brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "fetch_brand_name_map")
+    latest_signal_map = _safe(lambda: fetch_latest_signal_map(db), {}, "fetch_latest_signal_map")
 
     if sort_by not in _SORT_FIELDS:
         sort_by = "composite_market_score"
