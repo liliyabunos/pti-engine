@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from perfume_trend_sdk.utils.alias_generator import normalize_text
 from perfume_trend_sdk.storage.entities.fragrance_master_store import FragranceMasterStore
+
+_log = logging.getLogger(__name__)
 
 # Maximum token window for alias sliding-window matching.
 # Raised from 4 → 6 to cover aliases such as:
@@ -44,6 +47,22 @@ class PerfumeResolver:
                     if key not in seen:
                         seen.add(key)
                         matches.append(result)
+                        # Log alias matches — especially short-form single-token hits
+                        canonical = result["canonical_name"]
+                        if phrase != normalize_text(canonical):
+                            _log.debug(
+                                "[resolver] alias match: %r → %r (match_type=%s, confidence=%.2f)",
+                                phrase,
+                                canonical,
+                                result.get("match_type", "?"),
+                                result.get("confidence", 0.0),
+                            )
+                        if size == 1:
+                            _log.info(
+                                "[resolver] short-form alias: %r → %r",
+                                phrase,
+                                canonical,
+                            )
         return matches
 
     def _extract_candidates(

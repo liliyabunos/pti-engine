@@ -13,6 +13,24 @@ COMMON_BRAND_ABBREVIATIONS: dict[str, list[str]] = {
     "maison margiela": ["mm"],
 }
 
+# Single-token stripped bases that are too generic to use as standalone aliases.
+# These words appear as perfume names but are common English/French words that
+# would produce too many false positives if matched alone in social text.
+_GENERIC_SINGLE_TOKEN_BASES: frozenset[str] = frozenset({
+    # emotions / descriptors
+    "love", "dark", "light", "pure", "clean", "fresh", "warm", "cool",
+    "wild", "free", "brave", "rush", "sport", "dream", "bloom", "glow",
+    "icon", "luxe", "spark", "gold", "jade", "silk", "velvet", "intense",
+    "original", "classic", "summer", "winter", "spring", "night", "day",
+    # fragrance / product generic
+    "musk", "scent", "essence", "wood", "woods", "amber", "iris", "oud",
+    "cedar", "moss", "fig", "tea", "rose", "noir", "bleu", "rouge",
+    # colors (too short / too common)
+    "red", "white", "black", "blue", "green", "or",
+    # French generic terms
+    "eau", "pour", "homme", "femme", "nuit", "soleil",
+})
+
 # Concentration and product-form terms that appear as trailing suffixes in
 # perfume names from the fragrance_master seed data.  Ordered longest-first so
 # multi-word suffixes are stripped before shorter ones.
@@ -147,10 +165,14 @@ def generate_perfume_aliases(brand_name: str, perfume_name: str) -> list[str]:
             if brand_alias != brand:
                 aliases.add(f"{brand_alias} {base}".strip())
 
-        # Bare stripped base ("ambre sultan", "baccarat rouge 540") is only added
-        # when it is ≥ 2 tokens — single-word stripped bases ("love", "scent",
-        # "dark", "musk") are too generic and produce false matches in social text.
-        if len(base_tokens) >= 2:
+        # Bare stripped base ("ambre sultan", "baccarat rouge 540") is always
+        # added as a standalone alias UNLESS it is a single generic word.
+        # Multi-token bases (≥2 tokens) are always specific enough.
+        # Single-token bases ("aventus", "sauvage") are added when they are
+        # not in the generic blocklist — these are unambiguous perfume names.
+        if len(base_tokens) >= 2 or (
+            len(base_tokens) == 1 and base not in _GENERIC_SINGLE_TOKEN_BASES
+        ):
             aliases.add(base)
             aliases.add(f"{base} perfume".strip())
 
