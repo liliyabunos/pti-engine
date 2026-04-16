@@ -3,9 +3,9 @@
 Step 6B — Sync identity maps: resolver catalog ↔ market engine.
 
 Reads legacy Integer-PK brands/perfumes from the resolver DB (pti.db) and
-UUID-PK brands/perfumes from the market engine DB (market_dev.db), matches
-by slug, and writes mapping rows to brand_identity_map / perfume_identity_map
-tables in the market engine DB.
+UUID-PK brands/perfumes from the market engine DB (market_dev.db or Railway
+Postgres), matches by slug, and writes mapping rows to brand_identity_map /
+perfume_identity_map tables in the market engine DB.
 
 Matching algorithm
 ------------------
@@ -22,11 +22,20 @@ both hyphens and spaces collapse to "-" in the slug.
 
 Idempotent: re-running updates existing rows; it never creates duplicates.
 
-Usage:
-    python scripts/sync_identity_map.py
+Market DB selection (in priority order)
+-----------------------------------------
+  1. DATABASE_URL env var    → Railway / production Postgres
+  2. --market-db flag        → local SQLite (dev)
+
+Usage (local):
     python scripts/sync_identity_map.py \\
         --resolver-db outputs/pti.db \\
         --market-db outputs/market_dev.db \\
+        --verbose
+
+Usage (Railway Postgres):
+    DATABASE_URL="postgresql://..." python scripts/sync_identity_map.py \\
+        --resolver-db outputs/pti.db \\
         --verbose
 """
 
@@ -34,11 +43,16 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -85,12 +99,31 @@ def _perfume_match_slug(canonical_name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Loader helpers (raw sqlite3 — legacy DB has no ORM)
+# Engine helpers
+# ---------------------------------------------------------------------------
+
+def _make_engine(url: str):
+    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+    return create_engine(url, connect_args=connect_args)
+
+
+def _resolve_market_url(market_db_arg: str | None, database_url: str | None) -> str:
+    """Return the SQLAlchemy URL for the market engine DB."""
+    if database_url:
+        return database_url
+    path = market_db_arg or str(DEFAULT_MARKET_DB)
+    return path if "://" in path else f"sqlite:///{path}"
+
+
+# ---------------------------------------------------------------------------
+# Loader helpers — resolver DB (always local SQLite)
 # ---------------------------------------------------------------------------
 
 def _load_legacy_brands(resolver_db: str) -> list[dict]:
     """Return all brands from the resolver catalog DB."""
-    engine = create_engine(f"sqlite:///{resolver_db}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{resolver_db}", connect_args={"check_same_thread": False}
+    )
     with engine.connect() as conn:
         rows = conn.execute(text(
             "SELECT id, canonical_name, normalized_name FROM brands ORDER BY id"
@@ -100,7 +133,9 @@ def _load_legacy_brands(resolver_db: str) -> list[dict]:
 
 def _load_legacy_perfumes(resolver_db: str) -> list[dict]:
     """Return all perfumes from the resolver catalog DB."""
-    engine = create_engine(f"sqlite:///{resolver_db}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{resolver_db}", connect_args={"check_same_thread": False}
+    )
     with engine.connect() as conn:
         rows = conn.execute(text(
             "SELECT id, brand_id, canonical_name, normalized_name FROM perfumes ORDER BY id"
@@ -108,9 +143,13 @@ def _load_legacy_perfumes(resolver_db: str) -> list[dict]:
     return [dict(r._mapping) for r in rows]
 
 
-def _load_market_brands(market_db: str) -> list[dict]:
-    """Return all brands from the market engine DB."""
-    engine = create_engine(f"sqlite:///{market_db}", connect_args={"check_same_thread": False})
+# ---------------------------------------------------------------------------
+# Loader helpers — market DB (SQLite or Postgres)
+# ---------------------------------------------------------------------------
+
+def _load_market_brands(market_url: str) -> list[dict]:
+    """Return all brands from the market engine DB (SQLite or Postgres)."""
+    engine = _make_engine(market_url)
     with engine.connect() as conn:
         rows = conn.execute(text(
             "SELECT CAST(id AS TEXT) AS id, name, slug FROM brands"
@@ -118,9 +157,9 @@ def _load_market_brands(market_db: str) -> list[dict]:
     return [dict(r._mapping) for r in rows]
 
 
-def _load_market_perfumes(market_db: str) -> list[dict]:
-    """Return all perfumes from the market engine DB."""
-    engine = create_engine(f"sqlite:///{market_db}", connect_args={"check_same_thread": False})
+def _load_market_perfumes(market_url: str) -> list[dict]:
+    """Return all perfumes from the market engine DB (SQLite or Postgres)."""
+    engine = _make_engine(market_url)
     with engine.connect() as conn:
         rows = conn.execute(text(
             "SELECT CAST(id AS TEXT) AS id, name, slug FROM perfumes"
@@ -198,14 +237,14 @@ def _upsert_perfume_map(
 
 def sync(
     resolver_db: str,
-    market_db: str,
+    market_url: str,
     verbose: bool = False,
 ) -> dict:
     """Match resolver catalog entities to market engine entities and write mappings.
 
     Args:
-        resolver_db:  Path to legacy resolver/catalog DB (pti.db).
-        market_db:    Path to market engine DB (market_dev.db).
+        resolver_db:  Path to resolver/catalog SQLite DB (pti.db).
+        market_url:   SQLAlchemy URL for the market engine DB (SQLite or Postgres).
         verbose:      If True, print unmatched examples.
 
     Returns:
@@ -213,29 +252,29 @@ def sync(
     """
     now = datetime.now(timezone.utc)
 
-    # Ensure mapping tables exist in market DB
-    market_url = f"sqlite:///{market_db}"
-    engine = create_engine(market_url, connect_args={"check_same_thread": False})
+    # Ensure mapping tables exist in market DB (create_all is idempotent)
+    engine = _make_engine(market_url)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
 
     # ----------------------------------------------------------------
     # Load all entities from both sides
     # ----------------------------------------------------------------
+    backend = "postgres" if not market_url.startswith("sqlite") else f"sqlite ({market_url})"
     logger.info("Loading resolver brands from %s", resolver_db)
     legacy_brands   = _load_legacy_brands(resolver_db)
-    logger.info("Loading market brands from %s", market_db)
-    market_brands   = _load_market_brands(market_db)
+    logger.info("Loading market brands from %s", backend)
+    market_brands   = _load_market_brands(market_url)
 
     logger.info("Loading resolver perfumes from %s", resolver_db)
     legacy_perfumes = _load_legacy_perfumes(resolver_db)
-    logger.info("Loading market perfumes from %s", market_db)
-    market_perfumes = _load_market_perfumes(market_db)
+    logger.info("Loading market perfumes from %s", backend)
+    market_perfumes = _load_market_perfumes(market_url)
 
     # ----------------------------------------------------------------
     # Build slug-keyed lookup for market side
     # ----------------------------------------------------------------
-    # slug → (uuid_str, name)
+    # slug → {id: uuid_str, name: str, slug: str}
     market_brand_by_slug:   dict[str, dict] = {r["slug"]: r for r in market_brands}
     market_perfume_by_slug: dict[str, dict] = {r["slug"]: r for r in market_perfumes}
 
@@ -327,7 +366,7 @@ def sync(
 
     return {
         "resolver_db": str(resolver_db),
-        "market_db":   str(market_db),
+        "market_url":  market_url,
         # brands
         "legacy_brands":    len(legacy_brands),
         "market_brands":    len(market_brands),
@@ -351,15 +390,24 @@ def sync(
 
 def _parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Sync identity maps: resolver catalog ↔ market engine."
+        description=(
+            "Sync identity maps: resolver catalog ↔ market engine.\n\n"
+            "Market DB selection (in priority order):\n"
+            "  1. DATABASE_URL env var  → Railway / production Postgres\n"
+            "  2. --market-db flag      → local SQLite (dev)\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument(
         "--resolver-db", default=str(DEFAULT_RESOLVER_DB),
-        help="Path to resolver/catalog DB (default: outputs/pti.db)",
+        help="Path to resolver/catalog SQLite DB (default: outputs/pti.db)",
     )
     p.add_argument(
-        "--market-db", default=str(DEFAULT_MARKET_DB),
-        help="Path to market engine DB (default: outputs/market_dev.db)",
+        "--market-db", default=None,
+        help=(
+            "Path to market engine SQLite DB for local dev. "
+            "Not required when DATABASE_URL is set."
+        ),
     )
     p.add_argument(
         "--verbose", action="store_true",
@@ -372,11 +420,22 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = _parser().parse_args()
 
-    result = sync(args.resolver_db, args.market_db, verbose=args.verbose)
+    database_url = os.environ.get("DATABASE_URL", "")
+    market_url = _resolve_market_url(args.market_db, database_url)
+
+    backend = (
+        f"postgres ({database_url.split('@')[-1]})" if database_url
+        else f"sqlite ({args.market_db or DEFAULT_MARKET_DB})"
+    )
+    print(f"[sync_identity_map] resolver_db = {args.resolver_db}")
+    print(f"[sync_identity_map] market_db   = {backend}")
+    print()
+
+    result = sync(args.resolver_db, market_url, verbose=args.verbose)
 
     print("\nIdentity map sync complete:")
     print(f"  Resolver DB : {result['resolver_db']}")
-    print(f"  Market DB   : {result['market_db']}")
+    print(f"  Market DB   : {result['market_url']}")
     print()
     print(f"  Brands  — legacy={result['legacy_brands']:>4}  market={result['market_brands']:>4}  "
           f"mapped={result['brand_mapped']:>4}  new={result['brand_new']:>4}  "

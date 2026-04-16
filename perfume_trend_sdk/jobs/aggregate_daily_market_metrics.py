@@ -576,8 +576,15 @@ def main() -> None:
     Base.metadata.create_all(engine)
 
     # Build IdentityResolver if mapping tables are available.
-    # Default: same DB as the market engine (mapping tables live there).
-    resolver_db_path = args.resolver_db or os.environ.get("PTI_DB_PATH", "outputs/pti.db")
+    # Identity maps (brand_identity_map, perfume_identity_map) live in the
+    # market engine DB. In production DATABASE_URL is the market DB, so the
+    # resolver must point there — not at the resolver catalog SQLite (pti.db).
+    resolver_db_path = (
+        args.resolver_db                       # explicit CLI override always wins
+        or os.environ.get("DATABASE_URL")      # production Postgres — identity maps are here
+        or os.environ.get("PTI_DB_PATH")       # local SQLite market dev DB
+        or "outputs/pti.db"                    # last-resort fallback
+    )
     identity_resolver: Optional[IdentityResolver] = None
     try:
         ir = IdentityResolver(resolver_db_path)

@@ -30,8 +30,22 @@ def _make_engine(url: str) -> Engine:
 
 
 def get_database_url() -> str:
-    """Return the active database URL from environment variables."""
-    if db_url := os.environ.get("DATABASE_URL"):
+    """Return the active database URL from environment variables.
+
+    URL resolution order:
+      1. DATABASE_URL env var  → Postgres in production (Railway / Render / Fly)
+      2. PTI_DB_PATH env var   → SQLite file path for local dev
+      3. Default               → sqlite:///outputs/pti.db (local dev fallback)
+
+    Railway quirk: the Postgres plugin exports DATABASE_URL with the legacy
+    ``postgres://`` scheme prefix. SQLAlchemy 1.4+ requires ``postgresql://``.
+    This function normalises the prefix so the engine is always created correctly.
+    """
+    db_url = os.environ.get("DATABASE_URL", "").strip()
+    if db_url:
+        # Normalise Railway's legacy postgres:// → postgresql://
+        if db_url.startswith("postgres://"):
+            db_url = "postgresql://" + db_url[len("postgres://"):]
         return db_url
     path = os.environ.get("PTI_DB_PATH", "outputs/pti.db")
     return _build_url(path)
