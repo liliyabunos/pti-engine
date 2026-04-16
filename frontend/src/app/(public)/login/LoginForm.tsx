@@ -37,7 +37,7 @@ export default function LoginForm() {
         email: normalized,
         options: {
           // The callback route will redirect the user to their intended destination
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
 
