@@ -198,14 +198,28 @@ def get_entity(
     history_days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db_session),
 ) -> EntityDetail:
+    import logging
+    _log = logging.getLogger(__name__)
+
+    def _safe(fn, fallback, label):
+        try:
+            return fn()
+        except Exception as exc:
+            _log.error("[PTI] entity query failed (%s): %s", label, exc)
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            return fallback
+
     em = _get_entity_or_404(db, entity_id)
-    brand_name_map = fetch_brand_name_map(db)
+    brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "brand_name_map")
     brand_name = get_brand_name(em, brand_name_map)
 
-    latest = _get_latest_snapshot(db, em.id)
-    history_rows = _get_history(db, em.id, days=history_days)
-    signal_rows = _get_signals(db, em.id, limit=20)
-    mention_rows = _get_recent_mentions(db, em.id, limit=5)
+    latest = _safe(lambda: _get_latest_snapshot(db, em.id), None, "latest_snapshot")
+    history_rows = _safe(lambda: _get_history(db, em.id, days=history_days), [], "history")
+    signal_rows = _safe(lambda: _get_signals(db, em.id, limit=20), [], "signals")
+    mention_rows = _safe(lambda: _get_recent_mentions(db, em.id, limit=5), [], "mentions")
 
     history: List[SnapshotRow] = [
         SnapshotRow(
