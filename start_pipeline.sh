@@ -17,6 +17,10 @@ TODAY=$(date -u +%Y-%m-%d)
 echo "[pipeline] Starting full pipeline run for date=$TODAY"
 echo "[pipeline] DATABASE_URL backend: ${DATABASE_URL:+postgres (set)} ${DATABASE_URL:-MISSING - will fallback to SQLite}"
 
+# Step 0: Reset resolved_signals sequence to prevent pkey conflicts on rerun
+echo "[pipeline] Step 0 — Reset sequence"
+python3 scripts/reset_sequence.py
+
 # Step 1: Ingest all sources (YouTube + Reddit)
 echo "[pipeline] Step 1 — Ingestion"
 python3 -m perfume_trend_sdk.jobs.run_ingestion \
