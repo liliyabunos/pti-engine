@@ -79,7 +79,10 @@ export function fmtDatetime(iso: string | null | undefined): string {
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-US", {
+    // Parse date components directly to avoid UTC→local timezone shift.
+    // new Date("YYYY-MM-DD") creates UTC midnight which shifts 1 day back in US timezones.
+    const [year, month, day] = iso.substring(0, 10).split("-").map(Number);
+    return new Date(year, month - 1, day).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
     });
