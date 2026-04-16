@@ -14,9 +14,6 @@ COPY start_pipeline.sh .
 COPY scripts/ scripts/
 COPY configs/ configs/
 
-# Resolver catalog SQLite DB (fragrance_master + aliases, read-only by ingest jobs)
-COPY outputs/pti.db outputs/pti.db
-
 # Install the package and all declared dependencies
 RUN pip install --no-cache-dir .
 
