@@ -3705,3 +3705,57 @@ If auth is fully delegated to Supabase frontend/server flows and the backend doe
 - `generous-prosperity` correctly uses production PostgreSQL
 - `pipeline-daily` must explicitly set `PTI_ENV=production`
 - request-time `create_all()` must be removed from API dependencies
+
+---
+
+## D5. Aggregation Layer Rules (Entity Consolidation + Chart Continuity)
+
+### Entity key normalisation (concentration suffix stripping)
+
+The daily aggregator (`perfume_trend_sdk/analysis/market_signals/aggregator.py`)
+must normalise the resolver's `canonical_name` before using it as the market entity
+key. Concentration suffixes are stripped from the END of the name using `_base_name()`.
+
+Suffixes stripped (longest-first, iterative):
+- `Extrait de Parfum` → `Eau de Parfum` → `Eau de Toilette` → `Eau de Cologne` → `Eau Fraiche` → `Extrait` → `Parfum`
+
+Effect: `"Dior Sauvage Eau de Parfum"` and `"Dior Sauvage"` both write to the same
+`entity_market` row and `entity_timeseries_daily` stream.
+
+**Rule:** Resolver tables (`resolved_signals`, `perfume_identity_map`) are unchanged.
+Normalisation is aggregation-layer only. The original `canonical_name` is preserved
+in resolver storage for replay/debugging.
+
+### Carry-forward rows for chart continuity
+
+After the main snapshot write pass, the aggregator inserts zero-mention rows for
+entities that were active in the past 7 days but produced no content on `target_date`.
+
+**Row values:** `mention_count=0`, `engagement_sum=0`, `composite_market_score=0.0`,
+`growth_rate=-1.0`, `momentum=acceleration=volatility=0.0`.
+
+**Safeguards:**
+1. Real rows for `target_date` are never overwritten (NOT IN guard).
+2. The activity window queries only `mention_count > 0` rows — carry-forward rows
+   themselves do NOT extend the window. An entity silent for 7+ real days stops
+   receiving carry-forward rows automatically.
+3. Re-running aggregation for the same date is idempotent.
+
+**Rule:** Carry-forward rows must never contribute to mention totals, signal detection,
+or composite_market_score. Score=0, mentions=0 rows are filtered below all signal
+thresholds (breakout_min_score=15, breakout_min_mentions=2).
+
+### Fragment entity cleanup rule
+
+If old concentration-variant entity_market rows exist from a pre-normalisation
+backfill, they must be cleaned up before they pollute top movers rankings:
+
+1. Delete `entity_timeseries_daily` rows for fragment entities.
+2. Delete `signals` rows for fragment entities.
+3. Delete `entity_market` rows whose `canonical_name` ends with a concentration suffix.
+4. Re-run `detect_breakout_signals` for affected dates.
+
+Fragment identification SQL pattern:
+```sql
+WHERE canonical_name ~ ' (Eau de Parfum|Eau de Toilette|Extrait de Parfum|Extrait)$'
+```
