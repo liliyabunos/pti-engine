@@ -74,6 +74,26 @@ def _get_entity_type(db: Session, entity_uuid: uuid.UUID) -> str:
     return em.entity_type if em else "perfume"
 
 
+def _sanitize_metadata(meta: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Replace non-finite floats (inf, -inf, nan) before JSON storage.
+
+    PostgreSQL JSON rejects Python's float("inf") / float("nan").
+    Cap infinite values at 9999.9; replace nan with None.
+    """
+    if not meta:
+        return meta
+    import math
+    cleaned = {}
+    for k, v in meta.items():
+        if isinstance(v, float):
+            if math.isinf(v):
+                v = 9999.9 if v > 0 else -9999.9
+            elif math.isnan(v):
+                v = None
+        cleaned[k] = v
+    return cleaned
+
+
 def _upsert_signal(db: Session, sig: Dict[str, Any], entity_type: str) -> bool:
     """Insert or update a signal. Returns True if new."""
     existing = (
@@ -86,16 +106,17 @@ def _upsert_signal(db: Session, sig: Dict[str, Any], entity_type: str) -> bool:
         )
         .first()
     )
+    metadata = _sanitize_metadata(sig.get("metadata"))
     if existing:
         existing.strength = sig.get("strength", 0.0)
-        existing.metadata_json = sig.get("metadata")
+        existing.metadata_json = metadata
         return False
     db.add(Signal(
         entity_id=sig["entity_id"],
         entity_type=entity_type,
         signal_type=sig["signal_type"],
         strength=sig.get("strength", 0.0),
-        metadata_json=sig.get("metadata"),
+        metadata_json=metadata,
         detected_at=sig["detected_at"],
         created_at=datetime.now(timezone.utc),
     ))
