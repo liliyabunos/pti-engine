@@ -28,7 +28,7 @@ import logging
 import os
 import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -291,6 +291,87 @@ def _upsert_snapshot(
         ))
 
 
+# ---------------------------------------------------------------------------
+# Carry-forward — chart continuity on quiet days
+# ---------------------------------------------------------------------------
+
+# How many days back to look for active entities.  An entity that had at least
+# one real row in the past CARRY_FORWARD_DAYS days gets a zero-mention row for
+# target_date if it has no real row yet.  Once an entity goes CARRY_FORWARD_DAYS
+# consecutive days with no content, carry-forward stops automatically — this
+# bounds row growth to O(active_entities × CARRY_FORWARD_DAYS).
+CARRY_FORWARD_DAYS = 7
+
+
+def _carry_forward_quiet_entities(db: Session, target_date: date) -> int:
+    """Insert zero-mention rows for entities active in the last CARRY_FORWARD_DAYS
+    days that have no row for target_date.
+
+    Selection logic:
+      1. Find every entity_id that has at least one entity_timeseries_daily row
+         in the half-open window [target_date - 7d, target_date).
+      2. Exclude entity_ids that already have a row for target_date
+         (real rows written by the main snapshot pass must not be touched).
+      3. For each remaining entity_id, insert a zero-activity row.
+
+    The inserted row carries:
+      mention_count = 0, engagement_sum = 0, unique_authors = 0
+      growth_rate   = -1.0  (100% decline — honest, not estimated)
+      composite_market_score = 0.0
+      momentum = acceleration = volatility = 0.0
+
+    This gives Recharts a data point at every date so it can draw a
+    continuous line rather than isolated dots.  The score of 0 is correct:
+    no content appeared for this entity today.
+
+    Returns the number of rows inserted.
+    """
+    cutoff = (target_date - timedelta(days=CARRY_FORWARD_DAYS)).isoformat()
+    target_str = target_date.isoformat()
+
+    rows = db.execute(
+        text("""
+            SELECT DISTINCT entity_id
+            FROM entity_timeseries_daily
+            WHERE date >= :cutoff
+              AND date <  :target
+              AND entity_id NOT IN (
+                  SELECT entity_id
+                  FROM   entity_timeseries_daily
+                  WHERE  date = :target
+              )
+        """),
+        {"cutoff": cutoff, "target": target_str},
+    ).fetchall()
+
+    if not rows:
+        return 0
+
+    now = _now()
+    for (entity_uuid,) in rows:
+        db.add(EntityTimeSeriesDaily(
+            entity_id=entity_uuid,
+            entity_type="perfume",
+            date=target_date,
+            mention_count=0.0,
+            unique_authors=0,
+            engagement_sum=0.0,
+            sentiment_avg=None,
+            confidence_avg=None,
+            search_index=None,
+            retailer_score=None,
+            growth_rate=-1.0,
+            composite_market_score=0.0,
+            momentum=0.0,
+            acceleration=0.0,
+            volatility=0.0,
+            created_at=now,
+            updated_at=now,
+        ))
+
+    return len(rows)
+
+
 _YT_URL_PREFIX = "https://www.youtube.com/watch?v="
 _TT_URL_PREFIX = "https://www.tiktok.com/@{handle}/video/"
 
@@ -524,19 +605,30 @@ def run(
 
     db.flush()
 
+    # Carry-forward: entities active in the past 7 days but silent today
+    # get a zero-mention row so chart lines remain continuous.
+    cf_written = _carry_forward_quiet_entities(db, target_date_obj)
+    if cf_written:
+        logger.info(
+            "carry_forward_written date=%s count=%d",
+            target_date, cf_written,
+        )
+        db.flush()
+
     mentions_written = _write_mentions(
         db, content_items, resolved_signals, target_date, entity_uuid_map,
         identity_resolver=identity_resolver,
     )
 
     logger.info(
-        "aggregate_daily_market_metrics_completed date=%s entities=%d mentions=%d",
-        target_date, len(snapshots), mentions_written,
+        "aggregate_daily_market_metrics_completed date=%s entities=%d carry_forward=%d mentions=%d",
+        target_date, len(snapshots), cf_written, mentions_written,
     )
 
     return {
         "target_date": target_date,
         "entities_processed": len(snapshots),
+        "carry_forward": cf_written,
         "mentions_written": mentions_written,
     }
 
