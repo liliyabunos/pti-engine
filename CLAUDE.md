@@ -3624,3 +3624,84 @@ Do not build before first external user has accessed the product:
 The soft launch goal is: **one real external user sees real fragrance market data on a server that runs without the developer present.**
 
 Everything else is secondary to that milestone.
+
+---
+
+## O3. Railway Production Service Map & Runtime Guards
+
+### Confirmed Railway production contour
+
+The production Railway environment is split into these services:
+
+| Role | Service | Runtime model |
+|------|---------|---------------|
+| Frontend | `pti-frontend` | always-on |
+| FastAPI backend | `generous-prosperity` | always-on |
+| Ingestion / scheduled jobs | `pipeline-daily` | cron / scheduled |
+| PostgreSQL | `Postgres` | managed |
+
+### Environment variable responsibilities
+
+#### `generous-prosperity`
+Required:
+- `DATABASE_URL`
+- `PTI_ENV=production`
+
+Optional:
+- `SECRET_KEY` only if backend-signed auth/session/token flows are enabled
+
+Not required:
+- `YOUTUBE_API_KEY`
+
+#### `pipeline-daily`
+Required:
+- `DATABASE_URL`
+- `PTI_ENV=production`
+- `YOUTUBE_API_KEY`
+
+Rule:
+`pipeline-daily` must fail fast if `DATABASE_URL` is missing in production. It must never silently fall back to SQLite in production mode.
+
+#### `pti-frontend`
+Required:
+- frontend public env vars only (e.g. API base URL, Supabase public vars as applicable)
+
+Not required:
+- `DATABASE_URL`
+- `YOUTUBE_API_KEY`
+
+### Production DB safety rule
+
+In production, both backend and scheduled pipeline must use PostgreSQL via `DATABASE_URL`.
+
+`PTI_ENV=production` must be set on all production compute services so missing `DATABASE_URL` fails fast instead of falling back to SQLite.
+
+### Schema management rule
+
+Production schema must be managed by Alembic migrations only.
+
+Do NOT call:
+- `Base.metadata.create_all(...)`
+
+inside request-path dependency code.
+
+Reason:
+- `start.sh` already runs `alembic upgrade head`
+- request-time schema creation is wasteful and can bypass migration discipline
+
+### Auth secret rule
+
+`SECRET_KEY` is required only if the backend directly signs:
+- tokens
+- sessions
+- magic links
+- JWT-like auth artifacts
+
+If auth is fully delegated to Supabase frontend/server flows and the backend does not sign auth state, `SECRET_KEY` may remain unset until a backend-signed auth flow is introduced.
+
+### Current confirmed state
+
+- `YOUTUBE_API_KEY` belongs in `pipeline-daily`, not in backend API service
+- `generous-prosperity` correctly uses production PostgreSQL
+- `pipeline-daily` must explicitly set `PTI_ENV=production`
+- request-time `create_all()` must be removed from API dependencies

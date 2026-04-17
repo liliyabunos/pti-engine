@@ -13,9 +13,7 @@ from typing import Generator
 
 from sqlalchemy.orm import Session
 
-from perfume_trend_sdk.db.market.models import Base
 from perfume_trend_sdk.db.market.session import (
-    _make_engine,
     get_database_url,
     make_session_factory,
 )
@@ -25,13 +23,10 @@ from perfume_trend_sdk.storage.market.sqlite_store import MarketStore
 def get_db_session() -> Generator[Session, None, None]:
     """FastAPI dependency that yields a managed SQLAlchemy session.
 
-    Creates and migrates market engine tables on first call if they don't
-    exist, then hands a session to the route. Commit on success, rollback
-    on error, always close.
+    Schema is managed exclusively by Alembic (run via start.sh before uvicorn).
+    Commit on success, rollback on error, always close.
     """
     url = get_database_url()
-    engine = _make_engine(url)
-    Base.metadata.create_all(engine)
     factory = make_session_factory(url)
     session: Session = factory()
     try:
