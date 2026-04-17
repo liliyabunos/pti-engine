@@ -49,6 +49,52 @@ _STOP_WORDS = frozenset({
     "and", "et", "maison", "parfums", "parfum", "eau",
 })
 
+# ---------------------------------------------------------------------------
+# Concentration-suffix normalisation
+# ---------------------------------------------------------------------------
+# These suffixes appear at the END of resolver canonical names and must be
+# stripped before using the name as an aggregation key, so that concentration
+# variants collapse into one market entity stream:
+#   "Dior Sauvage Eau de Parfum"  →  "Dior Sauvage"
+#   "Creed Aventus Extrait de Parfum"  →  "Creed Aventus"
+#
+# Longer / more-specific alternatives listed before shorter ones so the regex
+# engine never greedily matches a substring when the full phrase is present.
+# The loop in _base_name() handles double-suffixed names such as
+# "Baccarat Rouge 540 Extrait Extrait de Parfum".
+_CONC_SUFFIX_RE = re.compile(
+    r"\s+(?:"
+    r"Extrait\s+de\s+Parfum"
+    r"|Eau\s+de\s+Parfum"
+    r"|Eau\s+de\s+Toilette"
+    r"|Eau\s+de\s+Cologne"
+    r"|Eau\s+Fraiche"
+    r"|Extrait"
+    r"|Parfum"
+    r")\s*$",
+    re.IGNORECASE,
+)
+
+
+def _base_name(canonical: str) -> str:
+    """Return the base perfume name with concentration suffix stripped.
+
+    Applied iteratively until stable so that a name like
+    'Baccarat Rouge 540 Extrait Extrait de Parfum' reduces to
+    'Baccarat Rouge 540' in two passes.
+
+    The original canonical_name is preserved in resolver/storage tables and is
+    only used as a display hint inside aggregate_from_data(); this function
+    affects the aggregation key only.
+    """
+    name = canonical.strip()
+    while True:
+        stripped = _CONC_SUFFIX_RE.sub("", name).strip()
+        if not stripped or stripped == name:
+            break
+        name = stripped
+    return name
+
 
 def generate_ticker(canonical_name: str) -> str:
     """Generate a short uppercase ticker symbol from a canonical entity name."""
@@ -208,11 +254,15 @@ class DailyAggregator:
                 if not canonical:
                     continue
 
-                eid = canonical  # use canonical_name as stable entity_id
+                # Collapse concentration variants into one market entity stream.
+                # "Dior Sauvage Eau de Parfum" and "Dior Sauvage" both key to
+                # "Dior Sauvage". The original canonical_name is unchanged in
+                # resolved_signals; only the aggregation key is normalised here.
+                eid = _base_name(canonical)
 
                 if eid not in entity_data:
                     entity_data[eid] = {
-                        "canonical_name": canonical,
+                        "canonical_name": eid,  # base name is the market identity
                         "mention_count": 0.0,
                         "unique_authors": set(),
                         "engagement_sum": 0.0,
