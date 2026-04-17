@@ -3,7 +3,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh start_pipeline.sh"
-cronSchedule = "0 11 * * *"
+startCommand = "sh start_pipeline_evening.sh"
+cronSchedule = "0 23 * * *"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

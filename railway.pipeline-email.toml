@@ -1,0 +1,12 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# DISABLED until send_daily_digest job is implemented.
+# Remove the leading '#' from cronSchedule when the job is ready.
+# startCommand = "python3 -m perfume_trend_sdk.jobs.send_daily_digest"
+# cronSchedule = "0 0 * * *"
+startCommand = "echo '[pipeline-email] send_daily_digest not yet implemented — skipping'"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 1
