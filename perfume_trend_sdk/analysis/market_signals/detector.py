@@ -92,9 +92,11 @@ class BreakoutDetector:
             else:
                 growth_ratio = (cur_score - prev_score) / prev_score
             if growth_ratio >= t["breakout_growth_pct"]:
+                # Cap growth_pct at 9999.9 — float("inf") is invalid JSON in Postgres.
+                growth_pct = round(growth_ratio * 100, 1) if growth_ratio < 1e6 else 9999.9
                 signals.append(self._signal(
                     entity_id, "breakout", detected_at, cur_score,
-                    {"prev_score": prev_score, "growth_pct": round(growth_ratio * 100, 1)},
+                    {"prev_score": prev_score, "growth_pct": growth_pct},
                 ))
 
         # ── acceleration_spike ───────────────────────────────────────
