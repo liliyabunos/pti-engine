@@ -3543,18 +3543,22 @@ Rules:
 
 ### Soft Launch Access Model
 
-V1 soft launch is **invite-only**.
+V1 soft launch uses **frictionless magic link access** — no approval gate anywhere in the auth flow.
 
 Access model:
-- users receive an invite link (email or direct share)
-- invite link includes a token or leads to a magic link flow
+- any email can request a magic link from the login page
+- login page sends `signInWithOtp` immediately — no pre-check
+- `/auth/callback` establishes session and redirects to `/dashboard` — no approval check
+- middleware checks Supabase session only — no app_users lookup
+- terminal layout checks Supabase session only — no app_users lookup
 - no public sign-up page in V1
 - no social login in V1 (too much surface area for a soft launch)
 
-**Why invite-only:**
-- product is not yet public-ready for unfiltered traffic
-- user feedback loop is more valuable at small scale first
-- reduces support burden and noise before core flows are validated
+**Why no approval gate:**
+- soft launch priority is frictionless first contact
+- access gating will be implemented via payment/subscription layer (Stripe) in a future milestone
+- the `app_users` table and `isApprovedUser` guard remain in the codebase but are not active in the auth flow
+- when payment layer is added, gating moves to subscription status, not manual approval
 
 ### Minimal Auth Strategy
 

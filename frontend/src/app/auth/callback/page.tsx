@@ -13,41 +13,13 @@
  *      Used by browser-initiated signInWithOtp (normal login form).
  *      exchangeCodeForSession() exchanges the code for a session.
  *
- * After a session is established:
- *   - verified the email is approved in app_users (backend check)
- *   - approved  → redirect to /dashboard
- *   - not approved / API error → sign out + redirect to /login?error=not_approved
+ * After a session is established → redirect to /dashboard.
+ * No approval gate at this stage — access control via payment/subscription later.
  */
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/auth/client";
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ?? "";
-
-async function verifyApproval(email: string): Promise<boolean> {
-  if (!API_BASE) return false;
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/v1/auth/users/${encodeURIComponent(email.toLowerCase())}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) return false;
-    const user = await res.json();
-    return user?.access_status === "approved";
-  } catch {
-    return false;
-  }
-}
-
-function recordLogin(email: string): void {
-  if (!API_BASE) return;
-  fetch(
-    `${API_BASE}/api/v1/auth/users/${encodeURIComponent(email.toLowerCase())}/login`,
-    { method: "POST", cache: "no-store" }
-  ).catch(() => {});
-}
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -56,15 +28,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const supabase = createClient();
 
-    async function finalize(email: string) {
-      const approved = await verifyApproval(email);
-      if (!approved) {
-        setStatus("Access not approved. Redirecting\u2026");
-        await supabase.auth.signOut();
-        router.replace("/login?error=not_approved");
-        return;
-      }
-      recordLogin(email);
+    function finalize() {
       router.replace("/dashboard");
     }
 
@@ -77,12 +41,12 @@ export default function AuthCallbackPage() {
       // ── PKCE flow: ?code= present ────────────────────────────────────────
       if (code) {
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error || !data.session?.user?.email) {
+        if (error || !data.session) {
           console.error("[PTI] exchangeCodeForSession failed:", error?.message);
           router.replace("/login?error=auth_failed");
           return;
         }
-        await finalize(data.session.user.email);
+        finalize();
         return;
       }
 
@@ -93,8 +57,8 @@ export default function AuthCallbackPage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (session?.user?.email) {
-        await finalize(session.user.email);
+      if (session) {
+        finalize();
         return;
       }
 
@@ -107,11 +71,11 @@ export default function AuthCallbackPage() {
 
       const {
         data: { subscription: sub },
-      } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (session?.user?.email) {
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (session) {
           clearTimeout(timeout);
           sub.unsubscribe();
-          await finalize(session.user.email);
+          finalize();
         }
       });
     }

@@ -3,9 +3,8 @@
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { createOtpClient } from "@/lib/auth/otp-client";
-import { isApprovedUser } from "@/lib/auth/guards";
 
-type LoginState = "idle" | "success" | "not_approved" | "error";
+type LoginState = "idle" | "success" | "error";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
@@ -24,14 +23,7 @@ export default function LoginForm() {
     startTransition(async () => {
       setState("idle");
 
-      // Step 1 — pre-check: is this email in app_users with status = approved?
-      const approved = await isApprovedUser(normalized);
-      if (!approved) {
-        setState("not_approved");
-        return;
-      }
-
-      // Step 2 — send Supabase magic link (implicit flow — bypasses @supabase/ssr PKCE override)
+      // Send Supabase magic link (implicit flow — bypasses @supabase/ssr PKCE override)
       const supabase = createOtpClient();
       const siteUrl =
         process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
@@ -111,26 +103,11 @@ export default function LoginForm() {
                   "w-full rounded border bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100",
                   "placeholder:text-zinc-700",
                   "focus:outline-none focus:ring-1",
-                  state === "not_approved" || state === "error"
+                  state === "error"
                     ? "border-red-800 focus:ring-red-700/40"
                     : "border-zinc-700 focus:border-amber-500 focus:ring-amber-500/30",
                 ].join(" ")}
               />
-
-              {/* ── Not approved ── */}
-              {state === "not_approved" && (
-                <p className="mt-2 text-xs leading-relaxed text-red-400">
-                  This email is not approved for access yet. If you believe this
-                  is a mistake, contact{" "}
-                  <a
-                    href="mailto:access@pti.market"
-                    className="underline underline-offset-2"
-                  >
-                    access@pti.market
-                  </a>
-                  .
-                </p>
-              )}
 
               {/* ── Error ── */}
               {state === "error" && (
@@ -145,7 +122,7 @@ export default function LoginForm() {
               disabled={isPending || !email.trim()}
               className="w-full rounded bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400 disabled:opacity-50 transition-colors"
             >
-              {isPending ? "Checking…" : "Send magic link →"}
+              {isPending ? "Sending…" : "Send magic link →"}
             </button>
           </form>
         )}

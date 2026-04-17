@@ -38,9 +38,7 @@ def main() -> None:
     payload = json.dumps({
         "type": "magiclink",
         "email": args.email,
-        "options": {
-            "redirect_to": REDIRECT_TO,
-        },
+        "redirect_to": REDIRECT_TO,
     }).encode()
 
     req = urllib.request.Request(

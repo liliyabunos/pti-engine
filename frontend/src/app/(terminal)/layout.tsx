@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { StatusBar } from "@/components/shell/StatusBar";
-import { getApprovedSessionUser } from "@/lib/auth/guards.server";
+import { createClient } from "@/lib/auth/server";
 
 /**
  * Terminal shell layout — Server Component.
@@ -16,23 +16,16 @@ import { getApprovedSessionUser } from "@/lib/auth/guards.server";
  * │            │                                         │
  * └────────────┴─────────────────────────────────────────┘
  *
- * Two-layer auth model:
- *   Layer 1 — middleware.ts: redirects unauthenticated/unapproved requests
- *             before the page is rendered (early redirect, low cost)
- *   Layer 2 — this layout: server-side re-check before rendering any content.
- *             Catches edge cases where middleware was bypassed or the approval
- *             status changed between the middleware check and the render.
- *
- * This layout is a Server Component so it can call getApprovedSessionUser()
- * directly. No client-side useEffect needed.
+ * Auth: session check only (soft launch).
+ * No approval gate — access gating via payment layer later.
  */
 export default async function TerminalLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Server-side auth guard — second layer of protection
-  const user = await getApprovedSessionUser();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     redirect("/login");
   }
