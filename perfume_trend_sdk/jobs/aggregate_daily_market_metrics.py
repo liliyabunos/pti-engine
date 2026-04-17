@@ -45,7 +45,7 @@ from perfume_trend_sdk.db.market.entity_mention import EntityMention
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily
 from perfume_trend_sdk.db.market.models import Base, EntityMarket
 from perfume_trend_sdk.db.market.perfume import Perfume
-from perfume_trend_sdk.db.market.session import _make_engine, get_database_url
+from perfume_trend_sdk.db.market.session import _make_engine, get_database_url, make_session_factory
 
 logger = logging.getLogger(__name__)
 
@@ -665,8 +665,6 @@ def main() -> None:
         pass
 
     url = get_database_url()
-    engine = _make_engine(url)
-    Base.metadata.create_all(engine)
 
     # Build IdentityResolver if mapping tables are available.
     # Identity maps (brand_identity_map, perfume_identity_map) live in the
@@ -693,8 +691,7 @@ def main() -> None:
     except Exception as exc:
         logger.warning("bridge_unavailable reason=%s", exc)
 
-    from sqlalchemy.orm import sessionmaker
-    Session_ = sessionmaker(bind=engine)
+    Session_ = make_session_factory(url)
     with Session_() as session:
         summary = run(session, target_date=args.date, identity_resolver=identity_resolver)
         session.commit()

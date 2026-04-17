@@ -30,7 +30,7 @@ from perfume_trend_sdk.analysis.market_signals.detector import BreakoutDetector
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily
 from perfume_trend_sdk.db.market.models import Base, EntityMarket
 from perfume_trend_sdk.db.market.signal import Signal
-from perfume_trend_sdk.db.market.session import _make_engine, get_database_url
+from perfume_trend_sdk.db.market.session import _make_engine, get_database_url, make_session_factory
 
 logger = logging.getLogger(__name__)
 
@@ -201,11 +201,7 @@ def main() -> None:
         pass
 
     url = get_database_url()
-    engine = _make_engine(url)
-    Base.metadata.create_all(engine)
-
-    from sqlalchemy.orm import sessionmaker
-    Session_ = sessionmaker(bind=engine)
+    Session_ = make_session_factory(url)
     with Session_() as session:
         summary = run(session, detected_at=args.date)
         session.commit()
