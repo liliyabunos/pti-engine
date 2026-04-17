@@ -1,19 +1,44 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { createOtpClient } from "@/lib/auth/otp-client";
 
 type LoginState = "idle" | "success" | "error";
 
+// Detects WhatsApp, Instagram, Facebook, and other in-app browsers
+// that restrict fetch/cookie behavior or may have unexpected window.location.origin
+function detectInAppBrowser(): string | null {
+  if (typeof navigator === "undefined") return null;
+  const ua = navigator.userAgent;
+  if (/WhatsApp/.test(ua)) return "WhatsApp";
+  if (/FBAN|FBAV|FB_IAB/.test(ua)) return "Facebook";
+  if (/Instagram/.test(ua)) return "Instagram";
+  if (/Line\//.test(ua)) return "Line";
+  if (/Snapchat/.test(ua)) return "Snapchat";
+  return null;
+}
+
+// Always use the env var for redirect — never rely on window.location.origin.
+// In-app browsers (WhatsApp WebView) may return unexpected or null origins,
+// causing emailRedirectTo to fail Supabase's allowlist check.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://pti-frontend-production.up.railway.app";
+
 export default function LoginForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>("idle");
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [inAppBrowser, setInAppBrowser] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Where to land after successful auth (magic link callback will honour this)
   const next = searchParams.get("next") || "/dashboard";
+
+  useEffect(() => {
+    setInAppBrowser(detectInAppBrowser());
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,26 +47,35 @@ export default function LoginForm() {
 
     startTransition(async () => {
       setState("idle");
+      setErrorDetail(null);
 
-      // Send Supabase magic link (implicit flow — bypasses @supabase/ssr PKCE override)
+      const emailRedirectTo = `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`;
+
+      console.log("[PTI LOGIN] attempting signInWithOtp", {
+        email: normalized,
+        emailRedirectTo,
+        origin: typeof window !== "undefined" ? window.location.origin : "ssr",
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "ssr",
+      });
+
       const supabase = createOtpClient();
-      const siteUrl =
-        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-        window.location.origin;
       const { error } = await supabase.auth.signInWithOtp({
         email: normalized,
-        options: {
-          // The callback route will redirect the user to their intended destination
-          emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
-        },
+        options: { emailRedirectTo },
       });
 
       if (error) {
-        console.error("[PTI] Magic link error:", error.message, error.status);
+        console.error("[PTI LOGIN] signInWithOtp failed", {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        });
+        setErrorDetail(error.message);
         setState("error");
         return;
       }
 
+      console.log("[PTI LOGIN] signInWithOtp success — email dispatched");
       setState("success");
     });
   }
@@ -49,20 +83,31 @@ export default function LoginForm() {
   return (
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
+
+        {/* ── In-app browser warning ── */}
+        {inAppBrowser && (
+          <div className="mb-6 rounded border border-amber-700/50 bg-amber-950/40 px-4 py-3">
+            <p className="text-xs leading-relaxed text-amber-300">
+              You&apos;re opening PTI inside {inAppBrowser}. For sign-in to work
+              correctly, please open this page in{" "}
+              <strong>Safari</strong> or your default browser first.
+            </p>
+          </div>
+        )}
+
         {/* Header block */}
         <div className="mb-10">
           <div className="mb-3 flex items-center gap-2">
             <span className="h-px w-6 bg-amber-500/60" />
             <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-amber-500/80">
-              Invite only
+              Soft launch
             </span>
           </div>
           <h1 className="mb-1 text-xl font-bold tracking-tight text-zinc-100">
             PTI Market Terminal
           </h1>
           <p className="text-sm text-zinc-500">
-            PTI is currently in invite-only soft launch. Enter your email to
-            receive a secure sign-in link.
+            Enter your email to receive a secure sign-in link.
           </p>
         </div>
 
@@ -81,7 +126,7 @@ export default function LoginForm() {
           </div>
         )}
 
-        {/* ── Form (idle / error / not_approved) ── */}
+        {/* ── Form (idle / error) ── */}
         {state !== "success" && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -112,7 +157,7 @@ export default function LoginForm() {
               {/* ── Error ── */}
               {state === "error" && (
                 <p className="mt-2 text-xs text-red-400">
-                  Unable to send sign-in link. Please try again.
+                  {errorDetail ?? "Unable to send sign-in link. Please try again."}
                 </p>
               )}
             </div>
@@ -129,12 +174,12 @@ export default function LoginForm() {
 
         {/* ── Footer note ── */}
         <p className="mt-8 text-center text-xs text-zinc-700">
-          Don&apos;t have access?{" "}
+          Problems signing in?{" "}
           <a
             href="mailto:access@pti.market"
             className="text-zinc-500 hover:text-zinc-300 transition-colors"
           >
-            Request an invite
+            Contact support
           </a>
         </p>
       </div>
