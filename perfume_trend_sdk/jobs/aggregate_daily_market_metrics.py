@@ -335,6 +335,7 @@ def _carry_forward_quiet_entities(db: Session, target_date: date) -> int:
             FROM entity_timeseries_daily
             WHERE date >= :cutoff
               AND date <  :target
+              AND mention_count > 0
               AND entity_id NOT IN (
                   SELECT entity_id
                   FROM   entity_timeseries_daily
