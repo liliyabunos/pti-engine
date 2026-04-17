@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/auth/client";
+import { createOtpClient } from "@/lib/auth/otp-client";
 import { isApprovedUser } from "@/lib/auth/guards";
 
 type LoginState = "idle" | "success" | "not_approved" | "error";
@@ -31,18 +31,21 @@ export default function LoginForm() {
         return;
       }
 
-      // Step 2 — send Supabase magic link
-      const supabase = createClient();
+      // Step 2 — send Supabase magic link (implicit flow — bypasses @supabase/ssr PKCE override)
+      const supabase = createOtpClient();
+      const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+        window.location.origin;
       const { error } = await supabase.auth.signInWithOtp({
         email: normalized,
         options: {
           // The callback route will redirect the user to their intended destination
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`,
+          emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
 
       if (error) {
-        console.error("[PTI] Magic link error:", error.message);
+        console.error("[PTI] Magic link error:", error.message, error.status);
         setState("error");
         return;
       }
