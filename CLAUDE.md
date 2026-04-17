@@ -3543,48 +3543,56 @@ Rules:
 
 ### Soft Launch Access Model
 
+**Status: CONFIRMED WORKING in production (2026-04-17)**
+
 V1 soft launch uses **frictionless magic link access** — no approval gate anywhere in the auth flow.
 
-Access model:
-- any email can request a magic link from the login page
-- login page sends `signInWithOtp` immediately — no pre-check
-- `/auth/callback` establishes session and redirects to `/dashboard` — no approval check
-- middleware checks Supabase session only — no app_users lookup
-- terminal layout checks Supabase session only — no app_users lookup
-- no public sign-up page in V1
-- no social login in V1 (too much surface area for a soft launch)
+#### Canonical auth flow (verified end-to-end)
 
-**Why no approval gate:**
-- soft launch priority is frictionless first contact
-- access gating will be implemented via payment/subscription layer (Stripe) in a future milestone
-- the `app_users` table and `isApprovedUser` guard remain in the codebase but are not active in the auth flow
-- when payment layer is added, gating moves to subscription status, not manual approval
+```
+user enters email
+→ LoginForm calls signInWithOtp via createOtpClient (plain @supabase/supabase-js, flowType:implicit)
+→ Supabase sends magic link email
+→ user clicks link
+→ Supabase verifies token → redirects to /auth/callback#access_token=...&refresh_token=...
+→ AuthCallbackPage (client component) manually parses window.location.hash
+→ supabase.auth.setSession({ access_token, refresh_token })
+→ @supabase/ssr stores session in httpOnly cookie
+→ router.replace("/dashboard")
+→ middleware: session present → pass
+→ terminal layout: session present → render
+```
 
-### Minimal Auth Strategy
+#### Why manual hash parsing is required
 
-V1 auth must be:
-- lightweight
-- not a full OAuth system
-- sufficient to gate access
+`@supabase/ssr createBrowserClient` hardcodes `flowType:"pkce"` after spreading user options — the user-provided value is always overridden. A PKCE-wired client does not process `#access_token=` hash tokens. `getSession()` returns null and `onAuthStateChange` never fires → 8s timeout → `auth_failed`.
 
-Recommended approach:
+Fix: manually parse `window.location.hash` and call `setSession()` directly on the `@supabase/ssr` client. This bypasses the PKCE-only `detectSessionInUrl` behavior while keeping cookie storage intact.
 
-**Magic link (preferred):**
-- user provides email
-- backend generates a signed time-limited token
-- token is sent to email (transactional email provider: Resend, Postmark, or SendGrid)
-- clicking the link creates a session
-- session stored in an HTTP-only cookie (JWT or opaque token)
+#### Access gate state
 
-**Alternative (simpler for first external user):**
-- shared access token in a header or URL param
-- valid for soft launch if user count is ≤ 5
+- login page: no pre-check, `signInWithOtp` always fires
+- `/auth/callback`: no approval check, session → `/dashboard`
+- middleware: Supabase session check only, no `app_users` lookup
+- terminal layout: Supabase session check only, no `app_users` lookup
+- `app_users` table and `isApprovedUser` guard remain in codebase, inactive
+- future gating: payment/subscription layer (Stripe), not manual approval
 
-**Rules:**
-- Do NOT store passwords
-- Do NOT implement full OAuth in V1
-- Session must expire (24h default, configurable)
-- Auth must not block the API for unauthenticated internal health checks
+#### Auth implementation notes
+
+- OTP sending: `createOtpClient()` (`@supabase/supabase-js` direct, `flowType:implicit`, no session persistence)
+- Session management: `createClient()` (`@supabase/ssr createBrowserClient`, httpOnly cookie storage)
+- Callback route: `/auth/callback` — the only route that finalizes auth
+- Root `/` is a Server Component and cannot process `#access_token=` hash — never use as redirect target
+- `redirect_to` must be at the top level of the Supabase Admin `generate_link` payload — nested inside `options` is silently ignored
+
+#### Lessons learned
+
+- Do not use pre-approval as a login gate — it adds friction with no security benefit (Supabase controls identity)
+- Do not rely on implicit hash parsing "by default" with `@supabase/ssr` — verify in production with a real magic link
+- Test every auth flow in a clean browser window with a fresh email
+- `redirect_to` in `generate_link` API goes at top level, not inside `options`
+- Always verify the `redirect_to` value in the generated link URL before testing
 
 ### Minimal Product Shell (Required Before External Access)
 
