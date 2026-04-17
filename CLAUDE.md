@@ -3710,52 +3710,140 @@ If auth is fully delegated to Supabase frontend/server flows and the backend doe
 
 ## D5. Aggregation Layer Rules (Entity Consolidation + Chart Continuity)
 
+### Core rules (MANDATORY)
+
+1. **Market aggregation must collapse concentration suffixes into base perfume entities.**
+   `"Dior Sauvage Eau de Parfum"` and `"Dior Sauvage"` are the same market entity.
+   Concentration variants must not create separate market streams.
+
+2. **Carry-forward rows are allowed only as zero-mention continuity rows.**
+   They provide chart line continuity on quiet days. They must never carry forward
+   non-zero mention counts, scores, or engagement values.
+
+3. **Carry-forward must be bounded by a 7-day lookback.**
+   An entity silent for 7+ consecutive real days stops receiving carry-forward rows
+   automatically. The lookback window counts only `mention_count > 0` rows.
+
+4. **Carry-forward rows must never inflate mentions, scores, growth, or signal logic.**
+   Score=0, mentions=0. All signal detection thresholds (breakout_min_score=15,
+   breakout_min_mentions=2) are above carry-forward values by design.
+
+5. **Stale fragment entities must be cleaned if they predate consolidation fixes.**
+   Pre-fix backfill may have written data to concentration-variant entities.
+   Those rows pollute top movers rankings and must be deleted.
+
+6. **Signal re-detection is required after fragment cleanup for affected historical dates.**
+   Signal detection is idempotent — it clears stale signals before re-detecting.
+   Always re-run `detect_breakout_signals --date <date>` for each affected date
+   after running a fragment cleanup.
+
+---
+
 ### Entity key normalisation (concentration suffix stripping)
 
 The daily aggregator (`perfume_trend_sdk/analysis/market_signals/aggregator.py`)
-must normalise the resolver's `canonical_name` before using it as the market entity
-key. Concentration suffixes are stripped from the END of the name using `_base_name()`.
+normalises the resolver's `canonical_name` before using it as the market entity key.
+Concentration suffixes are stripped from the END of the name using `_base_name()`.
 
 Suffixes stripped (longest-first, iterative):
 - `Extrait de Parfum` → `Eau de Parfum` → `Eau de Toilette` → `Eau de Cologne` → `Eau Fraiche` → `Extrait` → `Parfum`
 
-Effect: `"Dior Sauvage Eau de Parfum"` and `"Dior Sauvage"` both write to the same
-`entity_market` row and `entity_timeseries_daily` stream.
+The loop iterates until stable — handles double-suffixed names:
+`"Baccarat Rouge 540 Extrait Extrait de Parfum"` → two passes → `"Baccarat Rouge 540"`.
+
+Guard: if stripping would return an empty string (e.g. a single-word name like `"Parfum"`),
+the original name is kept unchanged.
 
 **Rule:** Resolver tables (`resolved_signals`, `perfume_identity_map`) are unchanged.
 Normalisation is aggregation-layer only. The original `canonical_name` is preserved
 in resolver storage for replay/debugging.
 
-### Carry-forward rows for chart continuity
+---
+
+### Carry-forward rows
 
 After the main snapshot write pass, the aggregator inserts zero-mention rows for
 entities that were active in the past 7 days but produced no content on `target_date`.
+This is implemented in `_carry_forward_quiet_entities()` in
+`perfume_trend_sdk/jobs/aggregate_daily_market_metrics.py`.
 
 **Row values:** `mention_count=0`, `engagement_sum=0`, `composite_market_score=0.0`,
 `growth_rate=-1.0`, `momentum=acceleration=volatility=0.0`.
 
-**Safeguards:**
+**Critical safeguard — perpetuation prevention:**
+The 7-day activity window query must filter `AND mention_count > 0`.
+Without this, carry-forward rows themselves count as activity, causing fragment
+entities to receive carry-forward indefinitely even after all real data is gone.
+
+**Three guarantees:**
 1. Real rows for `target_date` are never overwritten (NOT IN guard).
-2. The activity window queries only `mention_count > 0` rows — carry-forward rows
-   themselves do NOT extend the window. An entity silent for 7+ real days stops
-   receiving carry-forward rows automatically.
+2. Carry-forward rows do NOT extend the window — only real `mention_count > 0` rows count.
 3. Re-running aggregation for the same date is idempotent.
 
-**Rule:** Carry-forward rows must never contribute to mention totals, signal detection,
-or composite_market_score. Score=0, mentions=0 rows are filtered below all signal
-thresholds (breakout_min_score=15, breakout_min_mentions=2).
+---
 
-### Fragment entity cleanup rule
+### Fragment entity cleanup
 
-If old concentration-variant entity_market rows exist from a pre-normalisation
-backfill, they must be cleaned up before they pollute top movers rankings:
+If concentration-variant entity_market rows exist from a pre-normalisation backfill,
+they must be deleted in FK order before they pollute top movers rankings.
 
-1. Delete `entity_timeseries_daily` rows for fragment entities.
-2. Delete `signals` rows for fragment entities.
-3. Delete `entity_market` rows whose `canonical_name` ends with a concentration suffix.
-4. Re-run `detect_breakout_signals` for affected dates.
+**Deletion order (respect FK constraints):**
+1. `entity_timeseries_daily` WHERE entity_id IN (fragment IDs)
+2. `signals` WHERE entity_id IN (fragment IDs)
+3. `entity_mentions` WHERE entity_id IN (fragment IDs)
+4. `entity_market` WHERE canonical_name matches suffix pattern
 
-Fragment identification SQL pattern:
+**Fragment identification pattern (PostgreSQL):**
 ```sql
-WHERE canonical_name ~ ' (Eau de Parfum|Eau de Toilette|Extrait de Parfum|Extrait)$'
+WHERE canonical_name ~* ' (Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)$'
+```
+
+Use `~*` (case-insensitive) to catch mixed-case variants from the resolver.
+
+**Always run a DRY-RUN SELECT first** to confirm the candidate list before executing DELETE.
+
+**After cleanup — required signal re-detection:**
+```bash
+railway ssh --service generous-prosperity python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date <YYYY-MM-DD>
+```
+Run for each date that had fragment signals. Signal detection clears stale signals
+for the target date before re-detecting — safe to run repeatedly.
+
+---
+
+### Signal metadata JSON safety
+
+Signal metadata (stored in `signals.metadata_json`) must never contain non-finite
+float values (`float("inf")`, `float("-inf")`, `float("nan")`). PostgreSQL JSON
+rejects these as invalid tokens.
+
+**Two-layer protection implemented:**
+1. Detector (`detector.py`): caps `growth_pct` at `9999.9` when `prev_score == 0`.
+2. Storage (`detect_breakout_signals.py`): `_sanitize_metadata()` replaces any
+   remaining `inf`/`-inf` with `±9999.9` and `nan` with `None` before ORM flush.
+
+---
+
+### Verification queries after any aggregation or cleanup run
+
+```sql
+-- Fragments must be zero
+SELECT COUNT(*) FROM entity_market
+WHERE canonical_name ~* ' (Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)$';
+
+-- Top movers must be base entities only
+SELECT e.canonical_name, t.composite_market_score, t.mention_count, t.date
+FROM entity_timeseries_daily t
+JOIN entity_market e ON e.id = t.entity_id
+WHERE t.date = (SELECT MAX(date) FROM entity_timeseries_daily WHERE mention_count > 0)
+  AND t.mention_count > 0
+ORDER BY t.composite_market_score DESC
+LIMIT 10;
+
+-- Reference entity continuity check (Dior Sauvage, Creed Aventus, MFK BR540)
+SELECT t.date, t.mention_count, t.composite_market_score
+FROM entity_timeseries_daily t
+JOIN entity_market e ON e.id = t.entity_id
+WHERE e.canonical_name = 'Dior Sauvage'
+ORDER BY t.date;
 ```
