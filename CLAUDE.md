@@ -3850,13 +3850,25 @@ ORDER BY t.date;
 
 ---
 
-## D6. Production Schedule & Execution Model
+## D6. Production Schedule & Execution Model — COMPLETED 2026-04-17
+
+### Implementation status
+
+| Component | Status |
+|-----------|--------|
+| `pipeline-daily` (morning) | ACTIVE — cron `0 11 * * *` |
+| `pipeline-evening` | ACTIVE — cron `0 23 * * *` |
+| `pipeline-email` | CREATED — cron disabled, pending `send_daily_digest` implementation |
+| Email digest job | NOT YET IMPLEMENTED |
+
+All three Railway services are configured. Two cycles run fully automatically.
+Email slot is reserved but inactive until `send_daily_digest.py` is built.
+
+---
 
 ### Timezone
 
 All scheduled times are defined in **UTC**.
-
-Reference mapping for America/New_York:
 
 | UTC | ET (standard) | ET (daylight) |
 |-----|--------------|---------------|
@@ -3866,32 +3878,31 @@ Reference mapping for America/New_York:
 
 ---
 
-### Fixed production schedule
+### Production schedule
 
-#### Morning cycle
+| UTC | Railway service | cron | Script | Cycle |
+|-----|----------------|------|--------|-------|
+| 11:00 | `pipeline-daily` | `0 11 * * *` | `sh start_pipeline.sh` | Morning |
+| 23:00 | `pipeline-evening` | `0 23 * * *` | `sh start_pipeline_evening.sh` | Evening |
+| 00:00 | `pipeline-email` | *(disabled)* | `send_daily_digest` *(stub)* | — |
 
-| UTC | Job | Command |
-|-----|-----|---------|
-| 11:00 | YouTube ingest | `python3 scripts/ingest_youtube.py --max-results 50 --lookback-days 2` |
-| 11:10 | Reddit ingest | `python3 scripts/ingest_reddit.py --lookback-days 1` |
-| 11:25 | Aggregate metrics | `python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date $(date -u +%Y-%m-%d)` |
-| 11:35 | Detect signals | `python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date $(date -u +%Y-%m-%d)` |
-| 12:00 | Verify state | `python3 scripts/verify_market_state.py` |
+Steps within each cycle run sequentially inside the shell script (not separate cron entries):
 
-#### Evening cycle
+**Morning cycle** (`start_pipeline.sh`): reset sequence → YouTube ingest → Reddit ingest → aggregate → detect signals → verify state
 
-| UTC | Job | Command |
-|-----|-----|---------|
-| 23:00 | YouTube ingest | `python3 scripts/ingest_youtube.py --max-results 50 --lookback-days 2` |
-| 23:10 | Reddit ingest | `python3 scripts/ingest_reddit.py --lookback-days 1` |
-| 23:25 | Aggregate metrics | `python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date $(date -u +%Y-%m-%d)` |
-| 23:35 | Detect signals | `python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date $(date -u +%Y-%m-%d)` |
+**Evening cycle** (`start_pipeline_evening.sh`): reset sequence → YouTube ingest → Reddit ingest → aggregate → detect signals *(no verify)*
 
-#### Daily report
+---
 
-| UTC | Job | Notes |
-|-----|-----|-------|
-| 00:00 | Daily market digest email | Runs after evening cycle completes; one email per calendar day |
+### Service configuration
+
+| Service | Config file | Start command | `DATABASE_URL` | `PTI_ENV` | `YOUTUBE_API_KEY` |
+|---------|-------------|--------------|----------------|-----------|-------------------|
+| `pipeline-daily` | `railway.pipeline.toml` | `sh start_pipeline.sh` | ✓ | `production` | ✓ |
+| `pipeline-evening` | `railway.pipeline-evening.toml` | `sh start_pipeline_evening.sh` | ✓ | `production` | ✓ |
+| `pipeline-email` | `railway.pipeline-email.toml` | echo placeholder | ✓ | `production` | — |
+| `generous-prosperity` | `railway.toml` | `sh start.sh` | ✓ | `production` | — |
+| `pti-frontend` | — | Next.js | — | — | — |
 
 ---
 
@@ -3906,45 +3917,53 @@ Reference mapping for America/New_York:
 
 ---
 
-### Data correctness rules
+### Safety guarantees
 
-- All production jobs must connect via `DATABASE_URL` (Railway PostgreSQL).
-- No fallback to SQLite is permitted in production (`PTI_ENV=production` enforces this).
-- All jobs must be **idempotent** — re-running for the same date must not produce
-  duplicate rows, duplicate signals, or duplicate emails.
-- Scheduled jobs must derive the target date automatically from wall-clock UTC
-  (`$(date -u +%Y-%m-%d)`). Manual `--date` overrides are for backfill only.
-
----
-
-### Email reporting rules
-
-- Exactly **one report per calendar day** (UTC midnight boundary).
-- Report content is based on the latest completed evening cycle data.
-- Duplicate suppression: before sending, check whether a report for the current
-  UTC date has already been dispatched. If yes, skip.
-- Report must not be sent if the evening cycle has not completed successfully.
-
----
-
-### Service responsibility rules
-
-| Service | Allowed to run scheduled jobs |
-|---------|-------------------------------|
-| `pipeline-daily` | Yes — the only service permitted to run ingestion, aggregation, signal detection, and reporting |
-| `generous-prosperity` (API) | No — serves read-only API requests only |
-| `pti-frontend` | No — no backend job execution |
-
-The schedule must be defined via **Railway cron** in `pipeline-daily`.
-No other service may define or trigger pipeline jobs.
+- All production jobs connect via `DATABASE_URL` (Railway PostgreSQL). No SQLite fallback.
+- `PTI_ENV=production` enforced on all compute services — missing `DATABASE_URL` fails fast.
+- All jobs are **idempotent** — re-running for the same date produces no duplicates.
+- Scheduled jobs derive the target date from wall-clock UTC automatically.
+  `--date` overrides are for manual backfill only.
+- Schema managed exclusively by Alembic (`start.sh` runs `alembic upgrade head`).
+  No `Base.metadata.create_all()` in any request path or job CLI.
 
 ---
 
 ### Failure handling
 
-- If an ingest job fails, aggregation for that cycle should still run on whatever
-  data is already in the database. Data is additive — a missed ingest is not fatal.
+- If an ingest job fails, aggregation still runs on existing data. Ingestion is additive — a missed cycle is not fatal.
 - If aggregation fails, signal detection must not run for that cycle.
-- If signal detection fails, `verify_market_state` may still run (it is read-only).
+- If signal detection fails, `verify_market_state` may still run (read-only).
 - A failed evening cycle must not block the next morning cycle.
-- All failures must be logged with enough detail to diagnose without SSH access.
+- All failures are logged with enough detail to diagnose without SSH access.
+
+---
+
+### Email reporting rules (for future implementation)
+
+- Exactly **one report per calendar day** (UTC midnight boundary).
+- Report content based on the latest completed evening cycle data.
+- Deduplication check required before send — skip if report for the date already dispatched.
+- Report must not send if the evening cycle has not completed successfully.
+- Implementation requires: `RESEND_API_KEY`, `DIGEST_FROM_EMAIL`, `DIGEST_TO_EMAIL` env vars.
+- Activate by: implementing `send_daily_digest.py` → uncommenting `cronSchedule` in
+  `railway.pipeline-email.toml` → push → Railway picks up automatically.
+
+---
+
+## Current System Status
+
+**As of 2026-04-17**
+
+| Component | Status |
+|-----------|--------|
+| Production pipeline | ACTIVE |
+| Scheduling | FULLY AUTOMATED — 2× daily (11:00 UTC + 23:00 UTC) |
+| Data source: YouTube | ACTIVE |
+| Data source: Reddit | ACTIVE |
+| Data source: TikTok | DEFERRED — pending Research API approval |
+| Timeseries continuity | VERIFIED — continuous lines, carry-forward working |
+| Fragment entity consolidation | COMPLETE — 53 concentration-variant rows cleaned |
+| Signal detection | VERIFIED — no duplicate signals, Infinity JSON bug fixed |
+| Email reporting | NOT YET IMPLEMENTED |
+| Frontend terminal | ACTIVE — live data, real signals |
