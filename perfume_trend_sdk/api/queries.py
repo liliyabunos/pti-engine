@@ -36,16 +36,15 @@ def _slugify(value: str) -> str:
 def fetch_brand_name_map(db: Session) -> Dict[str, str]:
     """Return {slugified_perfume_name: brand_name} for all perfumes in the market catalog.
 
-    Uses a raw SQL query to stay compatible with both the legacy resolver DB
-    schema (integer PKs, canonical_name columns) and the v2 UUID schema.
-    Brand name is the brand's canonical_name.
+    Uses a raw SQL query against the v2 UUID schema (migration 003+).
+    v2 brands/perfumes use 'name' — not 'canonical_name' (that was the v1 schema, dropped in 003).
     """
     try:
         rows = db.execute(
             text(
-                "SELECT p.canonical_name, b.canonical_name "
+                "SELECT p.name, b.name "
                 "FROM perfumes p JOIN brands b ON p.brand_id = b.id "
-                "WHERE p.canonical_name IS NOT NULL AND b.canonical_name IS NOT NULL"
+                "WHERE p.name IS NOT NULL AND b.name IS NOT NULL"
             )
         ).fetchall()
     except Exception:
