@@ -9,6 +9,7 @@ COPY alembic/ alembic/
 COPY alembic.ini .
 COPY start.sh .
 COPY start_pipeline.sh .
+COPY start_pipeline_evening.sh .
 
 # Ingestion scripts and config watchlists
 COPY scripts/ scripts/
@@ -21,7 +22,7 @@ COPY data/resolver/pti.db data/resolver/pti.db
 RUN pip install --no-cache-dir .
 
 # Make start scripts executable
-RUN chmod +x start.sh start_pipeline.sh
+RUN chmod +x start.sh start_pipeline.sh start_pipeline_evening.sh
 
 # Runtime directories that jobs write into (raw payloads, unmapped log)
 RUN mkdir -p data/raw outputs
