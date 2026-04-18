@@ -50,7 +50,11 @@ def fetch_brand_name_map(db: Session) -> Dict[str, str]:
         ).fetchall()
     except Exception:
         # If the perfumes/brands tables don't exist or have a different shape,
-        # return an empty map — brand names will be omitted rather than crashing.
+        # rollback to clear any aborted transaction state, then return empty map.
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return {}
     return {_slugify(perfume_name): brand_name for perfume_name, brand_name in rows}
 
@@ -108,6 +112,10 @@ def fetch_latest_signal_map(
         logging.getLogger(__name__).error(
             "[PTI] fetch_latest_signal_map failed: %s", exc
         )
+        try:
+            db.rollback()
+        except Exception:
+            pass
         return {}
     # If two signals share the exact same detected_at timestamp, keep highest strength.
     result: Dict[uuid.UUID, Tuple[str, Optional[float]]] = {}

@@ -221,10 +221,12 @@ def get_screener(
     # Build set of entity UUIDs that have signals (for has_signals / signal_type filters)
     entity_uuids_with_signal: Optional[set] = None
     if has_signals is True or signal_type is not None:
-        q = db.query(Signal.entity_id)
-        if signal_type and signal_type in _VALID_SIGNAL_TYPES:
-            q = q.filter(Signal.signal_type == signal_type)
-        entity_uuids_with_signal = {r[0] for r in q.distinct().all()}
+        def _fetch_signal_uuids():
+            q = db.query(Signal.entity_id)
+            if signal_type and signal_type in _VALID_SIGNAL_TYPES:
+                q = q.filter(Signal.signal_type == signal_type)
+            return {r[0] for r in q.distinct().all()}
+        entity_uuids_with_signal = _safe(_fetch_signal_uuids, set(), "signal_filter")
 
     summaries: List[EntitySummary] = []
     for em, snap in rows:
