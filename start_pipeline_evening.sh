@@ -15,26 +15,31 @@
 
 set -e
 
+# Hard timeout: if any step hangs beyond its limit, kill it and exit non-zero.
+# Railway will mark the execution as failed and not leave it stuck forever.
+STEP_TIMEOUT=3600  # 1 hour per step (ingestion is the longest)
+
 TODAY=$(date -u +%Y-%m-%d)
 echo "[pipeline-evening] Starting for date=$TODAY"
 echo "[pipeline-evening] DATABASE_URL: ${DATABASE_URL:+postgres (set)} ${DATABASE_URL:-MISSING - will fallback to SQLite}"
+echo "[pipeline-evening] Step timeout: ${STEP_TIMEOUT}s per step"
 
 # Step 0: Reset resolved_signals sequence to prevent pkey conflicts on rerun
 echo "[pipeline-evening] Step 0 — Reset sequence"
-python3 scripts/reset_sequence.py
+timeout "$STEP_TIMEOUT" python3 scripts/reset_sequence.py
 
 # Step 1: Ingest all sources (YouTube + Reddit)
 echo "[pipeline-evening] Step 1 — Ingestion"
-python3 -m perfume_trend_sdk.jobs.run_ingestion \
+timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.run_ingestion \
   --max-results "${INGEST_YT_MAX_RESULTS:-50}" \
   --lookback-days "${INGEST_YT_LOOKBACK_DAYS:-2}"
 
 # Step 2: Aggregate daily metrics for today
 echo "[pipeline-evening] Step 2 — Aggregation for date=$TODAY"
-python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date "$TODAY"
+timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date "$TODAY"
 
 # Step 3: Detect signals
 echo "[pipeline-evening] Step 3 — Signal detection for date=$TODAY"
-python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date "$TODAY"
+timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date "$TODAY"
 
 echo "[pipeline-evening] Complete for date=$TODAY"
