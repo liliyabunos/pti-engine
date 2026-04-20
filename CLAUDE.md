@@ -4323,8 +4323,8 @@ A backup is not valid until a restore has been verified against a test environme
 |-------|--------|
 | Knowledge Base (seed) | OPERATIONAL — Kaggle + curated, ~2,240 perfumes |
 | Live ingestion | OPERATIONAL — YouTube + Reddit, 2× daily |
-| Fragrantica enrichment | CODE COMPLETE · PRODUCTION BLOCKED (Fragrantica 403) |
-| Notes / accords layer | CODE COMPLETE · tables exist · reference seed only |
+| Fragrantica enrichment | DEPLOY COMPLETE · PRODUCTION BLOCKED (Fragrantica 403 from Railway IPs) |
+| Notes / accords layer | DEPLOY COMPLETE · schema in production · awaiting real data |
 | Discovery loop | MISSING — fragrance_candidates table not created |
 | Coverage maintenance service | NOT IMPLEMENTED |
 | Historical backfill layer | NOT IMPLEMENTED |
@@ -4344,33 +4344,39 @@ A backup is not valid until a restore has been verified against a test environme
 ## Phase 1 — Fragrantica Enrichment Activation
 
 ### Current Status
-- Code complete
-- Local DB integration verified
-- Production deploy pending / partial
-- Real-source execution blocked by Fragrantica 403 protection
+**Code complete · Deploy complete · Production blocked by Fragrantica 403**
+
+Verified 2026-04-20:
+- Commit: `a221b39` on `main`
+- Railway deployment: `49184c0c` → SUCCESS
+- Alembic revision in production PostgreSQL: `008`
+- All 5 new tables confirmed in production schema
+- DB persistence pipeline verified in production (smoke test passed)
+- Live Fragrantica fetch returns HTTP 403 from Railway IPs
 
 ### What is complete
-- migration 008 created
-- Fragrantica ORM models added
-- DB-backed enrichment store added
-- notes / accords / junction tables introduced
-- notes_summary write path implemented
+- migration 008 created and applied to Railway PostgreSQL ✅
+- Fragrantica ORM models: `perfume_trend_sdk/db/market/fragrantica.py` ✅
+- DB-backed enrichment store: `fragrantica_enrichment_store.py` ✅
+- notes / accords / junction tables in production schema ✅
+- notes_summary write path verified in production environment ✅
+- Identity map lookup (resolver int PK → market UUID) working in production ✅
 
 ### What is not yet production-verified
-- Railway migration application
-- real Fragrantica fetch in production
+- real Fragrantica fetch in production (blocked by 403)
 - batch enrichment with real HTML payloads
+- `fragrantica_records` / `notes` / `accords` tables populated with real data
 
 ### Blocking constraint
-Fragrantica currently returns HTTP 403 to direct client requests.
-The current enrichment pipeline is structurally correct, but requires
-a Playwright-based or cookie-backed fetch client for real execution.
+Fragrantica returns HTTP 403 to direct HTTP requests from Railway IPs.
+The pipeline code is correct; the fetch layer requires Playwright or cookie
+injection to bypass bot protection.
 
 ### Rule
 Phase 1 must not be considered fully complete until:
-1. migration 008 is deployed to Railway
-2. production DB schema is verified
-3. a real enrichment batch succeeds against live source pages
+1. ~~migration 008 is deployed to Railway~~ — DONE ✅
+2. ~~production DB schema is verified~~ — DONE ✅ (all 5 tables confirmed 2026-04-20)
+3. a real enrichment batch succeeds against live source pages — BLOCKED (Fragrantica 403)
 
 ---
 
