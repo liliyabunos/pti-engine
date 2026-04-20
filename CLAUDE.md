@@ -4501,6 +4501,59 @@ Phase 1c should be revisited when:
 
 ---
 
+## Phase 2 — Notes & Brand Intelligence Layer (COMPLETED)
+
+### Status
+
+- Code complete
+- Local verification complete
+- Intelligence layer operational
+
+### What was added
+
+Migration 009 introduced:
+- notes_canonical
+- note_canonical_map
+- note_stats
+- accord_stats
+- note_brand_stats
+
+### Canonicalization
+
+Raw notes are now normalized into canonical note entities.
+
+Examples:
+- blackcurrant + black currant + Blackcurrant Syrup → one canonical note
+- bergamot + Calabrian bergamot → one canonical note
+- lychee + Litchi → one canonical note
+- cedar + cedarwood + Atlas Cedar + Virginian Cedar → one canonical note
+
+### Intelligence outputs
+
+The system now supports:
+- top notes
+- notes by brand
+- brands by note
+- perfumes by note
+- brand note profile
+- canonical note statistics
+
+### Operational path
+
+Job:
+`python3 -m perfume_trend_sdk.jobs.build_notes_intelligence`
+
+Properties:
+- idempotent
+- validation mode supported
+
+### Result
+
+PTI now has a usable note-level intelligence layer.
+This is the first production-grade analytical layer built on top of enrichment data.
+
+---
+
 ## Phase 0 — KB Stabilization (COMPLETED)
 
 ### Status
