@@ -79,18 +79,36 @@ class FragranticaParser:
         return None
 
     def _extract_brand_name(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract brand name from anchor tag following 'by' text or breadcrumb."""
+        """Extract brand name from anchor tag following 'by' text or breadcrumb.
+
+        Falls back to parsing og:title for the current Fragrantica HTML structure
+        where designer links no longer carry the brand name in their text.
+        """
         # Pattern: <p>by <a href="/designers/...">Brand Name</a></p>
         for p in soup.find_all("p"):
             text = p.get_text()
             if "by " in text:
                 link = p.find("a", href=re.compile(r"/designers/"))
                 if link:
-                    return link.get_text(strip=True) or None
-        # Fallback: any link to /designers/
-        link = soup.find("a", href=re.compile(r"/designers/"))
-        if link:
-            return link.get_text(strip=True) or None
+                    brand = link.get_text(strip=True)
+                    if brand and brand.lower() not in ("designers", ""):
+                        return brand
+
+        # Try any link to /designers/ that has meaningful text
+        for link in soup.find_all("a", href=re.compile(r"/designers/")):
+            brand = link.get_text(strip=True)
+            if brand and brand.lower() not in ("designers", "search by designers", ""):
+                return brand
+
+        # Fallback: parse og:title — format: "{Perfume} {Brand} perfume - ..."
+        # We can extract the brand from the URL path instead (more reliable)
+        canonical = soup.find("link", rel="canonical")
+        if canonical:
+            href = canonical.get("href", "")
+            m = re.search(r"/perfume/([^/]+)/", href)
+            if m:
+                return m.group(1).replace("-", " ").title()
+
         return None
 
     def _extract_accords(self, soup: BeautifulSoup) -> List[str]:
@@ -106,7 +124,11 @@ class FragranticaParser:
         return accords
 
     def _extract_notes(self, soup: BeautifulSoup) -> tuple:
-        """Extract top, middle, base notes from pyramid section."""
+        """Extract top, middle, base notes from pyramid section.
+
+        Supports both the legacy DOM structure (h4 + span) and the current
+        Fragrantica Vue.js structure (div.mx-auto sections + span.pyramid-note-label).
+        """
         top: List[str] = []
         middle: List[str] = []
         base: List[str] = []
@@ -115,7 +137,35 @@ class FragranticaParser:
         if not pyramid:
             return top, middle, base
 
+        # Current Fragrantica structure (Vue.js rendered):
+        # Each section is inside a div.mx-auto container that contains:
+        #   - span.inline-block  →  section header ("Top Notes" / "Middle Notes" / "Base Notes")
+        #   - span.pyramid-note-label  →  individual note names
+        section_divs = pyramid.find_all("div", class_="mx-auto")
+        if section_divs:
+            section_map = {"top": top, "middle": middle, "base": base, "heart": middle}
+            for div in section_divs:
+                header = div.find("span", class_="inline-block")
+                if not header:
+                    continue
+                heading = header.get_text(strip=True).lower()
+                target: Optional[List[str]] = None
+                for key, lst in section_map.items():
+                    if key in heading:
+                        target = lst
+                        break
+                if target is None:
+                    continue
+                for note_span in div.find_all("span", class_="pyramid-note-label"):
+                    text = note_span.get_text(strip=True)
+                    if text:
+                        target.append(text)
+            if top or middle or base:
+                return top, middle, base
+
+        # Fallback: legacy structure (h4 + span inside pyramid)
         current_section: Optional[List[str]] = None
+        _section_headers = {"top", "middle", "heart", "base"}
         for element in pyramid.find_all(["h4", "span"]):
             if element.name == "h4":
                 heading = element.get_text(strip=True).lower()
@@ -129,7 +179,7 @@ class FragranticaParser:
                     current_section = None
             elif element.name == "span" and current_section is not None:
                 text = element.get_text(strip=True)
-                if text:
+                if text and text.lower() not in _section_headers:
                     current_section.append(text)
 
         return top, middle, base

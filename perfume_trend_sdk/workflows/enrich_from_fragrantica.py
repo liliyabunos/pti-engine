@@ -49,6 +49,41 @@ from perfume_trend_sdk.enrichers.perfume_metadata.fragrantica_enricher import Fr
 from perfume_trend_sdk.normalizers.fragrantica.normalizer import FragranticaNormalizer
 from perfume_trend_sdk.storage.raw.filesystem import FilesystemRawStorage
 
+
+def _make_client(use_playwright: bool):
+    """Return the appropriate fetch client based on flags and env vars.
+
+    Priority order:
+      1. USE_CDP=true   → CDPFragranticaClient (connects to running Chrome via CDP)
+      2. USE_PLAYWRIGHT → PlaywrightFragranticaClient (headless browser)
+      3. default        → FragranticaClient (plain HTTP, may 403 in production)
+    """
+    use_cdp = os.environ.get("USE_CDP", "").lower() in ("1", "true", "yes")
+
+    if use_cdp:
+        try:
+            from perfume_trend_sdk.connectors.fragrantica.cdp_client import CDPFragranticaClient
+            cdp_endpoint = os.environ.get("CDP_ENDPOINT", "http://127.0.0.1:9222")
+            logger.info("[enrich_from_fragrantica] Using CDPFragranticaClient (endpoint=%s)", cdp_endpoint)
+            return CDPFragranticaClient(cdp_endpoint=cdp_endpoint)
+        except ImportError as exc:
+            logger.warning("[enrich_from_fragrantica] CDP client not available (%s) — falling back", exc)
+
+    if use_playwright:
+        try:
+            from perfume_trend_sdk.connectors.fragrantica.playwright_client import (
+                PlaywrightFragranticaClient,
+            )
+            logger.info("[enrich_from_fragrantica] Using PlaywrightFragranticaClient")
+            return PlaywrightFragranticaClient()
+        except ImportError as exc:
+            logger.warning(
+                "[enrich_from_fragrantica] Playwright not available (%s) — falling back to HTTP client",
+                exc,
+            )
+    logger.info("[enrich_from_fragrantica] Using FragranticaClient (plain HTTP)")
+    return FragranticaClient()
+
 logger = logging.getLogger(__name__)
 
 
@@ -89,6 +124,7 @@ def run(
     limit: int,
     output_path: str,
     market_db_url: str | None = None,
+    use_playwright: bool = False,
 ) -> Dict:
     """Enrich perfumes with Fragrantica data and persist to market DB.
 
@@ -99,6 +135,7 @@ def run(
     output_path     : JSON output file path (backward compat).
     market_db_url   : Market engine DB URL. If None, resolved from env vars
                       (DATABASE_URL → PTI_DB_PATH → default SQLite).
+    use_playwright  : If True, use PlaywrightFragranticaClient instead of plain HTTP.
 
     Returns
     -------
@@ -129,7 +166,7 @@ def run(
         )
 
     raw_storage = FilesystemRawStorage(base_dir="data/raw")
-    client = FragranticaClient()
+    client = _make_client(use_playwright)
     parser = FragranticaParser()
     normalizer = FragranticaNormalizer()
     enricher = FragranticaEnricher()
@@ -352,7 +389,25 @@ def main() -> None:
         default=None,
         help="Market DB URL (default: from DATABASE_URL or PTI_DB_PATH env vars)",
     )
+    arg_parser.add_argument(
+        "--playwright",
+        action="store_true",
+        default=False,
+        help="Use Playwright headless browser instead of plain HTTP (set USE_PLAYWRIGHT=true to enable via env)",
+    )
+    arg_parser.add_argument(
+        "--cdp",
+        action="store_true",
+        default=False,
+        help="Use CDP client (connects to running Chrome at localhost:9222) — set USE_CDP=true to enable via env",
+    )
     args = arg_parser.parse_args()
+
+    # Also honour env variables
+    use_playwright = args.playwright or os.environ.get("USE_PLAYWRIGHT", "").lower() in ("1", "true", "yes")
+    # CDP flag takes precedence — set it in env so _make_client() picks it up
+    if args.cdp or os.environ.get("USE_CDP", "").lower() in ("1", "true", "yes"):
+        os.environ["USE_CDP"] = "true"
 
     # Backward compat: --db was the old resolver DB flag
     resolver_db = args.resolver_db
@@ -364,6 +419,7 @@ def main() -> None:
         limit=args.limit,
         output_path=args.output,
         market_db_url=args.market_db,
+        use_playwright=use_playwright,
     )
 
 
