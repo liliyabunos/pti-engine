@@ -107,7 +107,7 @@ def get_brands_by_note(session: Session, canonical_note_id: str, limit: int = 20
         text(
             "SELECT b.name, b.slug, nbs.perfume_count, nbs.share "
             "FROM note_brand_stats nbs "
-            "JOIN brands b ON b.id = nbs.brand_id "
+            "JOIN brands b ON CAST(b.id AS text) = nbs.brand_id "
             "WHERE nbs.canonical_note_id = :cid "
             "ORDER BY nbs.perfume_count DESC "
             "LIMIT :lim"
@@ -148,8 +148,8 @@ def get_perfumes_by_note(
             "SELECT p.name, p.slug, b.name as brand_name, pn.note_position "
             "FROM perfume_notes pn "
             "JOIN note_canonical_map ncm ON ncm.note_id = pn.note_id "
-            "JOIN perfumes p ON p.id = pn.perfume_id "
-            "LEFT JOIN brands b ON b.id = p.brand_id "
+            "JOIN perfumes p ON CAST(p.id AS text) = pn.perfume_id "
+            "LEFT JOIN brands b ON CAST(b.id AS text) = CAST(p.brand_id AS text) "
             "WHERE ncm.canonical_note_id = :cid "
             "ORDER BY b.name, p.name "
             "LIMIT :lim"
@@ -192,7 +192,7 @@ def get_brand_note_profile(session: Session, brand_id: str) -> Optional[Dict[str
       brand_id, brand_name, perfume_count, top_notes, top_accords
     """
     brand_row = session.execute(
-        text("SELECT id, name, slug FROM brands WHERE id = :bid"),
+        text("SELECT id, name, slug FROM brands WHERE CAST(id AS text) = :bid"),
         {"bid": brand_id},
     ).fetchone()
     if not brand_row:
@@ -203,8 +203,8 @@ def get_brand_note_profile(session: Session, brand_id: str) -> Optional[Dict[str
         text(
             "SELECT COUNT(DISTINCT pn.perfume_id) "
             "FROM perfume_notes pn "
-            "JOIN perfumes p ON p.id = pn.perfume_id "
-            "WHERE p.brand_id = :bid"
+            "JOIN perfumes p ON CAST(p.id AS text) = pn.perfume_id "
+            "WHERE CAST(p.brand_id AS text) = :bid"
         ),
         {"bid": brand_id},
     ).fetchone()
@@ -218,8 +218,8 @@ def get_brand_note_profile(session: Session, brand_id: str) -> Optional[Dict[str
             "SELECT a.name, COUNT(DISTINCT pa.perfume_id) as cnt "
             "FROM perfume_accords pa "
             "JOIN accords a ON a.id = pa.accord_id "
-            "JOIN perfumes p ON p.id = pa.perfume_id "
-            "WHERE p.brand_id = :bid "
+            "JOIN perfumes p ON CAST(p.id AS text) = pa.perfume_id "
+            "WHERE CAST(p.brand_id AS text) = :bid "
             "GROUP BY a.name "
             "ORDER BY cnt DESC "
             "LIMIT 5"
@@ -245,7 +245,7 @@ def get_brands_with_most_notes(session: Session, limit: int = 10) -> List[Dict[s
             "SELECT b.name, b.slug, COUNT(DISTINCT nbs.canonical_note_id) as note_count, "
             "SUM(nbs.perfume_count) as total_perfume_note_links "
             "FROM note_brand_stats nbs "
-            "JOIN brands b ON b.id = nbs.brand_id "
+            "JOIN brands b ON CAST(b.id AS text) = nbs.brand_id "
             "GROUP BY b.id, b.name, b.slug "
             "ORDER BY note_count DESC, total_perfume_note_links DESC "
             "LIMIT :lim"

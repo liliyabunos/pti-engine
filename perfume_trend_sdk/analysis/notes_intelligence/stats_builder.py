@@ -146,9 +146,9 @@ def build_note_stats(
     # Load all perfume_notes with their perfume's brand_id
     rows = session.execute(
         text(
-            "SELECT pn.note_id, pn.note_position, pn.perfume_id, p.brand_id "
+            "SELECT pn.note_id, pn.note_position, pn.perfume_id, CAST(p.brand_id AS text) "
             "FROM perfume_notes pn "
-            "JOIN perfumes p ON p.id = pn.perfume_id"
+            "JOIN perfumes p ON CAST(p.id AS text) = pn.perfume_id"
         )
     ).fetchall()
 
@@ -230,9 +230,9 @@ def build_accord_stats(session: Session) -> None:
     """Compute and upsert accord_stats from perfume_accords."""
     rows = session.execute(
         text(
-            "SELECT pa.accord_id, pa.perfume_id, p.brand_id "
+            "SELECT pa.accord_id, pa.perfume_id, CAST(p.brand_id AS text) "
             "FROM perfume_accords pa "
-            "JOIN perfumes p ON p.id = pa.perfume_id"
+            "JOIN perfumes p ON CAST(p.id AS text) = pa.perfume_id"
         )
     ).fetchall()
 
@@ -294,7 +294,7 @@ def build_note_brand_stats(
         text(
             "SELECT pn.note_id, pn.perfume_id, p.brand_id "
             "FROM perfume_notes pn "
-            "JOIN perfumes p ON p.id = pn.perfume_id "
+            "JOIN perfumes p ON CAST(p.id AS text) = pn.perfume_id "
             "WHERE p.brand_id IS NOT NULL"
         )
     ).fetchall()
