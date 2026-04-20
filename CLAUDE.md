@@ -4343,40 +4343,84 @@ A backup is not valid until a restore has been verified against a test environme
 
 ## Phase 1 — Fragrantica Enrichment Activation
 
-### Current Status
-**Code complete · Deploy complete · Production blocked by Fragrantica 403**
+### Status
+- Code complete
+- Deploy complete
+- Production DB path verified
+- Production blocked by Fragrantica HTTP 403
 
-Verified 2026-04-20:
-- Commit: `a221b39` on `main`
-- Railway deployment: `49184c0c` → SUCCESS
-- Alembic revision in production PostgreSQL: `008`
-- All 5 new tables confirmed in production schema
-- DB persistence pipeline verified in production (smoke test passed)
-- Live Fragrantica fetch returns HTTP 403 from Railway IPs
+### Verified in production
+- Alembic migration 008 applied successfully
+- Production PostgreSQL contains:
+  - fragrantica_records
+  - notes
+  - accords
+  - perfume_notes
+  - perfume_accords
+- identity map lookup works
+- DB persistence path works
+- notes_summary update path works
 
-### What is complete
-- migration 008 created and applied to Railway PostgreSQL ✅
-- Fragrantica ORM models: `perfume_trend_sdk/db/market/fragrantica.py` ✅
-- DB-backed enrichment store: `fragrantica_enrichment_store.py` ✅
-- notes / accords / junction tables in production schema ✅
-- notes_summary write path verified in production environment ✅
-- Identity map lookup (resolver int PK → market UUID) working in production ✅
-
-### What is not yet production-verified
-- real Fragrantica fetch in production (blocked by 403)
-- batch enrichment with real HTML payloads
-- `fragrantica_records` / `notes` / `accords` tables populated with real data
-
-### Blocking constraint
-Fragrantica returns HTTP 403 to direct HTTP requests from Railway IPs.
-The pipeline code is correct; the fetch layer requires Playwright or cookie
-injection to bypass bot protection.
+### External blocker
+Live Fragrantica fetch from Railway IPs returns HTTP 403.
+This is an external access constraint, not a schema or persistence bug.
 
 ### Rule
-Phase 1 must not be considered fully complete until:
-1. ~~migration 008 is deployed to Railway~~ — DONE ✅
-2. ~~production DB schema is verified~~ — DONE ✅ (all 5 tables confirmed 2026-04-20)
-3. a real enrichment batch succeeds against live source pages — BLOCKED (Fragrantica 403)
+Phase 1 is not considered fully source-operational until the fetch layer is upgraded
+to a Playwright-based or cookie-backed client and a real enrichment batch succeeds.
+
+---
+
+## Phase 1b — Fragrantica Access Layer (Fetch Unblock)
+
+### Purpose
+
+Unblock real Fragrantica data ingestion by replacing the HTTP fetch layer.
+
+### Context
+
+Direct HTTP requests from Railway IPs return HTTP 403 due to bot protection.
+
+The enrichment pipeline, DB schema, and persistence layer are fully operational.
+Only the fetch layer is blocked.
+
+### Requirement
+
+`FragranticaClient.fetch_page(url)` must be upgraded to a browser-based or
+authenticated request mechanism.
+
+### Accepted Solutions
+
+- Playwright-based headless browser (preferred)
+- Cookie-injected HTTP client (if stable)
+- Hybrid (browser fetch → cached HTML → parser)
+
+### Rules
+
+- The fetch layer must be isolated behind a single interface:
+  `fetch_page(url) → html string`
+
+- The rest of the pipeline (parser, normalizer, store) MUST NOT change
+
+- Raw HTML must still be stored for replay/debug
+
+- Failures must be per-entity, not global
+
+### Completion Criteria
+
+Phase 1b is complete when:
+
+1. At least 50 perfumes are successfully fetched from live Fragrantica pages
+2. `parsed > 0`, `enriched > 0`
+3. DB rows inserted into:
+   - `fragrantica_records`
+   - `perfume_notes`
+   - `perfume_accords`
+4. `notes_summary` updated for those perfumes
+
+### Status
+
+Pending implementation
 
 ---
 
