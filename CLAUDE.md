@@ -4501,56 +4501,61 @@ Phase 1c should be revisited when:
 
 ---
 
-## Phase 2 — Notes & Brand Intelligence Layer (COMPLETED)
+## Phase 2 — Notes & Brand Intelligence Layer
 
 ### Status
 
 - Code complete
-- Local verification complete
-- Intelligence layer operational
+- Deploy complete
+- Production-ready
+- Production verification incomplete (data-dependent)
 
-### What was added
+### What is verified
 
-Migration 009 introduced:
-- notes_canonical
-- note_canonical_map
-- note_stats
-- accord_stats
-- note_brand_stats
+- Alembic migration 009 applied successfully
+- All intelligence tables exist in production:
+  - notes_canonical
+  - note_canonical_map
+  - note_stats
+  - accord_stats
+  - note_brand_stats
+- Intelligence job executes successfully in production environment
+- PostgreSQL compatibility issues resolved (UUID/text casting)
 
-### Canonicalization
+### Current limitation
 
-Raw notes are now normalized into canonical note entities.
+Production database contains no enrichment data:
 
-Examples:
-- blackcurrant + black currant + Blackcurrant Syrup → one canonical note
-- bergamot + Calabrian bergamot → one canonical note
-- lychee + Litchi → one canonical note
-- cedar + cedarwood + Atlas Cedar + Virginian Cedar → one canonical note
+- notes = 0
+- accords = 0
+- perfume_notes = 0
+- perfume_accords = 0
 
-### Intelligence outputs
+As a result:
+- intelligence job produces 0 rows
 
-The system now supports:
-- top notes
-- notes by brand
-- brands by note
-- perfumes by note
-- brand note profile
-- canonical note statistics
+### Root cause
 
-### Operational path
+Fragrantica enrichment runs only in local environment via CDP client.
 
-Job:
-`python3 -m perfume_trend_sdk.jobs.build_notes_intelligence`
+Railway production cannot execute enrichment due to Cloudflare protection.
 
-Properties:
-- idempotent
-- validation mode supported
+This is the same constraint described in Phase 1c.
 
-### Result
+### Classification
 
-PTI now has a usable note-level intelligence layer.
-This is the first production-grade analytical layer built on top of enrichment data.
+Phase 2 is:
+
+- fully implemented
+- fully deployable
+- data-dependent in production
+
+### Rule
+
+Do NOT modify Phase 2 logic.
+
+Phase 2 will become fully production-verified automatically once
+enrichment data is present in production database.
 
 ---
 
