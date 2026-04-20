@@ -4442,6 +4442,65 @@ No further changes to parser / enrichment / DB schema are required.
 
 ---
 
+## Phase 1c — Fragrantica Production Automation (DEFERRED)
+
+### Status
+
+Deferred by design.
+
+### Context
+
+Fragrantica enrichment is fully operational via CDP-based local execution.
+
+All core system layers are verified:
+- fetch
+- parse
+- normalize
+- persist
+
+The only missing capability is fully automated execution in production (Railway).
+
+### Problem
+
+Railway environment cannot:
+- run persistent browser sessions
+- pass Cloudflare bot protection
+- maintain authenticated browser context
+
+### Possible Solutions (not implemented)
+
+- remote headless browser (Playwright service)
+- proxy + CAPTCHA solving infrastructure
+- external scraping provider
+- hybrid local enrichment scheduler
+
+### Decision
+
+This phase is intentionally deferred.
+
+Reason:
+Product data layers (notes, brands, discovery, analytics) provide higher immediate value than production automation.
+
+### Rule
+
+Do NOT block product development waiting for full production automation.
+
+Local/CDP-based enrichment is considered sufficient for:
+
+- development
+- data expansion
+- feature building
+
+### Future Trigger
+
+Phase 1c should be revisited when:
+
+- system requires continuous automated enrichment
+- manual/local runs become a bottleneck
+- production scaling becomes necessary
+
+---
+
 ## Phase 0 — KB Stabilization (COMPLETED)
 
 ### Status
