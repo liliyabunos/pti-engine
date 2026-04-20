@@ -3979,3 +3979,500 @@ Steps within each cycle run sequentially inside the shell script (not separate c
 | Signal detection | VERIFIED — no duplicate signals, Infinity JSON bug fixed |
 | Email reporting | NOT YET IMPLEMENTED |
 | Frontend terminal | ACTIVE — live data, real signals |
+
+---
+
+## D7. Coverage Expansion Strategy
+
+PTI must not rely on live ingestion alone to build market coverage.
+
+Live ingestion (YouTube, Reddit) is optimized for **detecting fresh market movement**, not for constructing a complete perfume universe.
+
+### Core Rule
+
+Do NOT attempt to reach full perfume coverage through YouTube or Reddit queries alone.
+
+### Coverage Expansion Must Combine
+
+1. Seed / Knowledge Base imports (Kaggle, curated datasets)
+2. External metadata enrichment (Fragrantica)
+3. Discovery loop (candidate → validation → promotion)
+4. Historical backfill (pre-project data)
+
+### Coverage Objective
+
+The system must continuously expand:
+- number of known perfumes
+- number of known brands
+- metadata completeness (notes, accords, brand info)
+
+Coverage growth is a **first-class objective**, separate from signal detection.
+
+---
+
+## D8. Knowledge Base Operational Status
+
+A first-generation Knowledge Base (KB) is already implemented.
+
+### Current KB (v1)
+
+Primary resolver database: `pti.db`
+
+Contains:
+- fragrance_master (~2,240 rows)
+- aliases (~12,770 rows)
+- brands
+- perfumes
+
+Market-serving database: `market_dev.db` / PostgreSQL production
+
+Contains:
+- brands (UUID schema)
+- perfumes (UUID schema)
+- identity maps (resolver → market)
+
+### Important Distinction
+
+This KB is **already operational**, not theoretical.
+
+The goal is NOT to rebuild it, but to:
+
+- stabilize production-safe seeding
+- expand metadata completeness
+- integrate enrichment layers
+- improve linkage with market entities
+
+### Rule
+
+All ingestion and resolution must use the KB as the **source of truth for entity identity**.
+
+---
+
+## D9. Historical Backfill Layer
+
+Historical data must be collected through a dedicated backfill layer.
+
+### Purpose
+
+- Populate pre-project history
+- Increase entity coverage
+- Improve chart continuity
+- Reduce "cold start" effect
+
+### Sources
+
+- YouTube historical queries
+- Reddit historical fetch
+- Fragrantica catalog/discovery
+- (Optional future) Google Trends
+
+### Rules
+
+- Backfill is NOT part of daily/evening pipelines
+- Backfill runs as separate jobs
+- Backfill must be idempotent
+- Backfill must write through canonical storage (same schema as live ingestion)
+
+### Implementation Model
+
+Backfill jobs may be chunked by:
+- brand
+- perfume
+- date range
+- source platform
+
+Backfill must not interfere with real-time ingestion performance.
+
+---
+
+## D10. Fragrantica Enrichment Activation
+
+Fragrantica integration is implemented at the code level but not operationally active.
+
+### Current State
+
+| Component | Status |
+|-----------|--------|
+| connector | implemented |
+| parser | implemented |
+| normalizer | implemented |
+| enricher | implemented |
+| workflow | manual CLI only |
+| DB persistence | MISSING |
+| pipeline integration | MISSING |
+| raw data storage | MISSING |
+
+### Required Behavior
+
+Fragrantica enrichment must:
+
+1. Fetch raw HTML
+2. Store raw payloads
+3. Parse structured fields
+4. Normalize records
+5. Persist to DB-backed tables
+6. Merge into product metadata layer
+
+### Required Data
+
+- notes (top / middle / base)
+- accords
+- rating (value + count)
+- release year
+- perfumer
+- gender
+- similar perfumes
+
+### Critical Rule
+
+Enrichment must write to structured database tables, not only JSON files.
+
+---
+
+## D11. Notes & Accords Intelligence Layer
+
+Notes and accords are first-class analytical entities.
+
+### Required Tables
+
+- `notes`
+- `accords`
+- `perfume_notes` (many-to-many)
+- `perfume_accords` (many-to-many)
+
+### Required Capabilities
+
+- perfume entity page must expose notes and accords
+- dashboard must support:
+  - rising notes
+  - note spikes
+  - accord spikes
+- note-level scoring must be possible
+
+### Data Sources
+
+- Fragrantica (primary)
+- curated mappings
+- future extraction from content text
+
+### Rule
+
+A perfume entity is considered metadata-incomplete if notes or accords are missing and external sources can provide them.
+
+### Strategic Value
+
+Notes and accords enable:
+- cross-perfume trend analysis
+- ingredient-level intelligence
+- early detection of emerging scent trends
+
+---
+
+## D12. Brand Intelligence Layer
+
+Brands are first-class entities and must be fully represented.
+
+### Required Brand Metadata
+
+- canonical name
+- website
+- description
+- country of origin
+- founding year (optional)
+- perfume count
+- tracked perfume count
+
+### Required Capabilities
+
+- brand entity page must exist
+- brand page must show:
+  - linked perfumes
+  - trend contribution
+  - top notes / accords across brand portfolio
+- brand must be linkable to external website
+
+### Rule
+
+Brand data must not remain implicit via perfume rows alone.
+Brand identity must be explicit and queryable.
+
+---
+
+## D13. Discovery & Self-Improving Knowledge Loop
+
+The system must continuously learn new entities from unresolved content.
+
+### Core Concept
+
+Unknown entities must NOT be discarded.
+
+### Required Table: fragrance_candidates
+
+| Field | Type | Notes |
+|-------|------|-------|
+| raw_text | text | original unresolved mention |
+| normalized_text | text | cleaned version |
+| source | text | platform origin |
+| occurrences | int | mention count |
+| first_seen | timestamp | |
+| last_seen | timestamp | |
+| confidence | float | rule-based or AI score |
+| status | enum | `new` / `validated` / `rejected` |
+
+### Flow
+
+```
+ingestion → unresolved mention
+→ fragrance_candidates table
+→ aggregate by frequency
+→ validate via:
+    deterministic rules
+    KB matching
+    recurrence threshold
+    optional AI arbitration
+→ promote to:
+    fragrance_master
+    aliases
+    brands / notes
+```
+
+### Rule
+
+Discovery must be deterministic-first, AI-last.
+
+### Goal
+
+Transform unknown ingestion data into structured KB knowledge automatically.
+
+---
+
+## D14. Entity Coverage Maintenance Service
+
+A dedicated service must maintain completeness of known entities.
+
+### Purpose
+
+- ensure data freshness
+- repair missing metadata
+- prevent broken or sparse entities
+
+### Responsibilities
+
+- detect stale entities (no recent mentions)
+- detect metadata gaps (missing notes, accords, brand info)
+- detect fragmented entities (concentration-suffix duplicates)
+- schedule targeted refresh jobs
+
+### Example Maintenance Queues
+
+- `stale_entity_queue` — entities with no recent timeseries rows
+- `metadata_gap_queue` — entities with NULL notes_summary or accords
+- `fragment_merge_queue` — concentration-variant duplicates
+- `missing_brand_info_queue` — entities with brand_name IS NULL
+- `missing_note_info_queue` — perfumes with no note associations
+
+### Rule
+
+This service maintains known entities.
+It is NOT responsible for discovering new trends.
+
+---
+
+## O4. Backup & Recovery Policy
+
+Backups are mandatory for all production data layers.
+
+### Required Backup Types
+
+**1. Database snapshots**
+- daily automated snapshot
+- weekly retained
+- monthly archived
+
+**2. Raw data archives**
+- YouTube payloads (JSONL per run)
+- Reddit payloads (JSONL per run)
+- Fragrantica HTML (when enrichment is active)
+
+**3. Knowledge Base exports**
+- fragrance_master
+- aliases
+- brands
+- perfumes
+- notes (when populated)
+- accords (when populated)
+- identity maps (brand_identity_map, perfume_identity_map)
+
+### Rules
+
+- backups must be automated
+- backups must be versioned with timestamp
+- restore must be tested before a backup is considered valid
+
+### Critical Rule
+
+A backup is not valid until a restore has been verified against a test environment.
+
+---
+
+## Current Data Layer Status (v1)
+
+**As of 2026-04-20**
+
+| Layer | Status |
+|-------|--------|
+| Knowledge Base (seed) | OPERATIONAL — Kaggle + curated, ~2,240 perfumes |
+| Live ingestion | OPERATIONAL — YouTube + Reddit, 2× daily |
+| Fragrantica enrichment | CODE COMPLETE · PRODUCTION BLOCKED (Fragrantica 403) |
+| Notes / accords layer | CODE COMPLETE · tables exist · reference seed only |
+| Discovery loop | MISSING — fragrance_candidates table not created |
+| Coverage maintenance service | NOT IMPLEMENTED |
+| Historical backfill layer | NOT IMPLEMENTED |
+| Backup policy | NOT YET IMPLEMENTED |
+
+### Current Priority Order
+
+1. ~~Stabilize KB production seeding~~ — **DONE (Phase 0)**
+2. ~~Activate Fragrantica enrichment (DB tables + pipeline integration)~~ — **CODE COMPLETE · PRODUCTION BLOCKED** — unblock fetch layer (Playwright / cookie injection), then deploy + verify
+3. Add notes / accords tables + populate from Fragrantica — **CODE COMPLETE · awaiting real data**
+4. Build discovery loop (fragrance_candidates table + promotion flow)
+5. Build coverage maintenance service
+6. Implement backup policy
+
+---
+
+## Phase 1 — Fragrantica Enrichment Activation
+
+### Current Status
+- Code complete
+- Local DB integration verified
+- Production deploy pending / partial
+- Real-source execution blocked by Fragrantica 403 protection
+
+### What is complete
+- migration 008 created
+- Fragrantica ORM models added
+- DB-backed enrichment store added
+- notes / accords / junction tables introduced
+- notes_summary write path implemented
+
+### What is not yet production-verified
+- Railway migration application
+- real Fragrantica fetch in production
+- batch enrichment with real HTML payloads
+
+### Blocking constraint
+Fragrantica currently returns HTTP 403 to direct client requests.
+The current enrichment pipeline is structurally correct, but requires
+a Playwright-based or cookie-backed fetch client for real execution.
+
+### Rule
+Phase 1 must not be considered fully complete until:
+1. migration 008 is deployed to Railway
+2. production DB schema is verified
+3. a real enrichment batch succeeds against live source pages
+
+---
+
+## Phase 0 — KB Stabilization (COMPLETED)
+
+### Status
+
+Phase 0 (Knowledge Base stabilization and seeding) is complete.
+
+### Achievements
+
+- Restored Postgres-compatible fragrance master store (`pg_fragrance_master_store.py`, SQLAlchemy-based)
+- Unified seeding entrypoint (`scripts/seed_kb.py`)
+- Verified repeatable seed load for:
+  - fragrance_master
+  - aliases
+  - brands
+  - perfumes
+- Identity mapping between resolver (`data/resolver/pti.db`) and market DB is stable
+- brands: 260/260 linked, perfumes: 2246/2247 linked
+
+### Known Behaviors (NOT bugs)
+
+#### Alias Count Variance
+
+Alias count differences across environments are expected.
+
+Cause:
+- Different CSV load order (seed_master vs seed_placeholder)
+- ID assignment differences in resolver DB
+
+Impact:
+- No duplicate entities created
+- Resolver behavior remains correct
+- Some aliases intentionally map to multiple entities (e.g. base vs concentration variants)
+
+This behavior is accepted and should NOT be "fixed".
+
+#### Alias Collisions
+
+Examples like:
+- `"aventus"` → base entity (`Creed Aventus`, pid=27) + EDP variant (`Creed Aventus Eau de Parfum`)
+
+Are expected and beneficial.
+
+Resolver prioritizes:
+- base entity (lower ID)
+
+This is consistent with concentration-stripping aggregation logic.
+
+### Known Edge Case
+
+**"Les Bains Guerbois Eau de Cologne"**
+
+Issue:
+- Name contains `"Eau de Cologne"` as part of the actual product name (not a concentration qualifier)
+- `seed_market_catalog.py` strips standalone `Cologne` → produces malformed entry `name='Eau de'`, `slug='les-bains-guerbois-eau-de'`
+- `sync_identity_map.py` strips full `"Eau de Cologne"` → expects slug `'les-bains-guerbois'` → no match → 1 unlinked perfume
+
+Status:
+- Known issue, documented
+- Low impact — brand is not in tracked watchlist, has not appeared in any ingestion data
+- Deferred fix — do not modify normalization rules globally for this case
+
+### Rule
+
+Do NOT rework seeding logic unless:
+- data integrity is broken
+- resolver produces incorrect matches
+
+---
+
+## Execution Rule — Phase Completion
+
+A phase is NOT considered complete when code is only implemented locally.
+
+Each phase must pass 3 gates:
+
+**1. Code Complete**
+- implementation finished
+- local tests pass
+- local DB state verified
+
+**2. Deploy Complete**
+- changes pushed to main
+- Railway deployment completed
+- Alembic migrations applied successfully
+
+**3. Production Verified**
+- target workflow executed in Railway
+- expected DB/state changes confirmed
+- smoke-check passed
+
+### Rule
+
+CLAUDE.md may record a phase as fully complete only after all 3 gates pass.
+
+If code is complete but production is blocked by an external constraint
+(e.g. third-party 403, missing credentials, infra limitation),
+the phase must be marked as:
+
+- **code-complete**
+- **production-blocked**
+
+not fully complete.
