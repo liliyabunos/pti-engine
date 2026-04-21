@@ -1,5 +1,15 @@
 # CLAUDE.md — Perfume Trend Intelligence SDK
 
+## 🔒 Core Constraint
+
+This system is a distributed multi-service architecture.
+
+→ All shared state MUST be stored in Postgres.
+
+Local filesystem is NOT a valid persistence layer.
+
+---
+
 This project must optimize for correctness, recomputability, and low API cost over maximum automation.
 
 ## Perfume Trend Intelligence SDK — architecture guardrails
@@ -5855,6 +5865,81 @@ Expected:
 ### Long-term direction
 
 Resolver storage should eventually migrate to PostgreSQL (eliminating the SQLite dependency entirely), but this is deferred. Railway Volume is the approved interim production persistence layer.
+
+---
+
+## 🚫 Deprecated Architecture: Resolver Volume / SQLite
+
+The project previously attempted to use a Railway volume mounted at `/app/resolver-vol`
+to store a SQLite database (`pti.db`) for resolver/catalog logic.
+
+This approach is **fully deprecated and must NOT be used**.
+
+### ❌ Запрещено:
+- Using SQLite (`pti.db`) as resolver storage
+- Any filesystem-based DB under `/app/*`
+- Railway volumes for KB / resolver state
+- Copying seed DB files into containers
+- mkdir/chmod/chown logic for resolver storage
+- Any fallback to local DB
+
+### Причина:
+Railway volumes:
+- cannot be shared across services reliably
+- introduce permission issues (chmod/chown failures)
+- break multi-service architecture
+- are not needed because Postgres already exists
+
+---
+
+## ✅ Current Architecture: Postgres as Single Source of Truth
+
+All resolver, catalog, and identity data MUST live in Postgres.
+
+### Source of truth:
+- `DATABASE_URL` (Postgres)
+
+### Used by:
+- `pipeline-daily`
+- `pipeline-evening`
+- resolver
+- catalog import
+
+### Expected tables:
+- `brands`
+- `perfumes`
+- `aliases`
+- `fragrance_master` (or equivalent KB table)
+
+---
+
+## 🧩 Resolver Rules
+
+Resolver MUST:
+- query Postgres directly
+- NOT load any local files
+- NOT depend on SQLite
+- work identically across all services
+
+---
+
+## 🚀 Pipeline Rules
+
+Pipelines MUST:
+- read/write ONLY to Postgres
+- NOT use local filesystem for state
+- be stateless between runs
+
+---
+
+## ⚠️ Strict Architectural Constraint
+
+If any code introduces:
+- `/app/resolver-vol`
+- `.db` files as resolver storage
+- `sqlite3` usage in resolver or pipeline paths
+
+→ it must be removed or rejected.
 
 ---
 
