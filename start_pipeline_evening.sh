@@ -24,6 +24,22 @@ echo "[pipeline-evening] Starting for date=$TODAY"
 echo "[pipeline-evening] DATABASE_URL: ${DATABASE_URL:+postgres (set)} ${DATABASE_URL:-MISSING - will fallback to SQLite}"
 echo "[pipeline-evening] Step timeout: ${STEP_TIMEOUT}s per step"
 
+# ── Resolver volume init + catalog bootstrap ─────────────────────────────────
+if [ -n "${RESOLVER_DB_PATH:-}" ]; then
+  RESOLVER_DIR=$(dirname "$RESOLVER_DB_PATH")
+  mkdir -p "$RESOLVER_DIR"
+  if [ ! -f "$RESOLVER_DB_PATH" ]; then
+    echo "[pipeline-evening] Resolver volume empty — copying seed DB from repo..."
+    cp data/resolver/pti.db "$RESOLVER_DB_PATH"
+    echo "[pipeline-evening] Seed copied: $(sqlite3 "$RESOLVER_DB_PATH" 'SELECT COUNT(*) FROM fragrance_master;') FM rows"
+  fi
+  echo "[pipeline-evening] Resolver bootstrap — catalog check"
+  timeout 1800 python3 scripts/bootstrap_resolver_catalog.py || \
+    echo "[pipeline-evening] WARNING: bootstrap_resolver_catalog failed — continuing with existing resolver"
+else
+  echo "[pipeline-evening] RESOLVER_DB_PATH not set — using git-tracked data/resolver/pti.db"
+fi
+
 # Step 0: Reset resolved_signals sequence to prevent pkey conflicts on rerun
 echo "[pipeline-evening] Step 0 — Reset sequence"
 timeout "$STEP_TIMEOUT" python3 scripts/reset_sequence.py

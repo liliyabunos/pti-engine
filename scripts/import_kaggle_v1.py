@@ -14,6 +14,7 @@ Rollback: DELETE FROM fragrance_master/perfumes/brands WHERE source='kaggle_v1'.
 import argparse
 import csv
 import hashlib
+import os
 import re
 import sqlite3
 import unicodedata
@@ -38,7 +39,8 @@ CONC_SUFFIXES = [
 NOISE_PATTERNS = {"n/a", "na", "???", "unknown", "-", ""}
 MIN_LEN = 2
 
-DB_PATH = Path(__file__).resolve().parent.parent / "data" / "resolver" / "pti.db"
+_DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "resolver" / "pti.db"
+DB_PATH = Path(os.environ.get("RESOLVER_DB_PATH", str(_DEFAULT_DB)))
 
 
 def normalize(text: str) -> str:
