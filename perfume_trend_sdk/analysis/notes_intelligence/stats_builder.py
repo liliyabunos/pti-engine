@@ -292,7 +292,7 @@ def build_note_brand_stats(
     """Compute and upsert note_brand_stats (canonical_note × brand)."""
     rows = session.execute(
         text(
-            "SELECT pn.note_id, pn.perfume_id, p.brand_id "
+            "SELECT pn.note_id, pn.perfume_id, CAST(p.brand_id AS text) "
             "FROM perfume_notes pn "
             "JOIN perfumes p ON CAST(p.id AS text) = pn.perfume_id "
             "WHERE p.brand_id IS NOT NULL"
@@ -308,8 +308,9 @@ def build_note_brand_stats(
         cid = note_id_to_canonical_id.get(note_id)
         if not cid:
             continue
-        pair_perfumes[(cid, brand_id)].add(perfume_id)
-        brand_total_perfumes[brand_id].add(perfume_id)
+        brand_id_str = str(brand_id) if brand_id is not None else None
+        pair_perfumes[(cid, brand_id_str)].add(perfume_id)
+        brand_total_perfumes[brand_id_str].add(perfume_id)
 
     now = _now()
     for (canonical_note_id, brand_id), perfumes in pair_perfumes.items():
