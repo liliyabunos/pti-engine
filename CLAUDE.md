@@ -4645,51 +4645,71 @@ Phase 4 determines which candidates become part of the Knowledge Base.
 
 ---
 
-## Phase 4a — Review & Approval Pipeline
+## Phase 4a — CSV Review & Approval Pipeline (COMPLETED)
 
-### Purpose
+### Status
+- Code complete
+- Review workflow complete
+- CSV-first human review interface implemented
+- System ready for Phase 4b with safeguards
 
-Provide a structured review layer for candidate validation before promotion.
+### What was added
+Review fields were added to `fragrance_candidates`:
 
-### Scope
+- `review_status`
+- `normalized_candidate_text`
+- `reviewed_at`
+- `review_notes`
+- `approved_entity_type`
 
-- expose review candidates (validation_status = review or accepted_rule_based)
-- allow structured inspection:
-  - raw_text
-  - normalized_text
-  - occurrences
-  - confidence_score
-  - candidate_type
-- support manual or rule-assisted decisions:
-  - approve
-  - reject
-  - reclassify
+### Review model
 
-### Required Capabilities
+Phase 4a introduces a human-in-the-loop review layer without writing to the Knowledge Base.
 
-- query top candidates by:
-  - occurrences
-  - confidence_score
-  - candidate_type
-- ability to mark candidates as:
-  - approved_for_promotion
-  - rejected_final
-- optional normalization step:
-  - strip context words (e.g. "review the baccarat rouge" → "baccarat rouge")
-  - standardize naming before promotion
+Primary interface:
+- CSV export for review
+- CSV import for review decisions
 
-### Rules
+### Review states
 
-- Phase 4a MUST NOT modify:
-  - fragrance_master
-  - aliases
-  - brand tables
+Human review decisions are persisted through `review_status`, including:
+- `pending_review`
+- `approved_for_promotion`
+- `rejected_final`
+- `needs_normalization`
 
-- Phase 4a only prepares candidates for promotion.
+### Important distinction
 
-### Output
+`validation_status` and `review_status` are separate dimensions:
 
-A set of approved, normalized candidates ready for KB insertion.
+- `validation_status` = system decision
+- `review_status` = human/promotion decision
+
+Noise classified in Phase 3B may still remain `pending_review` until explicitly rejected or excluded from review exports.
+
+### Current result
+
+A first approved-for-promotion queue now exists.
+
+Examples:
+- `baccarat rouge 540`
+- `xerjoff`
+- `dior homme`
+- `dior homme parfum`
+- `ysl myself`
+
+Normalization examples:
+- `review the baccarat rouge` → `baccarat rouge`
+
+### Rule for Phase 4b
+
+Phase 4b must NOT promote candidates blindly from `approved_for_promotion`.
+
+Before KB insertion, Phase 4b must apply final safeguards:
+- deduplication against existing KB
+- language detection / non-English filtering
+- context-fragment stripping validation
+- conflict checks against existing aliases and canonical entities
 
 ---
 
