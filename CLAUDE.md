@@ -5932,6 +5932,41 @@ Pipelines MUST:
 
 ---
 
+## 🧠 Resolver Architecture
+
+Resolver and Market layers are separate systems.
+
+Resolver uses:
+- integer IDs
+- `normalized_name`
+- `aliases` table
+- `fragrance_master` KB
+
+Market uses:
+- UUID IDs
+- production entities
+
+Resolver MUST NOT use market tables directly.
+
+---
+
+## 🚀 Migration Plan
+
+Resolver storage is being migrated from SQLite → Postgres.
+
+This requires:
+- new resolver tables in Postgres (`aliases`, `fragrance_master`, `normalized_name` on `brands`/`perfumes`)
+- data migration from SQLite (1,608 brands, 56,067 perfumes, 12,884 aliases, 56,067 FM rows)
+- new `PgFragranceMasterStore` (SQLAlchemy-backed, replaces `fragrance_master_store.py`)
+- resolver refactor: `PerfumeResolver(store)` instead of `PerfumeResolver(db_path)`
+
+Until migration is complete:
+- SQLite resolver (`data/resolver/pti.db`) remains the source of truth
+- but MUST NOT be tied to local filesystem volumes or container state
+- SQLite file is git-tracked and bundled with each deploy as a transitional measure only
+
+---
+
 ## ⚠️ Strict Architectural Constraint
 
 If any code introduces:
