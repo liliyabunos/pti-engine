@@ -5383,6 +5383,120 @@ Rules:
 
 ---
 
+## Phase 5 — Step 2: Data Schema Definition
+
+### Status
+Planned.
+
+### Target
+TARGET TYPE: PRODUCTION_TARGETED
+
+### Purpose
+
+Define a minimal, safe, and scalable schema for importing catalog data (Kaggle / Fragrantica datasets) into the Knowledge Base.
+
+This step determines:
+- what data is stored
+- where it is stored
+- what is intentionally excluded
+
+---
+
+### Design Principle
+
+Catalog expansion must be:
+
+- minimal-first (only required fields)
+- merge-safe (no duplication of entities)
+- compatible with existing KB structure
+- independent from ingestion / candidates / review pipeline
+
+---
+
+### Scope
+
+#### 1. Mandatory Fields
+
+Required for all imports:
+
+**Perfume**
+- brand_name
+- perfume_name
+
+**Brand**
+- brand_name
+
+These fields must be sufficient to:
+- create or match entities
+- support resolver logic
+- allow alias generation
+
+---
+
+#### 2. Optional Fields (Deferred / Secondary)
+
+May be imported later, but NOT required in initial Phase 5:
+
+- notes (top/middle/base)
+- accords
+- gender
+- release_year
+- rating
+- url
+
+Rule: Optional fields must NOT block import.
+
+---
+
+#### 3. Mapping to Existing Tables
+
+Data must be mapped into current schema:
+
+| Table | What is written |
+|-------|----------------|
+| `brands` | canonical brand_name |
+| `perfumes` | canonical perfume_name + brand link |
+| `fragrance_master` | combined brand + perfume identity + normalized representation |
+| `aliases` | generated name variants — must not duplicate existing aliases |
+
+---
+
+#### 4. Explicit Exclusions
+
+The following must NOT be imported in Step 2:
+
+- duplicate perfume rows
+- noisy or malformed names
+- incomplete fragments (e.g. "rouge", "540")
+- rating-based logic
+- popularity metrics
+- any data requiring inference or AI
+
+---
+
+### Completion Criteria
+
+Step 2 is complete when:
+
+1. required fields are clearly defined
+2. optional fields are explicitly deferred
+3. mapping to existing KB tables is defined
+4. exclusions are clearly listed
+5. schema is simple enough for safe bulk import
+
+---
+
+### Next Step
+
+Phase 5 — Step 3: Import Strategy
+
+Define:
+- how data is loaded
+- how deduplication is handled
+- how bulk insert is executed safely
+
+---
+
 ## Working Style Requirement
 
 - Work step-by-step
