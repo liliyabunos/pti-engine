@@ -5486,6 +5486,18 @@ Step 2 is complete when:
 
 ---
 
+### Alias Rule (Critical)
+
+Phase 5 must NOT perform bulk or aggressive alias generation.
+
+Only allowed:
+- minimal normalization-based aliases (safe, deterministic)
+- or defer alias creation to existing promotion/alias pipeline
+
+Reason: to avoid duplication, noise, and conflict with Phase 4 resolver logic.
+
+---
+
 ### Next Step
 
 Phase 5 — Step 3: Import Strategy
