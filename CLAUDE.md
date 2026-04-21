@@ -4550,40 +4550,41 @@ All cross-table joins involving UUID/text must use explicit CAST.
 
 ### Status
 
-Planned.
+- Phase 3A (collection layer): COMPLETE
+- Phase 3B (validation/filtering): NOT IMPLEMENTED
 
-### Purpose
+### What is implemented
 
-Capture unresolved entities from ingestion and convert them into structured candidates.
-
-### Core Principle
-
-No entity mention should be silently dropped.
-
-### System Design
-
-Unresolved mentions must be stored in a candidate layer and processed through aggregation and validation before being added to the knowledge base.
-
-### Scope (Phase 3)
-
-- candidate storage
-- frequency aggregation
+- fragrance_candidates table
+- resolver integration (unresolved → candidates)
+- aggregation job
 - confidence scoring
 
-### Out of Scope
+### Current behavior
 
-- automatic promotion to KB
-- AI-based classification
-- UI integration
+The system collects ALL unresolved phrases, including:
+- natural language fragments
+- partial perfume names
+- full perfume names
+- brand references
 
-### Completion Criteria
+This is intentional.
 
-Phase 3 is complete when:
+### Observation
 
-1. unresolved mentions are stored
-2. candidate aggregation produces frequency counts
-3. confidence scoring is implemented
-4. no ingestion data is silently lost
+Majority of candidates are noise (common phrases).
+
+This is expected at this stage.
+
+### Rule
+
+Phase 3A must NOT attempt to filter or validate candidates.
+
+Filtering is deferred to Phase 3B.
+
+### Next step
+
+Implement validation and filtering layer (Phase 3B).
 
 ---
 
