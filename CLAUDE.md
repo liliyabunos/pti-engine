@@ -5233,3 +5233,159 @@ the phase must be marked as:
 - **production-blocked**
 
 not fully complete.
+
+---
+
+## Phase Execution & Deployment Discipline
+
+### Core Rule
+
+Every phase MUST explicitly declare its execution target and deployment expectations before implementation.
+
+No phase is considered complete without satisfying its declared target.
+
+---
+
+## Phase Target Types
+
+Each phase must start with:
+
+- `target_type`
+- `authoritative_targets`
+- `requires_commit_push_deploy`
+- `expected_ui_visibility`
+
+### 1. LOCAL_ONLY
+
+Used for:
+- experiments
+- partial implementations
+- data exploration
+- prototype logic
+
+Rules:
+- changes may exist only in local DB (e.g. `outputs/*.db`)
+- must NOT be marked as production-complete
+- must NOT be assumed visible in API/UI
+- no deploy required
+
+---
+
+### 2. PRODUCTION_TARGETED
+
+Used for:
+- schema changes (alembic)
+- pipeline changes
+- resolver / KB mutations
+- ingestion / aggregation changes
+- anything expected to affect API or UI
+
+Rules:
+- must define authoritative production targets (DB/files)
+- must commit + push
+- must deploy (Railway)
+- must run production verification
+- NOT complete until production is verified
+
+---
+
+### 3. BUNDLED_LATER
+
+Used when:
+- phase is intentionally split
+- final deploy happens later as a group
+
+Rules:
+- must explicitly say: "deploy deferred"
+- must NOT be marked as production-complete
+- must reference which phase it will be bundled with
+
+---
+
+## Required Phase Header
+
+Every Claude Code task MUST begin with:
+
+```
+TARGET TYPE: [LOCAL_ONLY / PRODUCTION_TARGETED / BUNDLED_LATER]
+
+AUTHORITATIVE TARGETS:
+  [e.g. production PostgreSQL]
+  [e.g. data/resolver/pti.db]
+
+REQUIRES COMMIT/PUSH/DEPLOY: [YES/NO]
+
+EXPECTED UI CHANGE: [YES/NO/DELAYED]
+```
+
+---
+
+## Resolver / KB Rule
+
+For any phase that mutates Knowledge Base:
+
+- DO NOT write only to working DBs (e.g. `outputs/pti.db`)
+- MUST write to authoritative resolver DB used in production
+- MUST verify:
+  - row counts
+  - new entities
+  - new aliases
+  - resolver correctness
+
+---
+
+## UI Visibility Rule
+
+Knowledge Base changes do NOT guarantee immediate UI visibility.
+
+For an entity to appear in UI:
+
+1. entity exists in KB/resolver
+2. ingestion encounters matching content
+3. resolver maps content
+4. aggregation creates market rows
+5. API returns entity
+6. UI filters allow it
+
+Therefore:
+- KB update ≠ UI update
+- absence in UI ≠ failure
+
+---
+
+## Phase Completion Definition
+
+A phase is COMPLETE only if:
+
+| Target type | Completion criteria |
+|-------------|-------------------|
+| LOCAL_ONLY | verified locally |
+| PRODUCTION_TARGETED | deployed + verified in production |
+| BUNDLED_LATER | implemented and explicitly deferred |
+
+---
+
+## Phase 5 — Catalog Expansion Discipline
+
+Phase 5 is NOT part of the live ingestion pipeline.
+
+Principle:
+
+- Live pipeline → signals (YouTube/Reddit)
+- Catalog pipeline → universe (perfumes/brands)
+
+Rules:
+
+- bulk import must be controlled and batched
+- must not rely on live ingestion for coverage growth
+- must use structured sources (Fragrantica/Kaggle/etc.)
+- must merge safely into existing KB (no duplicates)
+
+---
+
+## Working Style Requirement
+
+- Work step-by-step
+- One phase → one goal
+- No large multi-phase implementations in a single step
+- Always verify before moving forward
