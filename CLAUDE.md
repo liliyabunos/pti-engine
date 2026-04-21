@@ -5813,11 +5813,44 @@ Railway Volume mounted at `/app/resolver-vol/`, referenced via `RESOLVER_DB_PATH
 ### Rule
 
 - `RESOLVER_DB_PATH` env var controls which SQLite file the resolver, bootstrap, and ingest scripts use
+- Production resolver persistence: Railway Volume at `/app/resolver-vol`, `RESOLVER_DB_PATH=/app/resolver-vol/pti.db`
 - On first cron execution: volume is empty → pipeline copies `data/resolver/pti.db` (git-tracked seed, 56k perfumes) into the volume → bootstrap guard SKIPS (kaggle_v1 already present)
 - Volume survives redeploys and cron executions — no re-import required
 - Bootstrap runs once on volume initialization, then SKIPS on all subsequent runs
 - Future KB mutations (promotions, new catalog imports) write to the Volume via `RESOLVER_DB_PATH`, not to the git-tracked file
 - If `RESOLVER_DB_PATH` is not set: scripts fall back to `data/resolver/pti.db` (local dev default)
+
+### Safe initialization order (shared volume, two services)
+
+Both `pipeline-daily` and `pipeline-evening` share the same volume. SQLite on a shared volume can race if both services initialize simultaneously.
+
+**Required order for first deployment:**
+
+1. Attach volume and set `RESOLVER_DB_PATH` on both services
+2. Let **`pipeline-daily` run first** (11:00 UTC cron) — it copies the seed and bootstraps the volume
+3. Verify the volume is populated before `pipeline-evening` runs (23:00 UTC)
+4. After first `pipeline-daily` run: volume is initialized — `pipeline-evening` will SKIP the copy and SKIP the bootstrap safely
+
+Normal operation (after initialization): both services read from an already-populated volume — no writes, no race.
+
+### Verification after first pipeline-daily run
+
+```bash
+railway ssh --service pipeline-daily -- python3 - <<'PY'
+import sqlite3
+conn = sqlite3.connect('/app/resolver-vol/pti.db')
+cur = conn.cursor()
+cur.execute("SELECT COUNT(*) FROM fragrance_master WHERE source='kaggle_v1'")
+print('kaggle_v1:', cur.fetchone()[0])
+cur.execute("SELECT COUNT(*) FROM fragrance_master")
+print('total FM:', cur.fetchone()[0])
+conn.close()
+PY
+```
+
+Expected:
+- `kaggle_v1: 53822`
+- `total FM: ~56067`
 
 ### Long-term direction
 
