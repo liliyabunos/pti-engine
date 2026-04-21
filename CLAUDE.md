@@ -5904,34 +5904,36 @@ Resolver MUST NOT use market tables directly.
 
 ---
 
-## 🚀 Migration Plan — Phase R1 (COMPLETE — 2026-04-21)
+## 🚀 Migration Plan — Phase R1 (PRODUCTION-VERIFIED — 2026-04-21)
 
 Resolver storage migrated from SQLite → Postgres.
 
 ### What was implemented
 
 - **Alembic migration 014**: `resolver_brands`, `resolver_perfumes`, `resolver_aliases`, `resolver_fragrance_master` tables — INTEGER PKs, `resolver_` prefix (no collision with UUID market tables)
-- **`PgResolverStore`** (`perfume_trend_sdk/storage/entities/pg_resolver_store.py`): same interface as `FragranceMasterStore`, backed by Postgres `resolver_*` tables
-- **`make_resolver(db_path)`** factory: auto-selects `PgResolverStore` (when `DATABASE_URL` set) or SQLite fallback
+- **Alembic migration 015**: fixed missing SERIAL sequences for `resolver_aliases.id` and `resolver_fragrance_master.id` (migration 014 missed explicit `CREATE SEQUENCE` + `SET DEFAULT`)
+- **`PgResolverStore`** (`perfume_trend_sdk/storage/entities/pg_resolver_store.py`): same interface as `FragranceMasterStore`, backed by Postgres `resolver_*` tables; includes `check_has_data()` fail-fast guard
+- **`make_resolver(db_path)`** factory: auto-selects `PgResolverStore` (when `DATABASE_URL` set) or SQLite fallback; calls `check_has_data()` in production to fail fast if migration hasn't run
 - **`PerfumeResolver.__init__(store=...)`**: accepts store object; `db_path` kept for backward compat
-- **`scripts/migrate_resolver_to_postgres.py`**: idempotent migration SQLite → Postgres
-- **`scripts/verify_resolver_shadow.py`**: shadow verification — row count + resolver output parity
+- **`scripts/migrate_resolver_to_postgres.py`**: idempotent batch migration using `psycopg2.extras.execute_values` (2,000-row batches; 56k rows in ~2 minutes)
+- **`scripts/verify_resolver_shadow.py`**: shadow verification — row count parity + 16 resolver alias probes
 
-### Production cutover steps
+### Production verification results (2026-04-21)
 
-1. Deploy → `alembic upgrade head` → `resolver_*` tables created
-2. `railway run --service pipeline-daily python3 scripts/migrate_resolver_to_postgres.py`
-3. `railway run --service pipeline-daily python3 scripts/verify_resolver_shadow.py`
-4. If verify passes → production pipelines already use `PgResolverStore` (DATABASE_URL is set)
+| Table | SQLite | Postgres | Match |
+|-------|--------|----------|-------|
+| resolver_brands | 1,608 | 1,608 | ✅ |
+| resolver_perfumes | 56,067 | 56,067 | ✅ |
+| resolver_aliases | 12,884 | 12,884 | ✅ |
+| resolver_fragrance_master | 56,067 | 56,067 | ✅ |
 
-### Expected counts after migration
+Resolver output parity: 16/16 alias probes pass ✅
 
-| Table | Count |
-|-------|-------|
-| resolver_brands | ~1,608 |
-| resolver_perfumes | ~56,067 |
-| resolver_aliases | ~12,884 |
-| resolver_fragrance_master | ~56,067 |
+Shadow verification: **PASS** — "Production cutover is safe."
+
+### Fail-fast guard (production)
+
+If `resolver_aliases` has fewer than 5,000 rows and `PTI_ENV=production`, `make_resolver()` raises `RuntimeError` immediately. This prevents silent "no matches" when migration has not been run.
 
 ---
 
