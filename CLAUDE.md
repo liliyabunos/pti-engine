@@ -4551,7 +4551,7 @@ All cross-table joins involving UUID/text must use explicit CAST.
 ### Status
 
 - Phase 3A (collection layer): COMPLETE
-- Phase 3B (validation/filtering): NOT IMPLEMENTED
+- Phase 3B (validation/filtering): COMPLETE
 
 ### What is implemented
 
@@ -4584,7 +4584,45 @@ Filtering is deferred to Phase 3B.
 
 ### Next step
 
-Implement validation and filtering layer (Phase 3B).
+Implement promotion pipeline (Phase 3C).
+
+---
+
+## Phase 3B — Candidate Validation & Noise Filtering (COMPLETED)
+
+### Status
+- Code complete
+- Deterministic validation complete
+- Discovery layer operational
+
+### What was added
+- rule-based classification of fragrance_candidates
+- candidate_type classification
+- validation_status classification
+- rejection_reason support
+- deterministic noise filtering
+
+### Classification outcomes
+Candidates are now separated into:
+- accepted_rule_based
+- rejected_noise
+- review
+
+### Current behavior
+The system now:
+- preserves all unresolved candidates
+- rejects obvious natural-language noise
+- surfaces perfume/brand/note-like candidates
+- keeps ambiguous entities in review
+
+### Rule
+Phase 3B does NOT promote candidates into the KB.
+
+Promotion remains a separate phase.
+
+### Result
+PTI now has a usable discovery pipeline:
+unresolved → candidate collection → validation → review-ready queue
 
 ---
 
