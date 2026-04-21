@@ -4759,40 +4759,28 @@ The create_new_entity bucket is deferred to Phase 4c, which will handle:
 
 ---
 
-## Phase 4c — Create Bucket Review & Controlled New Entity Creation
+## Phase 4c — Create Bucket Review & Controlled New Entity Creation (COMPLETED)
 
 ### Status
+- Code complete / 5 new KB entities created / KB integrity verified
 
-Planned.
+### What was achieved
+- Enhanced classifier (`enhanced_classify_4c`) — stricter than Phase 4b:
+  - pyramid position words rejected from perfume part (notes, bottom, top, middle, base, heart)
+  - single-note-word perfume parts rejected
+  - perfume-part alias lookup for convert_to_merge
+  - in-batch partial-name deduplication (prevents creating "Xerjoff Jazz" and "Xerjoff Jazz Club" as separate entities)
+- Brand alias seed: "jovoy" → Jovoy Paris added; 5 Jovoy candidates resolved as exact_now_in_kb
+- 5 new perfume entities created: Xerjoff Jazz Club, Xerjoff Pt 2 Deified, Initio Musk Therapy, Tom Ford Grey Vetiver, Dior Homme Parfum
+- 3 merge aliases for existing entities: Tom Ford Tobacco Oud, Tom Ford Uno, Tom Ford Uno De
+- 6 partial-name aliases auto-created post-entity-creation in second pass: Tom Ford Grey, Xerjoff Jazz, Dior Homme
+- KB integrity check: PASS — zero duplicates, zero orphan aliases
 
-### Purpose
+### Rule
+Phase 4c create runs are bounded and conservative by design.
+Do NOT increase `--allow-create --limit` without re-running `--analyze` to inspect the current bucket state.
 
-Safely convert `create_new_entity` candidates into new Knowledge Base entities
-after additional validation, cleanup, and brand coverage expansion.
-
-### Context
-
-Phase 4b identified a `create_new_entity` bucket containing candidates that:
-
-- are not matched to existing KB entities
-- passed initial review (Phase 4a)
-- were gated to prevent unsafe insertion
-
-This bucket contains a mix of:
-- valid new perfumes / brands
-- partial name fragments
-- over-normalized tokens
-- foreign-language or contextual phrases
-
-### Design Principle
-
-New entity creation must be stricter than alias merging.
-
-Creating a new KB entity has a higher risk of polluting the system than adding an alias.
-
----
-
-## Scope
+### Scope
 
 Phase 4c is responsible for:
 
