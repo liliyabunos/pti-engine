@@ -122,6 +122,20 @@ export default function EntityPage({ params }: PageProps) {
 
         {data && summary && (
           <div className="space-y-4 p-4">
+            {/* ── Quiet state banner — shown when entity has no recent market data ── */}
+            {summary.last_score == null && summary.mention_count == null && (
+              <div className="flex items-start gap-3 rounded border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
+                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Catalog
+                </span>
+                <p className="text-[11px] text-zinc-500">
+                  This entity is known to the catalog but has not appeared in
+                  any ingested content yet. Market data will populate
+                  automatically once mentions are detected.
+                </p>
+              </div>
+            )}
+
             {/* ── Entity header panel ──────────────────────────────────── */}
             <TerminalPanel noPad>
               <EntityHeader

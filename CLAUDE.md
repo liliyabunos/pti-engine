@@ -3973,6 +3973,66 @@ Steps within each cycle run sequentially inside the shell script (not separate c
 
 ---
 
+## Phase U1 — Catalog Exposure in UI
+
+### Target Type: PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_*` tables (migration 014 — already live)
+- `entity_market` table (already live)
+
+### Requires Commit / Push / Deploy: YES
+
+### Expected UI Change: YES — screener gets mode tabs, entity page gets quiet state
+
+### Goal
+
+Expose the full resolver/catalog (56k perfumes, 1,600+ brands) to the UI.
+
+Before Phase U1, the screener only showed entities with timeseries data from ingestion.
+After Phase U1, users can browse, search, and discover all known entities regardless of ingestion activity.
+
+### What was implemented
+
+**Backend — `perfume_trend_sdk/api/routes/catalog.py`**
+- `GET /api/v1/catalog/perfumes` — search resolver_perfumes, cross-ref entity_market
+- `GET /api/v1/catalog/brands` — search resolver_brands, cross-ref entity_market
+- `GET /api/v1/catalog/counts` — headline counts: known_perfumes, known_brands, active_today
+- All endpoints gracefully return empty results for SQLite dev environments (resolver_* tables are Postgres-only)
+- `entity_id` (market slug) is returned when entity has been resolved from content — null for catalog-only entries
+
+**Registered in `main.py`**: `prefix="/api/v1/catalog"`, tag `catalog`
+
+**Frontend — new types in `types.ts`**: `CatalogPerfumeRow`, `CatalogBrandRow`, `CatalogPerfumesResponse`, `CatalogBrandsResponse`, `CatalogCounts`, `CatalogParams`
+
+**Frontend — `frontend/src/lib/api/catalog.ts`**: `fetchCatalogPerfumes`, `fetchCatalogBrands`, `fetchCatalogCounts`
+
+**Frontend — screener page (`screener/page.tsx`)**:
+- Mode tabs: "Active today" | "All Perfumes" | "All Brands"
+- Active today: existing screener behavior (entity_market + timeseries)
+- All Perfumes: server-side text search via `GET /api/v1/catalog/perfumes?q=`
+- All Brands: server-side text search via `GET /api/v1/catalog/brands?q=`
+- Catalog table rows: "Tracked" badge (green) if entity_id present, "In Catalog" badge (grey) if not
+- Tracked rows navigate to entity page; catalog-only rows are non-clickable
+- Header subtitle shows catalog totals from `/api/v1/catalog/counts`
+
+**Frontend — entity page quiet state**:
+- If `summary.last_score == null && summary.mention_count == null`, show a gray banner:
+  "This entity is known to the catalog but has not appeared in any ingested content yet."
+
+### Completion Criteria
+
+- [ ] `GET /api/v1/catalog/perfumes` returns results from resolver_perfumes in production
+- [ ] `GET /api/v1/catalog/brands` returns results from resolver_brands in production
+- [ ] `GET /api/v1/catalog/counts` returns 56k+ known_perfumes, 1,600+ known_brands
+- [ ] Screener mode tabs visible in frontend
+- [ ] "All Perfumes" tab shows catalog rows with server-side search
+- [ ] Tracked entities navigate to entity page; catalog-only rows show "In Catalog" badge
+- [ ] Entity page shows quiet state banner for entities with no market data
+
+---
+
 ## Current System Status
 
 **As of 2026-04-17**

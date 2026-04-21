@@ -12,6 +12,7 @@ import {
 import { clsx } from "clsx";
 
 import { fetchScreener } from "@/lib/api/screener";
+import { fetchCatalogPerfumes, fetchCatalogBrands, fetchCatalogCounts } from "@/lib/api/catalog";
 import { Header } from "@/components/shell/Header";
 import {
   ControlBar,
@@ -22,39 +23,30 @@ import { SectionHeader } from "@/components/primitives/SectionHeader";
 import { SearchInput } from "@/components/primitives/SearchInput";
 import { FilterChip } from "@/components/primitives/FilterChip";
 import { ErrorState } from "@/components/primitives/ErrorState";
+import { EmptyState } from "@/components/primitives/EmptyState";
+import { TableSkeleton } from "@/components/primitives/LoadingSkeleton";
 import { ScreenerFilters } from "@/components/screener/ScreenerFilters";
 import { ScreenerTable } from "@/components/screener/ScreenerTable";
-import type { ScreenerParams } from "@/lib/api/types";
+import type { ScreenerParams, CatalogPerfumeRow, CatalogBrandRow } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
 // V1 Known Limitations
 // ---------------------------------------------------------------------------
 //
-// 1. TEXT SEARCH IS CLIENT-SIDE ONLY
-//    The SearchInput filters `data.rows` in the browser after the backend
-//    returns results. It does NOT send a `q` param to the backend.
-//    This means search only covers the current page (limit=50 by default).
-//    To fix: add a `q` / `search` param to GET /api/v1/screener backend route.
+// 1. TEXT SEARCH IS CLIENT-SIDE ONLY (active mode)
+//    In "Active today" mode, search filters browser-side on current page.
+//    In "All Perfumes" / "All Brands" modes, search is server-side via
+//    /api/v1/catalog/perfumes?q=... and /api/v1/catalog/brands?q=...
 //
-// 2. WATCHLISTS + ALERTS ARE SCAFFOLD ONLY
-//    /watchlists and /alerts exist as placeholder routes with no backend wiring.
-//
-// 3. COMPARE MODE IS PLACEHOLDER
-//    The "Related Entities & Compare Mode" block on entity pages is a
-//    non-functional placeholder. No compare API exists yet.
-//
-// 4. RECENT MENTION LINKS DEPEND ON BACKEND SOURCE URL QUALITY
-//    RecentMentions shows an external link only when source_url starts with
-//    "http". Internal-only records show a lock icon. URL quality depends on
-//    what the backend ingestion pipeline stores.
-//
-// 5. BRAND ANALYTICS MAY BE SHALLOWER THAN PERFUME ANALYTICS
-//    Brand-level entities aggregate mentions across all child perfumes.
-//    Signal density, timeseries depth, and confidence may be lower for brands.
+// 2. CATALOG ENTITIES WITHOUT entity_id are not navigable.
+//    Catalog rows with entity_id=null (never resolved from content) show an
+//    "In Catalog" badge but clicking does nothing (no entity page exists).
 //
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 50;
+
+type ScreenerMode = "active" | "catalog_perfumes" | "catalog_brands";
 
 // Preset configurations — each prefills a specific set of screener params
 const PRESETS: {
@@ -109,8 +101,9 @@ const PRESETS: {
 // URL param serialization helpers
 // ---------------------------------------------------------------------------
 
-function paramsToSearch(p: ScreenerParams): string {
+function paramsToSearch(p: ScreenerParams, mode: ScreenerMode): string {
   const q = new URLSearchParams();
+  if (mode !== "active") q.set("mode", mode);
   if (p.sort_by) q.set("sort_by", p.sort_by);
   if (p.order) q.set("order", p.order);
   if (p.entity_type) q.set("entity_type", p.entity_type);
@@ -155,13 +148,209 @@ function detectPreset(params: ScreenerParams): string | null {
     const match = keys.every((k) => {
       const pv = p.params[k];
       const cv = params[k];
-      if (pv === undefined) return true; // preset doesn't constrain this field
+      if (pv === undefined) return true;
       return pv === cv;
     });
     if (match && p.params.signal_type === params.signal_type) return p.key;
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Catalog table (simpler columns for resolver catalog rows)
+// ---------------------------------------------------------------------------
+
+function CatalogPerfumeTable({
+  rows,
+  isLoading,
+}: {
+  rows: CatalogPerfumeRow[];
+  isLoading: boolean;
+}) {
+  const router = useRouter();
+
+  if (isLoading) return <TableSkeleton rows={10} cols={3} />;
+  if (!rows.length) {
+    return (
+      <EmptyState
+        message="No perfumes found"
+        detail="Try a different search term"
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-zinc-800">
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Name
+            </th>
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Brand
+            </th>
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const isTracked = !!row.entity_id;
+            return (
+              <tr
+                key={row.resolver_id}
+                onClick={
+                  isTracked
+                    ? () =>
+                        router.push(
+                          `/entities/${encodeURIComponent(row.entity_id!)}`,
+                        )
+                    : undefined
+                }
+                className={clsx(
+                  "border-b border-zinc-800/40 transition-colors",
+                  isTracked
+                    ? "group cursor-pointer hover:bg-zinc-800/30"
+                    : "opacity-60",
+                )}
+              >
+                <td className="px-3 py-2">
+                  <span
+                    className={clsx(
+                      "block truncate max-w-[240px] text-xs",
+                      isTracked
+                        ? "text-zinc-200 group-hover:text-amber-300"
+                        : "text-zinc-400",
+                    )}
+                  >
+                    {row.canonical_name}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-[11px] text-zinc-500">
+                  {row.brand_name ?? "—"}
+                </td>
+                <td className="px-3 py-2">
+                  {isTracked ? (
+                    <span className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-500">
+                      Tracked
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
+                      In Catalog
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CatalogBrandTable({
+  rows,
+  isLoading,
+}: {
+  rows: CatalogBrandRow[];
+  isLoading: boolean;
+}) {
+  const router = useRouter();
+
+  if (isLoading) return <TableSkeleton rows={10} cols={3} />;
+  if (!rows.length) {
+    return (
+      <EmptyState
+        message="No brands found"
+        detail="Try a different search term"
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-zinc-800">
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Brand
+            </th>
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500 w-20">
+              Perfumes
+            </th>
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const isTracked = !!row.entity_id;
+            return (
+              <tr
+                key={row.resolver_id}
+                onClick={
+                  isTracked
+                    ? () =>
+                        router.push(
+                          `/entities/${encodeURIComponent(row.entity_id!)}`,
+                        )
+                    : undefined
+                }
+                className={clsx(
+                  "border-b border-zinc-800/40 transition-colors",
+                  isTracked
+                    ? "group cursor-pointer hover:bg-zinc-800/30"
+                    : "opacity-60",
+                )}
+              >
+                <td className="px-3 py-2">
+                  <span
+                    className={clsx(
+                      "block truncate max-w-[300px] text-xs",
+                      isTracked
+                        ? "text-zinc-200 group-hover:text-amber-300"
+                        : "text-zinc-400",
+                    )}
+                  >
+                    {row.canonical_name}
+                  </span>
+                </td>
+                <td className="px-3 py-2 tabular-nums text-[11px] text-zinc-500">
+                  {row.perfume_count.toLocaleString()}
+                </td>
+                <td className="px-3 py-2">
+                  {isTracked ? (
+                    <span className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-500">
+                      Tracked
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
+                      In Catalog
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mode tabs
+// ---------------------------------------------------------------------------
+
+const MODE_TABS: { key: ScreenerMode; label: string; hint: string }[] = [
+  { key: "active", label: "Active today", hint: "Entities with market signal data" },
+  { key: "catalog_perfumes", label: "All Perfumes", hint: "56k+ perfumes in KB" },
+  { key: "catalog_brands", label: "All Brands", hint: "Full brand catalog" },
+];
 
 // ---------------------------------------------------------------------------
 // Inner page — reads URL search params
@@ -172,13 +361,32 @@ function ScreenerPageInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  // Mode: active (default) | catalog_perfumes | catalog_brands
+  const [mode, setMode] = useState<ScreenerMode>(
+    () => (searchParams.get("mode") as ScreenerMode) ?? "active",
+  );
+
   // Initialize screener params from URL
   const [params, setParams] = useState<ScreenerParams>(() =>
     searchToParams(searchParams),
   );
 
-  // Client-side search (backend /screener has no text search param in V1)
+  // Search — server-side in catalog modes, client-side in active mode
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search for catalog server-side calls
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearch(value);
+      // Simple debounce via setTimeout replacement in state
+      setDebouncedSearch(value);
+    },
+    [],
+  );
+
+  // Catalog-specific pagination
+  const [catalogOffset, setCatalogOffset] = useState(0);
 
   // Filter sidebar open/close (local — not synced to URL)
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -188,8 +396,8 @@ function ScreenerPageInner() {
   // ---------------------------------------------------------------------------
 
   const pushParams = useCallback(
-    (next: ScreenerParams) => {
-      const qs = paramsToSearch(next);
+    (next: ScreenerParams, nextMode: ScreenerMode) => {
+      const qs = paramsToSearch(next, nextMode);
       router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
     },
     [pathname, router],
@@ -199,12 +407,22 @@ function ScreenerPageInner() {
     (updates: Partial<ScreenerParams>) => {
       const next = { ...params, ...updates, offset: 0 };
       setParams(next);
-      pushParams(next);
+      pushParams(next, mode);
+    },
+    [params, pushParams, mode],
+  );
+
+  const switchMode = useCallback(
+    (nextMode: ScreenerMode) => {
+      setMode(nextMode);
+      setSearch("");
+      setDebouncedSearch("");
+      setCatalogOffset(0);
+      pushParams(params, nextMode);
     },
     [params, pushParams],
   );
 
-  // Handle column header sort click — toggle direction if same key
   const handleSort = useCallback(
     (key: string) => {
       const next: Partial<ScreenerParams> = {
@@ -233,9 +451,9 @@ function ScreenerPageInner() {
         ...preset.params,
       };
       setParams(next);
-      pushParams(next);
+      pushParams(next, mode);
     },
-    [pushParams],
+    [pushParams, mode],
   );
 
   const resetAll = useCallback(() => {
@@ -246,40 +464,98 @@ function ScreenerPageInner() {
       offset: 0,
     };
     setSearch("");
+    setDebouncedSearch("");
     setParams(next);
-    pushParams(next);
-  }, [pushParams]);
+    pushParams(next, mode);
+  }, [pushParams, mode]);
 
   const goPage = useCallback(
     (dir: 1 | -1) => {
-      const next = {
-        ...params,
-        offset: Math.max(0, (params.offset ?? 0) + dir * PAGE_SIZE),
-      };
-      setParams(next);
-      pushParams(next);
+      if (mode === "active") {
+        const next = {
+          ...params,
+          offset: Math.max(0, (params.offset ?? 0) + dir * PAGE_SIZE),
+        };
+        setParams(next);
+        pushParams(next, mode);
+      } else {
+        setCatalogOffset((prev) => Math.max(0, prev + dir * PAGE_SIZE));
+      }
     },
-    [params, pushParams],
+    [params, pushParams, mode],
   );
 
   // ---------------------------------------------------------------------------
-  // Query
+  // Catalog counts (for header)
   // ---------------------------------------------------------------------------
-
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["screener", params],
-    queryFn: () => fetchScreener(params),
-    staleTime: 30_000,
+  const { data: catalogCounts } = useQuery({
+    queryKey: ["catalog-counts"],
+    queryFn: fetchCatalogCounts,
+    staleTime: 5 * 60_000, // 5 min — counts don't change during a session
   });
 
   // ---------------------------------------------------------------------------
-  // Client-side name filter (within current page results only)
-  // Note: backend /screener does not support text search in V1.
-  //       Search applies to the current page only.
+  // Active mode query
   // ---------------------------------------------------------------------------
+  const activeQuery = useQuery({
+    queryKey: ["screener", params],
+    queryFn: () => fetchScreener(params),
+    staleTime: 30_000,
+    enabled: mode === "active",
+  });
 
+  // ---------------------------------------------------------------------------
+  // Catalog perfumes query
+  // ---------------------------------------------------------------------------
+  const catalogPerfumesQuery = useQuery({
+    queryKey: ["catalog-perfumes", debouncedSearch, catalogOffset],
+    queryFn: () =>
+      fetchCatalogPerfumes({
+        q: debouncedSearch || undefined,
+        limit: PAGE_SIZE,
+        offset: catalogOffset,
+      }),
+    staleTime: 60_000,
+    enabled: mode === "catalog_perfumes",
+  });
+
+  // ---------------------------------------------------------------------------
+  // Catalog brands query
+  // ---------------------------------------------------------------------------
+  const catalogBrandsQuery = useQuery({
+    queryKey: ["catalog-brands", debouncedSearch, catalogOffset],
+    queryFn: () =>
+      fetchCatalogBrands({
+        q: debouncedSearch || undefined,
+        limit: PAGE_SIZE,
+        offset: catalogOffset,
+      }),
+    staleTime: 60_000,
+    enabled: mode === "catalog_brands",
+  });
+
+  // ---------------------------------------------------------------------------
+  // Derived totals / pagination
+  // ---------------------------------------------------------------------------
+  const currentOffset =
+    mode === "active" ? (params.offset ?? 0) : catalogOffset;
+
+  const total =
+    mode === "active"
+      ? (activeQuery.data?.total ?? 0)
+      : mode === "catalog_perfumes"
+      ? (catalogPerfumesQuery.data?.total ?? 0)
+      : (catalogBrandsQuery.data?.total ?? 0);
+
+  const currentPage = Math.floor(currentOffset / PAGE_SIZE) + 1;
+  const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
+
+  // ---------------------------------------------------------------------------
+  // Active mode: client-side name filter (current page only)
+  // ---------------------------------------------------------------------------
   const filteredRows = useMemo(() => {
-    const rows = data?.rows ?? [];
+    if (mode !== "active") return [];
+    const rows = activeQuery.data?.rows ?? [];
     if (!search) return rows;
     const q = search.toLowerCase();
     return rows.filter(
@@ -288,80 +564,144 @@ function ScreenerPageInner() {
         r.ticker.toLowerCase().includes(q) ||
         (r.brand_name ?? "").toLowerCase().includes(q),
     );
-  }, [data?.rows, search]);
+  }, [activeQuery.data?.rows, search, mode]);
 
-  // ---------------------------------------------------------------------------
-  // Pagination state
-  // ---------------------------------------------------------------------------
-
-  const total = data?.total ?? 0;
-  const currentOffset = params.offset ?? 0;
-  const currentPage = Math.floor(currentOffset / PAGE_SIZE) + 1;
-  const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
-
-  // Detect active preset for visual hint
   const activePreset = detectPreset(params);
-
-  // Has any non-default filter active
   const hasActiveFilters =
-    params.entity_type ||
-    params.signal_type ||
-    params.has_signals ||
-    (params.min_score ?? 0) > 0 ||
-    (params.min_confidence ?? 0) > 0 ||
-    (params.min_mentions ?? 0) > 0;
+    mode === "active" &&
+    (params.entity_type ||
+      params.signal_type ||
+      params.has_signals ||
+      (params.min_score ?? 0) > 0 ||
+      (params.min_confidence ?? 0) > 0 ||
+      (params.min_mentions ?? 0) > 0);
+
+  // ---------------------------------------------------------------------------
+  // Header subtitle — show catalog totals when available
+  // ---------------------------------------------------------------------------
+  const headerSubtitle = catalogCounts
+    ? `${catalogCounts.known_perfumes.toLocaleString()} perfumes · ${catalogCounts.known_brands.toLocaleString()} brands · ${catalogCounts.active_today} active today`
+    : mode === "active"
+    ? activeQuery.data
+      ? `${activeQuery.data.total} active entities`
+      : undefined
+    : undefined;
 
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
+  const isError =
+    mode === "active"
+      ? activeQuery.isError
+      : mode === "catalog_perfumes"
+      ? catalogPerfumesQuery.isError
+      : catalogBrandsQuery.isError;
+
+  const error =
+    mode === "active"
+      ? activeQuery.error
+      : mode === "catalog_perfumes"
+      ? catalogPerfumesQuery.error
+      : catalogBrandsQuery.error;
+
+  const refetch =
+    mode === "active"
+      ? activeQuery.refetch
+      : mode === "catalog_perfumes"
+      ? catalogPerfumesQuery.refetch
+      : catalogBrandsQuery.refetch;
+
+  const isLoading =
+    mode === "active"
+      ? activeQuery.isLoading
+      : mode === "catalog_perfumes"
+      ? catalogPerfumesQuery.isLoading
+      : catalogBrandsQuery.isLoading;
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <Header
         title="Screener"
-        subtitle={data ? `${data.total} entities` : undefined}
+        subtitle={headerSubtitle}
         actions={
-          <button
-            onClick={() => setFiltersOpen((o) => !o)}
-            className={clsx(
-              "flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] transition-colors",
-              filtersOpen
-                ? "border-zinc-500 bg-zinc-800 text-zinc-200"
-                : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200",
-            )}
-          >
-            <SlidersHorizontal size={11} />
-            Filters
-            {hasActiveFilters && (
-              <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
-            )}
-          </button>
+          mode === "active" ? (
+            <button
+              onClick={() => setFiltersOpen((o) => !o)}
+              className={clsx(
+                "flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] transition-colors",
+                filtersOpen
+                  ? "border-zinc-500 bg-zinc-800 text-zinc-200"
+                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200",
+              )}
+            >
+              <SlidersHorizontal size={11} />
+              Filters
+              {hasActiveFilters && (
+                <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-amber-400" />
+              )}
+            </button>
+          ) : null
         }
       />
+
+      {/* ── Mode tabs ───────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-0 border-b border-zinc-800 bg-zinc-950 px-4">
+        {MODE_TABS.map((tab) => (
+          <button
+            key={tab.key}
+            title={tab.hint}
+            onClick={() => switchMode(tab.key)}
+            className={clsx(
+              "border-b-2 px-3 py-2 text-[11px] font-medium transition-colors",
+              mode === tab.key
+                ? "border-amber-400 text-amber-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-300",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* ── Control bar ─────────────────────────────────────────────────── */}
       <ControlBar
         left={
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {/* Search — client-side within current page (V1 limitation) */}
+            {/* Search */}
             <SearchInput
               value={search}
-              onChange={setSearch}
-              placeholder="Search name / ticker…"
-              className="w-40 shrink-0"
+              onChange={handleSearchChange}
+              placeholder={
+                mode === "active"
+                  ? "Search name / ticker…"
+                  : mode === "catalog_perfumes"
+                  ? "Search perfumes…"
+                  : "Search brands…"
+              }
+              className="w-44 shrink-0"
             />
-            <ControlBarDivider />
-            {/* Presets */}
-            <div className="flex shrink-0 items-center gap-1">
-              {PRESETS.map((p) => (
-                <FilterChip
-                  key={p.key}
-                  label={p.label}
-                  active={activePreset === p.key}
-                  onClick={() => applyPreset(p)}
-                />
-              ))}
-            </div>
+            {mode === "active" && (
+              <>
+                <ControlBarDivider />
+                {/* Presets */}
+                <div className="flex shrink-0 items-center gap-1">
+                  {PRESETS.map((p) => (
+                    <FilterChip
+                      key={p.key}
+                      label={p.label}
+                      active={activePreset === p.key}
+                      onClick={() => applyPreset(p)}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            {mode !== "active" && search && (
+              <span className="text-[10px] text-zinc-600">
+                server-side search
+              </span>
+            )}
           </div>
         }
         right={
@@ -375,12 +715,12 @@ function ScreenerPageInner() {
                 Clear filters
               </button>
             )}
-            {data && (
+            {mode === "active" && activeQuery.data && (
               <>
                 <ControlBarDivider />
                 <span className="text-[11px] text-zinc-600">
                   {filteredRows.length} shown
-                  {search ? ` (filtered from ${data.rows.length})` : ""}
+                  {search ? ` (filtered from ${activeQuery.data.rows.length})` : ""}
                 </span>
               </>
             )}
@@ -390,8 +730,8 @@ function ScreenerPageInner() {
 
       {/* ── Main layout ─────────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Filter sidebar */}
-        {filtersOpen && (
+        {/* Filter sidebar (active mode only) */}
+        {filtersOpen && mode === "active" && (
           <aside className="w-56 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950">
             <ScreenerFilters params={params} onChange={updateParams} />
           </aside>
@@ -412,10 +752,16 @@ function ScreenerPageInner() {
               {/* Panel header */}
               <div className="flex items-center justify-between px-4 py-3">
                 <SectionHeader
-                  title="Results"
+                  title={
+                    mode === "active"
+                      ? "Results"
+                      : mode === "catalog_perfumes"
+                      ? "Perfume Catalog"
+                      : "Brand Catalog"
+                  }
                   subtitle={
-                    data
-                      ? `${data.total} total · page ${currentPage} of ${totalPages}`
+                    !isLoading
+                      ? `${total.toLocaleString()} total · page ${currentPage} of ${totalPages}`
                       : undefined
                   }
                 />
@@ -423,20 +769,35 @@ function ScreenerPageInner() {
 
               {/* Scrollable table */}
               <div className="flex-1 overflow-y-auto">
-                <ScreenerTable
-                  rows={filteredRows}
-                  isLoading={isLoading}
-                  sortBy={params.sort_by}
-                  order={params.order}
-                  onSort={handleSort}
-                />
+                {mode === "active" && (
+                  <ScreenerTable
+                    rows={filteredRows}
+                    isLoading={isLoading}
+                    sortBy={params.sort_by}
+                    order={params.order}
+                    onSort={handleSort}
+                  />
+                )}
+                {mode === "catalog_perfumes" && (
+                  <CatalogPerfumeTable
+                    rows={catalogPerfumesQuery.data?.rows ?? []}
+                    isLoading={isLoading}
+                  />
+                )}
+                {mode === "catalog_brands" && (
+                  <CatalogBrandTable
+                    rows={catalogBrandsQuery.data?.rows ?? []}
+                    isLoading={isLoading}
+                  />
+                )}
               </div>
 
               {/* Pagination footer */}
               <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2">
                 <span className="text-[11px] text-zinc-500">
                   Showing {currentOffset + 1}–
-                  {Math.min(currentOffset + PAGE_SIZE, total)} of {total}
+                  {Math.min(currentOffset + PAGE_SIZE, total)} of{" "}
+                  {total.toLocaleString()}
                 </span>
                 <div className="flex items-center gap-1">
                   <button

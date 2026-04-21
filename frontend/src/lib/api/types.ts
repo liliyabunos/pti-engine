@@ -139,6 +139,53 @@ export interface EntityDetail {
   recent_mentions: RecentMentionRow[];
 }
 
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+export interface CatalogPerfumeRow {
+  resolver_id: number;
+  canonical_name: string;
+  brand_name: string | null;
+  /** Slug used in /entities/<entity_id> — present if tracked in market engine. */
+  entity_id: string | null;
+}
+
+export interface CatalogBrandRow {
+  resolver_id: number;
+  canonical_name: string;
+  perfume_count: number;
+  entity_id: string | null;
+}
+
+export interface CatalogPerfumesResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  rows: CatalogPerfumeRow[];
+}
+
+export interface CatalogBrandsResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  rows: CatalogBrandRow[];
+}
+
+export interface CatalogCounts {
+  known_perfumes: number;
+  known_brands: number;
+  active_today: number;
+}
+
+export interface CatalogParams {
+  q?: string;
+  limit?: number;
+  offset?: number;
+  sort_by?: string;
+  active_only?: boolean;
+}
+
 export interface ScreenerParams {
   entity_type?: string;
   min_score?: number;
