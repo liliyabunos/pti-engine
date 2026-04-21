@@ -4715,42 +4715,47 @@ Before KB insertion, Phase 4b must apply final safeguards:
 
 ## Phase 4b — Safe Promotion to Knowledge Base (COMPLETED)
 
-**Status:** COMPLETED — conservative promotion pipeline implemented and verified on bounded batch. KB expansion is now operational under safeguarded review.
+### Status
+- Code complete
+- Conservative promotion verified
+- KB integrity preserved
 
-### What was added
+### What was achieved
+Phase 4b introduced a controlled promotion pipeline with four explicit outcomes:
 
-- `alembic/versions/013`: 5 promotion traceability fields (`promotion_decision`, `promoted_at`, `promoted_canonical_name`, `promoted_as`, `promotion_rejection_reason`)
-- `perfume_trend_sdk/analysis/candidate_validation/promoter.py`: pre-check and execution layer
-- `perfume_trend_sdk/jobs/promote_candidates.py`: CLI job with `--dry-run`/`--no-dry-run`, `--limit`, `--type`, `--allow-create`
+- `exact_existing_entity`
+- `merge_into_existing`
+- `create_new_entity`
+- `reject_promotion`
 
-### 4 promotion decisions
+### Current result
+The first bounded run proved that promotion can operate safely without corrupting the Knowledge Base.
 
-| Decision | Meaning | Action |
-|----------|---------|--------|
-| `exact_existing_entity` | Already in KB | Record only, no write |
-| `merge_into_existing` | Variant/prefix of existing entity | Add alias (discovery_generated) |
-| `create_new_entity` | Genuinely new, brand resolvable | Gated — requires `--allow-create` |
-| `reject_promotion` | Fails final safeguards | Record rejection reason |
+Verified outcomes:
+- exact KB matches detected and recorded
+- safe alias merges performed
+- unsafe candidates rejected by safeguard rules
+- create bucket gated for manual follow-up
 
-### Safeguard layer
+### Important result
+Phase 4b did NOT perform blind KB expansion.
 
-Rejections (in order): `too_short`, `non_ascii`, `descriptor_token` (dupes/scent/dna/cologne/etc.), `single_common_word`, `digit_start`, `brand_not_resolvable`, `deferred_type`
+In the first bounded production-safe run:
+- no new fragrance_master rows were inserted
+- no new brands were inserted
+- no new perfumes were inserted
+- only safe aliases were added
 
-### First bounded run results (798 candidates, no creates)
+### Rule
+Phase 4b is conservative by design.
 
-| Decision | Count |
-|----------|-------|
-| exact_existing_entity | 48 |
-| merge_into_existing | 6 → **3 new aliases** |
-| create_new_entity (gated) | 90 |
-| reject_promotion | 654 |
-| errors | 0 |
+`--allow-create` must remain gated until create candidates pass additional review and cleanup.
 
-New aliases promoted: **Baccarat Rouge** → MFK BR540, **Xerjoff Erba Bura** → Xerjoff Erba Pura (fuzzy 0.94), **Byredo Bal** → BYREDO Bal d'Afrique
-
-### Rule for Phase 4c
-
-90 `create_new_entity` candidates remain gated pending human review. The CREATE bucket contains many mislabeled brand fragments (e.g. "rouge 540", "rouge", "different"). Do NOT run `--allow-create` without first manually classifying the full CREATE list. Expected valid new brands: ~10–20 after review. Notes candidates (19) require a separate notes promotion path.
+### Relationship to next phase
+The create_new_entity bucket is deferred to Phase 4c, which will handle:
+- manual review of gated create candidates
+- safe creation of new KB entities
+- missing-brand seed expansion before allowing creation
 
 ---
 
