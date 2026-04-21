@@ -1,8 +1,8 @@
-# Phase 5 — First Safe Import Run (Step 5 + Step 5b)
+# Phase 5 — Catalog Import Run (Step 5 + Step 5b + Full Run)
 
 **Date:** 2026-04-21  
-**Scope:** Pilot (500-row) + medium batch (5,000-row) catalog import from Parfumo/TidyTuesday dataset into resolver KB  
-**Status:** SAFE TO SCALE
+**Scope:** Pilot (500) → medium batch (5,000) → full run (59,273 valid rows) from Parfumo/TidyTuesday into resolver KB  
+**Status:** COMPLETE
 
 ---
 
@@ -228,30 +228,57 @@ python3 scripts/import_kaggle_v1.py --rollback
 
 ---
 
-## **CLASSIFICATION: SAFE TO SCALE**
+## M. Full Run (59,273 valid rows)
 
-The import pipeline is validated through two stages — pilot (500 rows) and medium batch (5,000 rows):
+| Metric | Count |
+|--------|-------|
+| New brands inserted | 561 |
+| New perfumes inserted | 49,366 |
+| Skipped (perfume dup, incl. 5k batch) | 9,869 |
+| Skipped (FM dup) | 38 |
+| FM rows inserted | 49,366 |
+| Errors | 0 |
 
-| Metric | Pilot | Medium batch |
-|--------|-------|-------------|
-| New perfumes | 475 | 4,456 |
-| New brands | 104 | 787 |
-| Duplicates | 0 | 0 |
-| Alias pollution | 0 | 0 |
-| FK violations | 0 | 0 |
-| Orphan perfumes | 0 | 0 |
-| Rollback precision | ✅ | ✅ |
+### Final resolver counts
 
-**One bug found and fixed:** fragrance_id positional collision → switched to SHA1 content-hash. Script is now idempotent and multi-run safe.
+| Table | Before full run | After full run | Delta |
+|-------|----------------|----------------|-------|
+| brands | 1,047 | 1,608 | +561 |
+| perfumes | 6,701 | 56,067 | +49,366 |
+| fragrance_master | 6,701 | 56,067 | +49,366 |
+| aliases | 12,884 | 12,884 | 0 ✅ |
 
-**Estimated full-run output (59,273 valid rows):**
-- ~1,348 new brands
-- ~53,822 new perfumes
-- ~53,822 fragrance_master rows
-- aliases: unchanged (0 new)
+**kaggle_v1 total:** 53,822 rows (4,456 from 5k batch + 49,366 from full run)
 
-Ready for full dataset import upon confirmation.
+### Verification
+
+| Check | Result |
+|-------|--------|
+| Perfume normalized_name duplicates | 0 ✅ |
+| Brand normalized_name duplicates | 0 ✅ |
+| FM normalized_name duplicates | 0 ✅ |
+| Orphan perfumes (no FM, no alias) | 0 ✅ |
+| FK perfumes.brand_id invalid | 0 ✅ |
+| FK fm.perfume_id invalid | 0 ✅ |
+| Aliases unchanged (12,884) | ✅ |
+| Errors during run | 0 ✅ |
 
 ---
 
-*Run date: 2026-04-21. Target: `data/resolver/pti.db`. Current state: 5,000-row kaggle_v1 import active (4,456 new perfumes, 787 new brands).*
+## **CLASSIFICATION: COMPLETE**
+
+| Stage | New perfumes | New brands | Dups | Alias pollution | Rollback |
+|-------|-------------|-----------|------|-----------------|---------|
+| Pilot (500) | 475 | 104 | 0 | 0 | ✅ |
+| Medium (5k) | 4,456 | 787 | 0 | 0 | ✅ |
+| Full (59k) | 49,366 | 561 | 0 | 0 | available |
+
+**KB before Phase 5:** 2,245 perfumes, 260 brands  
+**KB after Phase 5:** 56,067 perfumes, 1,608 brands  
+**Growth:** ×25 perfumes, ×6 brands
+
+**One bug found and fixed during run:** fragrance_id positional collision → SHA1 content-hash. Script is now idempotent and multi-run safe.
+
+---
+
+*Run date: 2026-04-21. Target: `data/resolver/pti.db`. Current state: 53,822 kaggle_v1 rows active.*
