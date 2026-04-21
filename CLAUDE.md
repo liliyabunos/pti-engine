@@ -4501,88 +4501,48 @@ Phase 1c should be revisited when:
 
 ---
 
-## Phase 2b — Production Enrichment Data Bridge
+## Phase 2b — Production Enrichment Data Bridge (COMPLETED)
 
 ### Status
 
-COMPLETED — 2026-04-21
+- Code complete
+- Deploy complete
+- Production verified
 
-### Purpose
+### What was achieved
 
-Populate production PostgreSQL with enrichment data that already exists locally.
+Local enrichment data successfully synchronized to production PostgreSQL.
 
-### Context
-
-Phase 1b proved that Fragrantica enrichment works through a local CDP-based browser session.
-
-Phase 2 proved that the Notes & Brand Intelligence layer is production-ready.
-
-However, production PostgreSQL currently contains no enrichment rows:
+Tables populated:
+- fragrantica_records
 - notes
 - accords
 - perfume_notes
 - perfume_accords
 
-Because of this, Phase 2 jobs run successfully in production but produce zero analytical output.
+### Result
 
-### Why this phase exists
+Phase 2 intelligence layer is now fully operational in production:
 
-Phase 2b is a data bridge.
+- notes_canonical populated
+- note_stats populated
+- accord_stats populated
+- note_brand_stats populated
 
-It does NOT introduce new business logic.
-It does NOT replace Phase 1c.
-It exists to make already-built intelligence layers usable in production
-before full Fragrantica production automation is available.
+Production now returns real analytical outputs.
 
-### Rule
+### Important Note
 
-Use existing locally generated enrichment data as a temporary upstream source
-for production PostgreSQL.
+This bridge uses locally generated enrichment data.
 
-This is an intentional bridge layer, not a permanent substitute for automated
-production enrichment.
+It is a temporary solution until Phase 1c (automated production enrichment) is implemented.
 
-### What Phase 2b must do
+### Known Technical Insight
 
-- export or read local enrichment-backed data
-- load it safely into production PostgreSQL
-- preserve idempotency
-- avoid duplicating rows
-- keep canonical IDs and mappings consistent
+Multiple PostgreSQL JOIN issues required explicit UUID/text casting.
 
-### What Phase 2b must NOT do
-
-- change enrichment logic
-- change note canonicalization logic
-- modify discovery logic
-- modify signal logic
-- bypass identity mapping rules
-
-### Completion Criteria
-
-Phase 2b is complete when:
-
-1. production PostgreSQL contains enrichment rows in:
-   - fragrantica_records
-   - notes
-   - accords
-   - perfume_notes
-   - perfume_accords
-
-2. Phase 2 intelligence job produces non-zero rows in production:
-   - notes_canonical
-   - note_stats
-   - accord_stats
-   - note_brand_stats
-
-3. Production can return real top notes and note-brand relationships.
-
-### Future Relationship to Phase 1c
-
-Phase 2b is temporary.
-
-When Phase 1c (fully automated production Fragrantica execution) is implemented,
-Phase 2b becomes optional or may be retired.
+Rule:
+All cross-table joins involving UUID/text must use explicit CAST.
 
 ---
 
