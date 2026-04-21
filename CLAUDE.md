@@ -4595,8 +4595,19 @@ All cross-table joins involving UUID/text must use explicit CAST.
 
 ### Status
 
-- Phase 3A (collection layer): COMPLETE
-- Phase 3B (validation/filtering): COMPLETE
+- Phase 3A (collection layer): COMPLETE and ACTIVE in production
+- Phase 3B (validation/filtering): COMPLETE and ACTIVE in production
+
+### Production evidence (as of 2026-04-21)
+- fragrance_candidates: 2,300 rows in production PostgreSQL (youtube source)
+- all rows classified: 312 accepted_rule_based / 1758 review / 230 rejected_noise
+- confidence_score computed (status='aggregated')
+- both jobs run in every pipeline cycle: Steps 1b + 1c (added 2026-04-21, commit 0d76907)
+
+### Gap fixed (2026-04-21)
+aggregate_candidates and validate_candidates existed but were not added to pipeline scripts.
+Candidates were collected (Phase 3A) but never aggregated or classified (Phase 3B).
+Fixed by adding Steps 1b and 1c to start_pipeline.sh and start_pipeline_evening.sh.
 
 ### What is implemented
 
