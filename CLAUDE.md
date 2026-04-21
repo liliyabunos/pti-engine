@@ -4759,6 +4759,171 @@ The create_new_entity bucket is deferred to Phase 4c, which will handle:
 
 ---
 
+## Phase 4c — Create Bucket Review & Controlled New Entity Creation
+
+### Status
+
+Planned.
+
+### Purpose
+
+Safely convert `create_new_entity` candidates into new Knowledge Base entities
+after additional validation, cleanup, and brand coverage expansion.
+
+### Context
+
+Phase 4b identified a `create_new_entity` bucket containing candidates that:
+
+- are not matched to existing KB entities
+- passed initial review (Phase 4a)
+- were gated to prevent unsafe insertion
+
+This bucket contains a mix of:
+- valid new perfumes / brands
+- partial name fragments
+- over-normalized tokens
+- foreign-language or contextual phrases
+
+### Design Principle
+
+New entity creation must be stricter than alias merging.
+
+Creating a new KB entity has a higher risk of polluting the system than adding an alias.
+
+---
+
+## Scope
+
+Phase 4c is responsible for:
+
+1. reviewing and cleaning the create bucket
+2. expanding missing brand coverage in KB
+3. re-validating candidates after cleanup
+4. enabling controlled `create_new_entity` promotion
+
+---
+
+## Step 1 — Create Bucket Review
+
+### Objective
+
+Filter out invalid candidates before allowing entity creation.
+
+### Tasks
+
+- review `create_new_entity` candidates
+- identify and reject:
+  - partial product fragments (e.g. "rouge", "540")
+  - over-stripped tokens (e.g. "different")
+  - contextual phrases (e.g. "inspired by baccarat")
+  - foreign-language fragments (e.g. "en el baccarat")
+- retain only candidates that:
+  - resemble full perfume names
+  - or clearly represent real brands
+
+### Rule
+
+Rejected create candidates must remain in DB with explicit rejection reason.
+
+---
+
+## Step 2 — Brand Coverage Expansion
+
+### Objective
+
+Resolve the largest rejection class: `brand_not_resolvable`.
+
+### Tasks
+
+- identify frequently occurring unknown brands from candidates
+- manually or via seed import add known brands into KB
+
+Examples:
+- Yodeyma
+- Lattafa
+- Kayali
+- other high-frequency unresolved brands
+
+### Rule
+
+Brand expansion must be done via controlled seed process, not implicit promotion.
+
+---
+
+## Step 3 — Re-Validation
+
+### Objective
+
+Re-run promotion pre-check after cleanup and brand expansion.
+
+Expected effects:
+- some candidates move from `reject_promotion` → `merge_into_existing`
+- some candidates move from `create_new_entity` → valid create candidates
+- reduction of noise in create bucket
+
+---
+
+## Step 4 — Controlled Create Promotion
+
+### Objective
+
+Enable safe creation of new KB entities.
+
+### Rules
+
+- creation allowed only with explicit flag (`--allow-create`)
+- bounded batch only (e.g. 10–25 entities)
+- only high-confidence candidates
+- only after passing all safeguards
+
+### Required Safeguards
+
+Before creating new entity:
+- dedup against existing perfumes and brands
+- normalized text must be clean and stable
+- language check (no fragments, no mixed context)
+- entity type must be confident (perfume or brand)
+
+---
+
+## Step 5 — Post-Creation Validation
+
+### Objective
+
+Ensure KB integrity after new entity insertion.
+
+### Must verify
+
+- no duplicate canonical entities created
+- resolver correctly maps new entities
+- aliases correctly linked
+- ingestion pipeline remains stable
+- new entities appear in discovery and intelligence layers
+
+---
+
+## Out of Scope
+
+Phase 4c does NOT:
+- introduce AI classification
+- perform bulk auto-creation
+- modify enrichment layer
+- modify signal engine
+
+---
+
+## Completion Criteria
+
+Phase 4c is complete when:
+
+1. create bucket is cleaned and reduced to valid candidates
+2. missing brands are added to KB via seed expansion
+3. controlled entity creation is successfully executed
+4. new entities are integrated without duplication
+5. resolver accuracy is preserved or improved
+
+---
+
 ## Relationship to Previous Phases
 
 - Phase 3A: collects all candidates
