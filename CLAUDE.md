@@ -4323,6 +4323,90 @@ Counts must match. New entities and aliases must appear in `data/resolver/pti.db
 
 ---
 
+## O6. Deployment Target Rule
+
+Every phase must explicitly declare its execution target before implementation.
+
+### Allowed target types
+
+1. `LOCAL_ONLY`
+2. `PRODUCTION_TARGETED`
+3. `BUNDLED_LATER`
+
+### Definitions
+
+#### LOCAL_ONLY
+
+Used for:
+- experiments
+- partial code work
+- local DB exploration
+- prototype logic
+
+Rules:
+- do not mark as production-complete
+- do not assume UI/API will change
+- do not treat local DB mutations as deployed state
+
+#### PRODUCTION_TARGETED
+
+Used for:
+- schema migrations
+- pipeline changes
+- KB mutations intended for live resolver
+- serving-layer changes
+- anything expected to affect API/UI
+
+Rules:
+- must identify the authoritative production DB/file path
+- must commit and push
+- must deploy to Railway
+- must verify production state after deploy
+- phase is not complete until production verification passes
+
+#### BUNDLED_LATER
+
+Used when a phase is intentionally developed in parts and released later as one combined deploy.
+
+Rules:
+- must explicitly say:
+  - "do not commit as final phase"
+  - "bundle with Phase X"
+- must not be described as done in production
+- must be marked as deferred for deploy
+
+### Required declaration in every phase prompt
+
+Before implementation, each phase prompt must state:
+
+- `target_type`: LOCAL_ONLY / PRODUCTION_TARGETED / BUNDLED_LATER
+- authoritative DB/file targets
+- whether commit/push/deploy is required
+- whether UI/API changes are expected immediately
+
+### Critical KB rule
+
+For any KB-changing phase (promotion, alias creation, new entities):
+- do not write only to working-copy DBs such as `outputs/pti.db`
+- write to the authoritative resolver DB used by runtime/deploy
+- verify resolver row counts and new aliases/entities in the production-path DB
+
+### Completion rule
+
+A phase may be marked fully complete only if its declared target has been satisfied.
+
+| Target type | Completion criteria |
+|-------------|-------------------|
+| LOCAL_ONLY | locally verified only |
+| PRODUCTION_TARGETED | deployed and production-verified |
+| BUNDLED_LATER | implemented but not yet released |
+
+**Incident references:**
+- Phase 4b+4c (2026-04-21) — KB changes written only to `outputs/pti.db` (working copy), not to `data/resolver/pti.db` (production path) → resolver stale for 5 days. Covered by O5.
+- Phase 3 (2026-04-21) — `aggregate_candidates` and `validate_candidates` implemented but not added to production pipeline scripts → Phase 3B inactive in production until explicit activation check.
+
+---
+
 ## O4. Backup & Recovery Policy
 
 Backups are mandatory for all production data layers.
