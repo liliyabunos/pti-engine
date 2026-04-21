@@ -5802,6 +5802,29 @@ After running on Railway, confirm:
 
 ---
 
+## Resolver Persistence Rule
+
+The production resolver catalog must not rely on ephemeral container filesystem state.
+
+### Current deployment mode
+
+Railway Volume mounted at `/app/resolver-vol/`, referenced via `RESOLVER_DB_PATH=/app/resolver-vol/pti.db` env var on both `pipeline-daily` and `pipeline-evening` services.
+
+### Rule
+
+- `RESOLVER_DB_PATH` env var controls which SQLite file the resolver, bootstrap, and ingest scripts use
+- On first cron execution: volume is empty → pipeline copies `data/resolver/pti.db` (git-tracked seed, 56k perfumes) into the volume → bootstrap guard SKIPS (kaggle_v1 already present)
+- Volume survives redeploys and cron executions — no re-import required
+- Bootstrap runs once on volume initialization, then SKIPS on all subsequent runs
+- Future KB mutations (promotions, new catalog imports) write to the Volume via `RESOLVER_DB_PATH`, not to the git-tracked file
+- If `RESOLVER_DB_PATH` is not set: scripts fall back to `data/resolver/pti.db` (local dev default)
+
+### Long-term direction
+
+Resolver storage should eventually migrate to PostgreSQL (eliminating the SQLite dependency entirely), but this is deferred. Railway Volume is the approved interim production persistence layer.
+
+---
+
 ## Working Style Requirement
 
 - Work step-by-step
