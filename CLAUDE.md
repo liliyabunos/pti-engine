@@ -4713,42 +4713,44 @@ Before KB insertion, Phase 4b must apply final safeguards:
 
 ---
 
-## Phase 4b — Safe Promotion to Knowledge Base
+## Phase 4b — Safe Promotion to Knowledge Base (COMPLETED)
 
-### Purpose
+**Status:** COMPLETED — conservative promotion pipeline implemented and verified on bounded batch. KB expansion is now operational under safeguarded review.
 
-Insert approved candidates into the Knowledge Base without corrupting identity resolution.
+### What was added
 
-### Scope
+- `alembic/versions/013`: 5 promotion traceability fields (`promotion_decision`, `promoted_at`, `promoted_canonical_name`, `promoted_as`, `promotion_rejection_reason`)
+- `perfume_trend_sdk/analysis/candidate_validation/promoter.py`: pre-check and execution layer
+- `perfume_trend_sdk/jobs/promote_candidates.py`: CLI job with `--dry-run`/`--no-dry-run`, `--limit`, `--type`, `--allow-create`
 
-- take approved candidates from Phase 4a
-- insert into:
-  - fragrance_master (if new perfume)
-  - aliases
-  - brands (if new)
-- rebuild resolver mappings
+### 4 promotion decisions
 
-### Required Safeguards
+| Decision | Meaning | Action |
+|----------|---------|--------|
+| `exact_existing_entity` | Already in KB | Record only, no write |
+| `merge_into_existing` | Variant/prefix of existing entity | Add alias (discovery_generated) |
+| `create_new_entity` | Genuinely new, brand resolvable | Gated — requires `--allow-create` |
+| `reject_promotion` | Fails final safeguards | Record rejection reason |
 
-- idempotent promotion (no duplicates)
-- conflict detection:
-  - avoid creating duplicate perfumes
-  - merge with existing entities where appropriate
-- maintain canonical identity rules
-- preserve existing UUID mappings in market DB
+### Safeguard layer
 
-### Rules
+Rejections (in order): `too_short`, `non_ascii`, `descriptor_token` (dupes/scent/dna/cologne/etc.), `single_common_word`, `digit_start`, `brand_not_resolvable`, `deferred_type`
 
-- promotion must be traceable (source = "discovery")
-- no blind insertion:
-  - all candidates must pass Phase 4a
-- no modification of existing entities without explicit merge logic
+### First bounded run results (798 candidates, no creates)
 
-### Post-Promotion Requirements
+| Decision | Count |
+|----------|-------|
+| exact_existing_entity | 48 |
+| merge_into_existing | 6 → **3 new aliases** |
+| create_new_entity (gated) | 90 |
+| reject_promotion | 654 |
+| errors | 0 |
 
-- rebuild aliases
-- resync resolver → market mapping
-- verify resolver behavior does not regress
+New aliases promoted: **Baccarat Rouge** → MFK BR540, **Xerjoff Erba Bura** → Xerjoff Erba Pura (fuzzy 0.94), **Byredo Bal** → BYREDO Bal d'Afrique
+
+### Rule for Phase 4c
+
+90 `create_new_entity` candidates remain gated pending human review. The CREATE bucket contains many mislabeled brand fragments (e.g. "rouge 540", "rouge", "different"). Do NOT run `--allow-create` without first manually classifying the full CREATE list. Expected valid new brands: ~10–20 after review. Notes candidates (19) require a separate notes promotion path.
 
 ---
 
