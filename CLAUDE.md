@@ -4626,6 +4626,132 @@ unresolved → candidate collection → validation → review-ready queue
 
 ---
 
+## Phase 4 — Promotion Pipeline (Controlled Knowledge Expansion)
+
+### Status
+
+Planned.
+
+### Purpose
+
+Convert validated candidates into structured knowledge base entities without introducing noise or breaking resolver integrity.
+
+### Design Principle
+
+Promotion must be controlled, explicit, and reversible.
+
+Discovery (Phase 3) produces candidates.  
+Phase 4 determines which candidates become part of the Knowledge Base.
+
+---
+
+## Phase 4a — Review & Approval Pipeline
+
+### Purpose
+
+Provide a structured review layer for candidate validation before promotion.
+
+### Scope
+
+- expose review candidates (validation_status = review or accepted_rule_based)
+- allow structured inspection:
+  - raw_text
+  - normalized_text
+  - occurrences
+  - confidence_score
+  - candidate_type
+- support manual or rule-assisted decisions:
+  - approve
+  - reject
+  - reclassify
+
+### Required Capabilities
+
+- query top candidates by:
+  - occurrences
+  - confidence_score
+  - candidate_type
+- ability to mark candidates as:
+  - approved_for_promotion
+  - rejected_final
+- optional normalization step:
+  - strip context words (e.g. "review the baccarat rouge" → "baccarat rouge")
+  - standardize naming before promotion
+
+### Rules
+
+- Phase 4a MUST NOT modify:
+  - fragrance_master
+  - aliases
+  - brand tables
+
+- Phase 4a only prepares candidates for promotion.
+
+### Output
+
+A set of approved, normalized candidates ready for KB insertion.
+
+---
+
+## Phase 4b — Safe Promotion to Knowledge Base
+
+### Purpose
+
+Insert approved candidates into the Knowledge Base without corrupting identity resolution.
+
+### Scope
+
+- take approved candidates from Phase 4a
+- insert into:
+  - fragrance_master (if new perfume)
+  - aliases
+  - brands (if new)
+- rebuild resolver mappings
+
+### Required Safeguards
+
+- idempotent promotion (no duplicates)
+- conflict detection:
+  - avoid creating duplicate perfumes
+  - merge with existing entities where appropriate
+- maintain canonical identity rules
+- preserve existing UUID mappings in market DB
+
+### Rules
+
+- promotion must be traceable (source = "discovery")
+- no blind insertion:
+  - all candidates must pass Phase 4a
+- no modification of existing entities without explicit merge logic
+
+### Post-Promotion Requirements
+
+- rebuild aliases
+- resync resolver → market mapping
+- verify resolver behavior does not regress
+
+---
+
+## Relationship to Previous Phases
+
+- Phase 3A: collects all candidates
+- Phase 3B: filters and classifies candidates
+- Phase 4a: validates candidates for promotion
+- Phase 4b: inserts validated candidates into KB
+
+---
+
+## Completion Criteria
+
+Phase 4 is complete when:
+
+1. candidates can be reviewed and approved
+2. approved candidates can be safely promoted
+3. KB grows without introducing duplicates or noise
+4. resolver accuracy is maintained or improved
+
+---
+
 ## Phase 2 — Notes & Brand Intelligence Layer
 
 ### Status
