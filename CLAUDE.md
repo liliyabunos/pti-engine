@@ -4546,6 +4546,47 @@ All cross-table joins involving UUID/text must use explicit CAST.
 
 ---
 
+## Phase 3 — Discovery / Self-Improving System
+
+### Status
+
+Planned.
+
+### Purpose
+
+Capture unresolved entities from ingestion and convert them into structured candidates.
+
+### Core Principle
+
+No entity mention should be silently dropped.
+
+### System Design
+
+Unresolved mentions must be stored in a candidate layer and processed through aggregation and validation before being added to the knowledge base.
+
+### Scope (Phase 3)
+
+- candidate storage
+- frequency aggregation
+- confidence scoring
+
+### Out of Scope
+
+- automatic promotion to KB
+- AI-based classification
+- UI integration
+
+### Completion Criteria
+
+Phase 3 is complete when:
+
+1. unresolved mentions are stored
+2. candidate aggregation produces frequency counts
+3. confidence scoring is implemented
+4. no ingestion data is silently lost
+
+---
+
 ## Phase 2 — Notes & Brand Intelligence Layer
 
 ### Status
