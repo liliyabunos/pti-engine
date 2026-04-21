@@ -276,8 +276,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--resolver-db",
-        default=os.environ.get("RESOLVER_DB_PATH", "data/resolver/pti.db"),
-        help="SQLite path for PerfumeResolver (fragrance_master / aliases). Defaults to RESOLVER_DB_PATH env var.",
+        default="data/resolver/pti.db",
+        help="SQLite path for PerfumeResolver (fragrance_master / aliases).",
     )
 
     # Source selection: single subreddit OR watchlist file

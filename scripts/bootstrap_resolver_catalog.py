@@ -26,7 +26,6 @@ Exit codes:
 """
 
 import argparse
-import os
 import sqlite3
 import subprocess
 import sys
@@ -40,8 +39,7 @@ CATALOG_URL = (
     "https://raw.githubusercontent.com/rfordatascience/tidytuesday"
     "/main/data/2024/2024-12-10/parfumo_data_clean.csv"
 )
-_DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "resolver" / "pti.db"
-DB_PATH = Path(os.environ.get("RESOLVER_DB_PATH", str(_DEFAULT_DB)))
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "resolver" / "pti.db"
 
 
 def log(msg: str) -> None:
