@@ -5486,6 +5486,24 @@ Step 2 is complete when:
 
 ---
 
+### Dedup Rule (Critical)
+
+Deduplication must NOT rely on slug only.
+
+Rules:
+
+- slug is used for indexing and ON CONFLICT safety
+- `normalized_name` is the canonical dedup key
+
+Before insert:
+1. normalize perfume name
+2. check existence via `normalized_name`
+3. only insert if not found
+
+Reason: to prevent near-duplicate entities caused by formatting differences.
+
+---
+
 ### Alias Rule (Critical)
 
 Phase 5 must NOT perform bulk or aggressive alias generation.
