@@ -140,6 +140,63 @@ export interface EntityDetail {
 }
 
 // ---------------------------------------------------------------------------
+// Phase U2 — type-specific entity detail responses
+// ---------------------------------------------------------------------------
+
+export interface PerfumeEntityDetail {
+  id: string;
+  resolver_id: number | null;
+  entity_type: "perfume";
+  canonical_name: string;
+  brand_name: string | null;
+  ticker: string | null;
+  /** "active" | "tracked" | "catalog_only" */
+  state: string;
+  has_activity_today: boolean;
+  aliases_count: number;
+  latest_score: number | null;
+  latest_growth: number | null;
+  latest_signal: string | null;
+  latest_date: string | null;
+  confidence_avg: number | null;
+  momentum: number | null;
+  timeseries: SnapshotRow[];
+  recent_signals: SignalRow[];
+  recent_mentions: RecentMentionRow[];
+  notes_top: string[];
+  notes_middle: string[];
+  notes_base: string[];
+  accords: string[];
+}
+
+export interface BrandPerfumeRow {
+  entity_id: string | null;
+  canonical_name: string;
+  has_activity_today: boolean;
+  latest_score: number | null;
+  mention_count: number | null;
+}
+
+export interface BrandEntityDetail {
+  id: string;
+  resolver_id: number | null;
+  entity_type: "brand";
+  canonical_name: string;
+  ticker: string | null;
+  /** "active" | "tracked" | "catalog_only" */
+  state: string;
+  has_activity_today: boolean;
+  perfume_count: number;
+  active_perfume_count: number;
+  latest_score: number | null;
+  latest_growth: number | null;
+  latest_signal: string | null;
+  top_perfumes: BrandPerfumeRow[];
+  timeseries: SnapshotRow[];
+  recent_signals: SignalRow[];
+}
+
+// ---------------------------------------------------------------------------
 // Catalog
 // ---------------------------------------------------------------------------
 

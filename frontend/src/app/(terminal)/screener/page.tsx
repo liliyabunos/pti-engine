@@ -38,9 +38,9 @@ import type { ScreenerParams, CatalogPerfumeRow, CatalogBrandRow } from "@/lib/a
 //    In "All Perfumes" / "All Brands" modes, search is server-side via
 //    /api/v1/catalog/perfumes?q=... and /api/v1/catalog/brands?q=...
 //
-// 2. CATALOG ENTITIES WITHOUT entity_id are not navigable.
-//    Catalog rows with entity_id=null (never resolved from content) show an
-//    "In Catalog" badge but clicking does nothing (no entity page exists).
+// 2. ALL CATALOG ENTITIES ARE NOW NAVIGABLE (Phase U2)
+//    Tracked rows → /entities/perfume/{entity_id} or /entities/brand/{entity_id}
+//    Catalog-only rows → /entities/perfume/{resolver_id} or /entities/brand/{resolver_id}
 //
 // ---------------------------------------------------------------------------
 
@@ -199,33 +199,17 @@ function CatalogPerfumeTable({
           {rows.map((row) => {
             const isTracked = !!row.entity_id;
             const isActive = row.has_activity_today;
+            const href = isTracked
+              ? `/entities/perfume/${encodeURIComponent(row.entity_id!)}`
+              : `/entities/perfume/${row.resolver_id}`;
             return (
               <tr
                 key={row.resolver_id}
-                onClick={
-                  isTracked
-                    ? () =>
-                        router.push(
-                          `/entities/${encodeURIComponent(row.entity_id!)}`,
-                        )
-                    : undefined
-                }
-                className={clsx(
-                  "border-b border-zinc-800/40 transition-colors",
-                  isTracked
-                    ? "group cursor-pointer hover:bg-zinc-800/30"
-                    : "opacity-60",
-                )}
+                onClick={() => router.push(href)}
+                className="group cursor-pointer border-b border-zinc-800/40 transition-colors hover:bg-zinc-800/30"
               >
                 <td className="px-3 py-2">
-                  <span
-                    className={clsx(
-                      "block truncate max-w-[240px] text-xs",
-                      isTracked
-                        ? "text-zinc-200 group-hover:text-amber-300"
-                        : "text-zinc-400",
-                    )}
-                  >
+                  <span className="block max-w-[240px] truncate text-xs text-zinc-200 group-hover:text-amber-300">
                     {row.canonical_name}
                   </span>
                 </td>
@@ -295,33 +279,17 @@ function CatalogBrandTable({
           {rows.map((row) => {
             const isTracked = !!row.entity_id;
             const isActive = row.has_activity_today;
+            const href = isTracked
+              ? `/entities/brand/${encodeURIComponent(row.entity_id!)}`
+              : `/entities/brand/${row.resolver_id}`;
             return (
               <tr
                 key={row.resolver_id}
-                onClick={
-                  isTracked
-                    ? () =>
-                        router.push(
-                          `/entities/${encodeURIComponent(row.entity_id!)}`,
-                        )
-                    : undefined
-                }
-                className={clsx(
-                  "border-b border-zinc-800/40 transition-colors",
-                  isTracked
-                    ? "group cursor-pointer hover:bg-zinc-800/30"
-                    : "opacity-60",
-                )}
+                onClick={() => router.push(href)}
+                className="group cursor-pointer border-b border-zinc-800/40 transition-colors hover:bg-zinc-800/30"
               >
                 <td className="px-3 py-2">
-                  <span
-                    className={clsx(
-                      "block truncate max-w-[300px] text-xs",
-                      isTracked
-                        ? "text-zinc-200 group-hover:text-amber-300"
-                        : "text-zinc-400",
-                    )}
-                  >
+                  <span className="block max-w-[300px] truncate text-xs text-zinc-200 group-hover:text-amber-300">
                     {row.canonical_name}
                   </span>
                 </td>
