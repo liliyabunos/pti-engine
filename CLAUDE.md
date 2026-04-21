@@ -5589,9 +5589,137 @@ After each import run, verify:
 
 ---
 
-### Next Step
+---
 
-Phase 5 — Step 4: Import Execution
+## Phase 5 — Step 4: Import Execution Strategy
+
+### Execution Target
+
+PRODUCTION_TARGETED
+
+### Execution Flow
+
+**Stage 1 — Prepare dataset locally**
+
+1. Download Kaggle dataset CSV locally
+2. Inspect raw data: count rows, check field availability (brand_name, perfume_name), identify encoding issues, identify obvious noise (nulls, fragments, single-word entries)
+3. Run a manual spot-check against existing KB: pick 10 well-known perfumes from the dataset, verify they already exist in `data/resolver/pti.db` — this calibrates expected skip rate
+
+**Stage 2 — Dry-run locally against `data/resolver/pti.db`**
+
+Run import script in dry-run mode (no writes). Output:
+- total rows in dataset
+- expected brands: new / already-exist
+- expected perfumes: new / already-exist / skipped-noise
+- expected fragrance_master: new / already-exist
+- estimated alias rows (deferred — should be 0)
+- sample of 10 new entities that would be inserted
+- sample of 10 entities that would be skipped and why
+
+Dry-run must complete without errors before any real run proceeds.
+
+**Stage 3 — Bounded real run locally against `data/resolver/pti.db`**
+
+First real run: **500 rows only** (brands + perfumes from the first 500 dataset rows).
+
+Why 500:
+- validates the full insert path end-to-end
+- dedup logic proven on real data
+- any normalization bugs surface early at low cost
+- rollback is trivial at this scale
+
+After 500-row run: verify counts, run spot-checks, confirm no duplicates. Only proceed if clean.
+
+**Stage 4 — Full real run locally**
+
+If 500-row run is clean: run full dataset against local `data/resolver/pti.db`.
+
+Batch size: 500 rows per commit. Each batch logs: inserted / skipped / failed counts.
+
+Expected completion: one local run, no restarts needed (ON CONFLICT DO NOTHING makes it safe to re-run on crash).
+
+**Stage 5 — Production import run**
+
+After local verification:
+
+- run the same import job against the production resolver DB
+- using the same batch size and safeguards
+- with `source='kaggle_v1'`
+
+Rules:
+- no DB state must be deployed via git
+- all production data mutations must happen via controlled execution
+
+**Stage 6 — Production market layer**
+
+New entities in the production resolver DB become visible in the market layer through normal ingestion: when content mentioning new entities is ingested, `_upsert_entity_market` creates the market-layer rows automatically.
+
+No direct PostgreSQL write to `entity_market` needed for Phase 5 — resolver is the source of truth for entity identity.
+
+### Limits
+
+| Run | Rows | Why |
+|-----|------|-----|
+| Dry-run | Full dataset | Read-only, safe at any size |
+| Bounded real run | 500 | Validates dedup + insert logic at low cost |
+| Full run | Full dataset | Only after 500-row run is verified clean |
+
+**Hard stops before full run:**
+- dry-run must pass with 0 errors
+- 500-row run must show 0 duplicates
+- spot-check must confirm at least 5 known perfumes correctly deduplicated (skipped, not re-inserted)
+
+### Rollback Strategy
+
+Every imported row is tagged `source='kaggle_v1'` at insert time.
+
+If something goes wrong after any run:
+
+```sql
+DELETE FROM fragrance_master WHERE source = 'kaggle_v1';
+DELETE FROM perfumes WHERE source = 'kaggle_v1';
+DELETE FROM brands WHERE source = 'kaggle_v1';
+```
+
+Three targeted deletes in FK order. No migration needed. Resolver returns to pre-import state exactly.
+
+**Production PostgreSQL:** no rollback needed — Phase 5 writes nothing directly to PostgreSQL. Market-layer rows only appear after ingestion, so the rollback window exists.
+
+### Verification
+
+**After 500-row run:**
+
+1. `SELECT COUNT(*) FROM brands WHERE source='kaggle_v1'` — must be > 0, must be < total brands in first 500 rows (some already existed)
+2. `SELECT COUNT(*) FROM perfumes WHERE source='kaggle_v1'` — same logic
+3. Spot-check 5 known perfumes from the 500-row slice: confirm they are NOT in `kaggle_v1` rows (correctly skipped by dedup)
+4. Spot-check 3 expected-new perfumes: confirm they ARE present with correct brand_id links
+
+**After full run:**
+
+1. Count delta: brands, perfumes, fragrance_master — compare to pre-run baseline
+2. Zero duplicates check: `SELECT normalized_name, COUNT(*) FROM perfumes GROUP BY normalized_name HAVING COUNT(*) > 1` — must return 0 rows
+3. Resolver lookup: 5 newly imported perfumes must resolve correctly via existing resolver logic
+4. Integrity check: all `perfumes.brand_id` must reference valid `brands.id` rows
+5. Confirm `aliases` table was not touched (count must be unchanged)
+
+### Success Criteria
+
+| Criteria | Pass condition |
+|----------|---------------|
+| Dry-run clean | 0 errors, expected counts look reasonable |
+| 500-row run clean | Counts correct, 0 duplicates, spot-checks pass |
+| Full run clean | All verification queries pass |
+| Zero alias pollution | `aliases` count unchanged from pre-import |
+| Zero duplicate normalized_names | Duplicate query returns 0 rows |
+| Resolver integrity | 5 new + 5 existing perfumes resolve correctly |
+| Rollback tag confirmed | `source='kaggle_v1'` present on all new rows |
+| Production run complete | Same verification passes against production DB |
+
+**Import is NOT considered successful if:**
+- any duplicate normalized_name exists
+- any perfume row has a NULL or invalid brand_id
+- aliases count changed (bulk generation must be 0)
+- resolver spot-check fails for any imported entity
 
 ---
 
