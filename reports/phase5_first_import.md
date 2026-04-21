@@ -1,7 +1,7 @@
-# Phase 5 — First Safe Import Run
+# Phase 5 — First Safe Import Run (Step 5 + Step 5b)
 
 **Date:** 2026-04-21  
-**Scope:** Bounded 500-row catalog import from Parfumo/TidyTuesday dataset into resolver KB  
+**Scope:** Pilot (500-row) + medium batch (5,000-row) catalog import from Parfumo/TidyTuesday dataset into resolver KB  
 **Status:** SAFE TO SCALE
 
 ---
@@ -51,7 +51,7 @@ Optional columns present but deferred: `Release_Year`, `Concentration`, `Rating_
 
 ---
 
-## D. Bounded Real Run (500 rows)
+## D. Bounded Real Run (500 rows) — Pilot
 
 | Metric | Count |
 |--------|-------|
@@ -67,19 +67,51 @@ All rows tagged `source='kaggle_v1'`.
 
 ---
 
-## E. Post-Run Verification
+## E. Bug Found & Fixed: fragrance_id Collision
+
+During the medium batch run (5,000 rows after the active pilot), a bug was discovered:
+
+**Root cause:** `fragrance_id` was generated as `fm_kaggle_v1_{batch_index}_{fm_batch_len}` — a positional counter that restarts at 0 on every script invocation. On the second run, the first 475 FM rows got IDs already occupied by the pilot batch. `OR IGNORE` silently dropped them → 475 perfumes in `perfumes` table with no `fragrance_master` row (orphans).
+
+**Impact:** Resolver still functional (uses `perfumes` + `aliases`, not `fragrance_master` for lookups). But FM integrity was broken.
+
+**Fix applied:** fragrance_id now uses `sha1(normalized_name)[:12]` — content-addressed, stable across runs, collision-safe.
+
+```python
+fid_hash = hashlib.sha1(normalized_fm.encode()).hexdigest()[:12]
+fragrance_id = f"fm_{SOURCE_TAG}_{fid_hash}"
+```
+
+All data was rolled back, orphans cleaned up, and the medium batch re-run with the fixed script.
+
+---
+
+## F. Medium Batch Run (5,000 rows) — Post-fix
+
+| Metric | Count |
+|--------|-------|
+| Rows loaded | 5,000 |
+| New brands inserted | 787 |
+| New perfumes inserted | 4,456 |
+| Skipped (perfume dup, incl. pilot) | 537 |
+| Skipped (FM dup) | 7 |
+| FM rows inserted | 4,456 |
+| Orphan perfumes | 0 |
+| Errors | 0 |
+
+Final counts: brands=1,047 (+787) / perfumes=6,701 (+4,456) / FM=6,701 (+4,456) / aliases=12,884 (unchanged)
+
+### Verification
 
 | Check | Result |
 |-------|--------|
-| brands: 260 → 364 (+104) | ✅ |
-| perfumes: 2,245 → 2,720 (+475) | ✅ |
-| fragrance_master: 2,245 → 2,720 (+475) | ✅ |
 | aliases unchanged (12,884) | ✅ |
 | perfume normalized_name duplicates | 0 ✅ |
 | brand normalized_name duplicates | 0 ✅ |
-| FK integrity: invalid brand_id | 0 ✅ |
-| FK integrity: invalid perfume_id in FM | 0 ✅ |
-| FK integrity: invalid brand_id in FM | 0 ✅ |
+| orphan perfumes (no FM row) | 0 ✅ |
+| FK perfumes.brand_id invalid | 0 ✅ |
+| FK fm.perfume_id invalid | 0 ✅ |
+| FK fm.brand_id invalid | 0 ✅ |
 | Errors during run | 0 ✅ |
 
 ### New perfume spot-check (5 samples)
@@ -96,6 +128,8 @@ All rows tagged `source='kaggle_v1'`.
 
 | Perfume |
 |---------|
+| Indult Tihota Eau de Parfum |
+| Di Ser Sola Parfum |
 | Parfums de Marly Delina |
 | Maison Francis Kurkdjian Baccarat Rouge 540 |
 | Byredo Gypsy Water |
@@ -104,43 +138,39 @@ All rows tagged `source='kaggle_v1'`.
 
 ---
 
-## F. Rollback Test
+## G. Rollback Test (post-fix)
 
-**First rollback attempt:** Used fragrance_master reference after FM deletion — caught 7 pre-existing orphan perfumes as side effect. Root cause: orphan perfumes (existed in `perfumes` with no FM row) were indistinguishable from newly inserted ones after FM rows were deleted.
-
-**Fix applied:** Collect kaggle_v1 `perfume_id` and `brand_id` from FM table *before* deleting it. Delete only the exact IDs that were inserted.
-
-**Second rollback (fixed):**
+Rollback tested against the full 5,000-row active state:
 
 | Action | Count |
 |--------|-------|
-| FM rows deleted | 475 |
-| Perfumes deleted | 475 |
-| Brands deleted | 104 |
+| FM rows deleted | 4,456 |
+| Perfumes deleted | 4,456 |
+| Brands deleted | 787 |
 
-| Table | Before | After | Match baseline |
-|-------|--------|-------|----------------|
-| brands | 364 | 260 | ✅ |
-| perfumes | 2,720 | 2,245 | ✅ |
-| fragrance_master | 2,720 | 2,245 | ✅ |
+| Table | Before | After | Baseline |
+|-------|--------|-------|----------|
+| brands | 1,047 | 260 | ✅ |
+| perfumes | 6,701 | 2,245 | ✅ |
+| fragrance_master | 6,701 | 2,245 | ✅ |
 | aliases | 12,884 | 12,884 | ✅ |
 | perfume dups | 0 | 0 | ✅ |
 
-**Rollback result: PASS** — baseline restored exactly, no side effects.
+**Rollback result: PASS** — baseline restored exactly, no side effects, no orphan perfumes.
 
 ---
 
-## G. Alias Integrity
+## H. Alias Integrity
 
 Aliases count before import: **12,884**  
-Aliases count after import: **12,884**  
+Aliases count after 5k import: **12,884**  
 Aliases count after rollback: **12,884**
 
 No alias pollution at any stage. ✅
 
 ---
 
-## H. Rollback Command
+## I. Rollback Command
 
 ```bash
 python3 scripts/import_kaggle_v1.py --rollback
@@ -150,7 +180,7 @@ Safe to run at any time. Removes all `source='kaggle_v1'` rows with exact ID tra
 
 ---
 
-## I. Script Location
+## J. Script Location
 
 ```
 scripts/import_kaggle_v1.py
@@ -173,17 +203,17 @@ python3 scripts/import_kaggle_v1.py --rollback
 
 ---
 
-## J. Notes & Known Behaviors
+## K. Notes & Known Behaviors
 
 **`Brands inserted: -1`** in script output: SQLite `cur.rowcount` returns `-1` after `executemany` with `OR IGNORE`. Cosmetic only — brands ARE correctly inserted (verified by count delta).
 
-**Pre-existing orphan perfumes:** 7 perfumes existed in the `perfumes` table with no corresponding `fragrance_master` row before this import. These are Phase 4c discovery entities and similar KB entries that exist in `perfumes` only. The first rollback incorrectly removed them. Fixed in the `--rollback` command by precise ID tracking.
+**fragrance_id collision bug (fixed):** The initial positional fragrance_id scheme (`fm_kaggle_v1_{i}_{seq}`) restarted at 0 on each invocation, causing silent FM row drops via `OR IGNORE` when a prior run had used the same IDs. Fixed by switching to content-addressed SHA1 hash: `fm_kaggle_v1_{sha1(normalized_name)[:12]}`. Stable across runs and idempotent.
 
-**`source` column in `perfumes`:** The `perfumes` table has no `source` column. Rollback uses FM-collected IDs rather than a source tag on `perfumes` directly.
+**`source` column in `perfumes`:** The `perfumes` table has no `source` column. Rollback uses FM-collected IDs (collected before FM deletion) for precise, side-effect-free cleanup.
 
 ---
 
-## K. Classification
+## L. Classification
 
 | Gate | Status |
 |------|--------|
@@ -200,7 +230,19 @@ python3 scripts/import_kaggle_v1.py --rollback
 
 ## **CLASSIFICATION: SAFE TO SCALE**
 
-The import pipeline is validated. The bounded run inserted 475 new perfumes and 104 new brands cleanly with zero errors, zero duplicates, zero alias pollution, and a verified rollback path.
+The import pipeline is validated through two stages — pilot (500 rows) and medium batch (5,000 rows):
+
+| Metric | Pilot | Medium batch |
+|--------|-------|-------------|
+| New perfumes | 475 | 4,456 |
+| New brands | 104 | 787 |
+| Duplicates | 0 | 0 |
+| Alias pollution | 0 | 0 |
+| FK violations | 0 | 0 |
+| Orphan perfumes | 0 | 0 |
+| Rollback precision | ✅ | ✅ |
+
+**One bug found and fixed:** fragrance_id positional collision → switched to SHA1 content-hash. Script is now idempotent and multi-run safe.
 
 **Estimated full-run output (59,273 valid rows):**
 - ~1,348 new brands
@@ -212,4 +254,4 @@ Ready for full dataset import upon confirmation.
 
 ---
 
-*Run date: 2026-04-21. Target: `data/resolver/pti.db`. Current state: 500-row kaggle_v1 import active in resolver.*
+*Run date: 2026-04-21. Target: `data/resolver/pti.db`. Current state: 5,000-row kaggle_v1 import active (4,456 new perfumes, 787 new brands).*

@@ -13,6 +13,7 @@ Rollback: DELETE FROM fragrance_master/perfumes/brands WHERE source='kaggle_v1'.
 
 import argparse
 import csv
+import hashlib
 import re
 import sqlite3
 import unicodedata
@@ -245,9 +246,12 @@ def run(csv_path: str, dry_run: bool, limit=None):
 
                 canonical_fm = f"{bc} {pc}"
                 normalized_fm = f"{bn} {pn}"
+                # Content-based fragrance_id: stable across runs, no collision risk
+                fid_hash = hashlib.sha1(normalized_fm.encode()).hexdigest()[:12]
+                fragrance_id = f"fm_{SOURCE_TAG}_{fid_hash}"
                 fm_batch.append(
                     (
-                        f"fm_{SOURCE_TAG}_{i}_{len(fm_batch)}",
+                        fragrance_id,
                         bc, pc, canonical_fm, normalized_fm,
                         SOURCE_TAG,
                         brand_id, perfume_id,
