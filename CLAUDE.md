@@ -5516,14 +5516,82 @@ Reason: to avoid duplication, noise, and conflict with Phase 4 resolver logic.
 
 ---
 
+---
+
+## Phase 5 — Step 3: Import Strategy
+
+### Execution Target
+
+PRODUCTION_TARGETED
+
+### Import Order
+
+Execute in strict order to satisfy foreign key constraints:
+
+1. brands — insert canonical brand rows first
+2. perfumes — insert perfume rows with brand_id foreign key
+3. fragrance_master — insert combined identity rows linking perfume + brand
+4. aliases — deferred (not part of Phase 5 core import)
+
+### Deduplication Strategy
+
+**Step 1 — Brand dedup (before insert):**
+- normalize brand_name (lowercase, strip whitespace)
+- check existence in `brands` table via normalized_name
+- skip if found; insert if not
+
+**Step 2 — Perfume dedup (before insert):**
+- strip concentration suffixes from perfume_name
+- normalize result (lowercase, strip whitespace)
+- check existence in `perfumes` table via normalized_name + brand_id
+- skip if found; insert if not
+
+**Step 3 — fragrance_master dedup:**
+- check existence via normalized_name (combined brand + perfume)
+- skip if found; insert if not
+
+**Rule:** ON CONFLICT DO NOTHING is the final safety net, not the primary dedup mechanism. Normalized_name check must run first.
+
+### Batch Size
+
+- 500 rows per commit
+- allows rollback of partial failures without losing all progress
+- progress logged after each batch
+
+### Insert Mode
+
+`INSERT ... ON CONFLICT DO NOTHING`
+
+Applied to all three tables. Safe for repeated runs — import is fully idempotent.
+
+### Error Handling
+
+- row-level errors are logged and skipped
+- batch continues after single-row failure
+- final summary reports: inserted, skipped, failed counts per table
+
+### Validation After Import
+
+After each import run, verify:
+- brands count increased by expected delta
+- perfumes count increased by expected delta
+- fragrance_master count consistent with perfumes
+- spot-check 5 known perfumes from the dataset resolve correctly via resolver
+
+### Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| Slug collisions between similar names | slug is secondary — normalized_name check runs first |
+| Brand name variants (e.g. "Tom Ford" vs "TomFord") | normalization must be consistent with existing KB normalization |
+| Partial imports on crash | ON CONFLICT DO NOTHING + batch commits make re-run safe |
+| Concentration suffix in perfume_name | strip suffixes before normalization and before dedup |
+
+---
+
 ### Next Step
 
-Phase 5 — Step 3: Import Strategy
-
-Define:
-- how data is loaded
-- how deduplication is handled
-- how bulk insert is executed safely
+Phase 5 — Step 4: Import Execution
 
 ---
 
