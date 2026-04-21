@@ -5759,6 +5759,49 @@ Three targeted deletes in FK order. No migration needed. Resolver returns to pre
 
 ---
 
+## Phase 5 — Production Catalog Bootstrap Rule
+
+Resolver catalog expansion must be deployed through an explicit guarded bootstrap command,
+not through git-committed SQLite snapshots and not as a step on every pipeline start.
+
+### Bootstrap command
+
+```bash
+python3 scripts/bootstrap_resolver_catalog.py
+```
+
+On Railway (one-time explicit trigger):
+```bash
+railway run --service pipeline-daily python3 scripts/bootstrap_resolver_catalog.py
+```
+
+### Behavior
+
+- if `kaggle_v1` rows already exist at expected scale → **SKIPPED** instantly (no download, no write)
+- if catalog is missing → download CSV from TidyTuesday URL, run full import → **IMPORTED**
+- supports `--dry-run`
+- supports `--force` for debugging only
+
+### Rule
+
+Catalog bootstrap is a one-time or recovery action, not a recurring pipeline step.
+
+Do NOT add `bootstrap_resolver_catalog.py` to `start_pipeline.sh` or `start_pipeline_evening.sh`.
+
+If the production resolver loses its catalog (e.g. after a fresh Railway deploy without the SQLite snapshot), run the bootstrap explicitly. It will detect the missing data and re-import.
+
+### Verification after bootstrap
+
+After running on Railway, confirm:
+
+1. `SELECT COUNT(*) FROM fragrance_master WHERE source='kaggle_v1'` → ~53,822
+2. `SELECT COUNT(*) FROM brands` → ~1,608
+3. `SELECT COUNT(*) FROM perfumes` → ~56,067
+4. `SELECT COUNT(*) FROM aliases` → 12,884 (must be unchanged)
+5. Spot-check 5 imported perfumes resolve correctly
+
+---
+
 ## Working Style Requirement
 
 - Work step-by-step
