@@ -102,12 +102,13 @@ def _compare_resolver_output(sqlite_store, pg_store) -> list[str]:
                 f"SQLite={sq_result!r} Postgres={pg_result!r}"
             )
 
-    # Known aliases that MUST resolve in both
-    must_resolve = [q for q in SAMPLE_QUERIES if q in ("br540", "sauvage", "aventus", "delina")]
-    for q in must_resolve:
+    # Critical check: any alias that resolves in SQLite must also resolve in Postgres
+    priority = ("sauvage", "aventus", "delina", "br540")
+    for q in priority:
+        sq_result = sqlite_store.get_perfume_by_alias(q)
         pg_result = pg_store.get_perfume_by_alias(q)
-        if pg_result is None:
-            failures.append(f"critical alias not found in Postgres: {q!r}")
+        if sq_result is not None and pg_result is None:
+            failures.append(f"critical alias resolves in SQLite but not Postgres: {q!r}")
 
     return failures
 

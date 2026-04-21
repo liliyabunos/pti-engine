@@ -15,6 +15,7 @@ Schema is owned by Alembic — init_schema() is a no-op here.
 """
 
 import logging
+import os
 from typing import Iterable
 
 from sqlalchemy import text
@@ -27,6 +28,12 @@ from perfume_trend_sdk.storage.entities.fragrance_master_store import (
 from perfume_trend_sdk.storage.postgres.db import get_engine
 
 _log = logging.getLogger(__name__)
+
+# Minimum alias count required to trust the Postgres resolver in production.
+# If resolver_aliases has fewer rows, the store is considered "empty" —
+# migration has not run yet, so production should fail fast rather than
+# silently resolving nothing.
+_MIN_ALIAS_ROWS_PRODUCTION = 5_000
 
 _ALLOWED_TABLES = {
     "brands": "resolver_brands",
@@ -55,6 +62,24 @@ class PgResolverStore:
 
     def init_schema(self) -> None:  # noqa: D401
         """No-op. Postgres schema is managed by Alembic migrations."""
+
+    def check_has_data(self) -> None:
+        """
+        Fail-fast guard: raise RuntimeError if resolver_aliases is empty.
+
+        Called by make_resolver() in production so that a missing migration
+        causes an immediate, visible error instead of silent 'no matches'.
+
+        Not called in dev/test environments.
+        """
+        count = self.count_rows("aliases")
+        if count < _MIN_ALIAS_ROWS_PRODUCTION:
+            raise RuntimeError(
+                f"Postgres resolver_aliases has only {count} rows "
+                f"(minimum expected: {_MIN_ALIAS_ROWS_PRODUCTION}). "
+                "Migration has not run yet. "
+                "Run: python3 scripts/migrate_resolver_to_postgres.py"
+            )
 
     # ------------------------------------------------------------------
     # Hot read path — called for every token window in resolve_text()

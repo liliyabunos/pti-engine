@@ -34,6 +34,9 @@ def make_resolver(db_path: str | None = None) -> "PerfumeResolver":
       - DATABASE_URL is set → PgResolverStore (Postgres resolver_* tables)
       - Otherwise          → FragranceMasterStore(db_path) (SQLite)
 
+    In production (PTI_ENV=production): calls store.check_has_data() to fail
+    fast if migration has not run yet, instead of silently resolving nothing.
+
     This is the preferred construction path for all production and script code.
     Direct PerfumeResolver(store=...) is still available for tests.
     """
@@ -41,6 +44,9 @@ def make_resolver(db_path: str | None = None) -> "PerfumeResolver":
         from perfume_trend_sdk.storage.entities.pg_resolver_store import PgResolverStore
         store = PgResolverStore()
         _log.info("[resolver] using Postgres resolver store (resolver_* tables)")
+        # Fail fast in production if migration hasn't populated the tables yet.
+        if os.environ.get("PTI_ENV", "dev").lower() == "production":
+            store.check_has_data()
     else:
         if not db_path:
             db_path = "data/resolver/pti.db"
