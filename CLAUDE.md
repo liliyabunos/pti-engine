@@ -5997,6 +5997,156 @@ If `resolver_aliases` has fewer than 5,000 rows and `PTI_ENV=production`, `make_
 
 ---
 
+## Phase U1 — Catalog Exposure in UI
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- production PostgreSQL (resolver/catalog tables)
+- backend API layer
+- frontend terminal UI (dashboard, screener, search)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES
+
+---
+
+### Goal
+
+Expose the full known perfume and brand catalog (resolver-backed, Postgres)
+to the UI, not only the subset with active daily signals.
+
+Transform PTI from:
+"daily movers dashboard"
+
+into:
+"full market terminal with active + passive universe"
+
+---
+
+### Context
+
+- Phase R1 completed:
+  - resolver migrated to Postgres
+  - ~56k perfumes available in resolver tables
+- UI currently shows only active subset (~131 perfumes)
+- This hides system scale and limits usability
+
+---
+
+### Core Principle
+
+System must distinguish between:
+
+1. Known universe (catalog)
+2. Active market (signals today)
+
+UI must expose both.
+
+---
+
+### Requirements
+
+#### 1. Catalog API
+
+System must provide endpoints:
+
+- /api/v1/catalog/perfumes
+- /api/v1/catalog/brands
+
+These endpoints:
+
+- MUST return entities even with zero activity
+- MUST be backed by Postgres
+- MUST NOT depend on SQLite
+
+---
+
+#### 2. Screener Modes
+
+UI must support:
+
+- Active Today
+- All Perfumes
+- All Brands
+
+User must be able to explore full catalog, not only movers.
+
+---
+
+#### 3. Search Behavior
+
+Search must operate on full catalog.
+
+NOT limited to:
+- movers
+- today's signals
+
+---
+
+#### 4. Counts Separation
+
+UI must display:
+
+- total known perfumes
+- active perfumes today
+
+Same for brands.
+
+---
+
+#### 5. Quiet Entity Handling
+
+Entities with no current activity:
+
+- MUST remain accessible
+- MUST have valid pages
+- MUST show "no active signal" state
+
+---
+
+### Constraints
+
+- Postgres is single source of truth
+- No SQLite usage in runtime
+- No silent fallback behavior
+- No breaking of existing signal pipeline
+
+---
+
+### Completion Criteria
+
+Phase is complete when:
+
+- User can browse full perfume catalog in UI
+- Search returns non-active entities
+- Screener supports catalog exploration modes
+- UI clearly separates known vs active entities
+- System remains stable in production
+
+---
+
+### Strategic Impact
+
+This phase converts PTI from:
+
+signal-only system
+
+into:
+
+market exploration platform
+
+and enables future layers:
+- entity analytics
+- historical tracking
+- discovery & promotion pipelines
+
+---
+
 ## ⚠️ Strict Architectural Constraint
 
 If any code introduces:
