@@ -5383,6 +5383,42 @@ Rules:
 
 ---
 
+## Phase 5 — Step 1: Catalog Source
+
+### Selected Source
+
+**Parfumo via TidyTuesday (2024-12-10)**
+
+| Property | Value |
+|----------|-------|
+| Dataset | `parfumo_data_clean.csv` |
+| Origin | Parfumo.com community dataset, published via R4DS TidyTuesday |
+| Direct URL | `https://raw.githubusercontent.com/rfordatascience/tidytuesday/main/data/2024/2024-12-10/parfumo_data_clean.csv` |
+| Total rows | 59,325 |
+| Valid rows (after filtering) | 59,273 |
+| Columns used | `Brand` → brand_name, `Name` → perfume_name |
+| Columns deferred | Release_Year, Concentration, Rating_Value, Rating_Count, Main_Accords, Top/Middle/Base Notes |
+| source tag | `kaggle_v1` |
+
+### Why Parfumo
+
+- Direct download, no authentication required
+- 59k+ rows — materially expands current 2,245-perfume KB
+- Community-verified perfume names from a dedicated fragrance platform
+- Clean brand/name structure compatible with existing KB schema
+
+### What it is NOT
+
+- Not the original Fragrantica/Kaggle source discussed in early Phase 5 planning
+- Not a canonical authority (Parfumo is community data)
+- Deferred columns (notes, accords, ratings) require separate enrichment phase
+
+### Rule
+
+All Phase 5 import activity uses this dataset and `source='kaggle_v1'` tag for traceability and rollback.
+
+---
+
 ## Phase 5 — Step 2: Data Schema Definition
 
 ### Status
