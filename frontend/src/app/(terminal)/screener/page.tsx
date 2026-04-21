@@ -198,6 +198,7 @@ function CatalogPerfumeTable({
         <tbody>
           {rows.map((row) => {
             const isTracked = !!row.entity_id;
+            const isActive = row.has_activity_today;
             return (
               <tr
                 key={row.resolver_id}
@@ -232,7 +233,11 @@ function CatalogPerfumeTable({
                   {row.brand_name ?? "—"}
                 </td>
                 <td className="px-3 py-2">
-                  {isTracked ? (
+                  {isActive ? (
+                    <span className="inline-flex items-center rounded border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-400">
+                      Active
+                    </span>
+                  ) : isTracked ? (
                     <span className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-500">
                       Tracked
                     </span>
@@ -289,6 +294,7 @@ function CatalogBrandTable({
         <tbody>
           {rows.map((row) => {
             const isTracked = !!row.entity_id;
+            const isActive = row.has_activity_today;
             return (
               <tr
                 key={row.resolver_id}
@@ -323,7 +329,11 @@ function CatalogBrandTable({
                   {row.perfume_count.toLocaleString()}
                 </td>
                 <td className="px-3 py-2">
-                  {isTracked ? (
+                  {isActive ? (
+                    <span className="inline-flex items-center rounded border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-400">
+                      Active
+                    </span>
+                  ) : isTracked ? (
                     <span className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-500">
                       Tracked
                     </span>

@@ -6,15 +6,16 @@ Catalog routes — expose full resolver KB to the UI.
 GET /api/v1/catalog/perfumes  — search all known perfumes (resolver_perfumes)
 GET /api/v1/catalog/brands    — search all known brands (resolver_brands)
 GET /api/v1/catalog/counts    — headline counts: known brands, perfumes, active today
+GET /api/v1/catalog/stats     — alias for /counts (backward-compat)
 
 These endpoints query resolver_* Postgres tables (migration 014) which contain the
 full 56k-perfume catalog, regardless of whether each entity has market timeseries data.
 
-Active market data (entity_market) is cross-referenced via a LEFT JOIN so callers
-know which catalog entities are already tracked in the market engine.
+Active market data (entity_market + entity_timeseries_daily) is cross-referenced so
+callers know which catalog entries are tracked and which have activity today.
 
 SQLite fallback: if resolver_* tables don't exist (dev/local without Postgres),
-all three endpoints return gracefully empty results instead of crashing.
+all endpoints return gracefully empty results instead of crashing.
 """
 
 import logging
@@ -45,6 +46,8 @@ class CatalogPerfumeRow(BaseModel):
     # Present if this perfume has been resolved from real ingested content and
     # has a row in entity_market; None for catalog-only entries.
     entity_id: Optional[str] = None
+    # True when this entity has mention_count > 0 on the latest data date.
+    has_activity_today: bool = False
 
 
 class CatalogBrandRow(BaseModel):
@@ -52,6 +55,7 @@ class CatalogBrandRow(BaseModel):
     canonical_name: str
     perfume_count: int = 0
     entity_id: Optional[str] = None
+    has_activity_today: bool = False
 
 
 class CatalogPerfumesResponse(BaseModel):
@@ -73,6 +77,9 @@ class CatalogCounts(BaseModel):
     known_brands: int
     # active_today = entities with mention_count > 0 on the latest data date
     active_today: int
+    # tracked = entities in entity_market (ever resolved from content)
+    tracked_perfumes: int = 0
+    tracked_brands: int = 0
 
 
 # ---------------------------------------------------------------------------
@@ -90,6 +97,22 @@ def _is_postgres(_db: Session) -> bool:
     return db_url.startswith("postgresql") or db_url.startswith("postgres")
 
 
+# CTE that materialises entity UUIDs active on the latest data date.
+# Used by both /perfumes and /brands to set has_activity_today.
+_ACTIVE_TODAY_CTE = """
+WITH active_today AS (
+    SELECT entity_id
+    FROM   entity_timeseries_daily
+    WHERE  date = (
+               SELECT MAX(date)
+               FROM   entity_timeseries_daily
+               WHERE  mention_count > 0
+           )
+    AND    mention_count > 0
+)
+"""
+
+
 # ---------------------------------------------------------------------------
 # GET /api/v1/catalog/perfumes
 # ---------------------------------------------------------------------------
@@ -100,14 +123,15 @@ def catalog_perfumes(
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     sort_by: str = Query("canonical_name", pattern="^(canonical_name|brand_name)$"),
-    active_only: bool = Query(False, description="Return only entities that have market data"),
+    active_only: bool = Query(False, description="Return only entities with activity today"),
     db: Session = Depends(get_db_session),
 ) -> CatalogPerfumesResponse:
     """Return perfumes from the resolver catalog (56k+ entries).
 
     Results include all known perfumes regardless of ingestion activity.
-    entity_id is non-null when the perfume has been resolved from content
-    and has a corresponding entity_market row (navigable entity page).
+    entity_id is non-null when the perfume has been resolved from content.
+    has_activity_today is true when mention_count > 0 on the latest data date.
+    active_only=true filters to only entities with activity today.
     """
     if not _is_postgres(db):
         return CatalogPerfumesResponse(total=0, limit=limit, offset=offset, rows=[])
@@ -115,39 +139,46 @@ def catalog_perfumes(
     try:
         q_pattern = f"%{q.strip()}%" if q else None
 
-        where = ""
+        where_clauses = []
         if q_pattern:
-            where = (
-                "WHERE (LOWER(rp.canonical_name) LIKE LOWER(:q) "
+            where_clauses.append(
+                "(LOWER(rp.canonical_name) LIKE LOWER(:q) "
                 "OR LOWER(rb.canonical_name) LIKE LOWER(:q))"
             )
-        active_join = "INNER JOIN" if active_only else "LEFT JOIN"
+        if active_only:
+            where_clauses.append("at.entity_id IS NOT NULL")
+
+        where = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+
+        order_col = "rb.canonical_name" if sort_by == "brand_name" else "rp.canonical_name"
 
         count_sql = text(
             f"""
+            {_ACTIVE_TODAY_CTE}
             SELECT COUNT(*)
-            FROM resolver_perfumes rp
-            LEFT JOIN resolver_brands rb ON rp.brand_id = rb.id
-            {active_join} entity_market em
-                ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
-               AND em.entity_type = 'perfume'
+            FROM   resolver_perfumes rp
+            LEFT JOIN resolver_brands     rb ON rp.brand_id = rb.id
+            LEFT JOIN entity_market       em ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+                                            AND em.entity_type = 'perfume'
+            LEFT JOIN active_today        at ON at.entity_id = em.id
             {where}
             """
         )
 
-        order_col = "rb.canonical_name" if sort_by == "brand_name" else "rp.canonical_name"
         rows_sql = text(
             f"""
+            {_ACTIVE_TODAY_CTE}
             SELECT
-                rp.id               AS resolver_id,
-                rp.canonical_name   AS canonical_name,
-                rb.canonical_name   AS brand_name,
-                em.entity_id        AS entity_id
-            FROM resolver_perfumes rp
-            LEFT JOIN resolver_brands rb ON rp.brand_id = rb.id
-            {active_join} entity_market em
-                ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
-               AND em.entity_type = 'perfume'
+                rp.id                                AS resolver_id,
+                rp.canonical_name                    AS canonical_name,
+                rb.canonical_name                    AS brand_name,
+                em.entity_id                         AS entity_id,
+                (at.entity_id IS NOT NULL)           AS has_activity_today
+            FROM   resolver_perfumes rp
+            LEFT JOIN resolver_brands     rb ON rp.brand_id = rb.id
+            LEFT JOIN entity_market       em ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+                                            AND em.entity_type = 'perfume'
+            LEFT JOIN active_today        at ON at.entity_id = em.id
             {where}
             ORDER BY {order_col} NULLS LAST
             LIMIT :limit OFFSET :offset
@@ -168,6 +199,7 @@ def catalog_perfumes(
                 canonical_name=r[1],
                 brand_name=r[2],
                 entity_id=r[3],
+                has_activity_today=bool(r[4]),
             )
             for r in data_rows
         ]
@@ -191,45 +223,56 @@ def catalog_brands(
     q: Optional[str] = Query(None, description="Text search on brand name"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    active_only: bool = Query(False, description="Return only brands with market data"),
+    active_only: bool = Query(False, description="Return only brands with activity today"),
     db: Session = Depends(get_db_session),
 ) -> CatalogBrandsResponse:
     """Return brands from the resolver catalog (1,600+ brands).
 
-    Results include all known brands.
-    entity_id is non-null when the brand has an entity_market row.
+    Results include all known brands regardless of ingestion activity.
+    has_activity_today is true when the brand's entity_market row has
+    mention_count > 0 on the latest data date.
     """
     if not _is_postgres(db):
         return CatalogBrandsResponse(total=0, limit=limit, offset=offset, rows=[])
 
     try:
         q_pattern = f"%{q.strip()}%" if q else None
-        where = "WHERE LOWER(rb.canonical_name) LIKE LOWER(:q)" if q_pattern else ""
-        active_join = "INNER JOIN" if active_only else "LEFT JOIN"
+
+        where_clauses = []
+        if q_pattern:
+            where_clauses.append("LOWER(rb.canonical_name) LIKE LOWER(:q)")
+        if active_only:
+            where_clauses.append("at.entity_id IS NOT NULL")
+
+        where = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
 
         count_sql = text(
             f"""
+            {_ACTIVE_TODAY_CTE}
             SELECT COUNT(DISTINCT rb.id)
-            FROM resolver_brands rb
-            {active_join} entity_market em
-                ON LOWER(em.canonical_name) = LOWER(rb.canonical_name)
-               AND em.entity_type = 'brand'
+            FROM   resolver_brands        rb
+            LEFT JOIN resolver_perfumes   rp ON rp.brand_id = rb.id
+            LEFT JOIN entity_market       em ON LOWER(em.canonical_name) = LOWER(rb.canonical_name)
+                                            AND em.entity_type = 'brand'
+            LEFT JOIN active_today        at ON at.entity_id = em.id
             {where}
             """
         )
 
         rows_sql = text(
             f"""
+            {_ACTIVE_TODAY_CTE}
             SELECT
-                rb.id                                    AS resolver_id,
-                rb.canonical_name                        AS canonical_name,
-                COUNT(rp.id)                             AS perfume_count,
-                em.entity_id                             AS entity_id
-            FROM resolver_brands rb
-            LEFT JOIN resolver_perfumes rp ON rp.brand_id = rb.id
-            {active_join} entity_market em
-                ON LOWER(em.canonical_name) = LOWER(rb.canonical_name)
-               AND em.entity_type = 'brand'
+                rb.id                                AS resolver_id,
+                rb.canonical_name                    AS canonical_name,
+                COUNT(rp.id)                         AS perfume_count,
+                em.entity_id                         AS entity_id,
+                BOOL_OR(at.entity_id IS NOT NULL)    AS has_activity_today
+            FROM   resolver_brands        rb
+            LEFT JOIN resolver_perfumes   rp ON rp.brand_id = rb.id
+            LEFT JOIN entity_market       em ON LOWER(em.canonical_name) = LOWER(rb.canonical_name)
+                                            AND em.entity_type = 'brand'
+            LEFT JOIN active_today        at ON at.entity_id = em.id
             {where}
             GROUP BY rb.id, rb.canonical_name, em.entity_id
             ORDER BY rb.canonical_name
@@ -251,6 +294,7 @@ def catalog_brands(
                 canonical_name=r[1],
                 perfume_count=int(r[2]),
                 entity_id=r[3],
+                has_activity_today=bool(r[4]) if r[4] is not None else False,
             )
             for r in data_rows
         ]
@@ -266,8 +310,47 @@ def catalog_brands(
 
 
 # ---------------------------------------------------------------------------
-# GET /api/v1/catalog/counts
+# GET /api/v1/catalog/counts  (also aliased as /stats)
 # ---------------------------------------------------------------------------
+
+def _build_counts(db: Session) -> CatalogCounts:
+    row = db.execute(
+        text(
+            """
+            SELECT
+                (SELECT COUNT(*) FROM resolver_perfumes)                             AS known_perfumes,
+                (SELECT COUNT(*) FROM resolver_brands)                               AS known_brands,
+                (
+                    SELECT COUNT(DISTINCT etd.entity_id)
+                    FROM   entity_timeseries_daily etd
+                    WHERE  etd.date = (
+                               SELECT MAX(date)
+                               FROM   entity_timeseries_daily
+                               WHERE  mention_count > 0
+                           )
+                    AND    etd.mention_count > 0
+                )                                                                    AS active_today,
+                (
+                    SELECT COUNT(*) FROM entity_market WHERE entity_type = 'perfume'
+                )                                                                    AS tracked_perfumes,
+                (
+                    SELECT COUNT(*) FROM entity_market WHERE entity_type = 'brand'
+                )                                                                    AS tracked_brands
+            """
+        )
+    ).fetchone()
+
+    if row is None:
+        return CatalogCounts(known_perfumes=0, known_brands=0, active_today=0)
+
+    return CatalogCounts(
+        known_perfumes=int(row[0]),
+        known_brands=int(row[1]),
+        active_today=int(row[2]),
+        tracked_perfumes=int(row[3]),
+        tracked_brands=int(row[4]),
+    )
+
 
 @router.get("/counts", response_model=CatalogCounts)
 def catalog_counts(
@@ -275,43 +358,17 @@ def catalog_counts(
 ) -> CatalogCounts:
     """Return headline catalog counts for the dashboard/screener header.
 
-    known_perfumes — total in resolver_perfumes (full KB)
-    known_brands   — total in resolver_brands
-    active_today   — entity_market rows with mention_count > 0 on the latest date
+    known_perfumes    — total in resolver_perfumes (full KB, 56k+)
+    known_brands      — total in resolver_brands (1,600+)
+    active_today      — entities with mention_count > 0 on the latest data date
+    tracked_perfumes  — entity_market rows with entity_type='perfume'
+    tracked_brands    — entity_market rows with entity_type='brand'
     """
     if not _is_postgres(db):
         return CatalogCounts(known_perfumes=0, known_brands=0, active_today=0)
 
     try:
-        row = db.execute(
-            text(
-                """
-                SELECT
-                    (SELECT COUNT(*) FROM resolver_perfumes)  AS known_perfumes,
-                    (SELECT COUNT(*) FROM resolver_brands)    AS known_brands,
-                    (
-                        SELECT COUNT(DISTINCT etd.entity_id)
-                        FROM entity_timeseries_daily etd
-                        WHERE etd.date = (
-                            SELECT MAX(date)
-                            FROM entity_timeseries_daily
-                            WHERE mention_count > 0
-                        )
-                        AND etd.mention_count > 0
-                    )                                         AS active_today
-                """
-            )
-        ).fetchone()
-
-        if row is None:
-            return CatalogCounts(known_perfumes=0, known_brands=0, active_today=0)
-
-        return CatalogCounts(
-            known_perfumes=int(row[0]),
-            known_brands=int(row[1]),
-            active_today=int(row[2]),
-        )
-
+        return _build_counts(db)
     except Exception as exc:
         _log.warning("[catalog] counts query failed: %s", exc)
         try:
@@ -319,3 +376,11 @@ def catalog_counts(
         except Exception:
             pass
         return CatalogCounts(known_perfumes=0, known_brands=0, active_today=0)
+
+
+@router.get("/stats", response_model=CatalogCounts)
+def catalog_stats(
+    db: Session = Depends(get_db_session),
+) -> CatalogCounts:
+    """Alias for /counts — same response shape."""
+    return catalog_counts(db=db)

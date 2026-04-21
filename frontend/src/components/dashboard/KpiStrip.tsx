@@ -1,30 +1,58 @@
 import { KpiCard } from "@/components/primitives/KpiCard";
 import { fmtScore, fmtConfidence } from "@/lib/formatters";
-import type { DashboardKPIs } from "@/lib/api/types";
+import type { DashboardKPIs, CatalogCounts } from "@/lib/api/types";
 
 interface KpiStripProps {
   kpis: DashboardKPIs;
+  /** When provided, shows catalog-scale Known Brands / Known Perfumes instead of tracked counts. */
+  catalogCounts?: CatalogCounts | null;
 }
 
-export function KpiStrip({ kpis }: KpiStripProps) {
+export function KpiStrip({ kpis, catalogCounts }: KpiStripProps) {
+  const knownBrands = catalogCounts?.known_brands ?? null;
+  const knownPerfumes = catalogCounts?.known_perfumes ?? null;
+  const activeToday = catalogCounts?.active_today ?? null;
+
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+      {/* Known Brands — catalog scale if available, else tracked count */}
       <KpiCard
-        label="Brands"
-        value={kpis.tracked_brands}
-        sub="tracked"
+        label="Known Brands"
+        value={
+          knownBrands != null
+            ? knownBrands.toLocaleString()
+            : kpis.tracked_brands
+        }
+        sub={
+          knownBrands != null
+            ? `${kpis.tracked_brands} tracked`
+            : "tracked"
+        }
       />
+
+      {/* Known Perfumes — catalog scale if available, else tracked count */}
       <KpiCard
-        label="Perfumes"
-        value={kpis.tracked_perfumes}
-        sub="tracked"
+        label="Known Perfumes"
+        value={
+          knownPerfumes != null
+            ? knownPerfumes.toLocaleString()
+            : kpis.tracked_perfumes
+        }
+        sub={
+          knownPerfumes != null
+            ? `${kpis.tracked_perfumes} tracked`
+            : "tracked"
+        }
       />
+
+      {/* Active Today — from catalog counts if available, else active_movers */}
       <KpiCard
-        label="Movers"
-        value={kpis.active_movers}
-        sub="active today"
+        label="Active Today"
+        value={activeToday != null ? activeToday : kpis.active_movers}
+        sub="with signal data"
         accent="green"
       />
+
       <KpiCard
         label="Breakouts"
         value={kpis.breakout_signals_today}

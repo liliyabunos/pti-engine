@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 import { fetchDashboard } from "@/lib/api/dashboard";
+import { fetchCatalogCounts } from "@/lib/api/catalog";
 import { useUIStore } from "@/lib/stores/ui";
 import { Header } from "@/components/shell/Header";
 import {
@@ -54,6 +55,13 @@ export default function DashboardPage() {
     queryKey: ["dashboard"],
     queryFn: () => fetchDashboard({ top_n: 20, signal_days: 7 }),
     refetchInterval: 60_000,
+  });
+
+  // Catalog-scale counts — feeds catalog numbers into KPI strip
+  const { data: catalogCounts } = useQuery({
+    queryKey: ["catalog-counts"],
+    queryFn: fetchCatalogCounts,
+    staleTime: 5 * 60_000,
   });
 
   // ---------------------------------------------------------------------------
@@ -171,7 +179,7 @@ export default function DashboardPage() {
         {isError && (
           <ErrorState message={String(error)} onRetry={() => refetch()} />
         )}
-        {data?.kpis && <KpiStrip kpis={data.kpis} />}
+        {data?.kpis && <KpiStrip kpis={data.kpis} catalogCounts={catalogCounts} />}
 
         {/* Main 3-column grid */}
         {!isError && (

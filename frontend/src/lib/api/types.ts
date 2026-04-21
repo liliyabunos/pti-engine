@@ -149,6 +149,8 @@ export interface CatalogPerfumeRow {
   brand_name: string | null;
   /** Slug used in /entities/<entity_id> — present if tracked in market engine. */
   entity_id: string | null;
+  /** True when mention_count > 0 on the latest data date. */
+  has_activity_today: boolean;
 }
 
 export interface CatalogBrandRow {
@@ -156,6 +158,7 @@ export interface CatalogBrandRow {
   canonical_name: string;
   perfume_count: number;
   entity_id: string | null;
+  has_activity_today: boolean;
 }
 
 export interface CatalogPerfumesResponse {
@@ -173,9 +176,16 @@ export interface CatalogBrandsResponse {
 }
 
 export interface CatalogCounts {
+  /** Total in resolver KB (56k+). */
   known_perfumes: number;
+  /** Total in resolver KB (1,600+). */
   known_brands: number;
+  /** Entities with mention_count > 0 on the latest data date. */
   active_today: number;
+  /** entity_market rows with entity_type='perfume'. */
+  tracked_perfumes: number;
+  /** entity_market rows with entity_type='brand'. */
+  tracked_brands: number;
 }
 
 export interface CatalogParams {
