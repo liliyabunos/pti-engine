@@ -4278,6 +4278,51 @@ It is NOT responsible for discovering new trends.
 
 ---
 
+## O5. Resolver DB Path Rule
+
+Production resolver state must be updated in the production-path resolver database.
+
+### Rule
+
+For any KB-changing phase (Phase 4b, 4c, and future promotion phases):
+
+- do NOT assume `outputs/pti.db` is the production resolver source
+- the authoritative production-path resolver DB is `data/resolver/pti.db`
+
+### Requirement
+
+All promotion runs that mutate KB state must target the resolver DB actually used by deployment/runtime.
+
+Run promotion jobs as:
+```bash
+RESOLVER_DB_PATH=data/resolver/pti.db PTI_DB_PATH=outputs/market_dev.db \
+  python3 -m perfume_trend_sdk.jobs.<phase_job> ...
+```
+
+Or copy after a local run:
+```bash
+cp outputs/pti.db data/resolver/pti.db
+```
+
+### Verification
+
+After any KB mutation phase, always verify both DBs:
+
+```bash
+sqlite3 data/resolver/pti.db "SELECT COUNT(*) FROM perfumes; SELECT COUNT(*) FROM aliases; SELECT COUNT(*) FROM fragrance_master;"
+sqlite3 outputs/pti.db         "SELECT COUNT(*) FROM perfumes; SELECT COUNT(*) FROM aliases; SELECT COUNT(*) FROM fragrance_master;"
+```
+
+Counts must match. New entities and aliases must appear in `data/resolver/pti.db` before committing and pushing.
+
+### Why this matters
+
+`data/resolver/pti.db` is the file checked into git and deployed to Railway. `outputs/pti.db` is a local working copy only — it is gitignored in effect (large binary, not pushed routinely). A KB change applied only to `outputs/pti.db` is invisible to the production pipeline until `data/resolver/pti.db` is updated and pushed.
+
+**Incident reference:** Phase 4b+4c (2026-04-21) — all KB changes were applied only to `outputs/pti.db`. Production resolver was stale for 5 days (April 16–21). Fixed by commit 3de63d1.
+
+---
+
 ## O4. Backup & Recovery Policy
 
 Backups are mandatory for all production data layers.
