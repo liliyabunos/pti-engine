@@ -31,6 +31,7 @@ from perfume_trend_sdk.db.market.notes_intelligence import (  # noqa: F401
     NoteStats,
 )
 from perfume_trend_sdk.db.market.perfume import Perfume  # noqa: F401
+from perfume_trend_sdk.db.market.fragrance_candidates import FragranceCandidate  # noqa: F401
 from perfume_trend_sdk.db.market.signal import Signal  # noqa: F401
 from perfume_trend_sdk.db.market.watchlist import Watchlist, WatchlistItem  # noqa: F401
 
@@ -66,6 +67,7 @@ __all__ = [
     "EntityMarket",
     "EntityMention",
     "EntityTimeSeriesDaily",
+    "FragranceCandidate",
     "NoteCanonical",
     "NoteCanonicalMap",
     "NoteBrandStats",

@@ -64,6 +64,8 @@ from perfume_trend_sdk.workflows.ingest_reddit_to_signals import (
     _classify_reddit_source,
     _compute_reddit_influence,
 )
+from perfume_trend_sdk.storage.entities.candidate_store import batch_upsert_candidates
+from perfume_trend_sdk.storage.postgres.db import session_scope
 
 
 def _make_stores(market_db: str):
@@ -210,6 +212,10 @@ def run(
 
         resolved_items = [resolver.resolve_content_item(item) for item in normalized_items]
         signal_store.save_resolved_signals(resolved_items)
+
+        # Save unresolved mentions to discovery candidates table
+        with session_scope() as db:
+            batch_upsert_candidates(db, resolved_items, source_platform="reddit")
 
         entities_found = sum(
             len(r.get("resolved_entities", [])) for r in resolved_items

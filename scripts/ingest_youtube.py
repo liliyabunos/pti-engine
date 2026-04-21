@@ -53,6 +53,8 @@ from perfume_trend_sdk.storage.signals.sqlite_store import SignalStore
 from perfume_trend_sdk.storage.signals.pg_store import PgSignalStore
 from perfume_trend_sdk.analysis.source_intelligence.analyzer import classify_source
 from perfume_trend_sdk.analysis.source_intelligence.scoring import compute_influence
+from perfume_trend_sdk.storage.entities.candidate_store import batch_upsert_candidates
+from perfume_trend_sdk.storage.postgres.db import session_scope
 
 
 def _make_stores(market_db: str):
@@ -186,6 +188,10 @@ def run(
         # Resolve entities from normalized text
         resolved_items = [resolver.resolve_content_item(item) for item in normalized_items]
         signal_store.save_resolved_signals(resolved_items)
+
+        # Save unresolved mentions to discovery candidates table
+        with session_scope() as db:
+            batch_upsert_candidates(db, resolved_items, source_platform="youtube")
 
         entities_found = sum(
             len(r.get("resolved_entities", [])) for r in resolved_items
