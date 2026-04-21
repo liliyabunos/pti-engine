@@ -32,6 +32,14 @@ timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.run_ingestion \
   --max-results "${INGEST_YT_MAX_RESULTS:-50}" \
   --lookback-days "${INGEST_YT_LOOKBACK_DAYS:-2}"
 
+# Step 1b: Aggregate and classify discovery candidates (Phase 3A → 3B)
+echo "[pipeline] Step 1b — Aggregate candidates"
+timeout 600 python3 -m perfume_trend_sdk.jobs.aggregate_candidates || \
+  echo "[pipeline] WARNING: aggregate_candidates failed — continuing"
+echo "[pipeline] Step 1c — Validate candidates (Phase 3B)"
+timeout 600 python3 -m perfume_trend_sdk.jobs.validate_candidates || \
+  echo "[pipeline] WARNING: validate_candidates failed — continuing"
+
 # Step 2: Aggregate daily metrics for today
 echo "[pipeline] Step 2 — Aggregation for date=$TODAY"
 timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date "$TODAY"
