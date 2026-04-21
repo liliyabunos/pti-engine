@@ -45,7 +45,7 @@ import yaml
 
 from perfume_trend_sdk.connectors.youtube.connector import YouTubeConnector
 from perfume_trend_sdk.normalizers.social_content.normalizer import SocialContentNormalizer
-from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import PerfumeResolver
+from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import PerfumeResolver, make_resolver
 from perfume_trend_sdk.storage.normalized.sqlite_store import NormalizedContentStore
 from perfume_trend_sdk.storage.normalized.pg_store import PgNormalizedContentStore
 from perfume_trend_sdk.storage.raw.filesystem import FilesystemRawStorage
@@ -137,8 +137,8 @@ def run(
 
     normalized_store, signal_store = _make_stores(market_db)
 
-    # Resolver DB — always local SQLite (read-only fragrance_master aliases)
-    resolver = PerfumeResolver(resolver_db)
+    # Resolver: Postgres (if DATABASE_URL set) else SQLite fallback
+    resolver = make_resolver(resolver_db)
     resolver.store.init_schema()
 
     published_after = _iso_days_ago(lookback_days)

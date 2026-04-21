@@ -5814,57 +5814,11 @@ After running on Railway, confirm:
 
 ## Resolver Persistence Rule
 
-The production resolver catalog must not rely on ephemeral container filesystem state.
+> ⚠️ **SUPERSEDED by Phase R1 (2026-04-21).** The Railway Volume / RESOLVER_DB_PATH approach described below was rolled back. The active architecture is Phase R1: Postgres `resolver_*` tables. See `## ✅ Current Architecture` and `## 🚀 Migration Plan` below.
 
-### Current deployment mode
+~~The production resolver catalog must not rely on ephemeral container filesystem state.~~
 
-Railway Volume mounted at `/app/resolver-vol/`, referenced via `RESOLVER_DB_PATH=/app/resolver-vol/pti.db` env var on both `pipeline-daily` and `pipeline-evening` services.
-
-### Rule
-
-- `RESOLVER_DB_PATH` env var controls which SQLite file the resolver, bootstrap, and ingest scripts use
-- Production resolver persistence: Railway Volume at `/app/resolver-vol`, `RESOLVER_DB_PATH=/app/resolver-vol/pti.db`
-- On first cron execution: volume is empty → pipeline copies `data/resolver/pti.db` (git-tracked seed, 56k perfumes) into the volume → bootstrap guard SKIPS (kaggle_v1 already present)
-- Volume survives redeploys and cron executions — no re-import required
-- Bootstrap runs once on volume initialization, then SKIPS on all subsequent runs
-- Future KB mutations (promotions, new catalog imports) write to the Volume via `RESOLVER_DB_PATH`, not to the git-tracked file
-- If `RESOLVER_DB_PATH` is not set: scripts fall back to `data/resolver/pti.db` (local dev default)
-
-### Safe initialization order (shared volume, two services)
-
-Both `pipeline-daily` and `pipeline-evening` share the same volume. SQLite on a shared volume can race if both services initialize simultaneously.
-
-**Required order for first deployment:**
-
-1. Attach volume and set `RESOLVER_DB_PATH` on both services
-2. Let **`pipeline-daily` run first** (11:00 UTC cron) — it copies the seed and bootstraps the volume
-3. Verify the volume is populated before `pipeline-evening` runs (23:00 UTC)
-4. After first `pipeline-daily` run: volume is initialized — `pipeline-evening` will SKIP the copy and SKIP the bootstrap safely
-
-Normal operation (after initialization): both services read from an already-populated volume — no writes, no race.
-
-### Verification after first pipeline-daily run
-
-```bash
-railway ssh --service pipeline-daily -- python3 - <<'PY'
-import sqlite3
-conn = sqlite3.connect('/app/resolver-vol/pti.db')
-cur = conn.cursor()
-cur.execute("SELECT COUNT(*) FROM fragrance_master WHERE source='kaggle_v1'")
-print('kaggle_v1:', cur.fetchone()[0])
-cur.execute("SELECT COUNT(*) FROM fragrance_master")
-print('total FM:', cur.fetchone()[0])
-conn.close()
-PY
-```
-
-Expected:
-- `kaggle_v1: 53822`
-- `total FM: ~56067`
-
-### Long-term direction
-
-Resolver storage should eventually migrate to PostgreSQL (eliminating the SQLite dependency entirely), but this is deferred. Railway Volume is the approved interim production persistence layer.
+**Active rule:** Resolver catalog lives in Postgres `resolver_*` tables (migration 014). `PerfumeResolver` is constructed via `make_resolver()` which auto-selects `PgResolverStore` when `DATABASE_URL` is set, or `FragranceMasterStore(db_path)` for local SQLite fallback. No `RESOLVER_DB_PATH` env var. No Railway Volume.
 
 ---
 
@@ -5950,20 +5904,34 @@ Resolver MUST NOT use market tables directly.
 
 ---
 
-## 🚀 Migration Plan
+## 🚀 Migration Plan — Phase R1 (COMPLETE — 2026-04-21)
 
-Resolver storage is being migrated from SQLite → Postgres.
+Resolver storage migrated from SQLite → Postgres.
 
-This requires:
-- new resolver tables in Postgres (`aliases`, `fragrance_master`, `normalized_name` on `brands`/`perfumes`)
-- data migration from SQLite (1,608 brands, 56,067 perfumes, 12,884 aliases, 56,067 FM rows)
-- new `PgFragranceMasterStore` (SQLAlchemy-backed, replaces `fragrance_master_store.py`)
-- resolver refactor: `PerfumeResolver(store)` instead of `PerfumeResolver(db_path)`
+### What was implemented
 
-Until migration is complete:
-- SQLite resolver (`data/resolver/pti.db`) remains the source of truth
-- but MUST NOT be tied to local filesystem volumes or container state
-- SQLite file is git-tracked and bundled with each deploy as a transitional measure only
+- **Alembic migration 014**: `resolver_brands`, `resolver_perfumes`, `resolver_aliases`, `resolver_fragrance_master` tables — INTEGER PKs, `resolver_` prefix (no collision with UUID market tables)
+- **`PgResolverStore`** (`perfume_trend_sdk/storage/entities/pg_resolver_store.py`): same interface as `FragranceMasterStore`, backed by Postgres `resolver_*` tables
+- **`make_resolver(db_path)`** factory: auto-selects `PgResolverStore` (when `DATABASE_URL` set) or SQLite fallback
+- **`PerfumeResolver.__init__(store=...)`**: accepts store object; `db_path` kept for backward compat
+- **`scripts/migrate_resolver_to_postgres.py`**: idempotent migration SQLite → Postgres
+- **`scripts/verify_resolver_shadow.py`**: shadow verification — row count + resolver output parity
+
+### Production cutover steps
+
+1. Deploy → `alembic upgrade head` → `resolver_*` tables created
+2. `railway run --service pipeline-daily python3 scripts/migrate_resolver_to_postgres.py`
+3. `railway run --service pipeline-daily python3 scripts/verify_resolver_shadow.py`
+4. If verify passes → production pipelines already use `PgResolverStore` (DATABASE_URL is set)
+
+### Expected counts after migration
+
+| Table | Count |
+|-------|-------|
+| resolver_brands | ~1,608 |
+| resolver_perfumes | ~56,067 |
+| resolver_aliases | ~12,884 |
+| resolver_fragrance_master | ~56,067 |
 
 ---
 

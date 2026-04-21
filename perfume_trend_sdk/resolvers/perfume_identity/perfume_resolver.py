@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple
+import os
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from perfume_trend_sdk.utils.alias_generator import normalize_text
 from perfume_trend_sdk.storage.entities.fragrance_master_store import FragranceMasterStore
@@ -25,11 +26,54 @@ _GENERIC_TOKENS: frozenset[str] = frozenset({
 })
 
 
+def make_resolver(db_path: str | None = None) -> "PerfumeResolver":
+    """
+    Factory: return a PerfumeResolver backed by Postgres or SQLite.
+
+    Selection rule:
+      - DATABASE_URL is set → PgResolverStore (Postgres resolver_* tables)
+      - Otherwise          → FragranceMasterStore(db_path) (SQLite)
+
+    This is the preferred construction path for all production and script code.
+    Direct PerfumeResolver(store=...) is still available for tests.
+    """
+    if os.environ.get("DATABASE_URL"):
+        from perfume_trend_sdk.storage.entities.pg_resolver_store import PgResolverStore
+        store = PgResolverStore()
+        _log.info("[resolver] using Postgres resolver store (resolver_* tables)")
+    else:
+        if not db_path:
+            db_path = "data/resolver/pti.db"
+        store = FragranceMasterStore(db_path)
+        _log.info("[resolver] using SQLite resolver store: %s", db_path)
+    return PerfumeResolver(store=store)
+
+
 class PerfumeResolver:
     version = "1.1"
 
-    def __init__(self, db_path: str) -> None:
-        self.store = FragranceMasterStore(db_path)
+    def __init__(
+        self,
+        db_path: str | None = None,
+        *,
+        store: Any = None,
+    ) -> None:
+        """
+        Construct a PerfumeResolver.
+
+        Preferred usage: call make_resolver() which picks the correct store
+        automatically based on DATABASE_URL.
+
+        Direct usage (backward-compatible):
+          PerfumeResolver("data/resolver/pti.db")      # SQLite
+          PerfumeResolver(store=PgResolverStore())     # Postgres
+        """
+        if store is not None:
+            self.store = store
+        elif db_path is not None:
+            self.store = FragranceMasterStore(db_path)
+        else:
+            raise ValueError("Provide either db_path or store= to PerfumeResolver")
 
     def resolve_text(self, text: str) -> List[Dict[str, Any]]:
         """Slide a token window (1–_MAX_WINDOW) over normalised text and return all alias hits."""

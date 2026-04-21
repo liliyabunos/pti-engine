@@ -54,7 +54,7 @@ from perfume_trend_sdk.connectors.reddit_watchlist.client import RedditAPIError
 from perfume_trend_sdk.connectors.reddit_watchlist.config import RedditWatchlistConfig
 from perfume_trend_sdk.connectors.reddit_watchlist.connector import RedditWatchlistConnector
 from perfume_trend_sdk.normalizers.social_content.normalizer import SocialContentNormalizer
-from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import PerfumeResolver
+from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import PerfumeResolver, make_resolver
 from perfume_trend_sdk.storage.normalized.sqlite_store import NormalizedContentStore
 from perfume_trend_sdk.storage.normalized.pg_store import PgNormalizedContentStore
 from perfume_trend_sdk.storage.raw.filesystem import FilesystemRawStorage
@@ -162,7 +162,8 @@ def run(
 
     normalized_store, signal_store = _make_stores(market_db)
 
-    resolver = PerfumeResolver(resolver_db)
+    # Resolver: Postgres (if DATABASE_URL set) else SQLite fallback
+    resolver = make_resolver(resolver_db)
     resolver.store.init_schema()
 
     total_fetched = 0
