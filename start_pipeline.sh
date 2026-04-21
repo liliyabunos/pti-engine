@@ -28,12 +28,12 @@ echo "[pipeline] Step timeout: ${STEP_TIMEOUT}s per step"
 # then bootstrap the kaggle_v1 catalog (53k perfumes).
 # Subsequent runs SKIP the bootstrap instantly (guard: kaggle_v1 rows > 0).
 if [ -n "${RESOLVER_DB_PATH:-}" ]; then
-  RESOLVER_DIR=$(dirname "$RESOLVER_DB_PATH")
-  mkdir -p "$RESOLVER_DIR"
+  mkdir -p /app/resolver-vol
+  chmod -R 777 /app/resolver-vol
   if [ ! -f "$RESOLVER_DB_PATH" ]; then
     echo "[pipeline] Resolver volume empty — copying seed DB from repo..."
     cp data/resolver/pti.db "$RESOLVER_DB_PATH"
-    echo "[pipeline] Seed copied: $(sqlite3 "$RESOLVER_DB_PATH" 'SELECT COUNT(*) FROM fragrance_master;') FM rows"
+    echo "[pipeline] Seed copied"
   fi
   echo "[pipeline] Resolver bootstrap — catalog check"
   timeout 1800 python3 scripts/bootstrap_resolver_catalog.py || \

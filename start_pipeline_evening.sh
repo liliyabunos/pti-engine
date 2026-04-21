@@ -26,12 +26,12 @@ echo "[pipeline-evening] Step timeout: ${STEP_TIMEOUT}s per step"
 
 # ── Resolver volume init + catalog bootstrap ─────────────────────────────────
 if [ -n "${RESOLVER_DB_PATH:-}" ]; then
-  RESOLVER_DIR=$(dirname "$RESOLVER_DB_PATH")
-  mkdir -p "$RESOLVER_DIR"
+  mkdir -p /app/resolver-vol
+  chmod -R 777 /app/resolver-vol
   if [ ! -f "$RESOLVER_DB_PATH" ]; then
     echo "[pipeline-evening] Resolver volume empty — copying seed DB from repo..."
     cp data/resolver/pti.db "$RESOLVER_DB_PATH"
-    echo "[pipeline-evening] Seed copied: $(sqlite3 "$RESOLVER_DB_PATH" 'SELECT COUNT(*) FROM fragrance_master;') FM rows"
+    echo "[pipeline-evening] Seed copied"
   fi
   echo "[pipeline-evening] Resolver bootstrap — catalog check"
   timeout 1800 python3 scripts/bootstrap_resolver_catalog.py || \
