@@ -6004,9 +6004,8 @@ PRODUCTION_TARGETED
 
 ### Authoritative Targets
 - production PostgreSQL
-- backend entity APIs
-- frontend entity pages (perfume + brand)
-- CLAUDE.md
+- backend entity API layer
+- frontend entity pages
 
 ### Requires Commit / Push / Deploy
 YES
@@ -6018,7 +6017,74 @@ YES
 
 ### Goal
 
-Build full intelligence pages for perfumes and brands so catalog entities become analyzable, not just searchable.
+Turn catalog entities into analyzable market objects.
+
+After Phase U1 exposed the full known catalog to the UI, Phase U2 must make
+perfume and brand pages useful as intelligence pages, not only searchable entries.
+
+---
+
+### Core Principle
+
+An entity must be useful even when it is quiet.
+
+Entity pages must support:
+- active entities
+- tracked but inactive entities
+- catalog-only entities
+
+---
+
+### Requirements
+
+#### 1. Perfume Entity Page
+Must expose:
+- canonical identity
+- brand
+- ticker
+- activity state
+- latest metrics
+- signal state
+- timeseries if available
+- recent mentions
+- notes / accords if available
+
+#### 2. Brand Entity Page
+Must expose:
+- brand identity
+- perfume count
+- active perfume count
+- linked perfumes
+- brand-level recent activity if available
+
+#### 3. Quiet State
+Entities with no active signal:
+- must still render
+- must show quiet-state messaging
+- must not disappear from the product
+
+#### 4. Navigation Integrity
+Screener and catalog search must open entity pages consistently.
+
+---
+
+### Constraints
+
+- Postgres is the single source of truth
+- frontend must present backend-computed values, not recompute them
+- terminal-style UI must remain intact
+- existing dashboard and screener flows must not break
+
+---
+
+### Completion Criteria
+
+Phase is complete when:
+- perfume pages render meaningful intelligence views
+- brand pages render linked portfolio views
+- catalog-only entities remain accessible
+- entity pages support both active and quiet states
+- production UI supports search → entity → analysis workflow
 
 ---
 
@@ -6028,28 +6094,15 @@ Build full intelligence pages for perfumes and brands so catalog entities become
 
 Two new endpoints registered BEFORE the catch-all `/{entity_id:path}`:
 
-`GET /api/v1/entities/perfume/{id}` — perfume entity detail
-- `{id}` = entity_id slug (tracked entity) OR resolver_id integer string (catalog-only)
-- Returns: `PerfumeEntityDetail` with state (active/tracked/catalog_only), aliases_count, notes_top/middle/base, accords, timeseries, recent_signals, recent_mentions
-- Notes/accords sourced from `fragrantica_records` via `perfumes.slug` join
+- `GET /api/v1/entities/perfume/{id}` — `{id}` = entity_id slug (tracked) OR resolver_id integer string (catalog-only). Returns state (active/tracked/catalog_only), aliases_count, notes/accords from `fragrantica_records`, timeseries, signals, mentions.
+- `GET /api/v1/entities/brand/{id}` — Returns perfume_count (from resolver_perfumes), active_perfume_count, top_perfumes ordered by score, timeseries, signals.
 
-`GET /api/v1/entities/brand/{id}` — brand entity detail
-- Returns: `BrandEntityDetail` with perfume_count (from resolver_perfumes), active_perfume_count, top_perfumes (tracked, ordered by score), timeseries, recent_signals
-
-Helper functions: `_check_activity_today`, `_resolver_id_for`, `_aliases_count`, `_fragrantica_notes`, `_brand_perfume_count`, `_brand_active_perfume_count`, `_brand_top_perfumes`
-
-**Frontend — new types in `types.ts`**: `PerfumeEntityDetail`, `BrandEntityDetail`, `BrandPerfumeRow`
-
-**Frontend — new API functions in `entities.ts`**: `fetchPerfumeEntity`, `fetchBrandEntity`
-
-**Frontend — new pages**
-- `entities/perfume/[id]/page.tsx` — state badge, chart, notes/accords, signals, quiet state
-- `entities/brand/[id]/page.tsx` — brand header, KPI row, tracked perfumes table, signals
-
-**Frontend — screener navigation updated**
-- All catalog rows now navigable (previously catalog-only rows were non-clickable)
-- Tracked rows → `/entities/perfume/{entity_id}` or `/entities/brand/{entity_id}`
-- Catalog-only rows → `/entities/perfume/{resolver_id}` or `/entities/brand/{resolver_id}`
+**Frontend**
+- New types: `PerfumeEntityDetail`, `BrandEntityDetail`, `BrandPerfumeRow`
+- New fetch functions: `fetchPerfumeEntity`, `fetchBrandEntity`
+- `entities/perfume/[id]/page.tsx` — state badge, chart, notes/accords section, signals, quiet state
+- `entities/brand/[id]/page.tsx` — brand header, KPI row, linked perfumes table, signals
+- Screener: all catalog rows now navigable (tracked → type slug URL, catalog-only → resolver_id URL)
 
 ### Navigation routing
 
@@ -6057,13 +6110,7 @@ Helper functions: `_check_activity_today`, `_resolver_id_for`, `_aliases_count`,
 |-------------|---------|--------------|
 | Perfume | `/entities/perfume/{entity_id}` | `/entities/perfume/{resolver_id}` |
 | Brand | `/entities/brand/{entity_id}` | `/entities/brand/{resolver_id}` |
-| Generic (backward compat) | `/entities/{entity_id}` | — (404 for catalog-only) |
-
-### Constraints honored
-- No SQLite usage — all queries target production PostgreSQL
-- Notes/accords: best-effort (graceful empty list if Fragrantica data unavailable)
-- No breaking changes to existing entity endpoint or dashboard
-- Route ordering: `/perfume/{id}` and `/brand/{id}` defined BEFORE `/{entity_id:path}`
+| Generic (backward compat) | `/entities/{entity_id}` | 404 |
 
 ---
 
