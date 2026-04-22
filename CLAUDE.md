@@ -4524,7 +4524,7 @@ A backup is not valid until a restore has been verified against a test environme
 | Live ingestion | OPERATIONAL — YouTube + Reddit, 2× daily |
 | Fragrantica enrichment | OPERATIONAL via local bridge · 35 records · Railway IPs still blocked |
 | Notes / accords layer (Fragrantica) | OPERATIONAL — 137 notes, 324 perfume_notes in production |
-| Notes / accords layer (dataset bulk) | PENDING PRODUCTION RUN — Phase 1B code complete, migration 017 deployed |
+| Notes / accords layer (dataset bulk) | OPERATIONAL — 272,622 notes · 132,954 accords · 26,799 perfumes covered (Phase 1B, 2026-04-22) |
 | Discovery loop | OPERATIONAL — fragrance_candidates, aggregate_candidates, validate_candidates |
 | Coverage maintenance service | OPERATIONAL — Phase 5 |
 | Historical backfill layer | NOT IMPLEMENTED |
@@ -4535,7 +4535,7 @@ A backup is not valid until a restore has been verified against a test environme
 1. ~~Stabilize KB production seeding~~ — **DONE (Phase 0)**
 2. ~~Activate Fragrantica enrichment (DB tables + pipeline integration)~~ — **DONE (Phase 1R)**
 3. ~~Add notes / accords tables + populate from Fragrantica~~ — **DONE — 137 notes, 324 perfume_notes**
-4. ~~Bulk notes backfill from Parfumo dataset (Phase 1B)~~ — **code complete, awaiting production run**
+4. ~~Bulk notes backfill from Parfumo dataset (Phase 1B)~~ — **DONE (2026-04-22) — 272,622 notes, 132,954 accords, 26,799 perfumes covered**
 5. Build historical backfill layer
 6. Implement backup policy
 
@@ -4822,7 +4822,22 @@ DELETE FROM resolver_perfume_accords WHERE source = 'parfumo_v1';
 - Migration 017 written ✅
 - Entity API updated ✅
 - Committed and pushed ✅
-- Production run: PENDING
+- Production run: COMPLETED ✅ (2026-04-22)
+
+### Production Results (verified 2026-04-22)
+
+| Metric | Value |
+|--------|-------|
+| Dataset rows processed | 59,325 |
+| Matched to resolver | 52,748 (88.9%) |
+| resolver_perfume_notes rows | 272,622 |
+| resolver_perfume_accords rows | 132,954 |
+| Perfumes with notes | 26,799 |
+| Perfumes with accords | 27,880 |
+| Idempotency | ✅ verified — second run: counts unchanged |
+| Catalog-only entity API | ✅ notes returned for resolver_id-based lookups |
+| Fragrantica priority | ✅ confirmed — Fragrantica notes returned when present |
+| Dataset fallback | ✅ confirmed — resolver_perfume_notes used when no Fragrantica record |
 
 ---
 
