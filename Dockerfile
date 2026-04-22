@@ -31,9 +31,13 @@ COPY data/resolver/pti.db data/resolver/pti.db
 # Install the package and all declared dependencies
 RUN pip install --no-cache-dir .
 
-# Install Playwright Chromium browser (as root, into system-accessible path)
-ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
-RUN python3 -m playwright install chromium
+# Install Playwright Chromium browser into a world-readable location.
+# PLAYWRIGHT_BROWSERS_PATH must NOT be set here via ENV since Railway env
+# overrides may blank it out — instead we install to /ms-playwright and
+# set the path at runtime via the PLAYWRIGHT_BROWSERS_PATH env var in Railway,
+# OR rely on the hardcoded default path below.
+RUN PLAYWRIGHT_BROWSERS_PATH=/ms-playwright python3 -m playwright install chromium \
+ && chmod -R 755 /ms-playwright
 
 # Make start scripts executable
 RUN chmod +x start.sh start_pipeline.sh start_pipeline_evening.sh

@@ -190,8 +190,17 @@ def _fetch_html(url: str) -> tuple[str, str]:
     """Fetch Fragrantica page HTML. Returns (html, client_name).
 
     Tries PlaywrightFragranticaClient first (handles Cloudflare JS challenge).
-    Falls back to FragranticaClient (plain requests) if Playwright is unavailable.
+    Sets PLAYWRIGHT_BROWSERS_PATH=/ms-playwright if env var not set, so
+    the browser installed during Docker build is found regardless of Railway's
+    env var override behavior.
+
+    Falls back to FragranticaClient (plain requests) if Playwright fails.
     """
+    import os
+    # Ensure the hardcoded Docker build path is used if env var is unset/empty
+    if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
+        os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/ms-playwright"
+
     from perfume_trend_sdk.connectors.fragrantica.playwright_client import (
         PlaywrightFragranticaClient,
     )
