@@ -68,47 +68,55 @@ def _load_queue_items(db: Session, limit: int) -> List[Dict[str, Any]]:
 
 
 # ---------------------------------------------------------------------------
-# Identity resolution: entity_id → resolver_perfume_id → FM row
+# Identity resolution: entity_id (UUID) → canonical_name → resolver FM row
 # ---------------------------------------------------------------------------
 
 def _resolve_identity(db: Session, entity_id: str) -> Optional[Dict[str, Any]]:
-    """Resolve entity_id (market UUID) → resolver_perfume_id → brand/name/fragrance_id.
+    """Resolve entity_id (market UUID) → canonical_name → resolver brand/perfume names.
 
-    Returns dict with brand_name, perfume_name, fragrance_id, resolver_id or None.
+    Lookup path:
+      entity_market.id (UUID) → entity_market.canonical_name
+      → resolver_fragrance_master JOIN ON LOWER(canonical_name)
+      → brand_name, perfume_name
+
+    Note: fragrance_id values in resolver_fragrance_master are internal placeholder
+    IDs (fr_001, fr_002...), not real Fragrantica IDs — so URLs are built from
+    brand_name + perfume_name slugs instead.
     """
-    # Step 1: entity_id → resolver_perfume_id via perfume_identity_map
+    # Step 1: entity_id (UUID) → entity_market canonical_name
     row = db.execute(text("""
-        SELECT resolver_perfume_id
-        FROM perfume_identity_map
-        WHERE CAST(market_perfume_uuid AS TEXT) = :uid
+        SELECT canonical_name
+        FROM entity_market
+        WHERE CAST(id AS TEXT) = :uid
         LIMIT 1
     """), {"uid": entity_id}).fetchone()
 
     if not row:
-        logger.warning("[enrich_from_queue] no identity map entry for entity_id=%s", entity_id)
+        logger.warning("[enrich_from_queue] no entity_market row for entity_id=%s", entity_id)
         return None
 
-    resolver_id = int(row[0])
+    canonical_name = str(row[0])
 
-    # Step 2: resolver_perfume_id → brand_name, perfume_name, fragrance_id
+    # Step 2: canonical_name → resolver_fragrance_master (case-insensitive)
     fm_row = db.execute(text("""
-        SELECT brand_name, perfume_name, fragrance_id
+        SELECT brand_name, perfume_name, perfume_id
         FROM resolver_fragrance_master
-        WHERE perfume_id = :rid
+        WHERE LOWER(canonical_name) = LOWER(:cname)
         LIMIT 1
-    """), {"rid": resolver_id}).fetchone()
+    """), {"cname": canonical_name}).fetchone()
 
     if not fm_row:
         logger.warning(
-            "[enrich_from_queue] no resolver_fragrance_master row for resolver_id=%d", resolver_id
+            "[enrich_from_queue] no resolver_fragrance_master row for canonical_name=%r",
+            canonical_name,
         )
         return None
 
     return {
-        "resolver_id": resolver_id,
+        "canonical_name": canonical_name,
         "brand_name": str(fm_row[0]) if fm_row[0] else None,
         "perfume_name": str(fm_row[1]) if fm_row[1] else None,
-        "fragrance_id": str(fm_row[2]) if fm_row[2] else None,
+        "resolver_id": int(fm_row[2]) if fm_row[2] else None,
     }
 
 
@@ -120,21 +128,18 @@ def _build_url(identity: Dict[str, Any], queue_fragrance_id: Optional[str]) -> O
     """Build Fragrantica URL from identity data.
 
     Priority:
-    1. fragrance_id from resolver_fragrance_master (e.g. "Brand-Name-12345")
-       → https://www.fragrantica.com/perfume/Brand-Name-12345.html
-    2. Brand slug + perfume slug from brand_name / perfume_name
-       → https://www.fragrantica.com/perfume/{brand_slug}/{perfume_slug}.html
-    3. fragrance_id from queue (queue_fragrance_id)
-    """
-    from perfume_trend_sdk.connectors.fragrantica.urls import (
-        BASE_URL, slugify, build_perfume_url
-    )
+    1. queue fragrance_id if it looks like a real Fragrantica slug (contains digits)
+    2. Brand slug + perfume slug from brand_name / perfume_name (most common path)
 
-    # Option 1: fragrance_id from FM (contains slug-like ID)
-    fid = identity.get("fragrance_id") or queue_fragrance_id
-    if fid and "-" in fid:
-        # Fragrance IDs are typically "Brand-Name-12345" — use as path suffix
-        return f"{BASE_URL}/perfume/{fid}.html"
+    Note: resolver_fragrance_master.fragrance_id values are internal placeholder IDs
+    (fr_001, fr_002...) and cannot be used to construct Fragrantica URLs directly.
+    """
+    from perfume_trend_sdk.connectors.fragrantica.urls import slugify, build_perfume_url
+
+    # Option 1: queue fragrance_id with real Fragrantica ID format (has digits at end)
+    if queue_fragrance_id and any(ch.isdigit() for ch in queue_fragrance_id):
+        from perfume_trend_sdk.connectors.fragrantica.urls import BASE_URL
+        return f"{BASE_URL}/perfume/{queue_fragrance_id}.html"
 
     # Option 2: build from brand + perfume name slugs
     brand = identity.get("brand_name")
