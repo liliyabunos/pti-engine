@@ -44,13 +44,22 @@ def _now_iso() -> str:
 # ---------------------------------------------------------------------------
 
 def _load_queue_items(db: Session, limit: int) -> List[Dict[str, Any]]:
-    """Load pending/pending_enrichment metadata_gap_queue items for Fragrantica gaps."""
+    """Load pending/pending_enrichment metadata_gap_queue items for Fragrantica gaps.
+
+    Only loads items where a resolver_fragrance_master match exists for the entity,
+    ensuring we can build a valid Fragrantica URL. Items without a resolver match
+    are left in the queue as pending_enrichment (the run_maintenance job already
+    set their status; they require a more sophisticated lookup path).
+    """
     rows = db.execute(text("""
-        SELECT id, entity_id, entity_type, canonical_name, gap_type, fragrance_id
-        FROM metadata_gap_queue
-        WHERE status IN ('pending', 'pending_enrichment')
-          AND gap_type IN ('missing_fragrantica', 'missing_notes', 'missing_accords')
-        ORDER BY priority ASC, gap_type
+        SELECT q.id, q.entity_id, q.entity_type, q.canonical_name, q.gap_type, q.fragrance_id
+        FROM metadata_gap_queue q
+        JOIN entity_market em ON CAST(em.id AS TEXT) = q.entity_id
+        JOIN resolver_fragrance_master rfm
+          ON LOWER(rfm.canonical_name) = LOWER(em.canonical_name)
+        WHERE q.status IN ('pending', 'pending_enrichment')
+          AND q.gap_type IN ('missing_fragrantica', 'missing_notes', 'missing_accords')
+        ORDER BY q.priority ASC, q.gap_type
         LIMIT :limit
     """), {"limit": limit}).fetchall()
 
