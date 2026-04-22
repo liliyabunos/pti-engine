@@ -2,12 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# System deps for Playwright Chromium + curl_cffi
+# System deps: minimal set needed before pip + playwright install-deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
-    libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-    libgbm1 libasound2 libpangocairo-1.0-0 libpango-1.0-0 libcairo2 \
-    libgdk-pixbuf2.0-0 libgtk-3-0 libx11-xcb1 libxcb-dri3-0 \
+    ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
 
 # Copy only what the backend needs — deliberately exclude frontend/
@@ -29,9 +26,9 @@ COPY data/resolver/pti.db data/resolver/pti.db
 # Install the package and all declared dependencies
 RUN pip install --no-cache-dir .
 
-# Install Playwright Chromium browser into /ms-playwright (world-readable).
+# Install Playwright Chromium + its system deps (handles Bookworm package renames automatically).
 # Use inline env var so Railway cannot blank it out via service env settings.
-RUN PLAYWRIGHT_BROWSERS_PATH=/ms-playwright python3 -m playwright install chromium \
+RUN PLAYWRIGHT_BROWSERS_PATH=/ms-playwright python3 -m playwright install --with-deps chromium \
  && chmod -R o+rx /ms-playwright
 
 # Make start scripts executable
