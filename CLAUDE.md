@@ -5607,6 +5607,87 @@ This phase builds confidence in production promotion behavior before enabling cr
 
 ---
 
+## Phase 4P.2 — First Controlled New Entity Creation
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_*` tables (migration 014)
+- `fragrance_candidates` (market Postgres DB)
+
+### Requires Commit / Push / Deploy
+NO (no code changes — execution only)
+
+### Expected UI Change
+INDIRECT (new entity visible once ingestion encounters matching content)
+
+---
+
+### Goal
+
+Execute the first controlled `create_new_entity` promotion in production using a single low-risk candidate.
+
+Candidate scope: **id=373, text="royal crown un", type=perfume**
+
+---
+
+### Pre-Checks Passed (all 9)
+
+1. `safeguard_check("royal crown un")` → None (PASS)
+2. No exact match in `resolver_aliases` for "royal crown un"
+3. No merge match via `check_merge` (hence CREATE, not merge)
+4. `resolve_brand("royal crown un", kb)` → brand_id=1143, brand_name="Royal Crown"
+5. normalized_name="royal crown un" — no duplicate in `resolver_perfumes`
+6. No duplicate in `resolver_fragrance_master`
+7. No existing alias for this normalized text
+8. "Un" not already under brand_id=1143 in `resolver_perfumes`
+9. Brand id=1143 confirmed in `resolver_brands`
+
+### Why create_new_entity (not merge)
+
+`check_merge` scans `alias_lookup` for "royal crown un" and finds no entry.
+No FM row with normalized_name="royal crown un" exists. No fuzzy match above
+threshold for this text. Brand is resolvable → entity is new, not a variant.
+
+### Result
+
+New entity created in one atomic transaction:
+- `resolver_perfumes`: id=113590, canonical="Royal Crown Un", normalized="royal crown un", brand_id=1143
+- `resolver_fragrance_master`: fid=disc_000373, brand_name="Royal Crown", perfume_name="Un", canonical="Royal Crown Un", source=discovery, perfume_id=113590
+- `resolver_aliases`: alias="Royal Crown Un", norm="royal crown un", type=discovery_generated, confidence=0.80
+
+### Count Deltas (production, 2026-04-22)
+
+| Table | Before | After | Delta |
+|-------|--------|-------|-------|
+| resolver_perfumes | 56,067 | 56,068 | +1 |
+| resolver_fragrance_master | 56,067 | 56,068 | +1 |
+| resolver_aliases | 12,888 | 12,889 | +1 |
+| resolver_brands | 1,608 | 1,608 | 0 |
+| discovery FM rows | 5 | 6 | +1 |
+| discovery_generated aliases | 19 | 20 | +1 |
+
+### Naming Convention Note
+
+Discovery entities store the FULL canonical name (brand + perfume) in
+`resolver_perfumes.canonical_name` — e.g., "Royal Crown Un".
+This differs from Kaggle-seed entities which store only the perfume part
+(e.g., "Aeternum"). Both are correct for their respective sources.
+
+### Bounded-Run Discipline
+
+- Single candidate only for first create run
+- Dry-run verified before real run
+- All 9 pre-checks passed before approval
+- Post-create verification ran immediately after
+
+### Status
+COMPLETED — 2026-04-22
+
+---
+
 ## Phase 5 — Catalog Expansion Discipline
 
 Phase 5 is NOT part of the live ingestion pipeline.
