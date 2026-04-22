@@ -5435,6 +5435,99 @@ A phase is COMPLETE only if:
 
 ---
 
+## Phase 4P — Promotion Pipeline: Postgres KB Writes (COMPLETED)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_*` tables (migration 014)
+- `fragrance_candidates` (market Postgres DB)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+NO (resolver-layer change only)
+
+---
+
+### Problem
+
+All Phase 4 promotion jobs (`promote_candidates.py`, `review_create_bucket.py`)
+wrote KB changes via `sqlite3.connect(RESOLVER_DB_PATH)`.
+
+Since Phase R1, the production resolver reads exclusively from Postgres `resolver_*` tables.
+
+Result: promoted entities never reached the production resolver. Phase 4b + 4c
+were effectively no-ops in production.
+
+---
+
+### What was implemented
+
+**New file — `perfume_trend_sdk/analysis/candidate_validation/pg_promoter.py`**
+
+Postgres-aware promotion execution layer:
+- `load_kb_snapshot_pg(store)` — reads `resolver_*` Postgres tables into memory
+- `execute_merge_pg(check, store)` — writes to `resolver_aliases` (ON CONFLICT DO NOTHING)
+- `execute_create_perfume_pg(check, store, candidate_id)` — atomic write to
+  `resolver_perfumes` + `resolver_fragrance_master` + `resolver_aliases`
+- `execute_create_brand_pg(check, store)` — writes to `resolver_brands` + `resolver_aliases`
+- `record_promotion_outcome_pg(db, ...)` — updates `fragrance_candidates` via SQLAlchemy Session
+- Re-exports all pure (no-DB) logic from `promoter.py` unchanged:
+  `safeguard_check`, `check_exact`, `check_merge`, `resolve_brand`, `run_prechecks`, etc.
+
+**Rewritten — `perfume_trend_sdk/jobs/promote_candidates.py`**
+- Removed `sqlite3` + `RESOLVER_DB_PATH`
+- Uses `PgResolverStore()` for KB reads/writes
+- Uses `session_scope()` for market DB (fragrance_candidates)
+- Added `_assert_postgres_available()` production guard
+
+**Rewritten — `perfume_trend_sdk/jobs/review_create_bucket.py`**
+- Removed `sqlite3` + `RESOLVER_DB_PATH`
+- All KB writes route through `pg_promoter` functions
+- All market DB ops use SQLAlchemy Session
+- Added `_assert_postgres_available()` production guard
+
+---
+
+### Production guard
+
+```python
+def _assert_postgres_available() -> None:
+    pti_env = os.environ.get("PTI_ENV", "dev").strip().lower()
+    if pti_env == "production" and not os.environ.get("DATABASE_URL"):
+        raise RuntimeError(
+            "promote_candidates: DATABASE_URL is required when PTI_ENV=production. "
+            "This job writes to Postgres resolver_* tables and does not support SQLite."
+        )
+```
+
+Both jobs raise `RuntimeError` on startup if `PTI_ENV=production` and `DATABASE_URL` is unset.
+This prevents any accidental SQLite fallback in production.
+
+---
+
+### Usage (after deploy)
+
+```bash
+# Dry-run preview (safe — no DB writes)
+railway run --service pipeline-daily \
+  python3 -m perfume_trend_sdk.jobs.promote_candidates --dry-run
+
+# Bounded real run — merge aliases only
+railway run --service pipeline-daily \
+  python3 -m perfume_trend_sdk.jobs.promote_candidates --no-dry-run --limit 25 --type perfume
+
+# Bounded real run — with new entity creation enabled
+railway run --service pipeline-daily \
+  python3 -m perfume_trend_sdk.jobs.promote_candidates --no-dry-run --limit 25 --allow-create
+```
+
+---
+
 ## Phase 5 — Catalog Expansion Discipline
 
 Phase 5 is NOT part of the live ingestion pipeline.
