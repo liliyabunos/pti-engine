@@ -5528,6 +5528,85 @@ railway run --service pipeline-daily \
 
 ---
 
+## Phase 4P.1 — Bounded Alias Expansion (Stability Phase)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- production PostgreSQL (`resolver_*` tables)
+- fragrance_candidates
+- promotion pipeline
+
+### Requires Commit / Push / Deploy
+NO (execution phase)
+
+### Expected UI Change
+INDIRECT (better resolution coverage)
+
+---
+
+### Goal
+
+Expand resolver alias coverage safely after Phase 4P by running bounded promotion batches using only safe decisions:
+
+- exact_existing_entity
+- merge_into_existing
+
+This phase builds confidence in production promotion behavior before enabling create_new_entity.
+
+---
+
+### Rules
+
+- Only approve small batches (10–20 max)
+- Only exact/merge candidates
+- Never bulk approve entire candidate set
+- Always run dry-run before real run
+- Always verify resolver behavior after promotion
+
+---
+
+### Batches executed
+
+**Batch 1 (2026-04-22):** 9 candidates — 7 exact + 2 merge
+- Approved: id=316 (baccarat rouge 540), 815 (xerjoff erba bura), 3803 (creed silver mountain water), 440 (maison francis kurkdjian), 813 (xerjoff), 1578 (louis vuitton), 394 (royal crown), 3814 (silver mountain water), 3813 (creed silver mountain)
+- Result: resolver_aliases 12,884 → 12,886 (+2 merge aliases)
+
+**Batch 2 (2026-04-22):** 7 candidates — 5 exact + 2 merge
+- Approved: id=330 (baccarat rouge), 1334 (creed aventus), 814 (xerjoff erba), 1064 (yves saint laurent), 3824 (creed silver), 677 (baccarat rouge 540 extrait), 905 (erba pura)
+- Result: resolver_aliases 12,886 → 12,888 (+2 merge aliases)
+
+### Cumulative count delta
+- resolver_aliases: 12,884 → 12,888 (+4 total)
+- resolver_perfumes / resolver_brands / resolver_fragrance_master: unchanged
+- discovery_generated aliases: 15 → 19 (+4)
+
+---
+
+### Out of Scope
+
+- No create_new_entity execution
+- No schema changes
+- No promotion logic changes
+
+---
+
+### Completion Criteria
+
+- Multiple bounded batches executed successfully ✅
+- resolver_aliases steadily increases ✅
+- new aliases resolve correctly in production ✅
+- no incorrect merges observed ✅
+
+---
+
+### Next Phase
+
+→ Phase 4P.2 — Controlled New Entity Creation
+
+---
+
 ## Phase 5 — Catalog Expansion Discipline
 
 Phase 5 is NOT part of the live ingestion pipeline.
