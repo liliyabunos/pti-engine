@@ -4516,14 +4516,14 @@ A backup is not valid until a restore has been verified against a test environme
 
 ## Current Data Layer Status (v1)
 
-**As of 2026-04-20**
+**As of 2026-04-22**
 
 | Layer | Status |
 |-------|--------|
 | Knowledge Base (seed) | OPERATIONAL — Kaggle + curated, ~2,240 perfumes |
 | Live ingestion | OPERATIONAL — YouTube + Reddit, 2× daily |
-| Fragrantica enrichment | DEPLOY COMPLETE · PRODUCTION BLOCKED (Fragrantica 403 from Railway IPs) |
-| Notes / accords layer | DEPLOY COMPLETE · schema in production · awaiting real data |
+| Fragrantica enrichment | OPERATIONAL via local bridge · 35 records · Railway IPs still blocked |
+| Notes / accords layer | OPERATIONAL — 137 notes, 324 perfume_notes in production |
 | Discovery loop | MISSING — fragrance_candidates table not created |
 | Coverage maintenance service | NOT IMPLEMENTED |
 | Historical backfill layer | NOT IMPLEMENTED |
@@ -4532,8 +4532,8 @@ A backup is not valid until a restore has been verified against a test environme
 ### Current Priority Order
 
 1. ~~Stabilize KB production seeding~~ — **DONE (Phase 0)**
-2. ~~Activate Fragrantica enrichment (DB tables + pipeline integration)~~ — **CODE COMPLETE · PRODUCTION BLOCKED** — unblock fetch layer (Playwright / cookie injection), then deploy + verify
-3. Add notes / accords tables + populate from Fragrantica — **CODE COMPLETE · awaiting real data**
+2. ~~Activate Fragrantica enrichment (DB tables + pipeline integration)~~ — **DONE (Phase 1R)**
+3. ~~Add notes / accords tables + populate from Fragrantica~~ — **DONE — 137 notes, 324 perfume_notes**
 4. Build discovery loop (fragrance_candidates table + promotion flow)
 5. Build coverage maintenance service
 6. Implement backup policy
@@ -4638,6 +4638,74 @@ Remaining work is strictly infrastructure:
 - or hybrid local enrichment pipeline
 
 No further changes to parser / enrichment / DB schema are required.
+
+---
+
+## Phase 1R — Fragrantica Enrichment Recovery (COMPLETED)
+
+### Status
+- Code complete
+- Local enrichment bridge operational
+- Production PostgreSQL populated with real notes data
+- Railway production fetch still blocked by Cloudflare IP restriction
+
+### What was achieved
+
+Phase 1R unblocked the Fragrantica enrichment pipeline end-to-end.
+
+Root cause (fixed): `FragranticaClient` used `User-Agent: PTI-SDK/1.0` which Fragrantica's bot
+detection immediately blocked. Fixed to realistic Chrome User-Agent.
+
+Larger blocker: Cloudflare blocks all requests from Railway datacenter IPs with HTTP 403.
+This applies regardless of User-Agent or TLS fingerprint (including `curl_cffi chrome120`).
+
+Resolution: **Local enrichment bridge** — run `enrich_from_queue.py` on the local machine
+(not blocked by Cloudflare) with `DATABASE_URL` pointing to production PostgreSQL.
+Fetch happens locally; persist goes directly to production DB.
+
+### Key implementations
+
+**`perfume_trend_sdk/jobs/enrich_from_queue.py`** (new job):
+- Queue loader with `resolver_fragrance_master` JOIN filter (only loads resolvable entities)
+- Identity resolution via `entity_market.id → canonical_name → resolver_fragrance_master`
+  (NOT via `perfume_identity_map` which has stale UUIDs from old seeding)
+- Multi-strategy fetch: curl_cffi → Playwright → plain requests
+- Search-based URL resolution: Fragrantica requires numeric ID in URL
+  (`/perfume/Brand/Name-12345.html`). Slug-only URLs return 404.
+  - Strategy A: Fragrantica search redirect detection (works for popular perfumes)
+  - Strategy B: DuckDuckGo HTML search for canonical URLs with numeric IDs
+  - Rate limiting: DDG shows CAPTCHA after ~2 rapid requests; add delays between searches
+
+### Production verification
+
+6 perfumes enriched in production (2026-04-22):
+
+| Perfume | Notes extracted |
+|---------|----------------|
+| Parfums de Marly Layton | Top: Apple, Lavender, Bergamot; Mid: Geranium, Violet, Jasmine; Base: Vanilla, Cardamom, Sandalwood |
+| Parfums de Marly Pegasus | Top: Heliotrope, Cumin, Bergamot; Mid: Bitter Almond, Lavender, Jasmine; Base: Vanilla, Sandalwood, Amber |
+| Dior Sauvage | Top: Calabrian bergamot, Pepper; Mid: Sichuan Pepper, Lavender; Base: Ambroxan, Cedar |
+| Creed Aventus | Top: Geranium, Cumin, Bergamot; Mid: Oakmoss, Oud; Base: Sandalwood, Musk |
+| Chanel Bleu de Chanel | Record created, Vue.js notes rendering required for extraction |
+| Tom Ford Black Orchid | Record created, Vue.js notes rendering required for extraction |
+
+Production counts: `fragrantica_records=35`, `notes=137`, `perfume_notes=324`
+
+### Local enrichment run command
+
+```bash
+DATABASE_URL="<production-public-url>" \
+python3 -m perfume_trend_sdk.jobs.enrich_from_queue --limit 10
+```
+
+For items where DDG search fails (rate-limited), use the direct-URL approach with known
+Fragrantica numeric IDs. The queue sets `fragrance_id` when a real Fragrantica ID is available;
+`_build_url` uses that directly if present.
+
+### Rule
+
+Phase 1R local bridge is the operational path until Railway IPs are unblocked.
+Phase 1c (full production automation) remains deferred — see that section for details.
 
 ---
 
