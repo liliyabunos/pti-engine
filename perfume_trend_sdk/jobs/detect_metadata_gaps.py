@@ -40,7 +40,7 @@ def _detect_missing_fragrantica(db: Session) -> List[Dict[str, Any]]:
     rows = db.execute(text("""
         SELECT e.id, e.entity_type, e.canonical_name
         FROM entity_market e
-        LEFT JOIN fragrantica_records fr ON fr.perfume_id = e.id
+        LEFT JOIN fragrantica_records fr ON fr.perfume_id = CAST(e.id AS TEXT)
         WHERE e.entity_type = 'perfume'
           AND fr.id IS NULL
         ORDER BY e.canonical_name
@@ -65,7 +65,7 @@ def _detect_missing_notes(db: Session) -> List[Dict[str, Any]]:
     rows = db.execute(text("""
         SELECT e.id, e.entity_type, e.canonical_name, fr.fragrance_id
         FROM entity_market e
-        JOIN fragrantica_records fr ON fr.perfume_id = e.id
+        JOIN fragrantica_records fr ON fr.perfume_id = CAST(e.id AS TEXT)
         WHERE e.entity_type = 'perfume'
           AND (fr.notes_top_json IS NULL OR fr.notes_top_json = '[]')
           AND (fr.notes_middle_json IS NULL OR fr.notes_middle_json = '[]')
@@ -92,7 +92,7 @@ def _detect_missing_accords(db: Session) -> List[Dict[str, Any]]:
     rows = db.execute(text("""
         SELECT e.id, e.entity_type, e.canonical_name, fr.fragrance_id
         FROM entity_market e
-        JOIN fragrantica_records fr ON fr.perfume_id = e.id
+        JOIN fragrantica_records fr ON fr.perfume_id = CAST(e.id AS TEXT)
         WHERE e.entity_type = 'perfume'
           AND (fr.accords_json IS NULL OR fr.accords_json = '[]')
         ORDER BY e.canonical_name
