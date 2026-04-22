@@ -4523,9 +4523,10 @@ A backup is not valid until a restore has been verified against a test environme
 | Knowledge Base (seed) | OPERATIONAL — Kaggle + curated, ~2,240 perfumes |
 | Live ingestion | OPERATIONAL — YouTube + Reddit, 2× daily |
 | Fragrantica enrichment | OPERATIONAL via local bridge · 35 records · Railway IPs still blocked |
-| Notes / accords layer | OPERATIONAL — 137 notes, 324 perfume_notes in production |
-| Discovery loop | MISSING — fragrance_candidates table not created |
-| Coverage maintenance service | NOT IMPLEMENTED |
+| Notes / accords layer (Fragrantica) | OPERATIONAL — 137 notes, 324 perfume_notes in production |
+| Notes / accords layer (dataset bulk) | PENDING PRODUCTION RUN — Phase 1B code complete, migration 017 deployed |
+| Discovery loop | OPERATIONAL — fragrance_candidates, aggregate_candidates, validate_candidates |
+| Coverage maintenance service | OPERATIONAL — Phase 5 |
 | Historical backfill layer | NOT IMPLEMENTED |
 | Backup policy | NOT YET IMPLEMENTED |
 
@@ -4534,8 +4535,8 @@ A backup is not valid until a restore has been verified against a test environme
 1. ~~Stabilize KB production seeding~~ — **DONE (Phase 0)**
 2. ~~Activate Fragrantica enrichment (DB tables + pipeline integration)~~ — **DONE (Phase 1R)**
 3. ~~Add notes / accords tables + populate from Fragrantica~~ — **DONE — 137 notes, 324 perfume_notes**
-4. Build discovery loop (fragrance_candidates table + promotion flow)
-5. Build coverage maintenance service
+4. ~~Bulk notes backfill from Parfumo dataset (Phase 1B)~~ — **code complete, awaiting production run**
+5. Build historical backfill layer
 6. Implement backup policy
 
 ---
@@ -4706,6 +4707,122 @@ Fragrantica numeric IDs. The queue sets `fragrance_id` when a real Fragrantica I
 
 Phase 1R local bridge is the operational path until Railway IPs are unblocked.
 Phase 1c (full production automation) remains deferred — see that section for details.
+
+---
+
+## Phase 1B — Bulk Notes Backfill (Dataset-Based)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_perfume_notes` (migration 017)
+- `resolver_perfume_accords` (migration 017)
+- entity API (`/api/v1/entities/perfume/{id}`)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — notes appear at scale in entity pages for both tracked and catalog-only perfumes
+
+---
+
+### Problem
+
+Fragrantica enrichment covers only 35 perfumes (blocked from Railway by Cloudflare).
+The full 56k catalog has no notes/accords data in production.
+
+The Parfumo dataset (TidyTuesday 2024-12-10, `parfumo_data_clean.csv`) which was used
+to seed `resolver_perfumes` in Phase 5 also contains structured notes and accords columns:
+- `Top_Notes`, `Middle_Notes`, `Base_Notes` — comma-separated ingredient lists
+- `Main_Accords` — comma-separated accord names
+
+Importing this dataset's notes covers the full 56k catalog at zero cost — no scraping,
+no AI, no external service calls.
+
+---
+
+### What was implemented
+
+**Alembic migration 017** — `resolver_perfume_notes` + `resolver_perfume_accords` tables:
+- Integer FK to `resolver_perfumes.id` (not entity_market UUIDs)
+- Covers all 56k resolver catalog entries regardless of ingestion activity
+- UNIQUE on `(resolver_perfume_id, normalized_name, position)` — idempotent inserts
+- `source` column: `parfumo_v1` for imported rows, `fragrantica_v1` for scrape future
+
+**`scripts/import_dataset_notes.py`** — production import script:
+- Downloads Parfumo CSV from TidyTuesday (cached in `/tmp/`)
+- Builds resolver lookup: 2 key strategies (brand+perfume, full canonical)
+- Auto-detects table names: `resolver_perfumes` (Postgres) or `perfumes` (SQLite legacy)
+- ON CONFLICT DO NOTHING — fully idempotent, safe to re-run
+- Batch commits (500 rows), progress logging
+- `--dry-run` mode for safe preview
+- `--verify-only` for post-run checks
+- Source tagging for rollback: `DELETE FROM resolver_perfume_notes WHERE source='parfumo_v1'`
+
+**Entity API** (`entities.py`) — two-layer fallback:
+1. `_fragrantica_notes()` — reads from `fragrantica_records` (scrape quality, highest priority)
+2. `_resolver_notes()` — reads from `resolver_perfume_notes` (dataset quality, fallback)
+3. Combined in `_get_perfume_notes()` — prefer fragrantica, fall back to dataset
+4. Catalog-only entities (no entity_market row) now also get notes from `_resolver_notes()`
+
+---
+
+### Production run command
+
+```bash
+# Step 1 — apply migration (run automatically via alembic upgrade head on deploy)
+# Or manually: railway run --service generous-prosperity alembic upgrade head
+
+# Step 2 — dry-run preview
+railway run --service pipeline-daily \
+  python3 scripts/import_dataset_notes.py --dry-run
+
+# Step 3 — bounded first run (500 rows to validate)
+railway run --service pipeline-daily \
+  python3 scripts/import_dataset_notes.py --limit 500
+
+# Step 4 — full run
+railway run --service pipeline-daily \
+  python3 scripts/import_dataset_notes.py
+
+# Step 5 — verify
+railway run --service pipeline-daily \
+  python3 scripts/import_dataset_notes.py --verify-only
+```
+
+---
+
+### Expected results (after full production run)
+
+| Metric | Expected |
+|--------|----------|
+| Matched resolver_perfumes | ~45,000–50,000 (80-90% of 56k) |
+| resolver_perfume_notes rows | ~150,000–300,000 |
+| resolver_perfume_accords rows | ~100,000–200,000 |
+| Perfumes with any notes | ~40,000+ |
+| Entity API notes for catalog-only | ALL matched catalog perfumes |
+| Fragrantica notes priority | Unchanged — still preferred |
+
+---
+
+### Rollback
+
+```sql
+DELETE FROM resolver_perfume_notes WHERE source = 'parfumo_v1';
+DELETE FROM resolver_perfume_accords WHERE source = 'parfumo_v1';
+```
+
+---
+
+### Status
+- Code complete ✅
+- Migration 017 written ✅
+- Entity API updated ✅
+- Committed and pushed ✅
+- Production run: PENDING
 
 ---
 

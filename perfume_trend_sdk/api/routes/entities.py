@@ -256,6 +256,46 @@ def _fragrantica_notes(db: Session, entity_id_slug: str):
     )
 
 
+def _resolver_notes(db: Session, resolver_id: int):
+    """Fetch notes / accords from resolver_perfume_notes (Phase 1B dataset fallback)."""
+    if not resolver_id:
+        return [], [], [], []
+    notes_rows = _safe(lambda: db.execute(
+        text("""
+        SELECT note_name, position
+        FROM resolver_perfume_notes
+        WHERE resolver_perfume_id = :rid
+        ORDER BY position, note_name
+        """),
+        {"rid": resolver_id},
+    ).fetchall(), None, "resolver_notes")
+    accords_rows = _safe(lambda: db.execute(
+        text("""
+        SELECT accord_name
+        FROM resolver_perfume_accords
+        WHERE resolver_perfume_id = :rid
+        ORDER BY accord_name
+        """),
+        {"rid": resolver_id},
+    ).fetchall(), None, "resolver_accords")
+    if notes_rows is None and accords_rows is None:
+        return [], [], [], []
+    top = [r[0] for r in (notes_rows or []) if r[1] == "top"]
+    middle = [r[0] for r in (notes_rows or []) if r[1] == "middle"]
+    base = [r[0] for r in (notes_rows or []) if r[1] == "base"]
+    accords = [r[0] for r in (accords_rows or [])]
+    return top, middle, base, accords
+
+
+def _get_perfume_notes(db: Session, entity_id_slug: str, resolver_id: Optional[int]):
+    """Return notes/accords, preferring fragrantica_records then falling back to resolver_perfume_notes."""
+    top, mid, base, acc = _fragrantica_notes(db, entity_id_slug)
+    if top or mid or base or acc:
+        return top, mid, base, acc
+    # Fallback: dataset-imported notes (Phase 1B)
+    return _resolver_notes(db, resolver_id)
+
+
 def _brand_perfume_count(db: Session, brand_canonical_name: str) -> int:
     row = _safe(lambda: db.execute(
         text("""
@@ -434,7 +474,7 @@ def get_perfume_entity(
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "perfume")
         aliases = _aliases_count(db, resolver_id, "perfume") if resolver_id else 0
-        notes_top, notes_mid, notes_base, accords = _fragrantica_notes(db, em.entity_id)
+        notes_top, notes_mid, notes_base, accords = _get_perfume_notes(db, em.entity_id, resolver_id)
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         return PerfumeEntityDetail(
@@ -481,6 +521,7 @@ def get_perfume_entity(
         raise HTTPException(status_code=404, detail=f"Perfume not found: {id}")
 
     aliases = _aliases_count(db, resolver_id, "perfume")
+    cat_top, cat_mid, cat_base, cat_acc = _resolver_notes(db, resolver_id)
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
@@ -488,6 +529,10 @@ def get_perfume_entity(
         brand_name=rp_row[2],
         state="catalog_only",
         aliases_count=aliases,
+        notes_top=cat_top,
+        notes_middle=cat_mid,
+        notes_base=cat_base,
+        accords=cat_acc,
     )
 
 
