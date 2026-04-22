@@ -257,76 +257,115 @@ def _insert_batch(
     notes_table: str = "resolver_perfume_notes",
     accords_table: str = "resolver_perfume_accords",
 ) -> Tuple[int, int]:
-    """Bulk-insert a batch of notes + accords using executemany.
+    """Bulk-insert using psycopg2 execute_values (single SQL per batch).
 
-    Uses a single transaction with one executemany call per table —
-    far fewer roundtrips than row-by-row inserts.
+    For SQLite fallback, uses multi-row VALUES string construction.
     Returns (notes_attempted, accords_attempted).
     """
     if dry_run or (not notes_batch and not accords_batch):
         return len(notes_batch), len(accords_batch)
 
     now = _now_iso()
-    notes_ok = 0
-    accords_ok = 0
+    db_url = engine.url
 
-    # Build parameter lists
-    note_params = [
-        {
-            "pid": item["resolver_perfume_id"],
-            "name": item["note_name"],
-            "norm": item["normalized_name"],
-            "pos": item["position"],
-            "src": item.get("source", "parfumo_v1"),
-            "ts": now,
-        }
-        for item in notes_batch
-    ]
-    accord_params = [
-        {
-            "pid": item["resolver_perfume_id"],
-            "name": item["accord_name"],
-            "norm": item["normalized_name"],
-            "src": item.get("source", "parfumo_v1"),
-            "ts": now,
-        }
-        for item in accords_batch
-    ]
+    # ------------------------------------------------------------------
+    # PostgreSQL fast path — psycopg2 execute_values (single INSERT per batch)
+    # ------------------------------------------------------------------
+    if str(db_url).startswith("postgresql"):
+        try:
+            import psycopg2
+            import psycopg2.extras
 
+            raw = engine.raw_connection()
+            try:
+                cur = raw.cursor()
+                if notes_batch:
+                    note_rows = [
+                        (
+                            item["resolver_perfume_id"],
+                            item["note_name"],
+                            item["normalized_name"],
+                            item["position"],
+                            item.get("source", "parfumo_v1"),
+                            now,
+                        )
+                        for item in notes_batch
+                    ]
+                    psycopg2.extras.execute_values(
+                        cur,
+                        f"""
+                        INSERT INTO {notes_table}
+                          (resolver_perfume_id, note_name, normalized_name, position, source, created_at)
+                        VALUES %s
+                        ON CONFLICT (resolver_perfume_id, normalized_name, position) DO NOTHING
+                        """,
+                        note_rows,
+                        page_size=5000,
+                    )
+                if accords_batch:
+                    accord_rows = [
+                        (
+                            item["resolver_perfume_id"],
+                            item["accord_name"],
+                            item["normalized_name"],
+                            item.get("source", "parfumo_v1"),
+                            now,
+                        )
+                        for item in accords_batch
+                    ]
+                    psycopg2.extras.execute_values(
+                        cur,
+                        f"""
+                        INSERT INTO {accords_table}
+                          (resolver_perfume_id, accord_name, normalized_name, source, created_at)
+                        VALUES %s
+                        ON CONFLICT (resolver_perfume_id, normalized_name) DO NOTHING
+                        """,
+                        accord_rows,
+                        page_size=5000,
+                    )
+                raw.commit()
+            finally:
+                raw.close()
+            return len(notes_batch), len(accords_batch)
+        except Exception as exc:
+            logger.warning("[import] execute_values error: %s — falling back to row-by-row", exc)
+
+    # ------------------------------------------------------------------
+    # SQLite fallback — individual inserts (acceptable for local dev)
+    # ------------------------------------------------------------------
     with engine.begin() as conn:
-        if note_params:
+        for item in notes_batch:
             try:
                 conn.execute(
                     text(f"""
                     INSERT INTO {notes_table}
                       (resolver_perfume_id, note_name, normalized_name, position, source, created_at)
-                    VALUES
-                      (:pid, :name, :norm, :pos, :src, :ts)
+                    VALUES (:pid, :name, :norm, :pos, :src, :ts)
                     ON CONFLICT (resolver_perfume_id, normalized_name, position) DO NOTHING
                     """),
-                    note_params,
+                    {"pid": item["resolver_perfume_id"], "name": item["note_name"],
+                     "norm": item["normalized_name"], "pos": item["position"],
+                     "src": item.get("source", "parfumo_v1"), "ts": now},
                 )
-                notes_ok = len(note_params)
-            except Exception as exc:
-                logger.warning("[import] Notes bulk insert error: %s", exc)
-
-        if accord_params:
+            except Exception:
+                pass
+        for item in accords_batch:
             try:
                 conn.execute(
                     text(f"""
                     INSERT INTO {accords_table}
                       (resolver_perfume_id, accord_name, normalized_name, source, created_at)
-                    VALUES
-                      (:pid, :name, :norm, :src, :ts)
+                    VALUES (:pid, :name, :norm, :src, :ts)
                     ON CONFLICT (resolver_perfume_id, normalized_name) DO NOTHING
                     """),
-                    accord_params,
+                    {"pid": item["resolver_perfume_id"], "name": item["accord_name"],
+                     "norm": item["normalized_name"], "src": item.get("source", "parfumo_v1"),
+                     "ts": now},
                 )
-                accords_ok = len(accord_params)
-            except Exception as exc:
-                logger.warning("[import] Accords bulk insert error: %s", exc)
-
-    return notes_ok, accords_ok
+            except Exception:
+                pass
+    return len(notes_batch), len(accords_batch)
 
 
 # ---------------------------------------------------------------------------
