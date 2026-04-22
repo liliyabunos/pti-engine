@@ -183,6 +183,39 @@ def _update_queue_status(
 
 
 # ---------------------------------------------------------------------------
+# Fetch helper — Playwright preferred, plain requests as fallback
+# ---------------------------------------------------------------------------
+
+def _fetch_html(url: str) -> tuple[str, str]:
+    """Fetch Fragrantica page HTML. Returns (html, client_name).
+
+    Tries PlaywrightFragranticaClient first (handles Cloudflare JS challenge).
+    Falls back to FragranticaClient (plain requests) if Playwright is unavailable.
+    """
+    from perfume_trend_sdk.connectors.fragrantica.playwright_client import (
+        PlaywrightFragranticaClient,
+    )
+
+    try:
+        pw_client = PlaywrightFragranticaClient(
+            timeout_ms=30_000,
+            max_retries=2,
+            backoff_seconds=5,
+            raw_html_dir=None,  # no local file save in production
+        )
+        html = pw_client.fetch_page(url)
+        return html, "playwright"
+    except Exception as pw_exc:
+        logger.warning("[enrich_from_queue] Playwright unavailable (%s), trying requests", pw_exc)
+
+    from perfume_trend_sdk.connectors.fragrantica.client import FragranticaClient
+
+    http_client = FragranticaClient(timeout=20, max_retries=2, backoff_seconds=5)
+    html = http_client.fetch_page(url)
+    return html, "requests"
+
+
+# ---------------------------------------------------------------------------
 # Main enrichment logic per item
 # ---------------------------------------------------------------------------
 
@@ -192,7 +225,6 @@ def _enrich_item(
     dry_run: bool,
 ) -> str:
     """Attempt enrichment for one queue item. Returns outcome string."""
-    from perfume_trend_sdk.connectors.fragrantica.client import FragranticaClient
     from perfume_trend_sdk.connectors.fragrantica.parser import FragranticaParser
     from perfume_trend_sdk.normalizers.fragrantica.normalizer import FragranticaNormalizer
     from perfume_trend_sdk.storage.entities.fragrantica_enrichment_store import (
@@ -232,10 +264,12 @@ def _enrich_item(
         logger.info("[enrich_from_queue] DRY-RUN: would fetch %s", url)
         return "dry_run"
 
-    # 3. Fetch
+    # 3. Fetch — try Playwright first (bypasses Cloudflare JS challenge),
+    #    fall back to plain requests if Playwright is unavailable.
     try:
-        client = FragranticaClient(timeout=20, max_retries=2, backoff_seconds=5)
-        html = client.fetch_page(url)
+        _html, fetch_client = _fetch_html(url)
+        html = _html
+        logger.info("[enrich_from_queue] fetched via %s (%d bytes)", fetch_client, len(html))
     except Exception as exc:
         note = f"fetch failed: {exc}"
         logger.error("[enrich_from_queue] FETCH FAIL %s: %s", canonical_name, exc)
