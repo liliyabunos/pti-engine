@@ -189,34 +189,57 @@ def _update_queue_status(
 def _fetch_html(url: str) -> tuple[str, str]:
     """Fetch Fragrantica page HTML. Returns (html, client_name).
 
-    Tries PlaywrightFragranticaClient first (handles Cloudflare JS challenge).
-    Sets PLAYWRIGHT_BROWSERS_PATH=/ms-playwright if env var not set, so
-    the browser installed during Docker build is found regardless of Railway's
-    env var override behavior.
+    Strategy (in order):
+    1. curl_cffi: mimics Chrome's TLS fingerprint — bypasses Cloudflare bot
+       detection without a browser. Lightweight and fast.
+    2. Playwright: full headless browser — handles JS challenges but heavy.
+    3. requests: plain HTTP fallback.
 
-    Falls back to FragranticaClient (plain requests) if Playwright fails.
+    Raises RuntimeError if all methods fail.
     """
+    # --- Strategy 1: curl_cffi (Chrome TLS fingerprint) ---
+    try:
+        from curl_cffi import requests as cffi_requests
+
+        resp = cffi_requests.get(
+            url,
+            impersonate="chrome120",
+            headers={
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            },
+            timeout=20,
+            allow_redirects=True,
+        )
+        if resp.status_code == 200:
+            return resp.text, "curl_cffi"
+        logger.warning(
+            "[enrich_from_queue] curl_cffi got HTTP %d for %s", resp.status_code, url
+        )
+    except Exception as cffi_exc:
+        logger.warning("[enrich_from_queue] curl_cffi failed (%s)", cffi_exc)
+
+    # --- Strategy 2: Playwright headless browser ---
     import os
-    # Ensure the hardcoded Docker build path is used if env var is unset/empty
     if not os.environ.get("PLAYWRIGHT_BROWSERS_PATH"):
         os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/ms-playwright"
 
-    from perfume_trend_sdk.connectors.fragrantica.playwright_client import (
-        PlaywrightFragranticaClient,
-    )
-
     try:
+        from perfume_trend_sdk.connectors.fragrantica.playwright_client import (
+            PlaywrightFragranticaClient,
+        )
         pw_client = PlaywrightFragranticaClient(
             timeout_ms=30_000,
-            max_retries=2,
+            max_retries=1,
             backoff_seconds=5,
-            raw_html_dir=None,  # no local file save in production
+            raw_html_dir=None,
         )
         html = pw_client.fetch_page(url)
         return html, "playwright"
     except Exception as pw_exc:
-        logger.warning("[enrich_from_queue] Playwright unavailable (%s), trying requests", pw_exc)
+        logger.warning("[enrich_from_queue] Playwright failed (%s)", pw_exc)
 
+    # --- Strategy 3: plain requests ---
     from perfume_trend_sdk.connectors.fragrantica.client import FragranticaClient
 
     http_client = FragranticaClient(timeout=20, max_retries=2, backoff_seconds=5)
