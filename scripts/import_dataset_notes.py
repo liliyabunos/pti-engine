@@ -257,18 +257,46 @@ def _insert_batch(
     notes_table: str = "resolver_perfume_notes",
     accords_table: str = "resolver_perfume_accords",
 ) -> Tuple[int, int]:
-    """Insert a batch of notes + accords. Returns (notes_inserted, accords_inserted)."""
+    """Bulk-insert a batch of notes + accords using executemany.
+
+    Uses a single transaction with one executemany call per table —
+    far fewer roundtrips than row-by-row inserts.
+    Returns (notes_attempted, accords_attempted).
+    """
     if dry_run or (not notes_batch and not accords_batch):
         return len(notes_batch), len(accords_batch)
 
+    now = _now_iso()
     notes_ok = 0
     accords_ok = 0
-    now = _now_iso()
+
+    # Build parameter lists
+    note_params = [
+        {
+            "pid": item["resolver_perfume_id"],
+            "name": item["note_name"],
+            "norm": item["normalized_name"],
+            "pos": item["position"],
+            "src": item.get("source", "parfumo_v1"),
+            "ts": now,
+        }
+        for item in notes_batch
+    ]
+    accord_params = [
+        {
+            "pid": item["resolver_perfume_id"],
+            "name": item["accord_name"],
+            "norm": item["normalized_name"],
+            "src": item.get("source", "parfumo_v1"),
+            "ts": now,
+        }
+        for item in accords_batch
+    ]
 
     with engine.begin() as conn:
-        for item in notes_batch:
+        if note_params:
             try:
-                result = conn.execute(
+                conn.execute(
                     text(f"""
                     INSERT INTO {notes_table}
                       (resolver_perfume_id, note_name, normalized_name, position, source, created_at)
@@ -276,23 +304,15 @@ def _insert_batch(
                       (:pid, :name, :norm, :pos, :src, :ts)
                     ON CONFLICT (resolver_perfume_id, normalized_name, position) DO NOTHING
                     """),
-                    {
-                        "pid": item["resolver_perfume_id"],
-                        "name": item["note_name"],
-                        "norm": item["normalized_name"],
-                        "pos": item["position"],
-                        "src": item.get("source", "parfumo_v1"),
-                        "ts": now,
-                    },
+                    note_params,
                 )
-                if result.rowcount > 0:
-                    notes_ok += 1
+                notes_ok = len(note_params)
             except Exception as exc:
-                logger.debug("[import] Note insert skip: %s", exc)
+                logger.warning("[import] Notes bulk insert error: %s", exc)
 
-        for item in accords_batch:
+        if accord_params:
             try:
-                result = conn.execute(
+                conn.execute(
                     text(f"""
                     INSERT INTO {accords_table}
                       (resolver_perfume_id, accord_name, normalized_name, source, created_at)
@@ -300,18 +320,11 @@ def _insert_batch(
                       (:pid, :name, :norm, :src, :ts)
                     ON CONFLICT (resolver_perfume_id, normalized_name) DO NOTHING
                     """),
-                    {
-                        "pid": item["resolver_perfume_id"],
-                        "name": item["accord_name"],
-                        "norm": item["normalized_name"],
-                        "src": item.get("source", "parfumo_v1"),
-                        "ts": now,
-                    },
+                    accord_params,
                 )
-                if result.rowcount > 0:
-                    accords_ok += 1
+                accords_ok = len(accord_params)
             except Exception as exc:
-                logger.debug("[import] Accord insert skip: %s", exc)
+                logger.warning("[import] Accords bulk insert error: %s", exc)
 
     return notes_ok, accords_ok
 
@@ -332,7 +345,7 @@ def run(
     csv_raw: str,
     dry_run: bool = False,
     limit: Optional[int] = None,
-    batch_size: int = 500,
+    batch_size: int = 5000,
     source: str = "parfumo_v1",
 ) -> Dict:
     rows = _parse_csv(csv_raw)
@@ -488,7 +501,7 @@ def main():
     parser = argparse.ArgumentParser(description="Phase 1B: Bulk notes backfill from Parfumo dataset")
     parser.add_argument("--dry-run", action="store_true", help="Parse and match but do not write to DB")
     parser.add_argument("--limit", type=int, default=None, help="Limit to first N dataset rows")
-    parser.add_argument("--batch-size", type=int, default=500, help="Insert batch size (default: 500)")
+    parser.add_argument("--batch-size", type=int, default=5000, help="Insert batch size (default: 5000)")
     parser.add_argument("--csv-path", type=str, default=None, help="Path to local Parfumo CSV (skip download)")
     parser.add_argument("--verify-only", action="store_true", help="Only run verification queries, no import")
     parser.add_argument("--source", type=str, default="parfumo_v1", help="Source tag for imported rows")
