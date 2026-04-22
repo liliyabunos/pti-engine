@@ -53,4 +53,13 @@ echo "[pipeline] Step 4 — Market state verification"
 timeout 300 python3 -m perfume_trend_sdk.jobs.verify_market_state || \
   echo "[pipeline] WARNING: verify_market_state reported issues — check logs"
 
+# Step 5: Coverage maintenance (Phase 5) — runs morning-only, non-blocking
+echo "[pipeline] Step 5 — Coverage maintenance (stale + metadata detection + runner)"
+timeout 300 python3 -m perfume_trend_sdk.jobs.detect_stale_entities --stale-days 14 || \
+  echo "[pipeline] WARNING: detect_stale_entities failed — continuing"
+timeout 300 python3 -m perfume_trend_sdk.jobs.detect_metadata_gaps || \
+  echo "[pipeline] WARNING: detect_metadata_gaps failed — continuing"
+timeout 300 python3 -m perfume_trend_sdk.jobs.run_maintenance --limit 20 || \
+  echo "[pipeline] WARNING: run_maintenance failed — continuing"
+
 echo "[pipeline] Pipeline complete for date=$TODAY"

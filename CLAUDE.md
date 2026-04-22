@@ -5688,6 +5688,140 @@ COMPLETED — 2026-04-22
 
 ---
 
+## Phase 5 — Coverage Maintenance Service
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- production PostgreSQL
+- maintenance queue tables (`stale_entity_queue`, `metadata_gap_queue`)
+- maintenance jobs / runner
+- production pipeline integration (`start_pipeline.sh`)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+INDIRECT
+
+---
+
+### Goal
+
+Keep entity coverage healthy over time.
+
+After Phase 4 completed the production self-learning loop, the system now has a
+maintenance layer that detects stale entities and metadata gaps, then queues
+safe follow-up work for future remediation.
+
+---
+
+### Core Principle
+
+Discovery grows the universe. Maintenance keeps the universe usable.
+
+Phase 5 prevents:
+- stale entities with no recent refresh path going unnoticed
+- metadata-incomplete perfumes silently degrading entity pages
+- growing UI/catalog surface with empty or degraded entity pages
+
+---
+
+### Alembic Migration
+
+Migration 016 (`alembic/versions/016_add_maintenance_queues.py`) adds:
+
+**`stale_entity_queue`**
+- `entity_id` (UNIQUE) — entity_market.id UUID
+- `entity_type`, `canonical_name`, `reason`, `priority`
+- `status`: pending / detected_only / done / failed
+- `last_seen_date`, `days_inactive`
+- `created_at`, `updated_at`, `last_attempted_at`, `notes_json`
+
+**`metadata_gap_queue`**
+- `entity_id + gap_type` (UNIQUE) — one entry per entity per gap type
+- `gap_type`: missing_fragrantica | missing_notes | missing_accords
+- `entity_type`, `canonical_name`, `reason`, `priority`
+- `status`: pending / pending_enrichment / done / failed
+- `fragrance_id` (resolver reference for enrichment path lookup)
+- `created_at`, `updated_at`, `last_attempted_at`, `notes_json`
+
+---
+
+### Jobs Added
+
+| Job | Module | Purpose |
+|-----|--------|---------|
+| detect_stale_entities | `perfume_trend_sdk.jobs.detect_stale_entities` | Find entities inactive > N days |
+| detect_metadata_gaps | `perfume_trend_sdk.jobs.detect_metadata_gaps` | Find perfumes with missing notes/accords/fragrantica |
+| run_maintenance | `perfume_trend_sdk.jobs.run_maintenance` | Process bounded pending queue items |
+
+**Stale detection rule**: entity has no timeseries row with mention_count > 0
+in the last `--stale-days` (default: 14). Or has zero timeseries rows at all.
+
+**Metadata gap types detected**:
+- `missing_fragrantica`: perfume in entity_market with no fragrantica_records row
+- `missing_notes`: fragrantica_records exists but all note lists are empty
+- `missing_accords`: fragrantica_records exists but accords_json is empty
+
+**Runner behavior (Phase 5 conservative)**:
+- stale_entity_queue: no automated refresh path exists yet → mark `detected_only`
+- metadata_gap_queue: Fragrantica enrichment requires CDP browser (not automated in prod) → mark `pending_enrichment`
+- Bounded: `--limit 20` per queue per run
+- Both outcomes are explicit states — no silent failures
+
+---
+
+### Pipeline Integration
+
+Added to `start_pipeline.sh` Step 5 (morning cycle only, non-blocking):
+
+```sh
+timeout 300 python3 -m perfume_trend_sdk.jobs.detect_stale_entities --stale-days 14 || ...
+timeout 300 python3 -m perfume_trend_sdk.jobs.detect_metadata_gaps || ...
+timeout 300 python3 -m perfume_trend_sdk.jobs.run_maintenance --limit 20 || ...
+```
+
+Evening pipeline (`start_pipeline_evening.sh`) is not modified — maintenance runs once daily.
+
+---
+
+### Production Verification
+
+After deploy, run in Railway:
+
+```bash
+railway ssh --service generous-prosperity "cd /app && python3 -m perfume_trend_sdk.jobs.detect_stale_entities --dry-run"
+railway ssh --service generous-prosperity "cd /app && python3 -m perfume_trend_sdk.jobs.detect_metadata_gaps --dry-run"
+```
+
+Then real run:
+```bash
+railway ssh --service generous-prosperity "cd /app && python3 -m perfume_trend_sdk.jobs.detect_stale_entities"
+railway ssh --service generous-prosperity "cd /app && python3 -m perfume_trend_sdk.jobs.detect_metadata_gaps"
+railway ssh --service generous-prosperity "cd /app && python3 -m perfume_trend_sdk.jobs.run_maintenance --limit 20"
+```
+
+Verify queue state:
+```sql
+SELECT status, COUNT(*) FROM stale_entity_queue GROUP BY status;
+SELECT gap_type, status, COUNT(*) FROM metadata_gap_queue GROUP BY gap_type, status;
+```
+
+---
+
+### Completion Criteria
+
+- migration 016 applied in production ✓
+- stale entities detected and queued automatically ✓
+- metadata gaps detected and queued automatically ✓
+- bounded maintenance runner executes without error ✓
+- no regression in pipeline-daily / pipeline-evening ✓
+- coverage health is now an active system concern ✓
+
+---
+
 ## Phase 5 — Catalog Expansion Discipline
 
 Phase 5 is NOT part of the live ingestion pipeline.
