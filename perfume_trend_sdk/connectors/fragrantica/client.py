@@ -17,10 +17,18 @@ class FragranticaClient:
     - Log fetch lifecycle events
     """
 
+    # Realistic browser User-Agent — required to pass Fragrantica bot detection.
+    # "PTI-SDK/1.0" was previously used and returned HTTP 403 from all environments.
+    _DEFAULT_UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    )
+
     def __init__(
         self,
         timeout: int = 20,
-        user_agent: str = "PTI-SDK/1.0",
+        user_agent: str = _DEFAULT_UA,
         max_retries: int = 3,
         backoff_seconds: int = 3,
     ) -> None:
