@@ -292,6 +292,146 @@ def _upsert_snapshot(
 
 
 # ---------------------------------------------------------------------------
+# Brand roll-up — aggregate perfume timeseries → brand market rows
+# ---------------------------------------------------------------------------
+
+def _rollup_brand_market_data(db: Session, target_date: date) -> int:
+    """Create/update brand entity_market and entity_timeseries_daily rows.
+
+    For every brand that has at least one perfume in entity_market with a
+    timeseries row for target_date, sum/average the perfume metrics to produce
+    a brand-level market snapshot.
+
+    Brand metrics (per date):
+      mention_count       = SUM(perfume mention_count)
+      engagement_sum      = SUM(perfume engagement_sum)
+      unique_authors      = SUM(perfume unique_authors)  [upper bound — may double-count]
+      composite_market_score = AVG(perfume composite_market_score) weighted by mention_count
+      growth_rate         = weighted avg of growth_rate (weight = mention_count)
+      momentum            = AVG(perfume momentum)
+      acceleration        = AVG(perfume acceleration)
+      volatility          = AVG(perfume volatility)
+      confidence_avg      = AVG(perfume confidence_avg)
+
+    Returns the number of brand rows upserted.
+    """
+    target_str = target_date.isoformat()
+
+    # Fetch per-brand aggregated perfume metrics for target_date.
+    # Only include perfumes that have real timeseries data (mention_count > 0)
+    # OR carry-forward rows (mention_count = 0) — all rows are included so that
+    # brands get a zero-score row even on quiet days, matching carry-forward behavior.
+    brand_rows = db.execute(
+        text("""
+        SELECT
+            em.brand_name,
+            SUM(etd.mention_count)                             AS total_mentions,
+            SUM(etd.engagement_sum)                            AS total_engagement,
+            SUM(etd.unique_authors)                            AS total_authors,
+            CASE WHEN SUM(etd.mention_count) > 0
+                 THEN SUM(etd.composite_market_score * etd.mention_count)
+                      / SUM(etd.mention_count)
+                 ELSE AVG(etd.composite_market_score)
+            END                                                AS wgt_score,
+            CASE WHEN SUM(etd.mention_count) > 0
+                 THEN SUM(COALESCE(etd.growth_rate, 0) * etd.mention_count)
+                      / SUM(etd.mention_count)
+                 ELSE AVG(etd.growth_rate)
+            END                                                AS wgt_growth,
+            AVG(etd.momentum)                                  AS avg_momentum,
+            AVG(etd.acceleration)                              AS avg_acceleration,
+            AVG(etd.volatility)                                AS avg_volatility,
+            AVG(etd.confidence_avg)                            AS avg_confidence
+        FROM entity_market em
+        JOIN entity_timeseries_daily etd ON etd.entity_id = em.id
+        WHERE em.entity_type = 'perfume'
+          AND em.brand_name IS NOT NULL
+          AND etd.date = :dt
+        GROUP BY em.brand_name
+        HAVING SUM(etd.mention_count) > 0
+        """),
+        {"dt": target_str},
+    ).fetchall()
+
+    if not brand_rows:
+        return 0
+
+    now = _now()
+    upserted = 0
+
+    for row in brand_rows:
+        brand_name = row[0]
+        if not brand_name:
+            continue
+
+        total_mentions  = float(row[1] or 0)
+        total_engagement = float(row[2] or 0)
+        total_authors   = int(row[3] or 0)
+        wgt_score       = float(row[4] or 0)
+        wgt_growth      = row[5]
+        avg_momentum    = row[6]
+        avg_acceleration = row[7]
+        avg_volatility  = row[8]
+        avg_confidence  = row[9]
+
+        # Upsert brand entity_market row
+        em = db.query(EntityMarket).filter(
+            EntityMarket.entity_type == "brand",
+            EntityMarket.canonical_name == brand_name,
+        ).first()
+        if em is None:
+            ticker = generate_ticker(brand_name)
+            entity_slug = f"brand-{_slugify(brand_name)}"
+            em = EntityMarket(
+                entity_id=entity_slug,
+                entity_type="brand",
+                ticker=ticker,
+                canonical_name=brand_name,
+                brand_name=brand_name,
+                created_at=now,
+            )
+            db.add(em)
+            db.flush()
+
+        # Upsert brand timeseries row for target_date
+        existing = db.query(EntityTimeSeriesDaily).filter_by(
+            entity_id=em.id,
+            entity_type="brand",
+            date=target_date,
+        ).first()
+
+        snap_data = {
+            "mention_count":          total_mentions,
+            "unique_authors":         total_authors,
+            "engagement_sum":         total_engagement,
+            "composite_market_score": wgt_score,
+            "growth_rate":            float(wgt_growth) if wgt_growth is not None else None,
+            "momentum":               float(avg_momentum) if avg_momentum is not None else None,
+            "acceleration":           float(avg_acceleration) if avg_acceleration is not None else None,
+            "volatility":             float(avg_volatility) if avg_volatility is not None else None,
+            "confidence_avg":         float(avg_confidence) if avg_confidence is not None else None,
+        }
+
+        if existing:
+            for k, v in snap_data.items():
+                setattr(existing, k, v)
+            existing.updated_at = now
+        else:
+            db.add(EntityTimeSeriesDaily(
+                entity_id=em.id,
+                entity_type="brand",
+                date=target_date,
+                created_at=now,
+                updated_at=now,
+                **snap_data,
+            ))
+
+        upserted += 1
+
+    return upserted
+
+
+# ---------------------------------------------------------------------------
 # Carry-forward — chart continuity on quiet days
 # ---------------------------------------------------------------------------
 
@@ -606,6 +746,16 @@ def run(
 
     db.flush()
 
+    # Brand roll-up: aggregate perfume timeseries → brand entity_market rows.
+    # Runs after perfume snapshots are committed so the JOIN has data to aggregate.
+    brand_rows_written = _rollup_brand_market_data(db, target_date_obj)
+    if brand_rows_written:
+        logger.info(
+            "brand_rollup_written date=%s count=%d",
+            target_date, brand_rows_written,
+        )
+        db.flush()
+
     # Carry-forward: entities active in the past 7 days but silent today
     # get a zero-mention row so chart lines remain continuous.
     cf_written = _carry_forward_quiet_entities(db, target_date_obj)
@@ -622,13 +772,14 @@ def run(
     )
 
     logger.info(
-        "aggregate_daily_market_metrics_completed date=%s entities=%d carry_forward=%d mentions=%d",
-        target_date, len(snapshots), cf_written, mentions_written,
+        "aggregate_daily_market_metrics_completed date=%s entities=%d brands=%d carry_forward=%d mentions=%d",
+        target_date, len(snapshots), brand_rows_written, cf_written, mentions_written,
     )
 
     return {
         "target_date": target_date,
         "entities_processed": len(snapshots),
+        "brand_rows_written": brand_rows_written,
         "carry_forward": cf_written,
         "mentions_written": mentions_written,
     }
