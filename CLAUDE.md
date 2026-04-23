@@ -7119,3 +7119,112 @@ the list was always empty despite showing a non-zero count.
 - [x] KPI "Tracked" shows correct count (entity_id != null)
 - [x] Phase E1 eligibility filter applied to catalog_perfumes
 - [x] Deployed to production Railway
+
+---
+
+## Phase E3 — Brand Market Surface Fix
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `entity_market` (brand rows with entity_type='brand')
+- `entity_timeseries_daily` (brand roll-up rows)
+- `signals` (brand-level signals)
+- `aggregate_daily_market_metrics.py`
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — Dashboard Brand toggle and Screener entity_type=brand filter now return brand entities
+
+### Status
+COMPLETED — 2026-04-23
+
+---
+
+### Root Cause
+
+The aggregator (`aggregate_daily_market_metrics.py`) never created brand market rows:
+
+1. **Aggregator exclusion**: `aggregator.py:251` — `if ent.get("entity_type") != "perfume": continue` — brands always excluded from snapshot writing
+2. **entity_type hardcode**: `_upsert_entity_market()` always created rows with `entity_type="perfume"` regardless of actual entity type
+
+As a result, `entity_market` contained only ~144 perfume rows and zero brand rows. The dashboard Brand toggle and screener `entity_type=brand` filter returned empty results.
+
+---
+
+### Fix
+
+**`perfume_trend_sdk/jobs/aggregate_daily_market_metrics.py`**
+
+Added `_rollup_brand_market_data(db, target_date) -> int`:
+- Queries `entity_market (perfume type) JOIN entity_timeseries_daily` for the target date
+- Groups by `em.brand_name`, filters `HAVING SUM(mention_count) > 0` (real activity required)
+- Computes weighted-average metrics (score, growth weighted by mention_count; momentum/acceleration/volatility/confidence averaged)
+- Upserts `EntityMarket` with `entity_type="brand"`, `entity_id="brand-{slugified_name}"` (e.g. `brand-creed`, `brand-parfums-de-marly`)
+- Upserts `EntityTimeSeriesDaily` with brand roll-up metrics
+
+Called in `run()` after perfume snapshots, before carry-forward. Returns count of brand rows upserted. Logged as `brand_rollup_written date=... count=...`.
+
+---
+
+### Data Path
+
+```
+perfume entity_market rows (existing)
+→ JOIN entity_timeseries_daily for target_date
+→ GROUP BY brand_name HAVING SUM(mention_count) > 0
+→ _rollup_brand_market_data() aggregates metrics per brand
+→ new brand entity_market rows (entity_type='brand', entity_id='brand-{slug}')
+→ new brand entity_timeseries_daily rows
+→ detect_breakout_signals creates brand-level signals
+→ dashboard / screener Brand filter returns brand entities
+```
+
+---
+
+### Production Verification (2026-04-23)
+
+Backfill run across 2026-04-16 through 2026-04-23:
+
+| Date | Brand rows written |
+|------|--------------------|
+| 2026-04-16 | 16 |
+| 2026-04-17 | 55 |
+| 2026-04-18 | 20 |
+| 2026-04-19 | 38 |
+| 2026-04-20 | 27 |
+| 2026-04-21 | 15 |
+| 2026-04-22 | 34 |
+| 2026-04-23 | 33 |
+
+Total brand entity_market rows: **79**
+
+Key brands verified (latest date, ranked by score):
+
+| Brand | entity_id | Score | Mentions |
+|-------|-----------|-------|----------|
+| Creed | brand-creed | 60.04 | 13 |
+| Maison Francis Kurkdjian | brand-maison-francis-kurkdjian | 50.17 | 6 |
+| Parfums de Marly | brand-parfums-de-marly | 46.56 | 6 |
+| Dior | brand-dior | 41.78 | 3 |
+| Yves Saint Laurent | brand-yves-saint-laurent | 39.76 | 2 |
+| Chanel | brand-chanel | 37.00 | 2 |
+
+Signal detection after backfill: 63 new signals (Apr 22) + 28 new signals (Apr 23), including brand-level breakout / new_entry / acceleration_spike signals.
+
+---
+
+### Completion Criteria
+
+- [x] `_rollup_brand_market_data()` implemented and deployed
+- [x] brand entity_market rows created for 79 unique brands
+- [x] brand timeseries rows created across Apr 16–23
+- [x] Creed, MFK, Parfums de Marly, Dior, YSL, Chanel all present with valid scores
+- [x] Signal detection produces brand-level signals
+- [x] Dashboard Brand toggle returns brand entities
+- [x] Screener entity_type=brand filter returns brand entities
+- [x] Brand entity pages navigable via `brand-{slug}` entity_id format
