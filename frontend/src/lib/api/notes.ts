@@ -1,6 +1,7 @@
 import type { NoteRow, AccordRow } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export async function fetchTopNotes(limit = 50): Promise<NoteRow[]> {
   const res = await fetch(`${API_BASE}/api/v1/notes/top?limit=${limit}`);
