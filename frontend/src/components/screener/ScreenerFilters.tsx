@@ -207,6 +207,27 @@ export function ScreenerFilters({ params, onChange }: ScreenerFiltersProps) {
           className="h-7 w-full rounded border border-zinc-700 bg-zinc-900 px-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
         />
       </FilterSection>
+
+      {/* ── Note ─────────────────────────────────────────────────────── */}
+      <FilterSection label="Contains Note">
+        <input
+          type="text"
+          placeholder="e.g. Vanilla"
+          value={params.note ?? ""}
+          onChange={(e) =>
+            onChange({ note: e.target.value || undefined })
+          }
+          className="h-7 w-full rounded border border-zinc-700 bg-zinc-900 px-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
+        />
+        {params.note && (
+          <button
+            onClick={() => onChange({ note: undefined })}
+            className="mt-1 text-[9px] text-zinc-600 hover:text-zinc-400"
+          >
+            Clear
+          </button>
+        )}
+      </FilterSection>
     </div>
   );
 }

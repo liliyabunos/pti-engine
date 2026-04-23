@@ -36,6 +36,8 @@ class EntitySummary(BaseModel):
     # Latest signal (if any) for screener/dashboard enrichment
     latest_signal_type: Optional[str] = None
     latest_signal_strength: Optional[float] = None
+    # Top 3 notes for screener chips (populated only in screener response, empty otherwise)
+    top_notes: List[str] = []
 
 
 class SnapshotRow(BaseModel):

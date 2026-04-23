@@ -21,6 +21,7 @@ import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum } from "@/lib/formatters";
 import type { EntityChartMetric } from "@/components/entity/EntityChart";
+import type { SimilarPerfumeRow } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
 // State badge
@@ -58,16 +59,34 @@ function NotesPill({ name }: { name: string }) {
   );
 }
 
+function SourceBadge({ source }: { source: string | null | undefined }) {
+  if (!source) return null;
+  const label = source === "fragrantica" ? "Fragrantica" : "Parfumo Dataset";
+  const color =
+    source === "fragrantica"
+      ? "border-violet-800 bg-violet-950/40 text-violet-400"
+      : "border-zinc-700 bg-zinc-800/40 text-zinc-500";
+  return (
+    <span
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${color}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function NotesSection({
   top,
   middle,
   base,
   accords,
+  source,
 }: {
   top: string[];
   middle: string[];
   base: string[];
   accords: string[];
+  source?: string | null;
 }) {
   const hasNotes = top.length || middle.length || base.length;
   const hasAccords = accords.length > 0;
@@ -75,7 +94,10 @@ function NotesSection({
 
   return (
     <TerminalPanel>
-      <SectionHeader title="Notes & Accords" />
+      <div className="flex items-center justify-between">
+        <SectionHeader title="Notes & Accords" />
+        <SourceBadge source={source} />
+      </div>
       <div className="mt-3 space-y-3">
         {hasAccords && (
           <div>
@@ -125,6 +147,52 @@ function NotesSection({
             </div>
           </div>
         )}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+function SimilarByNotes({ rows }: { rows: SimilarPerfumeRow[] }) {
+  const router = useRouter();
+  if (!rows.length) return null;
+  return (
+    <TerminalPanel noPad>
+      <div className="p-4">
+        <SectionHeader
+          title="Similar by Notes"
+          subtitle={`${rows.length} perfumes sharing ingredients`}
+        />
+      </div>
+      <PanelDivider />
+      <div className="divide-y divide-zinc-800/40">
+        {rows.map((r) => {
+          const href = r.entity_id
+            ? `/entities/perfume/${encodeURIComponent(r.entity_id)}`
+            : r.resolver_id
+            ? `/entities/perfume/${r.resolver_id}`
+            : null;
+          return (
+            <div
+              key={r.resolver_id ?? r.canonical_name}
+              onClick={href ? () => router.push(href) : undefined}
+              className={`flex items-center justify-between px-4 py-2 transition-colors ${href ? "cursor-pointer hover:bg-zinc-800/30" : ""}`}
+            >
+              <div className="min-w-0">
+                <span className="block truncate text-xs text-zinc-200">
+                  {r.canonical_name}
+                </span>
+                {r.brand_name && (
+                  <span className="block text-[10px] text-zinc-600">
+                    {r.brand_name}
+                  </span>
+                )}
+              </div>
+              <span className="ml-4 shrink-0 text-[10px] tabular-nums text-zinc-500">
+                {r.shared_notes} shared
+              </span>
+            </div>
+          );
+        })}
       </div>
     </TerminalPanel>
   );
@@ -377,7 +445,13 @@ export default function PerfumeEntityPage({ params }: PageProps) {
               middle={data.notes_middle}
               base={data.notes_base}
               accords={data.accords}
+              source={data.notes_source}
             />
+
+            {/* ── Similar by notes ────────────────────────────────────────── */}
+            {data.similar_perfumes?.length > 0 && (
+              <SimilarByNotes rows={data.similar_perfumes} />
+            )}
 
             {/* ── Signals + mentions (tracked only) ──────────────────────── */}
             {isTracked && (

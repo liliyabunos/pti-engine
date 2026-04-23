@@ -109,6 +109,7 @@ function paramsToSearch(p: ScreenerParams, mode: ScreenerMode): string {
   if (p.entity_type) q.set("entity_type", p.entity_type);
   if (p.signal_type) q.set("signal_type", p.signal_type);
   if (p.has_signals) q.set("has_signals", "true");
+  if (p.note) q.set("note", p.note);
   if (p.min_score != null && p.min_score > 0)
     q.set("min_score", String(p.min_score));
   if (p.min_confidence != null && p.min_confidence > 0)
@@ -128,6 +129,7 @@ function searchToParams(sp: URLSearchParams): ScreenerParams {
     entity_type: sp.get("entity_type") ?? undefined,
     signal_type: sp.get("signal_type") ?? undefined,
     has_signals: sp.get("has_signals") === "true" ? true : undefined,
+    note: sp.get("note") ?? undefined,
     min_score: sp.get("min_score") ? Number(sp.get("min_score")) : undefined,
     min_confidence: sp.get("min_confidence")
       ? Number(sp.get("min_confidence"))
@@ -426,6 +428,7 @@ function ScreenerPageInner() {
         min_score: undefined,
         min_confidence: undefined,
         min_mentions: undefined,
+        note: undefined,
         ...preset.params,
       };
       setParams(next);
@@ -440,6 +443,7 @@ function ScreenerPageInner() {
       order: "desc",
       limit: PAGE_SIZE,
       offset: 0,
+      note: undefined,
     };
     setSearch("");
     setDebouncedSearch("");
@@ -550,6 +554,7 @@ function ScreenerPageInner() {
     (params.entity_type ||
       params.signal_type ||
       params.has_signals ||
+      params.note ||
       (params.min_score ?? 0) > 0 ||
       (params.min_confidence ?? 0) > 0 ||
       (params.min_mentions ?? 0) > 0);

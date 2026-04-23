@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from perfume_trend_sdk.analysis.ranking.variant_collapser import collapse_and_rank
@@ -189,6 +189,7 @@ def get_screener(
     min_mentions: float = Query(0.0, description="Minimum mention_count"),
     signal_type: Optional[str] = Query(None, description="Filter to entities with this signal type"),
     has_signals: Optional[bool] = Query(None, description="true = only entities with any signal"),
+    note: Optional[str] = Query(None, description="Filter perfumes containing this note name"),
     # Sorting
     sort_by: str = Query("composite_market_score", description=f"One of: {', '.join(sorted(_SORT_FIELDS))}"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
@@ -228,6 +229,21 @@ def get_screener(
             return {r[0] for r in q.distinct().all()}
         entity_uuids_with_signal = _safe(_fetch_signal_uuids, set(), "signal_filter")
 
+    # Build set of entity UUIDs that contain the note (for note filter)
+    entity_uuids_with_note: Optional[set] = None
+    if note and note.strip():
+        def _fetch_note_uuids():
+            note_rows = db.execute(text("""
+                SELECT DISTINCT em.id
+                FROM entity_market em
+                JOIN resolver_perfumes rp ON LOWER(rp.canonical_name) = LOWER(em.canonical_name)
+                JOIN resolver_perfume_notes rpn ON rpn.resolver_perfume_id = rp.id
+                WHERE em.entity_type = 'perfume'
+                  AND LOWER(rpn.note_name) = LOWER(:note)
+            """), {"note": note.strip()}).fetchall()
+            return {r[0] for r in note_rows}
+        entity_uuids_with_note = _safe(_fetch_note_uuids, set(), "note_filter")
+
     summaries: List[EntitySummary] = []
     for em, snap in rows:
         score = snap.composite_market_score if snap else 0.0
@@ -244,6 +260,8 @@ def get_screener(
         if (mentions or 0.0) < min_mentions:
             continue
         if entity_uuids_with_signal is not None and em.id not in entity_uuids_with_signal:
+            continue
+        if entity_uuids_with_note is not None and em.id not in entity_uuids_with_note:
             continue
 
         sig_info = latest_signal_map.get(em.id)
@@ -274,6 +292,35 @@ def get_screener(
 
     total = len(summaries)
     page = summaries[offset: offset + limit]
+
+    # Batch-fetch top 3 notes per perfume entity in the current page
+    if page:
+        page_entity_ids = [s.entity_id for s in page]
+        try:
+            note_rows = db.execute(text("""
+                SELECT em.entity_id, rpn.note_name, COUNT(*) AS cnt
+                FROM entity_market em
+                JOIN resolver_perfumes rp ON LOWER(rp.canonical_name) = LOWER(em.canonical_name)
+                JOIN resolver_perfume_notes rpn ON rpn.resolver_perfume_id = rp.id
+                WHERE em.entity_id = ANY(:ids)
+                  AND em.entity_type = 'perfume'
+                GROUP BY em.entity_id, rpn.note_name
+                ORDER BY em.entity_id, cnt DESC
+            """), {"ids": page_entity_ids}).fetchall()
+            # Build entity_id → top 3 notes map
+            notes_map: dict = {}
+            for eid, note_name, _cnt in note_rows:
+                if eid not in notes_map:
+                    notes_map[eid] = []
+                if len(notes_map[eid]) < 3:
+                    notes_map[eid].append(note_name)
+            # Apply to page rows
+            page = [
+                s.model_copy(update={"top_notes": notes_map.get(s.entity_id, [])})
+                for s in page
+            ]
+        except Exception as exc:
+            _log.warning("[PTI] screener top_notes batch failed: %s", exc)
 
     return ScreenerResponse(
         total=total,

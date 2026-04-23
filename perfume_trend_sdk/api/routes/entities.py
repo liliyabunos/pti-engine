@@ -141,6 +141,14 @@ class BrandPerfumeRow(BaseModel):
     mention_count: Optional[float] = None
 
 
+class SimilarPerfumeRow(BaseModel):
+    canonical_name: str
+    brand_name: Optional[str] = None
+    resolver_id: Optional[int] = None
+    entity_id: Optional[str] = None   # set when tracked in market engine
+    shared_notes: int = 0
+
+
 class PerfumeEntityDetail(BaseModel):
     """Richer perfume entity response — works for tracked AND catalog-only entities."""
     id: str
@@ -168,6 +176,8 @@ class PerfumeEntityDetail(BaseModel):
     notes_middle: List[str] = []
     notes_base: List[str] = []
     accords: List[str] = []
+    notes_source: Optional[str] = None   # "fragrantica" | "parfumo"
+    similar_perfumes: List[SimilarPerfumeRow] = []
 
 
 class BrandEntityDetail(BaseModel):
@@ -189,6 +199,9 @@ class BrandEntityDetail(BaseModel):
     top_perfumes: List[BrandPerfumeRow] = []
     timeseries: List[SnapshotRow] = []
     recent_signals: List[SignalRow] = []
+    # Aggregated notes/accords across brand portfolio
+    top_notes: List[str] = []
+    top_accords: List[str] = []
 
 
 # ---------------------------------------------------------------------------
@@ -288,12 +301,55 @@ def _resolver_notes(db: Session, resolver_id: int):
 
 
 def _get_perfume_notes(db: Session, entity_id_slug: str, resolver_id: Optional[int]):
-    """Return notes/accords, preferring fragrantica_records then falling back to resolver_perfume_notes."""
+    """Return (top, mid, base, acc, source) preferring fragrantica then falling back to resolver_perfume_notes."""
     top, mid, base, acc = _fragrantica_notes(db, entity_id_slug)
     if top or mid or base or acc:
-        return top, mid, base, acc
+        return top, mid, base, acc, "fragrantica"
     # Fallback: dataset-imported notes (Phase 1B)
-    return _resolver_notes(db, resolver_id)
+    top, mid, base, acc = _resolver_notes(db, resolver_id)
+    if top or mid or base or acc:
+        return top, mid, base, acc, "parfumo"
+    return [], [], [], [], None
+
+
+def _similar_by_notes(db: Session, resolver_id: int, limit: int = 8) -> List[SimilarPerfumeRow]:
+    """Find perfumes that share the most notes with the given resolver perfume."""
+    if not resolver_id:
+        return []
+    rows = _safe(lambda: db.execute(
+        text("""
+        SELECT
+            rp2.id,
+            rp2.canonical_name,
+            rb2.canonical_name,
+            em.entity_id,
+            COUNT(*) AS shared_notes
+        FROM resolver_perfume_notes rpn1
+        JOIN resolver_perfume_notes rpn2
+            ON rpn1.normalized_name = rpn2.normalized_name
+           AND rpn2.resolver_perfume_id != :rid
+        JOIN resolver_perfumes rp2 ON rp2.id = rpn2.resolver_perfume_id
+        LEFT JOIN resolver_brands rb2 ON rb2.id = rp2.brand_id
+        LEFT JOIN entity_market em
+            ON LOWER(em.canonical_name) = LOWER(rp2.canonical_name)
+           AND em.entity_type = 'perfume'
+        WHERE rpn1.resolver_perfume_id = :rid
+        GROUP BY rp2.id, rp2.canonical_name, rb2.canonical_name, em.entity_id
+        ORDER BY shared_notes DESC, rp2.canonical_name
+        LIMIT :lim
+        """),
+        {"rid": resolver_id, "lim": limit},
+    ).fetchall(), [], "similar_by_notes")
+    return [
+        SimilarPerfumeRow(
+            resolver_id=int(r[0]),
+            canonical_name=r[1],
+            brand_name=r[2],
+            entity_id=r[3],
+            shared_notes=int(r[4]),
+        )
+        for r in rows
+    ]
 
 
 def _brand_perfume_count(db: Session, brand_canonical_name: str) -> int:
@@ -322,6 +378,42 @@ def _brand_active_perfume_count(db: Session, brand_canonical_name: str) -> int:
         {"n": brand_canonical_name},
     ).fetchone(), None, "brand_active_perfumes")
     return int(row[0]) if row else 0
+
+
+def _brand_top_notes(db: Session, brand_canonical_name: str, limit: int = 15) -> List[str]:
+    """Aggregate top notes across all brand perfumes in the KB."""
+    rows = _safe(lambda: db.execute(
+        text("""
+        SELECT rpn.note_name, COUNT(*) AS cnt
+        FROM resolver_perfumes rp
+        JOIN resolver_brands rb ON rp.brand_id = rb.id
+        JOIN resolver_perfume_notes rpn ON rpn.resolver_perfume_id = rp.id
+        WHERE LOWER(rb.canonical_name) = LOWER(:n)
+        GROUP BY rpn.note_name
+        ORDER BY cnt DESC
+        LIMIT :lim
+        """),
+        {"n": brand_canonical_name, "lim": limit},
+    ).fetchall(), [], "brand_top_notes")
+    return [r[0] for r in rows]
+
+
+def _brand_top_accords(db: Session, brand_canonical_name: str, limit: int = 10) -> List[str]:
+    """Aggregate top accords across all brand perfumes in the KB."""
+    rows = _safe(lambda: db.execute(
+        text("""
+        SELECT rpa.accord_name, COUNT(*) AS cnt
+        FROM resolver_perfumes rp
+        JOIN resolver_brands rb ON rp.brand_id = rb.id
+        JOIN resolver_perfume_accords rpa ON rpa.resolver_perfume_id = rp.id
+        WHERE LOWER(rb.canonical_name) = LOWER(:n)
+        GROUP BY rpa.accord_name
+        ORDER BY cnt DESC
+        LIMIT :lim
+        """),
+        {"n": brand_canonical_name, "lim": limit},
+    ).fetchall(), [], "brand_top_accords")
+    return [r[0] for r in rows]
 
 
 def _brand_top_perfumes(db: Session, brand_canonical_name: str) -> List[BrandPerfumeRow]:
@@ -474,7 +566,8 @@ def get_perfume_entity(
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "perfume")
         aliases = _aliases_count(db, resolver_id, "perfume") if resolver_id else 0
-        notes_top, notes_mid, notes_base, accords = _get_perfume_notes(db, em.entity_id, resolver_id)
+        notes_top, notes_mid, notes_base, accords, notes_source = _get_perfume_notes(db, em.entity_id, resolver_id)
+        similar = _similar_by_notes(db, resolver_id) if resolver_id else []
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         return PerfumeEntityDetail(
@@ -499,6 +592,8 @@ def get_perfume_entity(
             notes_middle=notes_mid,
             notes_base=notes_base,
             accords=accords,
+            notes_source=notes_source,
+            similar_perfumes=similar,
         )
 
     # Step 2: try catalog-only lookup via resolver_id
@@ -522,6 +617,8 @@ def get_perfume_entity(
 
     aliases = _aliases_count(db, resolver_id, "perfume")
     cat_top, cat_mid, cat_base, cat_acc = _resolver_notes(db, resolver_id)
+    cat_source = "parfumo" if (cat_top or cat_mid or cat_base or cat_acc) else None
+    similar = _similar_by_notes(db, resolver_id)
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
@@ -533,6 +630,8 @@ def get_perfume_entity(
         notes_middle=cat_mid,
         notes_base=cat_base,
         accords=cat_acc,
+        notes_source=cat_source,
+        similar_perfumes=similar,
     )
 
 
@@ -565,6 +664,8 @@ def get_brand_entity(
         perfume_count = _brand_perfume_count(db, em.canonical_name)
         active_count = _brand_active_perfume_count(db, em.canonical_name)
         top_perfumes = _brand_top_perfumes(db, em.canonical_name)
+        top_notes = _brand_top_notes(db, em.canonical_name)
+        top_accords = _brand_top_accords(db, em.canonical_name)
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
@@ -584,6 +685,8 @@ def get_brand_entity(
             top_perfumes=top_perfumes,
             timeseries=_build_snapshot_rows(history_rows),
             recent_signals=_build_signal_rows(signal_rows, em, None),
+            top_notes=top_notes,
+            top_accords=top_accords,
         )
 
     # Step 2: try catalog-only lookup via resolver_id
@@ -601,12 +704,16 @@ def get_brand_entity(
         raise HTTPException(status_code=404, detail=f"Brand not found: {id}")
 
     perfume_count = _brand_perfume_count(db, rb_row[1])
+    top_notes = _brand_top_notes(db, rb_row[1])
+    top_accords = _brand_top_accords(db, rb_row[1])
     return BrandEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
         canonical_name=rb_row[1],
         state="catalog_only",
         perfume_count=perfume_count,
+        top_notes=top_notes,
+        top_accords=top_accords,
     )
 
 

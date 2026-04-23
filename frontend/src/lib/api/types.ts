@@ -82,6 +82,8 @@ export interface EntitySummary {
   growth_rate: number | null;
   latest_signal_type: string | null;
   latest_signal_strength: number | null;
+  /** Top 3 notes — populated in screener response, empty otherwise */
+  top_notes: string[];
 }
 
 export interface ScreenerResponse {
@@ -143,6 +145,14 @@ export interface EntityDetail {
 // Phase U2 — type-specific entity detail responses
 // ---------------------------------------------------------------------------
 
+export interface SimilarPerfumeRow {
+  canonical_name: string;
+  brand_name: string | null;
+  resolver_id: number | null;
+  entity_id: string | null;
+  shared_notes: number;
+}
+
 export interface PerfumeEntityDetail {
   id: string;
   resolver_id: number | null;
@@ -167,6 +177,9 @@ export interface PerfumeEntityDetail {
   notes_middle: string[];
   notes_base: string[];
   accords: string[];
+  /** "fragrantica" | "parfumo" | null */
+  notes_source: string | null;
+  similar_perfumes: SimilarPerfumeRow[];
 }
 
 export interface BrandPerfumeRow {
@@ -194,6 +207,10 @@ export interface BrandEntityDetail {
   top_perfumes: BrandPerfumeRow[];
   timeseries: SnapshotRow[];
   recent_signals: SignalRow[];
+  /** Top notes aggregated across brand portfolio */
+  top_notes: string[];
+  /** Top accords aggregated across brand portfolio */
+  top_accords: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -253,6 +270,16 @@ export interface CatalogParams {
   active_only?: boolean;
 }
 
+export interface NoteRow {
+  note_name: string;
+  perfume_count: number;
+}
+
+export interface AccordRow {
+  accord_name: string;
+  perfume_count: number;
+}
+
 export interface ScreenerParams {
   entity_type?: string;
   min_score?: number;
@@ -260,6 +287,7 @@ export interface ScreenerParams {
   min_mentions?: number;
   signal_type?: string;
   has_signals?: boolean;
+  note?: string;
   sort_by?: string;
   order?: "asc" | "desc";
   limit?: number;

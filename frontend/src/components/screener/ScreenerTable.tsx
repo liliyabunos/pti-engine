@@ -137,6 +137,27 @@ const COLUMNS = [
     meta: { sortKey: undefined },
     cell: (c) => <SignalBadge type={c.getValue()} />,
   }),
+  col.accessor("top_notes", {
+    header: "Notes",
+    size: 160,
+    meta: { sortKey: undefined },
+    cell: (c) => {
+      const notes = c.getValue() ?? [];
+      if (!notes.length) return <span className="text-zinc-700">—</span>;
+      return (
+        <div className="flex flex-wrap gap-0.5">
+          {notes.slice(0, 3).map((n) => (
+            <span
+              key={n}
+              className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1 py-0 text-[9px] text-zinc-500"
+            >
+              {n}
+            </span>
+          ))}
+        </div>
+      );
+    },
+  }),
 ];
 
 // ---------------------------------------------------------------------------

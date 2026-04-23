@@ -290,6 +290,52 @@ export default function BrandEntityPage({ params }: PageProps) {
               <LinkedPerfumesTable rows={data.top_perfumes} />
             </TerminalPanel>
 
+            {/* ── Top notes & accords ─────────────────────────────────────── */}
+            {(data.top_notes?.length > 0 || data.top_accords?.length > 0) && (
+              <TerminalPanel>
+                <SectionHeader
+                  title="Notes & Accords"
+                  subtitle="aggregated across brand portfolio"
+                />
+                <div className="mt-3 space-y-3">
+                  {data.top_accords?.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                        Top Accords
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {data.top_accords.map((a) => (
+                          <span
+                            key={a}
+                            className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                          >
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {data.top_notes?.length > 0 && (
+                    <div>
+                      <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                        Top Notes
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {data.top_notes.map((n) => (
+                          <span
+                            key={n}
+                            className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                          >
+                            {n}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TerminalPanel>
+            )}
+
             {/* ── Signal timeline (tracked only) ─────────────────────────── */}
             {isTracked && data.recent_signals.length > 0 && (
               <TerminalPanel noPad>
