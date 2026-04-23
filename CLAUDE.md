@@ -1,5 +1,23 @@
 # CLAUDE.md — Perfume Trend Intelligence SDK
 
+## Frontend Production Verification Rule
+
+Healthcheck success is NOT sufficient production proof.
+
+A frontend task is BLOCKED if the shell loads but real dashboard/screener data fetch fails.
+
+**Production verification requires ALL of the following:**
+- Dashboard loads real data (entity rows visible, not empty/error state)
+- Screener loads real data (rows visible, not empty/error state)
+- "API down" indicator disappears from StatusBar
+- No "TypeError: Failed to fetch" or "Failed to load" errors in browser
+
+`/api/health → {"ok":true}` and `/ → 200` do NOT prove the product works.
+
+**Common cause**: `NEXT_PUBLIC_API_BASE_URL` not embedded at build time → browser uses `http://localhost:8000` fallback → mixed-content failure from HTTPS page. Fix: set in `next.config.ts` env block as a hardcoded build-time fallback.
+
+---
+
 ## 🔒 Core Constraint
 
 This system is a distributed multi-service architecture.
