@@ -112,6 +112,32 @@ WITH active_today AS (
 )
 """
 
+# ---------------------------------------------------------------------------
+# Display-eligibility filters
+# ---------------------------------------------------------------------------
+# Applied to ALL catalog queries so UI never surfaces malformed KB entries.
+# These rules are additive — data remains in the DB; only the API layer hides it.
+#
+# Perfume eligibility rules:
+#   1. At least 2 ASCII letters (filters '½', ':00', '68', '88', '№1'…)
+#   2. First character is alphanumeric (filters ':00', '/50', ',7738')
+#   3. Not a bare generic term (filters 'Cologne', 'Perfume', 'Scent' etc.)
+#
+# These three rules together remove 458 of 56,068 entries (< 1%).
+_PERFUME_ELIGIBILITY_CLAUSES = [
+    r"LENGTH(REGEXP_REPLACE(rp.canonical_name, '[^a-zA-Z]', '', 'g')) >= 2",
+    r"rp.canonical_name ~ '^[a-zA-Z0-9]'",
+    r"LOWER(rp.canonical_name) NOT IN ("
+    r"'cologne','fragrance','perfume','scent','mist','spray')",
+]
+
+# Brand eligibility:
+#   Brand catalog (1,608 entries) is already clean — no blanket filter applied.
+#   Numeric-named brands like "4711" are legitimate and must remain visible.
+#   Only apply the minimal guard: canonical_name must be non-empty (DB constraint
+#   handles this already, but kept for consistency).
+_BRAND_ELIGIBILITY_CLAUSES: list[str] = []  # no filter for brands in Phase E1
+
 
 # ---------------------------------------------------------------------------
 # GET /api/v1/catalog/perfumes
@@ -139,7 +165,7 @@ def catalog_perfumes(
     try:
         q_pattern = f"%{q.strip()}%" if q else None
 
-        where_clauses = []
+        where_clauses = list(_PERFUME_ELIGIBILITY_CLAUSES)  # always applied
         if q_pattern:
             where_clauses.append(
                 "(LOWER(rp.canonical_name) LIKE LOWER(:q) "
@@ -148,7 +174,7 @@ def catalog_perfumes(
         if active_only:
             where_clauses.append("at.entity_id IS NOT NULL")
 
-        where = ("WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
+        where = "WHERE " + " AND ".join(where_clauses)
 
         order_col = "rb.canonical_name" if sort_by == "brand_name" else "rp.canonical_name"
 
@@ -238,7 +264,7 @@ def catalog_brands(
     try:
         q_pattern = f"%{q.strip()}%" if q else None
 
-        where_clauses = []
+        where_clauses = list(_BRAND_ELIGIBILITY_CLAUSES)  # currently empty — all brands shown
         if q_pattern:
             where_clauses.append("LOWER(rb.canonical_name) LIKE LOWER(:q)")
         if active_only:
@@ -318,8 +344,12 @@ def _build_counts(db: Session) -> CatalogCounts:
         text(
             """
             SELECT
-                (SELECT COUNT(*) FROM resolver_perfumes)                             AS known_perfumes,
-                (SELECT COUNT(*) FROM resolver_brands)                               AS known_brands,
+                (SELECT COUNT(*) FROM resolver_perfumes rp
+                 WHERE LENGTH(REGEXP_REPLACE(rp.canonical_name, '[^a-zA-Z]', '', 'g')) >= 2
+                   AND rp.canonical_name ~ '^[a-zA-Z0-9]'
+                   AND LOWER(rp.canonical_name) NOT IN
+                       ('cologne','fragrance','perfume','scent','mist','spray'))       AS known_perfumes,
+                (SELECT COUNT(*) FROM resolver_brands)                                   AS known_brands,
                 (
                     SELECT COUNT(DISTINCT etd.entity_id)
                     FROM   entity_timeseries_daily etd

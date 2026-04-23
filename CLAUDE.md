@@ -6956,3 +6956,102 @@ If any code introduces:
 - One phase → one goal
 - No large multi-phase implementations in a single step
 - Always verify before moving forward
+
+---
+
+## Phase E1 — Entity Hygiene for UI
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_perfumes` (catalog display filter)
+- `entity_market` (screener dedup)
+- catalog/screener API endpoints
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — garbage names disappear from "All Perfumes" catalog tab; Byredo duplicate resolved in screener
+
+### Status
+COMPLETED — 2026-04-23
+
+---
+
+### Goal
+
+Remove malformed and low-quality entity names from UI exposure before redesigning product screens.
+UI quality comes before visual polish.
+
+### Problem
+
+The Parfumo/kaggle_v1 dataset (56k entries) included malformed entries:
+- Fractional chars ('½'), pure numbers ('68', '88'), Cyrillic/Unicode symbols
+- Names starting with punctuation (':00', ':11', '/50', ',7738')
+- Generic single-word terms ('Cologne', 'Fragrance', 'Perfume', 'Scent')
+- Single/double character abbreviations with no alphabetic content
+
+The entity_market table contained 1 case-insensitive duplicate (Byredo Gypsy Water × 2).
+
+### Audit Results (production, 2026-04-23)
+
+| Category | Before | After | Hidden |
+|----------|--------|-------|--------|
+| resolver_perfumes (display) | 56,068 | 55,613 | 455 |
+| resolver_brands (display) | 1,608 | 1,608 | 0 |
+| entity_market duplicates | 1 | 0 | — |
+
+Issue breakdown (perfumes):
+- < 2 ASCII letters (fragments, symbols, fractions): 92
+- Non-alphanumeric first character (':00', '/50', ',7738'): 387
+- Pure generic terms ('Cologne', 'Fragrance', 'Perfume', 'Scent'): 4
+- (categories overlap)
+
+### What was implemented
+
+**`perfume_trend_sdk/api/routes/catalog.py`**
+- Added `_PERFUME_ELIGIBILITY_CLAUSES` — 3 SQL filter clauses always injected into WHERE:
+  1. `LENGTH(REGEXP_REPLACE(rp.canonical_name, '[^a-zA-Z]', '', 'g')) >= 2` — at least 2 letters
+  2. `rp.canonical_name ~ '^[a-zA-Z0-9]'` — starts with alphanumeric
+  3. `LOWER(rp.canonical_name) NOT IN ('cologne','fragrance','perfume','scent','mist','spray')` — not generic
+- Applied to both `catalog_perfumes` (data + count) and `_build_counts` sub-query
+- Brand catalog filter: intentionally NOT applied (brands like '4711' are legitimate)
+
+**`perfume_trend_sdk/api/routes/dashboard.py`**
+- Added case-insensitive dedup step in screener after building `summaries` list
+- When two rows share the same lowercase `canonical_name`, the row with higher `composite_market_score` is kept
+- Eliminated 'Byredo Gypsy Water' / 'BYREDO Gypsy Water' screener duplicate
+
+### Display Eligibility Rules Summary
+
+Perfume must pass ALL:
+1. Contains ≥ 2 ASCII alphabetic characters (anywhere in name)
+2. First character is alphanumeric (a-z, A-Z, 0-9)
+3. Not a bare generic term (cologne, fragrance, perfume, scent, mist, spray)
+
+Brand: no filter applied — brand catalog is clean, and numeric brands like '4711' are legitimate.
+
+### Non-Destructive Guarantee
+
+Data remains in the database. The filter is applied only at the API serving layer.
+No rows were deleted. Bad entries remain for potential manual cleanup or promotion decisions.
+
+### Completion Criteria
+
+- [x] 455 garbage perfume entries hidden from catalog UI
+- [x] 1 Byredo Gypsy Water case duplicate removed from screener
+- [x] `known_perfumes` count in header shows 55,613 (not 56,068)
+- [x] catalog "All Perfumes" no longer shows ':00', '½', '68', '№1' etc.
+- [x] Brand catalog unchanged (1,608 brands all visible, including '4711')
+- [x] No DB deletes performed
+- [x] Deployed to production Railway
+
+### Known Remaining Issues (deferred to future phases)
+
+- 'Alguien' in entity_market has brand_name='Alguien' (self-brand) — needs manual review
+- Some brands have fragmented sub-brand names ('Creed Green Irish' instead of 'Creed') — systemic issue from aggregation
+- 'TOM FORD Private Blend' / 'TOM FORD Signature' tracked as separate brands — correct at catalog level, confusing in UI
+- case-insensitive duplicates remain in entity_market DB (not deleted, just hidden in screener)

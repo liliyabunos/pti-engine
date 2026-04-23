@@ -286,6 +286,24 @@ def get_screener(
             latest_signal_strength=sig_info[1] if sig_info else None,
         ))
 
+    # Deduplicate by case-insensitive canonical_name: keep the row with the
+    # higher composite_market_score when the same perfume was resolved under
+    # multiple casings (e.g. "Byredo Gypsy Water" vs "BYREDO Gypsy Water").
+    seen_names: dict[str, EntitySummary] = {}
+    deduped: List[EntitySummary] = []
+    for s in summaries:
+        key = s.canonical_name.lower()
+        if key not in seen_names:
+            seen_names[key] = s
+            deduped.append(s)
+        else:
+            existing = seen_names[key]
+            if (s.composite_market_score or 0.0) > (existing.composite_market_score or 0.0):
+                # Replace the weaker duplicate
+                deduped[deduped.index(existing)] = s
+                seen_names[key] = s
+    summaries = deduped
+
     # Sort
     reverse = order == "desc"
     summaries.sort(key=lambda s: getattr(s, sort_by) or 0.0, reverse=reverse)
