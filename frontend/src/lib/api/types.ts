@@ -204,6 +204,9 @@ export interface BrandEntityDetail {
   latest_score: number | null;
   latest_growth: number | null;
   latest_signal: string | null;
+  /** All catalog perfumes for the brand (from resolver, up to 100). entity_id=null for untracked. */
+  catalog_perfumes: BrandPerfumeRow[];
+  /** Alias for catalog_perfumes — kept for backward compat */
   top_perfumes: BrandPerfumeRow[];
   timeseries: SnapshotRow[];
   recent_signals: SignalRow[];

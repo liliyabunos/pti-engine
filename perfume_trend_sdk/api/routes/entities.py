@@ -195,8 +195,10 @@ class BrandEntityDetail(BaseModel):
     latest_score: Optional[float] = None
     latest_growth: Optional[float] = None
     latest_signal: Optional[str] = None
-    # Linked perfumes (tracked, ordered by score)
-    top_perfumes: List[BrandPerfumeRow] = []
+    # Linked perfumes — catalog_perfumes: all from resolver (up to 100)
+    # top_perfumes kept for backward compat (same data as catalog_perfumes)
+    catalog_perfumes: List[BrandPerfumeRow] = []
+    top_perfumes: List[BrandPerfumeRow] = []   # alias: same list
     timeseries: List[SnapshotRow] = []
     recent_signals: List[SignalRow] = []
     # Aggregated notes/accords across brand portfolio
@@ -416,30 +418,47 @@ def _brand_top_accords(db: Session, brand_canonical_name: str, limit: int = 10) 
     return [r[0] for r in rows]
 
 
-def _brand_top_perfumes(db: Session, brand_canonical_name: str) -> List[BrandPerfumeRow]:
+def _brand_catalog_perfumes(db: Session, brand_canonical_name: str, limit: int = 100) -> List[BrandPerfumeRow]:
+    """Return all catalog perfumes for a brand from resolver_perfumes (source of truth).
+
+    LEFT JOINs to entity_market + entity_timeseries_daily to populate market data
+    where available. Catalog-only perfumes (no ingested data) are included with
+    entity_id=None and all market fields null. Eligibility filter from Phase E1
+    is applied to hide malformed KB entries.
+    """
     rows = _safe(lambda: db.execute(
         text("""
+        WITH latest_date_per_entity AS (
+            SELECT entity_id, MAX(date) AS latest_date
+            FROM entity_timeseries_daily
+            WHERE mention_count > 0
+            GROUP BY entity_id
+        )
         SELECT
             em.entity_id,
-            em.canonical_name,
+            rp.canonical_name,
             etd.composite_market_score,
             etd.mention_count,
             CASE WHEN etd.mention_count > 0 THEN true ELSE false END AS has_activity_today
-        FROM entity_market em
-        LEFT JOIN entity_timeseries_daily etd ON (
-            etd.entity_id = em.id
-            AND etd.date = (
-                SELECT MAX(e2.date) FROM entity_timeseries_daily e2
-                WHERE e2.entity_id = em.id AND e2.mention_count > 0
-            )
-        )
-        WHERE em.entity_type = 'perfume'
-          AND LOWER(em.brand_name) = LOWER(:n)
-        ORDER BY COALESCE(etd.composite_market_score, 0) DESC
-        LIMIT 20
+        FROM resolver_perfumes rp
+        JOIN resolver_brands rb ON rp.brand_id = rb.id
+        LEFT JOIN entity_market em
+            ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+            AND em.entity_type = 'perfume'
+        LEFT JOIN latest_date_per_entity ld ON ld.entity_id = em.id
+        LEFT JOIN entity_timeseries_daily etd
+            ON etd.entity_id = em.id AND etd.date = ld.latest_date
+        WHERE LOWER(rb.canonical_name) = LOWER(:n)
+          AND LENGTH(REGEXP_REPLACE(rp.canonical_name, '[^a-zA-Z]', '', 'g')) >= 2
+          AND rp.canonical_name ~ '^[a-zA-Z0-9]'
+          AND LOWER(rp.canonical_name) NOT IN
+              ('cologne','fragrance','perfume','scent','mist','spray')
+        ORDER BY COALESCE(etd.composite_market_score, 0) DESC,
+                 rp.canonical_name ASC
+        LIMIT :lim
         """),
-        {"n": brand_canonical_name},
-    ).fetchall(), [], "brand_top_perfumes")
+        {"n": brand_canonical_name, "lim": limit},
+    ).fetchall(), [], "brand_catalog_perfumes")
     return [
         BrandPerfumeRow(
             entity_id=r[0],
@@ -663,7 +682,7 @@ def get_brand_entity(
 
         perfume_count = _brand_perfume_count(db, em.canonical_name)
         active_count = _brand_active_perfume_count(db, em.canonical_name)
-        top_perfumes = _brand_top_perfumes(db, em.canonical_name)
+        catalog_perfumes = _brand_catalog_perfumes(db, em.canonical_name)
         top_notes = _brand_top_notes(db, em.canonical_name)
         top_accords = _brand_top_accords(db, em.canonical_name)
 
@@ -682,7 +701,8 @@ def get_brand_entity(
             latest_score=latest.composite_market_score if latest else None,
             latest_growth=latest.growth_rate if latest else None,
             latest_signal=latest_sig,
-            top_perfumes=top_perfumes,
+            catalog_perfumes=catalog_perfumes,
+            top_perfumes=catalog_perfumes,
             timeseries=_build_snapshot_rows(history_rows),
             recent_signals=_build_signal_rows(signal_rows, em, None),
             top_notes=top_notes,
@@ -704,6 +724,7 @@ def get_brand_entity(
         raise HTTPException(status_code=404, detail=f"Brand not found: {id}")
 
     perfume_count = _brand_perfume_count(db, rb_row[1])
+    catalog_perfumes = _brand_catalog_perfumes(db, rb_row[1])
     top_notes = _brand_top_notes(db, rb_row[1])
     top_accords = _brand_top_accords(db, rb_row[1])
     return BrandEntityDetail(
@@ -712,6 +733,8 @@ def get_brand_entity(
         canonical_name=rb_row[1],
         state="catalog_only",
         perfume_count=perfume_count,
+        catalog_perfumes=catalog_perfumes,
+        top_perfumes=catalog_perfumes,
         top_notes=top_notes,
         top_accords=top_accords,
     )

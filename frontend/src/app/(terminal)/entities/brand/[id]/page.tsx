@@ -61,12 +61,12 @@ function KpiBox({ label, value }: { label: string; value: React.ReactNode }) {
 // Linked perfumes table
 // ---------------------------------------------------------------------------
 
-function LinkedPerfumesTable({ rows }: { rows: BrandPerfumeRow[] }) {
+function LinkedPerfumesTable({ rows, totalCount }: { rows: BrandPerfumeRow[]; totalCount: number }) {
   const router = useRouter();
 
   if (!rows.length) {
     return (
-      <EmptyState message="No tracked perfumes" detail="Perfumes appear here once mentions are detected." />
+      <EmptyState message="No perfumes in catalog" detail="No perfumes found for this brand in the knowledge base." />
     );
   }
 
@@ -84,7 +84,7 @@ function LinkedPerfumesTable({ rows }: { rows: BrandPerfumeRow[] }) {
             <th className="px-3 py-2 text-right text-[10px] font-semibold uppercase tracking-wider text-zinc-500 w-20">
               Mentions
             </th>
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500 w-20">
+            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500 w-24">
               Status
             </th>
           </tr>
@@ -92,7 +92,7 @@ function LinkedPerfumesTable({ rows }: { rows: BrandPerfumeRow[] }) {
         <tbody>
           {rows.map((row, i) => (
             <tr
-              key={row.entity_id ?? i}
+              key={row.entity_id ?? `${row.canonical_name}-${i}`}
               onClick={
                 row.entity_id
                   ? () => router.push(`/entities/perfume/${encodeURIComponent(row.entity_id!)}`)
@@ -102,7 +102,7 @@ function LinkedPerfumesTable({ rows }: { rows: BrandPerfumeRow[] }) {
                 "border-b border-zinc-800/40 transition-colors",
                 row.entity_id
                   ? "group cursor-pointer hover:bg-zinc-800/30"
-                  : "opacity-60",
+                  : "opacity-50",
               )}
             >
               <td className="px-3 py-2">
@@ -111,20 +111,24 @@ function LinkedPerfumesTable({ rows }: { rows: BrandPerfumeRow[] }) {
                     "block max-w-[280px] truncate text-xs",
                     row.entity_id
                       ? "text-zinc-200 group-hover:text-amber-300"
-                      : "text-zinc-400",
+                      : "text-zinc-500",
                   )}
                 >
                   {row.canonical_name}
                 </span>
               </td>
               <td className="px-3 py-2 text-right tabular-nums text-[11px] text-zinc-300">
-                {fmtScore(row.latest_score)}
+                {row.latest_score != null ? fmtScore(row.latest_score) : "—"}
               </td>
               <td className="px-3 py-2 text-right tabular-nums text-[11px] text-zinc-500">
                 {row.mention_count != null ? Math.round(row.mention_count) : "—"}
               </td>
               <td className="px-3 py-2">
-                {row.has_activity_today ? (
+                {!row.entity_id ? (
+                  <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
+                    In Catalog
+                  </span>
+                ) : row.has_activity_today ? (
                   <span className="inline-flex items-center rounded border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-400">
                     Active
                   </span>
@@ -138,6 +142,11 @@ function LinkedPerfumesTable({ rows }: { rows: BrandPerfumeRow[] }) {
           ))}
         </tbody>
       </table>
+      {totalCount > rows.length && (
+        <p className="px-3 py-2 text-[10px] text-zinc-600">
+          Showing {rows.length} of {totalCount.toLocaleString()} catalog perfumes
+        </p>
+      )}
     </div>
   );
 }
@@ -163,6 +172,9 @@ export default function BrandEntityPage({ params }: PageProps) {
 
   const isTracked = data?.state !== "catalog_only";
   const latestSignal = data?.recent_signals?.[0]?.signal_type ?? null;
+  // catalog_perfumes includes all KB entries; entity_id non-null = tracked in market
+  const catalogRows = data?.catalog_perfumes ?? data?.top_perfumes ?? [];
+  const trackedCount = catalogRows.filter((p) => p.entity_id != null).length;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -265,7 +277,7 @@ export default function BrandEntityPage({ params }: PageProps) {
                 />
                 <KpiBox
                   label="Tracked"
-                  value={data.top_perfumes.length}
+                  value={trackedCount}
                 />
                 <KpiBox
                   label="Active today"
@@ -274,20 +286,20 @@ export default function BrandEntityPage({ params }: PageProps) {
               </div>
             </TerminalPanel>
 
-            {/* ── Top tracked perfumes ────────────────────────────────────── */}
+            {/* ── Catalog perfumes ────────────────────────────────────────── */}
             <TerminalPanel noPad>
               <div className="p-4">
                 <SectionHeader
-                  title="Tracked Perfumes"
+                  title="Perfumes"
                   subtitle={
-                    data.top_perfumes.length
-                      ? `top ${data.top_perfumes.length} by score`
+                    catalogRows.length
+                      ? `${catalogRows.length < data.perfume_count ? `top ${catalogRows.length} of ${data.perfume_count.toLocaleString()}` : catalogRows.length.toLocaleString()} · tracked shown first`
                       : undefined
                   }
                 />
               </div>
               <PanelDivider />
-              <LinkedPerfumesTable rows={data.top_perfumes} />
+              <LinkedPerfumesTable rows={catalogRows} totalCount={data.perfume_count} />
             </TerminalPanel>
 
             {/* ── Top notes & accords ─────────────────────────────────────── */}
