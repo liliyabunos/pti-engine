@@ -14,7 +14,6 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from perfume_trend_sdk.db.market.base import Base
@@ -27,8 +26,9 @@ class Watchlist(Base):
 
     __tablename__ = "watchlists"
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    # id stored as varchar(36) UUID string — matches migration 004 column type
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
     owner_key: Mapped[str] = mapped_column(
         String(128), nullable=False, default=DEV_OWNER_KEY, index=True
@@ -51,11 +51,12 @@ class WatchlistItem(Base):
         UniqueConstraint("watchlist_id", "entity_id", "entity_type", name="uq_watchlist_entity"),
     )
 
-    id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    # id and watchlist_id stored as varchar(36) UUID strings — matches migration 004 column type
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid.uuid4())
     )
-    watchlist_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+    watchlist_id: Mapped[str] = mapped_column(
+        String(36),
         ForeignKey("watchlists.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

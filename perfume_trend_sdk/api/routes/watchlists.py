@@ -60,7 +60,7 @@ def _fmt_dt(value) -> str:
 def _get_watchlist_or_404(db: Session, watchlist_id: str) -> Watchlist:
     wl = (
         db.query(Watchlist)
-        .filter_by(id=uuid.UUID(watchlist_id), owner_key=DEV_OWNER_KEY)
+        .filter_by(id=watchlist_id, owner_key=DEV_OWNER_KEY)
         .first()
     )
     if wl is None:
@@ -194,7 +194,7 @@ def create_watchlist(
 ):
     """Create a new watchlist."""
     wl = Watchlist(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         owner_key=DEV_OWNER_KEY,
         name=body.name.strip(),
         description=body.description,
@@ -250,7 +250,7 @@ def add_watchlist_item(
         raise HTTPException(status_code=404, detail=f"Entity not found: {body.entity_id}")
 
     item = WatchlistItem(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         watchlist_id=wl.id,
         entity_id=body.entity_id,
         entity_type=body.entity_type,
