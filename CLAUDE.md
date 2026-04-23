@@ -4525,6 +4525,7 @@ A backup is not valid until a restore has been verified against a test environme
 | Fragrantica enrichment | OPERATIONAL via local bridge · 35 records · Railway IPs still blocked |
 | Notes / accords layer (Fragrantica) | OPERATIONAL — 137 notes, 324 perfume_notes in production |
 | Notes / accords layer (dataset bulk) | OPERATIONAL — 272,622 notes · 132,954 accords · 26,799 perfumes covered (Phase 1B, 2026-04-22) |
+| Notes / accords UI layer | OPERATIONAL — Phase 2R deployed 2026-04-22 |
 | Discovery loop | OPERATIONAL — fragrance_candidates, aggregate_candidates, validate_candidates |
 | Coverage maintenance service | OPERATIONAL — Phase 5 |
 | Historical backfill layer | NOT IMPLEMENTED |
@@ -4536,8 +4537,9 @@ A backup is not valid until a restore has been verified against a test environme
 2. ~~Activate Fragrantica enrichment (DB tables + pipeline integration)~~ — **DONE (Phase 1R)**
 3. ~~Add notes / accords tables + populate from Fragrantica~~ — **DONE — 137 notes, 324 perfume_notes**
 4. ~~Bulk notes backfill from Parfumo dataset (Phase 1B)~~ — **DONE (2026-04-22) — 272,622 notes, 132,954 accords, 26,799 perfumes covered**
-5. Build historical backfill layer
-6. Implement backup policy
+5. ~~Notes & accords UI rollout (Phase 2R)~~ — **DONE (2026-04-22)**
+6. Build historical backfill layer
+7. Implement backup policy
 
 ---
 
@@ -4838,6 +4840,92 @@ DELETE FROM resolver_perfume_accords WHERE source = 'parfumo_v1';
 | Catalog-only entity API | ✅ notes returned for resolver_id-based lookups |
 | Fragrantica priority | ✅ confirmed — Fragrantica notes returned when present |
 | Dataset fallback | ✅ confirmed — resolver_perfume_notes used when no Fragrantica record |
+
+---
+
+## Phase 2R — Notes & Accords UI Rollout (COMPLETED)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_perfume_notes`, `resolver_perfume_accords` (migration 017)
+- `fragrantica_records`, `notes`, `perfume_notes` (migration 008)
+- Backend entity + dashboard + notes APIs
+- Frontend entity pages + screener
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — notes visible on all entity pages, note filter in screener, note chips in screener table
+
+### Status
+COMPLETED — 2026-04-22
+
+---
+
+### What was implemented
+
+**Backend — `entities.py`**
+- `_get_perfume_notes()` returns 5-tuple `(top, mid, base, accords, source)` where source is `"fragrantica"` | `"parfumo"` | `None`
+- `_similar_by_notes(db, resolver_id, limit=8)` — self-JOIN on `resolver_perfume_notes.normalized_name` to find perfumes sharing the most notes with a target
+- `_brand_top_notes(db, brand_canonical_name, limit=15)` — aggregated top notes across brand portfolio via resolver tables
+- `_brand_top_accords(db, brand_canonical_name, limit=10)` — same for accords
+- `PerfumeEntityDetail` extended: `notes_source: Optional[str]`, `similar_perfumes: List[SimilarPerfumeRow]`
+- `BrandEntityDetail` extended: `top_notes: List[str]`, `top_accords: List[str]`
+- New `SimilarPerfumeRow` Pydantic model
+
+**Backend — `notes.py`** (new route module)
+- `GET /api/v1/notes/top?limit=` — top notes by perfume_count across resolver tables
+- `GET /api/v1/accords/top?limit=` — top accords by perfume_count
+- `GET /api/v1/notes/search?q=&limit=` — ILIKE search over normalized note names
+- All queries wrapped in `_safe_query` for graceful Postgres-only table failures
+
+**Backend — `dashboard.py`** (screener extension)
+- `note: Optional[str]` query param added to screener endpoint
+- Pre-computation of `entity_uuids_with_note` via 3-table JOIN (entity_market → resolver_perfumes → resolver_perfume_notes)
+- Batch top_notes fetch after pagination using `ANY(:ids)` with try/except SQLite fallback
+- Screener rows enriched with `top_notes` via `model_copy(update={"top_notes": ...})`
+
+**Frontend — `types.ts`**
+- `EntitySummary.top_notes: string[]`
+- `SimilarPerfumeRow` interface
+- `PerfumeEntityDetail.notes_source: string | null`, `.similar_perfumes: SimilarPerfumeRow[]`
+- `BrandEntityDetail.top_notes: string[]`, `.top_accords: string[]`
+- `NoteRow`, `AccordRow` interfaces
+- `ScreenerParams.note?: string`
+
+**Frontend — `notes.ts`** (new)
+- `fetchTopNotes`, `fetchTopAccords`, `fetchNotesSearch` using `NEXT_PUBLIC_API_BASE_URL`
+
+**Frontend — perfume entity page**
+- `SourceBadge` component (Fragrantica = violet, Parfumo Dataset = gray)
+- `NotesSection` shows source badge in header
+- `SimilarByNotes` section — shows up to 8 perfumes ordered by shared note count, navigable
+
+**Frontend — brand entity page**
+- "Notes & Accords" section aggregated across brand portfolio (accords first, then notes)
+- Rendered before signal timeline
+
+**Frontend — screener**
+- "Contains Note" text filter in `ScreenerFilters`
+- Note filter serialized to/from URL params
+- `top_notes` column in `ScreenerTable` showing up to 3 chips per row
+
+---
+
+### Completion Criteria — Verified
+
+- [x] `GET /api/v1/notes/top` returns top notes from resolver tables
+- [x] Perfume entity pages show notes with source badge
+- [x] "Similar by notes" section on perfume pages
+- [x] Brand entity pages show aggregated top notes/accords
+- [x] Screener note filter (`?note=Vanilla`) works end-to-end
+- [x] Screener rows show note chips in "Notes" column
+- [x] All resolver-table queries wrapped in try/except (SQLite dev compatibility)
+- [x] `NEXT_PUBLIC_API_BASE_URL` env var aligned across all API modules
 
 ---
 
