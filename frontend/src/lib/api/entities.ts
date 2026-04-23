@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, apiMutate } from "./client";
 import type { EntityDetail, EntitySummary, PerfumeEntityDetail, BrandEntityDetail } from "./types";
 
 export function fetchEntities(): Promise<EntitySummary[]> {
@@ -33,4 +33,20 @@ export function fetchBrandEntity(
     `/api/v1/entities/brand/${encodeURIComponent(id)}`,
     params,
   );
+}
+
+export interface StartTrackingResult {
+  entity_id: string;
+  canonical_name: string;
+  already_tracked: boolean;
+}
+
+export function startTracking(
+  resolver_id: number,
+  entity_type: string,
+): Promise<StartTrackingResult> {
+  return apiMutate<StartTrackingResult>("/api/v1/entities/start-tracking", {
+    method: "POST",
+    body: { resolver_id, entity_type },
+  });
 }

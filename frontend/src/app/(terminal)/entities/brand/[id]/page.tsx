@@ -1,12 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { use } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { clsx } from "clsx";
 
-import { fetchBrandEntity } from "@/lib/api/entities";
+import { fetchBrandEntity, startTracking } from "@/lib/api/entities";
 import { Header } from "@/components/shell/Header";
 import { TerminalPanel } from "@/components/primitives/TerminalPanel";
 import { PanelDivider } from "@/components/primitives/TerminalPanel";
@@ -15,6 +15,8 @@ import { LoadingSkeleton } from "@/components/primitives/LoadingSkeleton";
 import { ErrorState } from "@/components/primitives/ErrorState";
 import { EmptyState } from "@/components/primitives/EmptyState";
 import { SignalTimeline } from "@/components/entity/SignalTimeline";
+import { AddToWatchlistModal } from "@/components/entity/AddToWatchlistModal";
+import { CreateAlertModal } from "@/components/alerts/CreateAlertModal";
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { fmtScore, fmtGrowth } from "@/lib/formatters";
@@ -164,6 +166,10 @@ export default function BrandEntityPage({ params }: PageProps) {
   const decoded = decodeURIComponent(id);
   const router = useRouter();
 
+  const [showWatchModal, setShowWatchModal] = useState(false);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [isStartingTracking, setIsStartingTracking] = useState(false);
+
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["brand-entity", decoded],
     queryFn: () => fetchBrandEntity(decoded, { history_days: 30 }),
@@ -192,6 +198,27 @@ export default function BrandEntityPage({ params }: PageProps) {
         }
       />
 
+      {showWatchModal && data && isTracked && (
+        <AddToWatchlistModal
+          entityId={data.id}
+          entityType={data.entity_type}
+          canonicalName={data.canonical_name}
+          onClose={() => setShowWatchModal(false)}
+        />
+      )}
+
+      {showAlertModal && data && isTracked && (
+        <CreateAlertModal
+          prefill={{
+            entity_id: data.id,
+            entity_type: data.entity_type,
+            canonical_name: data.canonical_name,
+          }}
+          onClose={() => setShowAlertModal(false)}
+          onCreated={() => setShowAlertModal(false)}
+        />
+      )}
+
       <div className="flex-1 overflow-y-auto">
         {isLoading && (
           <div className="space-y-4 p-4">
@@ -210,15 +237,35 @@ export default function BrandEntityPage({ params }: PageProps) {
           <div className="space-y-4 p-4">
             {/* ── Catalog quiet state ─────────────────────────────────────── */}
             {data.state === "catalog_only" && (
-              <div className="flex items-start gap-3 rounded border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
-                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Catalog
-                </span>
-                <p className="text-[11px] text-zinc-500">
-                  This brand is known to the catalog but has not appeared in
-                  any ingested content yet. Market data will populate
-                  automatically once mentions are detected.
-                </p>
+              <div className="flex items-start justify-between gap-3 rounded border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Catalog
+                  </span>
+                  <p className="text-[11px] text-zinc-500">
+                    This brand is known to the catalog but has not appeared in
+                    any ingested content yet. Market data will populate
+                    automatically once mentions are detected.
+                  </p>
+                </div>
+                {data.resolver_id && (
+                  <button
+                    disabled={isStartingTracking}
+                    onClick={async () => {
+                      if (!data.resolver_id) return;
+                      setIsStartingTracking(true);
+                      try {
+                        const result = await startTracking(data.resolver_id, "brand");
+                        router.replace(`/entities/brand/${encodeURIComponent(result.entity_id)}`);
+                      } finally {
+                        setIsStartingTracking(false);
+                      }
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-40"
+                  >
+                    {isStartingTracking ? "Starting…" : "Start Tracking"}
+                  </button>
+                )}
               </div>
             )}
 
@@ -244,24 +291,40 @@ export default function BrandEntityPage({ params }: PageProps) {
                 </div>
 
                 {isTracked && (
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold tabular-nums leading-none text-zinc-100">
-                        {fmtScore(data.latest_score)}
-                      </p>
-                      <p className="mt-0.5 text-[9px] uppercase tracking-wider text-zinc-600">
-                        Market Score
-                      </p>
+                  <div className="flex shrink-0 flex-col items-end gap-3">
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-2xl font-bold tabular-nums leading-none text-zinc-100">
+                          {fmtScore(data.latest_score)}
+                        </p>
+                        <p className="mt-0.5 text-[9px] uppercase tracking-wider text-zinc-600">
+                          Market Score
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <DeltaBadge
+                          value={data.latest_growth}
+                          formatted={fmtGrowth(data.latest_growth)}
+                          size="md"
+                        />
+                        <p className="mt-1 text-[9px] uppercase tracking-wider text-zinc-600">
+                          Growth
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <DeltaBadge
-                        value={data.latest_growth}
-                        formatted={fmtGrowth(data.latest_growth)}
-                        size="md"
-                      />
-                      <p className="mt-1 text-[9px] uppercase tracking-wider text-zinc-600">
-                        Growth
-                      </p>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setShowWatchModal(true)}
+                        className="inline-flex items-center gap-1.5 rounded border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+                      >
+                        Watch
+                      </button>
+                      <button
+                        onClick={() => setShowAlertModal(true)}
+                        className="inline-flex items-center gap-1.5 rounded border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+                      >
+                        Alert
+                      </button>
                     </div>
                   </div>
                 )}

@@ -64,10 +64,18 @@ export function WatchlistTable({ watchlistId, items, isLoading }: WatchlistTable
           {items.map((row) => (
             <tr
               key={row.entity_id}
-              onClick={() =>
-                router.push(`/entities/${encodeURIComponent(row.entity_id)}`)
-              }
-              className="cursor-pointer border-b border-zinc-800/60 hover:bg-zinc-800/30"
+              onClick={() => {
+                const path =
+                  row.entity_type === "brand"
+                    ? `/entities/brand/${encodeURIComponent(row.entity_id)}`
+                    : `/entities/perfume/${encodeURIComponent(row.entity_id)}`;
+                router.push(path);
+              }}
+              className={`cursor-pointer border-b border-zinc-800/60 transition-colors ${
+                row.entity_type === "brand"
+                  ? "hover:bg-sky-950/10"
+                  : "hover:bg-zinc-800/30"
+              }`}
             >
               {/* Entity */}
               <td className="px-3 py-2">
@@ -81,9 +89,18 @@ export function WatchlistTable({ watchlistId, items, isLoading }: WatchlistTable
 
               {/* Type */}
               <td className="px-3 py-2">
-                <span className="rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[10px] text-zinc-400">
-                  {row.entity_type}
-                </span>
+                {row.entity_type === "brand" ? (
+                  <span
+                    title="Brand — composite score aggregated across perfume portfolio"
+                    className="inline-flex cursor-default items-center rounded border border-sky-800/70 bg-sky-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-400"
+                  >
+                    Brand
+                  </span>
+                ) : (
+                  <span className="rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
+                    Perfume
+                  </span>
+                )}
               </td>
 
               {/* Score */}

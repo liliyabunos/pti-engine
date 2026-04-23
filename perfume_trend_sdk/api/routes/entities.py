@@ -12,6 +12,8 @@ GET /api/v1/entities/{entity_id}/mentions — raw mention drilldown
 
 import json
 import logging
+import re
+import uuid as _uuid_mod
 from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -554,6 +556,122 @@ def list_entities(db: Session = Depends(get_db_session)) -> List[EntitySummary]:
             latest_signal_strength=sig_info[1] if sig_info else None,
         ))
     return result
+
+
+# ---------------------------------------------------------------------------
+# POST /api/v1/entities/start-tracking
+# Create a minimal entity_market row for a catalog-only entity.
+# This enables catalog-only entities to be watchlisted.
+# MUST be defined before /perfume/{id} and /brand/{id} to avoid shadowing.
+# ---------------------------------------------------------------------------
+
+def _slugify(s: str) -> str:
+    """Lowercase, collapse non-alphanumeric chars to dashes."""
+    s = s.lower().strip()
+    s = re.sub(r"[^a-z0-9]+", "-", s)
+    return s.strip("-")
+
+
+def _generate_ticker(canonical_name: str, entity_type: str, max_len: int = 6) -> str:
+    """Generate a short ticker from a canonical name."""
+    if entity_type == "brand":
+        words = canonical_name.upper().split()
+        if len(words) == 1:
+            return words[0][:max_len]
+        return "".join(w[0] for w in words)[:max_len]
+    # perfume: use significant words, skip "de", "du", "la", etc.
+    stop = {"de", "du", "la", "le", "les", "for", "of", "and", "the", "von", "der"}
+    words = [w for w in canonical_name.upper().split() if w.lower() not in stop]
+    if not words:
+        words = canonical_name.upper().split()
+    if len(words) == 1:
+        return words[0][:max_len]
+    return "".join(w[0] for w in words[:max_len])
+
+
+class StartTrackingRequest(BaseModel):
+    resolver_id: int
+    entity_type: str  # "perfume" | "brand"
+
+
+class StartTrackingResponse(BaseModel):
+    entity_id: str
+    canonical_name: str
+    already_tracked: bool = False
+
+
+@router.post("/start-tracking", response_model=StartTrackingResponse, status_code=201)
+def start_tracking(
+    body: StartTrackingRequest,
+    db: Session = Depends(get_db_session),
+) -> StartTrackingResponse:
+    """Create a minimal entity_market row for a catalog-only entity.
+
+    Enables catalog-only entities (known in the resolver KB but not yet
+    encountered in ingested content) to be added to watchlists.
+    """
+    if body.entity_type not in ("perfume", "brand"):
+        raise HTTPException(status_code=400, detail="entity_type must be 'perfume' or 'brand'")
+
+    # Look up in resolver catalog
+    table = "resolver_perfumes" if body.entity_type == "perfume" else "resolver_brands"
+    row = _safe(lambda: db.execute(
+        text(f"""
+        SELECT rp.canonical_name{', rb.canonical_name AS brand_name' if body.entity_type == 'perfume' else ', NULL AS brand_name'}
+        FROM {table} rp
+        {'LEFT JOIN resolver_brands rb ON rp.brand_id = rb.id' if body.entity_type == 'perfume' else ''}
+        WHERE rp.id = :rid
+        LIMIT 1
+        """),
+        {"rid": body.resolver_id},
+    ).fetchone(), None, "start_tracking_lookup")
+
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Resolver entity not found: {body.resolver_id}")
+
+    canonical_name: str = row[0]
+    brand_name: Optional[str] = row[1] if len(row) > 1 else None
+
+    # Compute the slug entity_id
+    if body.entity_type == "brand":
+        entity_id = f"brand-{_slugify(canonical_name)}"
+    else:
+        entity_id = _slugify(canonical_name)
+
+    # Check if already tracked
+    existing = db.query(EntityMarket).filter_by(entity_id=entity_id).first()
+    if existing:
+        return StartTrackingResponse(
+            entity_id=existing.entity_id,
+            canonical_name=existing.canonical_name,
+            already_tracked=True,
+        )
+
+    # Create minimal entity_market row
+    ticker = _generate_ticker(canonical_name, body.entity_type)
+    em = EntityMarket(
+        id=_uuid_mod.uuid4(),
+        entity_id=entity_id,
+        entity_type=body.entity_type,
+        ticker=ticker,
+        canonical_name=canonical_name,
+        brand_name=brand_name if body.entity_type == "perfume" else None,
+    )
+    db.add(em)
+    db.flush()
+
+    _log.info(
+        "start_tracking entity_id=%s type=%s canonical_name=%s",
+        entity_id,
+        body.entity_type,
+        canonical_name,
+    )
+
+    return StartTrackingResponse(
+        entity_id=entity_id,
+        canonical_name=canonical_name,
+        already_tracked=False,
+    )
 
 
 # ---------------------------------------------------------------------------

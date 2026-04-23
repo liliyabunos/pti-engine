@@ -1,14 +1,17 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
   createColumnHelper,
 } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown, Bookmark } from "lucide-react";
 import { clsx } from "clsx";
+
+import { AddToWatchlistModal } from "@/components/entity/AddToWatchlistModal";
 
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
@@ -220,6 +223,11 @@ export function ScreenerTable({
   onSort,
 }: ScreenerTableProps) {
   const router = useRouter();
+  const [watchTarget, setWatchTarget] = useState<{
+    entityId: string;
+    entityType: string;
+    canonicalName: string;
+  } | null>(null);
 
   const table = useReactTable({
     data: rows,
@@ -241,88 +249,118 @@ export function ScreenerTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          {table.getHeaderGroups().map((hg) => (
-            <tr key={hg.id} className="border-b border-zinc-800">
-              {hg.headers.map((header) => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const sk: string | undefined = (header.column.columnDef as any).meta?.sortKey;
-                const isSortable = !!sk;
-                const isActive = sortBy === sk;
+    <>
+      {watchTarget && (
+        <AddToWatchlistModal
+          entityId={watchTarget.entityId}
+          entityType={watchTarget.entityType}
+          canonicalName={watchTarget.canonicalName}
+          onClose={() => setWatchTarget(null)}
+        />
+      )}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            {table.getHeaderGroups().map((hg) => (
+              <tr key={hg.id} className="border-b border-zinc-800">
+                {hg.headers.map((header) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const sk: string | undefined = (header.column.columnDef as any).meta?.sortKey;
+                  const isSortable = !!sk;
+                  const isActive = sortBy === sk;
 
-                return (
-                  <th
-                    key={header.id}
-                    style={{ width: header.getSize() }}
-                    className={clsx(
-                      "px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500",
-                      isSortable &&
-                        "cursor-pointer select-none hover:text-zinc-300",
-                      isActive && "text-zinc-300",
-                    )}
-                    onClick={() => {
-                      if (isSortable && sk) onSort?.(sk);
+                  return (
+                    <th
+                      key={header.id}
+                      style={{ width: header.getSize() }}
+                      className={clsx(
+                        "px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500",
+                        isSortable &&
+                          "cursor-pointer select-none hover:text-zinc-300",
+                        isActive && "text-zinc-300",
+                      )}
+                      onClick={() => {
+                        if (isSortable && sk) onSort?.(sk);
+                      }}
+                    >
+                      <span className="inline-flex items-center gap-0.5">
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                        {isSortable && (
+                          <SortIcon
+                            active={isActive}
+                            direction={isActive ? order : undefined}
+                          />
+                        )}
+                      </span>
+                    </th>
+                  );
+                })}
+                {/* Watch column header */}
+                <th className="w-8 px-2 py-2" />
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {table.getRowModel().rows.map((row) => {
+              const isBrand = row.original.entity_type === "brand";
+              return (
+                <tr
+                  key={row.id}
+                  onClick={() => {
+                    const { entity_id, entity_type } = row.original;
+                    const path =
+                      entity_type === "brand"
+                        ? `/entities/brand/${encodeURIComponent(entity_id)}`
+                        : entity_type === "perfume"
+                        ? `/entities/perfume/${encodeURIComponent(entity_id)}`
+                        : `/entities/${encodeURIComponent(entity_id)}`;
+                    router.push(path);
+                  }}
+                  className={clsx(
+                    "group cursor-pointer border-b border-zinc-800/40 transition-colors",
+                    isBrand ? "hover:bg-sky-950/10" : "hover:bg-zinc-800/30",
+                  )}
+                >
+                  {row.getVisibleCells().map((cell, ci) => (
+                    <td
+                      key={cell.id}
+                      className={clsx(
+                        "px-3 py-2",
+                        ci === 0 && isBrand && "border-l-2 border-sky-800/50",
+                        ci === 0 && !isBrand && "border-l-2 border-transparent",
+                      )}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                  {/* Watch button cell */}
+                  <td
+                    className="px-2 py-2"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setWatchTarget({
+                        entityId: row.original.entity_id,
+                        entityType: row.original.entity_type,
+                        canonicalName: row.original.canonical_name,
+                      });
                     }}
                   >
-                    <span className="inline-flex items-center gap-0.5">
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                      {isSortable && (
-                        <SortIcon
-                          active={isActive}
-                          direction={isActive ? order : undefined}
-                        />
-                      )}
-                    </span>
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-        <tbody>
-          {table.getRowModel().rows.map((row) => {
-            const isBrand = row.original.entity_type === "brand";
-            return (
-              <tr
-                key={row.id}
-                onClick={() => {
-                  const { entity_id, entity_type } = row.original;
-                  const path =
-                    entity_type === "brand"
-                      ? `/entities/brand/${encodeURIComponent(entity_id)}`
-                      : entity_type === "perfume"
-                      ? `/entities/perfume/${encodeURIComponent(entity_id)}`
-                      : `/entities/${encodeURIComponent(entity_id)}`;
-                  router.push(path);
-                }}
-                className={clsx(
-                  "group cursor-pointer border-b border-zinc-800/40 transition-colors",
-                  isBrand ? "hover:bg-sky-950/10" : "hover:bg-zinc-800/30",
-                )}
-              >
-                {row.getVisibleCells().map((cell, ci) => (
-                  <td
-                    key={cell.id}
-                    className={clsx(
-                      "px-3 py-2",
-                      ci === 0 && isBrand && "border-l-2 border-sky-800/50",
-                      ci === 0 && !isBrand && "border-l-2 border-transparent",
-                    )}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    <button
+                      title="Add to watchlist"
+                      className="text-zinc-700 opacity-0 transition-opacity group-hover:opacity-100 hover:text-amber-400"
+                    >
+                      <Bookmark size={12} />
+                    </button>
                   </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

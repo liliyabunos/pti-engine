@@ -5,7 +5,7 @@ import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { fetchPerfumeEntity } from "@/lib/api/entities";
+import { fetchPerfumeEntity, startTracking } from "@/lib/api/entities";
 import { Header } from "@/components/shell/Header";
 import { TerminalPanel } from "@/components/primitives/TerminalPanel";
 import { PanelDivider } from "@/components/primitives/TerminalPanel";
@@ -233,6 +233,7 @@ export default function PerfumeEntityPage({ params }: PageProps) {
   const [chartMetric, setChartMetric] = useState<EntityChartMetric>("composite_market_score");
   const [showWatchModal, setShowWatchModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
+  const [isStartingTracking, setIsStartingTracking] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["perfume-entity", decoded],
@@ -298,15 +299,35 @@ export default function PerfumeEntityPage({ params }: PageProps) {
           <div className="space-y-4 p-4">
             {/* ── Catalog quiet state ─────────────────────────────────────── */}
             {data.state === "catalog_only" && (
-              <div className="flex items-start gap-3 rounded border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
-                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Catalog
-                </span>
-                <p className="text-[11px] text-zinc-500">
-                  This perfume is known to the catalog but has not appeared in
-                  any ingested content yet. Market data will populate
-                  automatically once mentions are detected.
-                </p>
+              <div className="flex items-start justify-between gap-3 rounded border border-zinc-700/50 bg-zinc-900/60 px-4 py-3">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Catalog
+                  </span>
+                  <p className="text-[11px] text-zinc-500">
+                    This perfume is known to the catalog but has not appeared in
+                    any ingested content yet. Market data will populate
+                    automatically once mentions are detected.
+                  </p>
+                </div>
+                {data.resolver_id && (
+                  <button
+                    disabled={isStartingTracking}
+                    onClick={async () => {
+                      if (!data.resolver_id) return;
+                      setIsStartingTracking(true);
+                      try {
+                        const result = await startTracking(data.resolver_id, "perfume");
+                        router.replace(`/entities/perfume/${encodeURIComponent(result.entity_id)}`);
+                      } finally {
+                        setIsStartingTracking(false);
+                      }
+                    }}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200 disabled:opacity-40"
+                  >
+                    {isStartingTracking ? "Starting…" : "Start Tracking"}
+                  </button>
+                )}
               </div>
             )}
 
