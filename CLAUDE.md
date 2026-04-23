@@ -7055,3 +7055,67 @@ No rows were deleted. Bad entries remain for potential manual cleanup or promoti
 - Some brands have fragmented sub-brand names ('Creed Green Irish' instead of 'Creed') — systemic issue from aggregation
 - 'TOM FORD Private Blend' / 'TOM FORD Signature' tracked as separate brands — correct at catalog level, confusing in UI
 - case-insensitive duplicates remain in entity_market DB (not deleted, just hidden in screener)
+
+---
+
+## Phase E2 — Fix Brand → Perfume Linking
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `resolver_perfumes` / `resolver_brands` (source of truth for catalog)
+- `entity_market` (market data overlay)
+- `/api/v1/entities/brand/{id}` endpoint
+- Frontend brand entity page
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — brand pages now show full perfume list from catalog (e.g. Adidas: 114 perfumes)
+
+### Status
+COMPLETED — 2026-04-23
+
+---
+
+### Root Cause
+
+`_brand_top_perfumes()` queried `entity_market` filtered by `brand_name` — only 144 tracked
+entities. `_brand_perfume_count()` queried `resolver_perfumes JOIN resolver_brands` — 56k
+catalog. Count and list were from different sources. For brands with zero tracked perfumes,
+the list was always empty despite showing a non-zero count.
+
+### Fix
+
+**`perfume_trend_sdk/api/routes/entities.py`**
+- Replaced `_brand_top_perfumes(db, name)` with `_brand_catalog_perfumes(db, name, limit=100)`
+- New function: `resolver_perfumes JOIN resolver_brands` as source, LEFT JOIN `entity_market`
+  + `entity_timeseries_daily` for market data where available
+- Phase E1 eligibility filter applied (≥2 letters, alphanumeric start, not generic)
+- `entity_id=None` for catalog-only perfumes (no ingested data yet)
+- Returns up to 100 perfumes ordered by composite_market_score DESC, then name ASC
+- `BrandEntityDetail` extended with `catalog_perfumes: List[BrandPerfumeRow]`
+  (`top_perfumes` kept as alias for backward compat — same data)
+
+**Frontend — `entities/brand/[id]/page.tsx`**
+- `LinkedPerfumesTable`: "In Catalog" badge (gray) for entries with `entity_id=null`
+- "Tracked" KPI: counts entries where `entity_id != null` (has market data)
+- Section renamed from "Tracked Perfumes" to "Perfumes"
+- "Showing N of M" footer when limit (100) < total `perfume_count`
+- Empty state changed to "No perfumes in catalog"
+- Catalog-only rows rendered at 50% opacity, non-clickable (no entity page yet)
+
+**`frontend/src/lib/api/types.ts`**
+- Added `catalog_perfumes: BrandPerfumeRow[]` field to `BrandEntityDetail`
+
+### Completion Criteria
+
+- [x] Adidas brand page shows ~114 perfumes
+- [x] Tracked perfumes (with entity_id) appear first, sorted by score
+- [x] Catalog-only perfumes appear below with "In Catalog" badge
+- [x] KPI "Tracked" shows correct count (entity_id != null)
+- [x] Phase E1 eligibility filter applied to catalog_perfumes
+- [x] Deployed to production Railway
