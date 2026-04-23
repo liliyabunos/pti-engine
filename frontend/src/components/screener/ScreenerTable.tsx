@@ -46,29 +46,50 @@ const COLUMNS = [
     meta: { sortKey: undefined },
     cell: (c) => {
       const row = c.row.original;
+      const isBrand = row.entity_type === "brand";
       return (
         <div className="min-w-0">
-          <span className="block truncate max-w-[180px] text-xs text-zinc-200 group-hover:text-amber-300">
+          <span
+            title={isBrand ? "Brand — score aggregated across perfume portfolio" : undefined}
+            className="block truncate max-w-[180px] text-xs text-zinc-200 group-hover:text-amber-300"
+          >
             {c.getValue()}
           </span>
-          {row.brand_name && (
+          {isBrand ? (
+            <span className="block text-[10px] text-sky-700/70">
+              portfolio aggregate
+            </span>
+          ) : row.brand_name ? (
             <span className="block truncate max-w-[180px] text-[10px] text-zinc-600">
               {row.brand_name}
             </span>
-          )}
+          ) : null}
         </div>
       );
     },
   }),
   col.accessor("entity_type", {
     header: "Type",
-    size: 64,
+    size: 72,
     meta: { sortKey: undefined },
     cell: (c) => {
       const t = c.getValue() ?? "";
+      if (t === "brand") {
+        return (
+          <span
+            title="Brand — composite score aggregated across perfume portfolio"
+            className="inline-flex cursor-default items-center rounded border border-sky-800/70 bg-sky-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-sky-400"
+          >
+            Brand
+          </span>
+        );
+      }
       return (
-        <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
-          {t.charAt(0).toUpperCase() + t.slice(1)}
+        <span
+          title="Individual fragrance"
+          className="inline-flex cursor-default items-center rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500"
+        >
+          Perfume
         </span>
       );
     },
@@ -265,23 +286,41 @@ export function ScreenerTable({
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
-              key={row.id}
-              onClick={() =>
-                router.push(
-                  `/entities/${encodeURIComponent(row.original.entity_id)}`,
-                )
-              }
-              className="group cursor-pointer border-b border-zinc-800/40 transition-colors hover:bg-zinc-800/30"
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} className="px-3 py-2">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {table.getRowModel().rows.map((row) => {
+            const isBrand = row.original.entity_type === "brand";
+            return (
+              <tr
+                key={row.id}
+                onClick={() => {
+                  const { entity_id, entity_type } = row.original;
+                  const path =
+                    entity_type === "brand"
+                      ? `/entities/brand/${encodeURIComponent(entity_id)}`
+                      : entity_type === "perfume"
+                      ? `/entities/perfume/${encodeURIComponent(entity_id)}`
+                      : `/entities/${encodeURIComponent(entity_id)}`;
+                  router.push(path);
+                }}
+                className={clsx(
+                  "group cursor-pointer border-b border-zinc-800/40 transition-colors",
+                  isBrand ? "hover:bg-sky-950/10" : "hover:bg-zinc-800/30",
+                )}
+              >
+                {row.getVisibleCells().map((cell, ci) => (
+                  <td
+                    key={cell.id}
+                    className={clsx(
+                      "px-3 py-2",
+                      ci === 0 && isBrand && "border-l-2 border-sky-800/50",
+                      ci === 0 && !isBrand && "border-l-2 border-transparent",
+                    )}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

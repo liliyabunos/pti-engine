@@ -24,6 +24,21 @@ import {
 } from "@/lib/formatters";
 import type { TopMoverRow } from "@/lib/api/types";
 
+// Entity type pill — brand gets a distinct sky-blue tint
+function EntityTypePill({ type }: { type: string }) {
+  if (type === "brand") {
+    return (
+      <span
+        title="Brand — composite score aggregated across perfume portfolio"
+        className="ml-1 inline-flex cursor-default items-center rounded border border-sky-800/70 bg-sky-950/40 px-1 py-px text-[8px] font-semibold uppercase tracking-wide text-sky-500"
+      >
+        Brand
+      </span>
+    );
+  }
+  return null;
+}
+
 // Dampening pill shown next to score for single-author entities
 function DampenedPill() {
   return (
@@ -85,10 +100,14 @@ function buildColumns(
       cell: (c) => {
         const row = c.row.original;
         const hasVariants = row.variant_names && row.variant_names.length > 0;
+        const isBrand = row.entity_type === "brand";
         return (
           <div className="min-w-0">
             <span className="inline-flex items-center">
-              <span className="block truncate max-w-[150px] text-xs text-zinc-200 group-hover:text-amber-300">
+              <span
+                title={isBrand ? "Brand — score aggregated across perfume portfolio" : row.canonical_name}
+                className="block truncate max-w-[150px] text-xs text-zinc-200 group-hover:text-amber-300"
+              >
                 {c.getValue()}
               </span>
               {hasVariants && (
@@ -97,10 +116,16 @@ function buildColumns(
                   names={row.variant_names}
                 />
               )}
+              <EntityTypePill type={row.entity_type} />
             </span>
-            {row.brand_name && (
+            {row.brand_name && !isBrand && (
               <span className="block truncate max-w-[160px] text-[10px] text-zinc-600">
                 {row.brand_name}
+              </span>
+            )}
+            {isBrand && (
+              <span className="block text-[10px] text-sky-700/70">
+                portfolio aggregate
               </span>
             )}
           </div>
@@ -230,6 +255,7 @@ export function TopMoversTable({
           {table.getRowModel().rows.map((row) => {
             const entityId = row.original.entity_id;
             const isSelected = entityId === selectedId;
+            const isBrand = row.original.entity_type === "brand";
 
             return (
               <tr
@@ -238,8 +264,8 @@ export function TopMoversTable({
                 className={clsx(
                   "group cursor-pointer border-b border-zinc-800/40 transition-colors",
                   isSelected
-                    ? "bg-zinc-800/70"
-                    : "hover:bg-zinc-800/30",
+                    ? isBrand ? "bg-sky-950/20" : "bg-zinc-800/70"
+                    : isBrand ? "hover:bg-sky-950/10" : "hover:bg-zinc-800/30",
                 )}
               >
                 {/* Selected accent — left edge */}
@@ -248,8 +274,9 @@ export function TopMoversTable({
                     key={cell.id}
                     className={clsx(
                       "px-2.5 py-2",
-                      // Left-edge accent on first cell for selected row
-                      ci === 0 && isSelected && "border-l-2 border-amber-400",
+                      // Left-edge accent on first cell
+                      ci === 0 && isSelected && isBrand && "border-l-2 border-sky-600",
+                      ci === 0 && isSelected && !isBrand && "border-l-2 border-amber-400",
                       ci === 0 && !isSelected && "border-l-2 border-transparent",
                     )}
                   >
@@ -260,7 +287,13 @@ export function TopMoversTable({
                         className="contents"
                       >
                         <Link
-                          href={`/entities/${encodeURIComponent(row.original.entity_id)}`}
+                          href={
+                            row.original.entity_type === "brand"
+                              ? `/entities/brand/${encodeURIComponent(row.original.entity_id)}`
+                              : row.original.entity_type === "perfume"
+                              ? `/entities/perfume/${encodeURIComponent(row.original.entity_id)}`
+                              : `/entities/${encodeURIComponent(row.original.entity_id)}`
+                          }
                           onClick={(e) => {
                             // Allow Ctrl/Cmd+click to open in new tab;
                             // plain click selects row without navigating

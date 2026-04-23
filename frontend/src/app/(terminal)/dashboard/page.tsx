@@ -33,9 +33,9 @@ import type { TopMoverRow } from "@/lib/api/types";
 // ---------------------------------------------------------------------------
 
 const ENTITY_TYPES = [
-  { key: "all", label: "All" },
-  { key: "perfume", label: "Perfume" },
-  { key: "brand", label: "Brand" },
+  { key: "all", label: "All", hint: "Perfumes and brands" },
+  { key: "perfume", label: "Perfume", hint: "Individual fragrances only" },
+  { key: "brand", label: "Brand", hint: "Brands — scores aggregate their perfume portfolio" },
 ] as const;
 
 type EntityTypeFilter = (typeof ENTITY_TYPES)[number]["key"];
@@ -143,14 +143,20 @@ export default function DashboardPage() {
               className="w-48"
             />
             <ControlBarDivider />
-            {ENTITY_TYPES.map(({ key, label }) => (
+            {ENTITY_TYPES.map(({ key, label, hint }) => (
               <FilterChip
                 key={key}
                 label={label}
                 active={entityTypeFilter === key}
                 onClick={() => setEntityTypeFilter(key)}
+                title={hint}
               />
             ))}
+            {entityTypeFilter === "brand" && (
+              <span className="text-[10px] text-sky-700/80">
+                ↳ scores roll up from portfolio
+              </span>
+            )}
           </div>
         }
         right={

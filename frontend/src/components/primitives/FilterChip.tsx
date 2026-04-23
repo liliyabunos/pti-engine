@@ -26,6 +26,7 @@ interface FilterChipProps {
   onRemove?: () => void;
   onClick?: () => void;
   className?: string;
+  title?: string;
 }
 
 export function FilterChip({
@@ -36,11 +37,13 @@ export function FilterChip({
   onRemove,
   onClick,
   className,
+  title,
 }: FilterChipProps) {
   return (
     <button
       type="button"
       disabled={disabled}
+      title={title}
       onClick={disabled ? undefined : onClick}
       className={clsx(
         // base
