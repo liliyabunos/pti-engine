@@ -146,6 +146,85 @@ def _get_recent_mentions(db: Session, entity_uuid, limit: int = 5) -> List[dict]
         ]
 
 
+def _get_entity_topics(
+    db: Session,
+    entity_id_str: str,
+    limit_per_type: int = 8,
+) -> tuple[list[str], list[str], list[str]]:
+    """Phase I5 — Return (top_topics, top_queries, top_subreddits) for an entity.
+
+    Aggregates entity_topic_links grouped by (topic_type, topic_text) ordered by
+    occurrence count DESC, then avg source_score DESC.
+
+    Returns three lists:
+      top_topics     — semantic topic labels (e.g. "compliment getter", "blind buy")
+      top_queries    — YouTube search queries (e.g. "creed aventus review")
+      top_subreddits — Reddit communities (e.g. "fragrance")
+    """
+    try:
+        rows = db.execute(text("""
+            SELECT topic_type, topic_text,
+                   COUNT(*) as occ,
+                   COALESCE(AVG(source_score), 0) as avg_score
+            FROM entity_topic_links
+            WHERE entity_id = :eid
+            GROUP BY topic_type, topic_text
+            ORDER BY occ DESC, avg_score DESC
+        """), {"eid": entity_id_str}).fetchall()
+    except Exception as exc:
+        _log.warning("[I5] entity_topics query failed: %s", exc)
+        return [], [], []
+
+    topics: list[str] = []
+    queries: list[str] = []
+    subreddits: list[str] = []
+    for ttype, ttext, _occ, _score in rows:
+        if ttype == "topic" and len(topics) < limit_per_type:
+            topics.append(ttext)
+        elif ttype == "query" and len(queries) < limit_per_type:
+            queries.append(ttext)
+        elif ttype == "subreddit" and len(subreddits) < limit_per_type:
+            subreddits.append(ttext)
+    return topics, queries, subreddits
+
+
+def _get_brand_topics(
+    db: Session,
+    brand_name: str,
+    limit_per_type: int = 8,
+) -> tuple[list[str], list[str], list[str]]:
+    """Phase I5 — Aggregate topics across all perfumes under a brand.
+
+    Joins entity_topic_links → entity_market filtered by brand_name='perfume'.
+    """
+    try:
+        rows = db.execute(text("""
+            SELECT etl.topic_type, etl.topic_text,
+                   COUNT(*) as occ,
+                   COALESCE(AVG(etl.source_score), 0) as avg_score
+            FROM entity_topic_links etl
+            JOIN entity_market em ON CAST(em.id AS TEXT) = etl.entity_id
+            WHERE em.brand_name = :bname AND em.entity_type = 'perfume'
+            GROUP BY etl.topic_type, etl.topic_text
+            ORDER BY occ DESC, avg_score DESC
+        """), {"bname": brand_name}).fetchall()
+    except Exception as exc:
+        _log.warning("[I5] brand_topics query failed: %s", exc)
+        return [], [], []
+
+    topics: list[str] = []
+    queries: list[str] = []
+    subreddits: list[str] = []
+    for ttype, ttext, _occ, _score in rows:
+        if ttype == "topic" and len(topics) < limit_per_type:
+            topics.append(ttext)
+        elif ttype == "query" and len(queries) < limit_per_type:
+            queries.append(ttext)
+        elif ttype == "subreddit" and len(subreddits) < limit_per_type:
+            subreddits.append(ttext)
+    return topics, queries, subreddits
+
+
 def _get_top_drivers(db: Session, entity_uuid, limit: int = 10) -> List[DriverRow]:
     """Phase I4 — Return top content drivers ordered by source quality + views.
 
@@ -330,6 +409,10 @@ class PerfumeEntityDetail(BaseModel):
     recent_signals: List[SignalRow] = []
     recent_mentions: List[RecentMentionRow] = []
     top_drivers: List[DriverRow] = []   # Phase I4 — highest-impact content items
+    # Phase I5 — Why it's trending (deterministic topic/query intelligence)
+    top_topics: List[str] = []     # semantic labels: "compliment getter", "blind buy", …
+    top_queries: List[str] = []    # YouTube search queries that surfaced this entity
+    top_subreddits: List[str] = [] # Reddit communities discussing this entity
     # Enrichment
     notes_top: List[str] = []
     notes_middle: List[str] = []
@@ -363,6 +446,10 @@ class BrandEntityDetail(BaseModel):
     timeseries: List[SnapshotRow] = []
     recent_signals: List[SignalRow] = []
     top_drivers: List[DriverRow] = []   # Phase I4 — highest-impact content items
+    # Phase I5 — Why it's trending (aggregated across brand portfolio)
+    top_topics: List[str] = []
+    top_queries: List[str] = []
+    top_subreddits: List[str] = []
     # Aggregated notes/accords across brand portfolio
     top_notes: List[str] = []
     top_accords: List[str] = []
@@ -883,6 +970,10 @@ def get_perfume_entity(
         notes_top, notes_mid, notes_base, accords, notes_source = _get_perfume_notes(db, em.entity_id, resolver_id)
         similar = _similar_by_notes(db, resolver_id) if resolver_id else []
         drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "top_drivers")
+        # Phase I5 — topic/query intelligence
+        p_topics, p_queries, p_subs = _safe(
+            lambda: _get_entity_topics(db, str(em.id)), ([], [], []), "entity_topics"
+        )
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         return PerfumeEntityDetail(
@@ -905,6 +996,9 @@ def get_perfume_entity(
             recent_signals=_build_signal_rows(signal_rows, em, em.brand_name),
             recent_mentions=_build_mention_rows(mention_rows),
             top_drivers=drivers,
+            top_topics=p_topics,    # Phase I5
+            top_queries=p_queries,  # Phase I5
+            top_subreddits=p_subs,  # Phase I5
             notes_top=notes_top,
             notes_middle=notes_mid,
             notes_base=notes_base,
@@ -984,6 +1078,9 @@ def get_brand_entity(
         top_notes = _brand_top_notes(db, em.canonical_name)
         top_accords = _brand_top_accords(db, em.canonical_name)
         drivers = _safe(lambda: _get_top_drivers_for_brand(db, em.canonical_name, limit=10), [], "brand_top_drivers")
+        b_topics, b_queries, b_subs = _safe(
+            lambda: _get_brand_topics(db, em.canonical_name), ([], [], []), "brand_topics"
+        )
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
@@ -1008,6 +1105,9 @@ def get_brand_entity(
             top_drivers=drivers,
             top_notes=top_notes,
             top_accords=top_accords,
+            top_topics=b_topics,
+            top_queries=b_queries,
+            top_subreddits=b_subs,
         )
 
     # Step 2: try catalog-only lookup via resolver_id

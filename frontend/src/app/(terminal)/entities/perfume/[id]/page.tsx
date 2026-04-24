@@ -23,6 +23,7 @@ import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum } from "@/lib/formatters";
 import type { EntityChartMetric } from "@/components/entity/EntityChart";
 import type { DriverRow, SimilarPerfumeRow } from "@/lib/api/types";
+import { WhyTrending } from "@/components/entity/WhyTrending";
 
 // ---------------------------------------------------------------------------
 // State badge
@@ -560,6 +561,13 @@ export default function PerfumeEntityPage({ params }: PageProps) {
             {isTracked && data.top_drivers?.length > 0 && (
               <TopDrivers drivers={data.top_drivers} />
             )}
+
+            {/* ── Why It's Trending (Phase I5) ────────────────────────────── */}
+            <WhyTrending
+              top_topics={data.top_topics}
+              top_queries={data.top_queries}
+              top_subreddits={data.top_subreddits}
+            />
 
             {/* ── Signals + mentions (tracked only) ──────────────────────── */}
             {isTracked && (

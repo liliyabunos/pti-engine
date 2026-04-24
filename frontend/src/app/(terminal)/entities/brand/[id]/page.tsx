@@ -22,6 +22,7 @@ import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { fmtScore, fmtGrowth } from "@/lib/formatters";
 import type { BrandPerfumeRow, DriverRow } from "@/lib/api/types";
+import { WhyTrending } from "@/components/entity/WhyTrending";
 
 // ---------------------------------------------------------------------------
 // State badge
@@ -493,6 +494,13 @@ export default function BrandEntityPage({ params }: PageProps) {
             {isTracked && (data.top_drivers?.length ?? 0) > 0 && (
               <TopDrivers drivers={data.top_drivers!} />
             )}
+
+            {/* ── Why It's Trending (Phase I5) ────────────────────────────── */}
+            <WhyTrending
+              top_topics={data.top_topics}
+              top_queries={data.top_queries}
+              top_subreddits={data.top_subreddits}
+            />
 
             {/* ── Signal timeline (tracked only) ─────────────────────────── */}
             {isTracked && data.recent_signals.length > 0 && (
