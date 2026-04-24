@@ -152,14 +152,15 @@ def main() -> None:
                     if existing:
                         topic_ids.append(existing[0])
                     else:
-                        result = db.execute(text("""
+                        row = db.execute(text("""
                             INSERT INTO content_topics (content_item_id, source_platform, topic_type, topic_text, confidence)
                             VALUES (:cid, :plat, :tt, :tx, :conf)
+                            RETURNING id
                         """), {
                             "cid": cci_id, "plat": platform,
                             "tt": t.topic_type, "tx": t.topic_text, "conf": t.confidence,
-                        })
-                        topic_ids.append(result.lastrowid)
+                        }).fetchone()
+                        topic_ids.append(row[0])
                         topics_written += 1
 
                 # Link topics to entities via entity_mentions
