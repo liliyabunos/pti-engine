@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, Suspense } from "react";
+import { useCallback, useState, Suspense } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Search,
 } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -30,18 +31,12 @@ import { ScreenerTable } from "@/components/screener/ScreenerTable";
 import type { ScreenerParams, CatalogPerfumeRow, CatalogBrandRow } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
-// V1 Known Limitations
-// ---------------------------------------------------------------------------
+// Search is server-side in all modes:
+//   Active Today  → q sent to /api/v1/screener?q=... (matches name/brand/ticker)
+//   All Perfumes  → q sent to /api/v1/catalog/perfumes?q=...
+//   All Brands    → q sent to /api/v1/catalog/brands?q=...
 //
-// 1. TEXT SEARCH IS CLIENT-SIDE ONLY (active mode)
-//    In "Active today" mode, search filters browser-side on current page.
-//    In "All Perfumes" / "All Brands" modes, search is server-side via
-//    /api/v1/catalog/perfumes?q=... and /api/v1/catalog/brands?q=...
-//
-// 2. ALL CATALOG ENTITIES ARE NOW NAVIGABLE (Phase U2)
-//    Tracked rows → /entities/perfume/{entity_id} or /entities/brand/{entity_id}
-//    Catalog-only rows → /entities/perfume/{resolver_id} or /entities/brand/{resolver_id}
-//
+// Client-side filtering of loaded rows is NOT used.
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 50;
@@ -323,6 +318,40 @@ function CatalogBrandTable({
 }
 
 // ---------------------------------------------------------------------------
+// Active Today empty state — shown when server-side search returns 0 rows
+// ---------------------------------------------------------------------------
+
+function ActiveEmptyState({
+  search,
+  onSearchCatalog,
+}: {
+  search: string;
+  onSearchCatalog: () => void;
+}) {
+  if (!search) {
+    return <EmptyState message="No active entities" detail="No market data for this period" />;
+  }
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <p className="text-sm text-zinc-400">
+        No active entities match{" "}
+        <span className="font-mono text-zinc-200">&ldquo;{search}&rdquo;</span>
+      </p>
+      <p className="mt-1 text-xs text-zinc-600">
+        This entity may exist in the catalog but has no market signal today.
+      </p>
+      <button
+        onClick={onSearchCatalog}
+        className="mt-4 flex items-center gap-1.5 rounded border border-zinc-700 px-3 py-1.5 text-[11px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+      >
+        <Search size={11} />
+        Search full catalog for &ldquo;{search}&rdquo;
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Mode tabs
 // ---------------------------------------------------------------------------
 
@@ -351,19 +380,21 @@ function ScreenerPageInner() {
     searchToParams(searchParams),
   );
 
-  // Search — server-side in catalog modes, client-side in active mode
+  // Search — server-side in all modes
+  // debouncedSearch drives API calls; search drives the input value
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounce search for catalog server-side calls
-  const handleSearchChange = useCallback(
-    (value: string) => {
-      setSearch(value);
-      // Simple debounce via setTimeout replacement in state
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
       setDebouncedSearch(value);
-    },
-    [],
-  );
+      // For active mode: reset offset when search changes
+      setParams((prev) => ({ ...prev, offset: 0 }));
+    }, 300);
+  }, []);
 
   // Catalog-specific pagination
   const [catalogOffset, setCatalogOffset] = useState(0);
@@ -393,10 +424,12 @@ function ScreenerPageInner() {
   );
 
   const switchMode = useCallback(
-    (nextMode: ScreenerMode) => {
+    (nextMode: ScreenerMode, keepSearch = false) => {
       setMode(nextMode);
-      setSearch("");
-      setDebouncedSearch("");
+      if (!keepSearch) {
+        setSearch("");
+        setDebouncedSearch("");
+      }
       setCatalogOffset(0);
       pushParams(params, nextMode);
     },
@@ -467,21 +500,26 @@ function ScreenerPageInner() {
     [params, pushParams, mode],
   );
 
+  // "Search full catalog" — switch to catalog_perfumes with current query
+  const handleSearchCatalog = useCallback(() => {
+    switchMode("catalog_perfumes", true);
+  }, [switchMode]);
+
   // ---------------------------------------------------------------------------
   // Catalog counts (for header)
   // ---------------------------------------------------------------------------
   const { data: catalogCounts } = useQuery({
     queryKey: ["catalog-counts"],
     queryFn: fetchCatalogCounts,
-    staleTime: 5 * 60_000, // 5 min — counts don't change during a session
+    staleTime: 5 * 60_000,
   });
 
   // ---------------------------------------------------------------------------
-  // Active mode query
+  // Active mode query — q is sent server-side
   // ---------------------------------------------------------------------------
   const activeQuery = useQuery({
-    queryKey: ["screener", params],
-    queryFn: () => fetchScreener(params),
+    queryKey: ["screener", params, debouncedSearch],
+    queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined }),
     staleTime: 30_000,
     enabled: mode === "active",
   });
@@ -532,22 +570,7 @@ function ScreenerPageInner() {
   const currentPage = Math.floor(currentOffset / PAGE_SIZE) + 1;
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 
-  // ---------------------------------------------------------------------------
-  // Active mode: client-side name filter (current page only)
-  // ---------------------------------------------------------------------------
-  const filteredRows = useMemo(() => {
-    if (mode !== "active") return [];
-    const rows = activeQuery.data?.rows ?? [];
-    if (!search) return rows;
-    const q = search.toLowerCase();
-    return rows.filter(
-      (r) =>
-        r.canonical_name.toLowerCase().includes(q) ||
-        r.ticker.toLowerCase().includes(q) ||
-        (r.brand_name ?? "").toLowerCase().includes(q),
-    );
-  }, [activeQuery.data?.rows, search, mode]);
-
+  const activeRows = activeQuery.data?.rows ?? [];
   const activePreset = detectPreset(params);
   const hasActiveFilters =
     mode === "active" &&
@@ -651,18 +674,18 @@ function ScreenerPageInner() {
       <ControlBar
         left={
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {/* Search */}
+            {/* Search — server-side in all modes */}
             <SearchInput
               value={search}
               onChange={handleSearchChange}
               placeholder={
                 mode === "active"
-                  ? "Search name / ticker…"
+                  ? "Search name / brand / ticker…"
                   : mode === "catalog_perfumes"
                   ? "Search perfumes…"
                   : "Search brands…"
               }
-              className="w-44 shrink-0"
+              className="w-48 shrink-0"
             />
             {mode === "active" && (
               <>
@@ -680,30 +703,24 @@ function ScreenerPageInner() {
                 </div>
               </>
             )}
-            {mode !== "active" && search && (
-              <span className="text-[10px] text-zinc-600">
-                server-side search
-              </span>
-            )}
           </div>
         }
         right={
           <>
-            {hasActiveFilters && (
+            {(hasActiveFilters || search) && (
               <button
                 onClick={resetAll}
                 className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300"
               >
                 <X size={11} />
-                Clear filters
+                Clear
               </button>
             )}
             {mode === "active" && activeQuery.data && (
               <>
                 <ControlBarDivider />
                 <span className="text-[11px] text-zinc-600">
-                  {filteredRows.length} shown
-                  {search ? ` (filtered from ${activeQuery.data.rows.length})` : ""}
+                  {total} shown
                 </span>
               </>
             )}
@@ -753,13 +770,20 @@ function ScreenerPageInner() {
               {/* Scrollable table */}
               <div className="flex-1 overflow-y-auto">
                 {mode === "active" && (
-                  <ScreenerTable
-                    rows={filteredRows}
-                    isLoading={isLoading}
-                    sortBy={params.sort_by}
-                    order={params.order}
-                    onSort={handleSort}
-                  />
+                  activeQuery.isFetched && activeRows.length === 0 ? (
+                    <ActiveEmptyState
+                      search={debouncedSearch}
+                      onSearchCatalog={handleSearchCatalog}
+                    />
+                  ) : (
+                    <ScreenerTable
+                      rows={activeRows}
+                      isLoading={isLoading}
+                      sortBy={params.sort_by}
+                      order={params.order}
+                      onSort={handleSort}
+                    />
+                  )
                 )}
                 {mode === "catalog_perfumes" && (
                   <CatalogPerfumeTable
@@ -778,7 +802,7 @@ function ScreenerPageInner() {
               {/* Pagination footer */}
               <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2">
                 <span className="text-[11px] text-zinc-500">
-                  Showing {currentOffset + 1}–
+                  Showing {total === 0 ? 0 : currentOffset + 1}–
                   {Math.min(currentOffset + PAGE_SIZE, total)} of{" "}
                   {total.toLocaleString()}
                 </span>

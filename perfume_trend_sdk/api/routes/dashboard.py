@@ -182,6 +182,8 @@ def get_dashboard(
 
 @router.get("/screener", response_model=ScreenerResponse)
 def get_screener(
+    # Text search — matches canonical_name, brand_name, ticker (server-side)
+    q: Optional[str] = Query(None, description="Text search across entity name, brand, ticker"),
     # Filters
     entity_type: Optional[str] = Query(None, description="perfume | brand"),
     min_score: float = Query(0.0, description="Minimum composite_market_score"),
@@ -244,6 +246,9 @@ def get_screener(
             return {r[0] for r in note_rows}
         entity_uuids_with_note = _safe(_fetch_note_uuids, set(), "note_filter")
 
+    # Pre-compute lowercased search term for O(1) matching inside the loop
+    q_lower = q.strip().lower() if q and q.strip() else None
+
     summaries: List[EntitySummary] = []
     for em, snap in rows:
         score = snap.composite_market_score if snap else 0.0
@@ -263,6 +268,15 @@ def get_screener(
             continue
         if entity_uuids_with_note is not None and em.id not in entity_uuids_with_note:
             continue
+        # Text search: match against canonical_name, ticker, brand_name (all active entities)
+        if q_lower:
+            brand_for_search = get_brand_name(em, brand_name_map) or ""
+            if not (
+                q_lower in (em.canonical_name or "").lower()
+                or q_lower in (em.ticker or "").lower()
+                or q_lower in brand_for_search.lower()
+            ):
+                continue
 
         sig_info = latest_signal_map.get(em.id)
         brand_name = get_brand_name(em, brand_name_map)

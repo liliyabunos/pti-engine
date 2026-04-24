@@ -284,6 +284,7 @@ export interface AccordRow {
 }
 
 export interface ScreenerParams {
+  q?: string;
   entity_type?: string;
   min_score?: number;
   min_confidence?: number;

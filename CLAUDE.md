@@ -18,6 +18,40 @@ A frontend task is BLOCKED if the shell loads but real dashboard/screener data f
 
 ---
 
+## Screener Search Rules
+
+Search in the screener must be **server-side** for all modes. Client-side filtering of a loaded page is not sufficient.
+
+**Mode-specific search scope:**
+
+| Mode | Search endpoint | What is searched |
+|------|----------------|-----------------|
+| Active Today | `GET /api/v1/screener?q=` | All ~200–300 active entities (not just the current page) |
+| All Perfumes | `GET /api/v1/catalog/perfumes?q=` | Full 56k resolver catalog |
+| All Brands | `GET /api/v1/catalog/brands?q=` | Full 1,600+ resolver catalog |
+
+**Rules:**
+- `q` param must be sent to the backend, not used to filter `rows` in the browser
+- Active Today: search is a substring match on `canonical_name`, `ticker`, and `brand_name`
+- Catalog modes: search is already server-side via catalog API
+- Debounce: 300ms before sending — avoids excessive API calls during typing
+- Empty state on Active Today + non-empty search: show clear message + "Search full catalog" button
+- "Search full catalog" button must preserve the current search term and switch to catalog mode
+
+**Anti-pattern (forbidden):**
+```typescript
+// WRONG — only searches the 50 loaded rows
+const filteredRows = useMemo(() => rows.filter(r => r.canonical_name.includes(search)), [rows, search]);
+```
+
+**Correct pattern:**
+```typescript
+// Debounce → send as q param → backend filters all entities → receive correct total + page
+queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined })
+```
+
+---
+
 ## 🔒 Core Constraint
 
 This system is a distributed multi-service architecture.
