@@ -86,15 +86,18 @@ NON-DESTRUCTIVE ROLLOUT:
 - High-quality YouTube mentions (viral videos): quality≈0.8 → weighted_score ≈ 1.8 × raw
 
 VERIFICATION:
-- migration 020 applied to production
-- mention_sources.source_score: backfilled for all YouTube rows with views
-- entity_timeseries_daily.weighted_signal_score: backfilled for all rows with mention_count > 0
-- API `/api/v1/dashboard` returns `weighted_signal_score` per top mover
-- Entity timeseries includes `weighted_signal_score` per day
+- Checked: production PostgreSQL + /api/v1/dashboard (2026-04-24)
+- migration 020 applied: `weighted_signal_score` column added, backfill complete
+- mention_sources.source_score: 1,455 / 2,444 rows populated (59% — YouTube rows with views)
+- entity_timeseries_daily.weighted_signal_score: 628 / 628 rows (100% of mention_count>0 rows)
+- API `/api/v1/dashboard` TopMoverRow now has 21 keys (was 20); `weighted_signal_score` present
+- Top production boosts: Creed Aventus +55.6%, Juliette Has a Gun Anyway +79.4%, Creed Aventus +44%
 
 NOTES:
 - Reddit mentions with NULL views: source_score=None → no boost (intended)
 - Carry-forward rows (mention_count=0): weighted_signal_score=NULL (correct — no mentions to weight)
+- Deployment required two fixes: (1) CollapsedRow dataclass field order violation (default field before
+  non-default), (2) stale 018 row in alembic_version causing double-head; both fixed in production.
 - Future: `weighted_signal_score` can replace `composite_market_score` as the ranking signal in I3+
 
 ---
