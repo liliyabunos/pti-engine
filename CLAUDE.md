@@ -116,7 +116,7 @@ System knows WHERE trend is going.
 
 ---
 
-### I4 — Driver Analysis
+### I4 — Driver Analysis (COMPLETED — 2026-04-24)
 
 Identify:
 - top videos
@@ -125,6 +125,53 @@ Identify:
 
 Result:
 System knows WHAT caused the trend.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- New `DriverRow` Pydantic schema: source_platform, source_url, source_name, views, likes,
+  comments_count, engagement_rate, source_score, occurred_at
+- New `_get_top_drivers(db, entity_uuid, limit=10)`: DISTINCT ON source_url query joining
+  entity_mentions + mention_sources, ordered by source_score DESC then views DESC; up to 10
+  deduplicated content items per entity
+- New `_get_top_drivers_for_brand(db, brand_name, limit=10)`: brand-specific variant that
+  aggregates across all perfume entity_market rows matching brand_name (brands have no direct
+  entity_mentions — those live on perfume entities)
+- `top_drivers: List[DriverRow] = []` added to `PerfumeEntityDetail` and `BrandEntityDetail`
+- Wired into `get_perfume_entity()` (tracked path) and `get_brand_entity()` (tracked path)
+- `DriverRow` interface + `top_drivers: DriverRow[]` added to `frontend/src/lib/api/types.ts`
+- `TopDrivers` component added to perfume entity page (between Notes and Signals sections)
+- `TopDrivers` component added to brand entity page (before Signal Timeline)
+
+ORDERING LOGIC:
+```
+# Per entity: deduplicate by source_url (DISTINCT ON), then outer sort by:
+priority_1: source_score DESC   (quality signal — YouTube or Reddit engagement formula)
+priority_2: views DESC          (reach — YouTube views; NULL for Reddit)
+
+# Only rows with ms.source_score IS NOT NULL returned (unscored items excluded from drivers)
+```
+
+VERIFICATION:
+- Checked: /api/v1/entities/perfume/Creed%20Aventus — top_drivers=10, YouTube creators ranked
+  by quality score. Top driver: "Fragrance Therapy" score=0.757 views=1828
+- Checked: /api/v1/entities/perfume/Yves%20Saint%20Laurent%20Libre — top_drivers=10, top
+  driver: "Купить Парфюм Недорого" score=0.678 views=27119
+- Checked: /api/v1/entities/brand/brand-creed — top_drivers=10 (aggregated across Creed perfumes)
+- Checked: /api/v1/entities/brand/brand-yves-saint-laurent — top_drivers=10
+- Checked: /api/v1/entities/brand/brand-xerjoff---join-the-club — top_drivers=10 (Reddit drivers,
+  no views — score derived from comments/upvotes formula)
+- Frontend: Top Drivers block renders on perfume and brand pages when data present
+- Version: 1.0.2
+
+NOTES:
+- Brand entity_market rows carry no direct entity_mentions — perfume entities carry those.
+  Solution: `_get_top_drivers_for_brand` joins through `entity_market.brand_name` instead of UUID.
+- Reddit sources have NULL views but non-null source_score — appear in drivers ordered by score,
+  views column shows "—" in UI. This is correct behavior.
+- Catalog-only entities (no entity_market row) never get top_drivers (returns empty list).
+- title field reserved in DriverRow schema but always null for now — video title not stored in
+  entity_mentions; source_url is the identifier. Future I5 may populate title from content text.
 
 ---
 
