@@ -80,6 +80,11 @@ class RecentMentionRow(BaseModel):
     author_name: Optional[str] = None
     engagement: Optional[float] = None
     occurred_at: str
+    # Phase I1 — source intelligence fields (nullable for backward compat)
+    views: Optional[int] = None
+    likes: Optional[int] = None
+    comments_count: Optional[int] = None
+    engagement_rate: Optional[float] = None
 
 
 class EntityDetail(BaseModel):

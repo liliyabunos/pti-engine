@@ -97,14 +97,52 @@ def _get_signals(db: Session, entity_uuid, limit: int) -> List[Signal]:
     )
 
 
-def _get_recent_mentions(db: Session, entity_uuid, limit: int = 5) -> List[EntityMention]:
-    return (
-        db.query(EntityMention)
-        .filter_by(entity_id=entity_uuid)
-        .order_by(EntityMention.occurred_at.desc())
-        .limit(limit)
-        .all()
-    )
+def _get_recent_mentions(db: Session, entity_uuid, limit: int = 5) -> List[dict]:
+    """Return mentions enriched with source intelligence data (Phase I1)."""
+    try:
+        rows = db.execute(text("""
+            SELECT
+                em.source_platform,
+                em.source_url,
+                em.author_name,
+                em.author_id,
+                em.engagement,
+                em.occurred_at,
+                ms.views,
+                ms.likes,
+                ms.comments_count,
+                ms.engagement_rate
+            FROM entity_mentions em
+            LEFT JOIN mention_sources ms ON ms.mention_id = em.id
+            WHERE em.entity_id = :eid
+            ORDER BY em.occurred_at DESC
+            LIMIT :lim
+        """), {"eid": str(entity_uuid), "lim": limit}).fetchall()
+        return [dict(r._mapping) for r in rows]
+    except Exception:
+        # Fallback to ORM without source data (e.g. SQLite dev)
+        rows_orm = (
+            db.query(EntityMention)
+            .filter_by(entity_id=entity_uuid)
+            .order_by(EntityMention.occurred_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [
+            {
+                "source_platform": m.source_platform,
+                "source_url": m.source_url,
+                "author_name": m.author_name or m.author_id,
+                "author_id": m.author_id,
+                "engagement": m.engagement,
+                "occurred_at": m.occurred_at,
+                "views": None,
+                "likes": None,
+                "comments_count": None,
+                "engagement_rate": None,
+            }
+            for m in rows_orm
+        ]
 
 
 def _build_summary(
@@ -512,16 +550,31 @@ def _build_signal_rows(signal_rows, em: EntityMarket, brand_name: Optional[str])
 
 
 def _build_mention_rows(mention_rows) -> List[RecentMentionRow]:
-    return [
-        RecentMentionRow(
-            source_platform=m.source_platform,
-            source_url=m.source_url,
-            author_name=m.author_name or m.author_id,
-            engagement=m.engagement,
-            occurred_at=_fmt_dt(m.occurred_at),
-        )
-        for m in mention_rows
-    ]
+    rows = []
+    for m in mention_rows:
+        if isinstance(m, dict):
+            occurred = m.get("occurred_at")
+            rows.append(RecentMentionRow(
+                source_platform=m.get("source_platform"),
+                source_url=m.get("source_url"),
+                author_name=m.get("author_name") or m.get("author_id"),
+                engagement=m.get("engagement"),
+                occurred_at=_fmt_dt(occurred) if occurred else "",
+                views=m.get("views"),
+                likes=m.get("likes"),
+                comments_count=m.get("comments_count"),
+                engagement_rate=m.get("engagement_rate"),
+            ))
+        else:
+            # ORM object fallback
+            rows.append(RecentMentionRow(
+                source_platform=m.source_platform,
+                source_url=m.source_url,
+                author_name=m.author_name or m.author_id,
+                engagement=m.engagement,
+                occurred_at=_fmt_dt(m.occurred_at),
+            ))
+    return rows
 
 
 # ---------------------------------------------------------------------------
@@ -858,6 +911,58 @@ def get_brand_entity(
     )
 
 
+@router.get("/{entity_id:path}/sources")
+def get_entity_sources(
+    entity_id: str,
+    hours: int = Query(72, ge=1, le=720),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db_session),
+):
+    """Phase I1 — Top sources driving mentions for this entity (last N hours).
+
+    Returns sources ranked by views desc, enriched with engagement metrics.
+    """
+    em = _get_entity_or_404(db, entity_id)
+    try:
+        rows = db.execute(text("""
+            SELECT
+                ms.platform,
+                ms.source_id,
+                ms.source_name,
+                SUM(COALESCE(ms.views, 0))         AS total_views,
+                SUM(COALESCE(ms.likes, 0))         AS total_likes,
+                SUM(COALESCE(ms.comments_count,0)) AS total_comments,
+                AVG(ms.engagement_rate)             AS avg_engagement_rate,
+                COUNT(*)                            AS mention_count,
+                MAX(em.occurred_at)                 AS last_seen
+            FROM entity_mentions em
+            JOIN mention_sources ms ON ms.mention_id = em.id
+            WHERE em.entity_id = :eid
+              AND em.occurred_at >= NOW() - INTERVAL '1 hour' * :hours
+            GROUP BY ms.platform, ms.source_id, ms.source_name
+            ORDER BY total_views DESC, mention_count DESC
+            LIMIT :lim
+        """), {"eid": str(em.id), "hours": hours, "lim": limit}).fetchall()
+    except Exception as exc:
+        _log.warning("[I1] sources query failed: %s", exc)
+        rows = []
+
+    return [
+        {
+            "platform": r[0],
+            "source_id": r[1],
+            "source_name": r[2],
+            "total_views": int(r[3] or 0),
+            "total_likes": int(r[4] or 0),
+            "total_comments": int(r[5] or 0),
+            "avg_engagement_rate": float(r[6]) if r[6] is not None else None,
+            "mention_count": int(r[7]),
+            "last_seen": r[8].isoformat() if r[8] else None,
+        }
+        for r in rows
+    ]
+
+
 @router.get("/{entity_id:path}/mentions", response_model=List[MentionRow])
 def get_entity_mentions(
     entity_id: str,
@@ -943,16 +1048,7 @@ def get_entity(
         for s in signal_rows
     ]
 
-    recent_mentions: List[RecentMentionRow] = [
-        RecentMentionRow(
-            source_platform=m.source_platform,
-            source_url=m.source_url,
-            author_name=m.author_name or m.author_id,
-            engagement=m.engagement,
-            occurred_at=_fmt_dt(m.occurred_at),
-        )
-        for m in mention_rows
-    ]
+    recent_mentions = _build_mention_rows(mention_rows)
 
     # Structured summary block (Step 8C)
     summary = _build_summary(em, latest, brand_name)

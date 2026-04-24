@@ -46,6 +46,7 @@ from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeries
 from perfume_trend_sdk.db.market.models import Base, EntityMarket
 from perfume_trend_sdk.db.market.perfume import Perfume
 from perfume_trend_sdk.db.market.session import _make_engine, get_database_url, make_session_factory
+from perfume_trend_sdk.db.market.source_intelligence import MentionSource, SourceProfile
 
 logger = logging.getLogger(__name__)
 
@@ -640,17 +641,60 @@ def _write_mentions(
             except ValueError:
                 occurred_at = _now()
 
-            db.add(EntityMention(
+            mention = EntityMention(
                 entity_id=entity_uuid,
                 entity_type=entity_type,
                 source_platform=item.get("source_platform"),
                 source_url=_resolve_source_url(item, cid),
                 author_id=item.get("source_account_handle"),
+                author_name=meta.get("channel_title") or item.get("source_account_handle"),
                 mention_count=1.0,
                 influence_score=float(meta.get("influence_score") or 0),
                 confidence=float(ent.get("confidence") or 1.0),
                 engagement=eng_total or None,
                 occurred_at=occurred_at,
+                created_at=_now(),
+            )
+            db.add(mention)
+            db.flush()  # get mention.id for MentionSource FK
+
+            # --- Phase I1: source intelligence rows ---
+            platform = item.get("source_platform") or "unknown"
+            source_id = meta.get("channel_id") or item.get("source_account_handle") or ""
+            source_name = meta.get("channel_title") or item.get("source_account_handle")
+            views_raw = int(engagement.get("views") or 0)
+            likes_raw = int(engagement.get("likes") or 0)
+            comments_raw = int(engagement.get("comments") or 0)
+            eng_rate: Optional[float] = (
+                (likes_raw + comments_raw) / views_raw if views_raw > 0 else None
+            )
+
+            if source_id:
+                # Upsert source_profiles — ON CONFLICT UPDATE name only
+                db.execute(text("""
+                    INSERT INTO source_profiles
+                        (id, platform, source_id, source_name, created_at, updated_at)
+                    VALUES
+                        (gen_random_uuid(), :platform, :source_id, :source_name, NOW(), NOW())
+                    ON CONFLICT (platform, source_id)
+                    DO UPDATE SET
+                        source_name = EXCLUDED.source_name,
+                        updated_at  = NOW()
+                """), {
+                    "platform": platform,
+                    "source_id": source_id,
+                    "source_name": source_name,
+                })
+
+            db.add(MentionSource(
+                mention_id=mention.id,
+                platform=platform,
+                source_id=source_id or "",
+                source_name=source_name,
+                views=views_raw or None,
+                likes=likes_raw or None,
+                comments_count=comments_raw or None,
+                engagement_rate=eng_rate,
                 created_at=_now(),
             ))
             written += 1
