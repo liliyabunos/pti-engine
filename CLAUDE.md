@@ -144,11 +144,15 @@ None:      mention_count == 0 (carry-forward row)
 ```
 
 VERIFICATION:
-- Checked: production PostgreSQL after backfill run for 2026-04-24
-- At least 5 distinct trend states across entity set verified
-- Dashboard top movers show Trend column with pills
-- Screener rows show Trend column
-- Perfume and brand entity pages show trend badge in header
+- Checked: production PostgreSQL + /api/v1/screener + browser UI (2026-04-24)
+- Backfill ran via `scripts/backfill_trend_state.py` on `generous-prosperity` service
+- 1,610 rows updated; 0 active rows remain NULL
+- DB distribution: rising=436, breakout=153, declining=36, peak=2, stable=1, NULL(carry-forward)=982
+- API: /api/v1/screener returns 258 active rows, all with non-null trend_state
+- Browser: Dashboard TREND column shows colored pills
+- Browser: Screener TREND column shows colored pills (no more "—")
+- Browser: Active rows show mix of states — breakout, rising, declining, peak, stable confirmed
+- Perfume and brand entity page headers show trend badge
 - Version: 1.0.3
 
 NOTES:
@@ -156,6 +160,8 @@ NOTES:
 - Pure function in trend_state.py allows easy threshold tuning
 - Non-finite growth_rate values (inf/-inf) handled safely via is_finite guard
 - Brand trend states aggregated from brand's own timeseries (not from constituent perfumes)
+- Backfill required after deploy: existing rows were NULL until `backfill_trend_state.py` ran
+- Future aggregation runs populate trend_state automatically — no manual backfill needed
 
 ---
 
