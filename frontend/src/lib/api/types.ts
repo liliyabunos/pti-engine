@@ -114,6 +114,11 @@ export interface RecentMentionRow {
   author_name: string | null;
   engagement: number | null;
   occurred_at: string;
+  // Phase I1 — source intelligence fields
+  views: number | null;
+  likes: number | null;
+  comments_count: number | null;
+  engagement_rate: number | null;
 }
 
 export interface EntitySummaryBlock {

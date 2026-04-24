@@ -63,7 +63,10 @@ def backfill(days: int = 7, dry_run: bool = False, batch_size: int = 200) -> dic
                 cci.engagement_json
             FROM entity_mentions em
             LEFT JOIN mention_sources ms ON ms.mention_id = em.id
-            LEFT JOIN canonical_content_items cci ON cci.id = em.source_url
+            LEFT JOIN canonical_content_items cci ON (
+                cci.id = em.source_url
+                OR cci.source_url = em.source_url
+            )
             WHERE ms.id IS NULL
               AND em.occurred_at >= :cutoff
             ORDER BY em.occurred_at DESC
@@ -98,41 +101,47 @@ def backfill(days: int = 7, dry_run: bool = False, batch_size: int = 200) -> dic
                     )
                 continue
 
-            # Upsert source_profiles
-            if source_id:
-                db.execute(text("""
-                    INSERT INTO source_profiles
-                        (id, platform, source_id, source_name, created_at, updated_at)
-                    VALUES
-                        (gen_random_uuid(), :platform, :source_id, :source_name, NOW(), NOW())
-                    ON CONFLICT (platform, source_id)
-                    DO UPDATE SET source_name = EXCLUDED.source_name, updated_at = NOW()
-                """), {
-                    "platform": platform,
-                    "source_id": source_id,
-                    "source_name": source_name,
-                })
-                profiles_upserted += 1
+            try:
+                # Use DO NOTHING in backfill — avoids UPDATE lock contention with live pipeline
+                if source_id:
+                    db.execute(text("""
+                        INSERT INTO source_profiles
+                            (id, platform, source_id, source_name, created_at, updated_at)
+                        VALUES
+                            (gen_random_uuid(), :platform, :source_id, :source_name, NOW(), NOW())
+                        ON CONFLICT (platform, source_id) DO NOTHING
+                    """), {
+                        "platform": platform,
+                        "source_id": source_id,
+                        "source_name": source_name,
+                    })
+                    profiles_upserted += 1
 
-            db.execute(text("""
-                INSERT INTO mention_sources
-                    (id, mention_id, platform, source_id, source_name,
-                     views, likes, comments_count, engagement_rate, created_at)
-                VALUES
-                    (gen_random_uuid(), :mention_id, :platform, :source_id, :source_name,
-                     :views, :likes, :comments_count, :engagement_rate, NOW())
-                ON CONFLICT DO NOTHING
-            """), {
-                "mention_id": str(mention_id),
-                "platform": platform,
-                "source_id": source_id or "",
-                "source_name": source_name,
-                "views": views or None,
-                "likes": likes or None,
-                "comments_count": comments or None,
-                "engagement_rate": eng_rate,
-            })
-            sources_written += 1
+                db.execute(text("""
+                    INSERT INTO mention_sources
+                        (id, mention_id, platform, source_id, source_name,
+                         views, likes, comments_count, engagement_rate, created_at)
+                    VALUES
+                        (gen_random_uuid(), :mention_id, :platform, :source_id, :source_name,
+                         :views, :likes, :comments_count, :engagement_rate, NOW())
+                    ON CONFLICT (mention_id) DO NOTHING
+                """), {
+                    "mention_id": str(mention_id),
+                    "platform": platform,
+                    "source_id": source_id or "",
+                    "source_name": source_name,
+                    "views": views or None,
+                    "likes": likes or None,
+                    "comments_count": comments or None,
+                    "engagement_rate": eng_rate,
+                })
+                sources_written += 1
+
+            except Exception as row_exc:
+                # Skip row on deadlock or transient error — backfill is idempotent
+                db.rollback()
+                print(f"  [skip] mention_id={mention_id} error={row_exc!s:.120}")
+                continue
 
             # Batch commit
             if (i + 1) % batch_size == 0:
