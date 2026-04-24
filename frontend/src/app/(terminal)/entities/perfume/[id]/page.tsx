@@ -21,7 +21,7 @@ import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum } from "@/lib/formatters";
 import type { EntityChartMetric } from "@/components/entity/EntityChart";
-import type { SimilarPerfumeRow } from "@/lib/api/types";
+import type { DriverRow, SimilarPerfumeRow } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
 // State badge
@@ -193,6 +193,86 @@ function SimilarByNotes({ rows }: { rows: SimilarPerfumeRow[] }) {
             </div>
           );
         })}
+      </div>
+    </TerminalPanel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Top Drivers (Phase I4)
+// ---------------------------------------------------------------------------
+
+function platformLabel(platform: string | null | undefined): string {
+  if (!platform) return "—";
+  if (platform === "youtube") return "YT";
+  if (platform === "reddit") return "RD";
+  return platform.slice(0, 2).toUpperCase();
+}
+
+function TopDrivers({ drivers }: { drivers: DriverRow[] }) {
+  if (!drivers.length) return null;
+  return (
+    <TerminalPanel noPad>
+      <div className="p-4">
+        <SectionHeader
+          title="Top Drivers"
+          subtitle={`${drivers.length} highest-impact content items`}
+        />
+      </div>
+      <PanelDivider />
+      <div className="divide-y divide-zinc-800/40">
+        {drivers.map((d, i) => (
+          <div key={d.source_url ?? i} className="flex items-start gap-3 px-4 py-2.5">
+            {/* Rank */}
+            <span className="mt-0.5 w-4 shrink-0 text-[10px] tabular-nums text-zinc-600">
+              {i + 1}
+            </span>
+            {/* Platform badge */}
+            <span className="mt-0.5 shrink-0 rounded border border-zinc-700 bg-zinc-800/40 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-zinc-400">
+              {platformLabel(d.source_platform)}
+            </span>
+            {/* Content link + source name */}
+            <div className="min-w-0 flex-1">
+              {d.source_url ? (
+                <a
+                  href={d.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-[11px] text-blue-400 hover:underline"
+                >
+                  {d.source_name ?? d.source_url}
+                </a>
+              ) : (
+                <span className="block truncate text-[11px] text-zinc-400">
+                  {d.source_name ?? "Unknown source"}
+                </span>
+              )}
+              {d.occurred_at && (
+                <span className="text-[9px] text-zinc-600">
+                  {d.occurred_at.slice(0, 10)}
+                </span>
+              )}
+            </div>
+            {/* Metrics */}
+            <div className="shrink-0 text-right">
+              {d.views != null && (
+                <p className="text-[10px] tabular-nums text-zinc-300">
+                  {d.views >= 1_000_000
+                    ? `${(d.views / 1_000_000).toFixed(1)}M`
+                    : d.views >= 1_000
+                    ? `${(d.views / 1_000).toFixed(0)}K`
+                    : String(d.views)}{" "}
+                  views
+                </p>
+              )}
+              {d.source_score != null && (
+                <p className="text-[9px] tabular-nums text-zinc-600">
+                  score {d.source_score.toFixed(2)}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </TerminalPanel>
   );
@@ -472,6 +552,11 @@ export default function PerfumeEntityPage({ params }: PageProps) {
             {/* ── Similar by notes ────────────────────────────────────────── */}
             {data.similar_perfumes?.length > 0 && (
               <SimilarByNotes rows={data.similar_perfumes} />
+            )}
+
+            {/* ── Top Drivers (Phase I4, tracked only) ───────────────────── */}
+            {isTracked && data.top_drivers?.length > 0 && (
+              <TopDrivers drivers={data.top_drivers} />
             )}
 
             {/* ── Signals + mentions (tracked only) ──────────────────────── */}

@@ -88,6 +88,25 @@ class RecentMentionRow(BaseModel):
     engagement_rate: Optional[float] = None
 
 
+class DriverRow(BaseModel):
+    """Phase I4 — A single content item driving trend movement for an entity.
+
+    Ordered by source quality (source_score DESC), then views DESC.
+    Top Drivers = highest-impact individual pieces of content, not aggregated channels.
+    """
+
+    source_platform: Optional[str] = None   # "youtube" | "reddit" | etc.
+    source_url: Optional[str] = None         # link to the video / post
+    source_name: Optional[str] = None        # channel name / subreddit / author
+    title: Optional[str] = None             # video title or post title (from mention text)
+    views: Optional[int] = None             # YouTube views / Reddit score proxy
+    likes: Optional[int] = None
+    comments_count: Optional[int] = None
+    engagement_rate: Optional[float] = None
+    source_score: Optional[float] = None    # Phase I2 quality score (0–1)
+    occurred_at: Optional[str] = None       # ISO8601 publish timestamp
+
+
 class EntityDetail(BaseModel):
     """Full entity page payload: metadata + chart series + signal history."""
 

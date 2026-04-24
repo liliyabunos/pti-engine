@@ -162,6 +162,20 @@ export interface SimilarPerfumeRow {
   shared_notes: number;
 }
 
+/** Phase I4 — a single content item driving trend movement */
+export interface DriverRow {
+  source_platform: string | null;
+  source_url: string | null;
+  source_name: string | null;
+  title: string | null;
+  views: number | null;
+  likes: number | null;
+  comments_count: number | null;
+  engagement_rate: number | null;
+  source_score: number | null;
+  occurred_at: string | null;
+}
+
 export interface PerfumeEntityDetail {
   id: string;
   resolver_id: number | null;
@@ -182,6 +196,7 @@ export interface PerfumeEntityDetail {
   timeseries: SnapshotRow[];
   recent_signals: SignalRow[];
   recent_mentions: RecentMentionRow[];
+  top_drivers: DriverRow[];
   notes_top: string[];
   notes_middle: string[];
   notes_base: string[];
@@ -219,6 +234,7 @@ export interface BrandEntityDetail {
   top_perfumes: BrandPerfumeRow[];
   timeseries: SnapshotRow[];
   recent_signals: SignalRow[];
+  top_drivers: DriverRow[];
   /** Top notes aggregated across brand portfolio */
   top_notes: string[];
   /** Top accords aggregated across brand portfolio */

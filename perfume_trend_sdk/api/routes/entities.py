@@ -30,6 +30,7 @@ from perfume_trend_sdk.api.queries import (
     get_brand_name,
 )
 from perfume_trend_sdk.api.schemas.entity import (
+    DriverRow,
     EntityDetail,
     EntitySummary,
     MentionRow,
@@ -145,6 +146,64 @@ def _get_recent_mentions(db: Session, entity_uuid, limit: int = 5) -> List[dict]
         ]
 
 
+def _get_top_drivers(db: Session, entity_uuid, limit: int = 10) -> List[DriverRow]:
+    """Phase I4 — Return top content drivers ordered by source quality + views.
+
+    Each row is a distinct content item (deduplicated by source_url).
+    Ordering: source_score DESC (quality), then views DESC (reach), then occurred_at DESC.
+    Only rows with a mention_sources entry are returned — unscored rows are excluded
+    because they carry no quality signal and would pollute the driver list.
+    """
+    try:
+        rows = db.execute(text("""
+            SELECT DISTINCT ON (COALESCE(em.source_url, em.id::text))
+                em.source_platform,
+                em.source_url,
+                ms.source_name,
+                em.source_url         AS title_url,
+                ms.views,
+                ms.likes,
+                ms.comments_count,
+                ms.engagement_rate,
+                ms.source_score,
+                em.occurred_at
+            FROM entity_mentions em
+            JOIN mention_sources ms ON ms.mention_id = em.id
+            WHERE em.entity_id = :eid
+              AND ms.source_score IS NOT NULL
+            ORDER BY
+                COALESCE(em.source_url, em.id::text),
+                ms.source_score DESC,
+                COALESCE(ms.views, 0) DESC,
+                em.occurred_at DESC
+        """), {"eid": str(entity_uuid)}).fetchall()
+    except Exception as exc:
+        _log.warning("[I4] top_drivers query failed: %s", exc)
+        return []
+
+    # Sort the deduplicated rows by source_score DESC, then views DESC
+    rows_sorted = sorted(
+        rows,
+        key=lambda r: (-(r[8] or 0.0), -(r[4] or 0)),
+    )[:limit]
+
+    result = []
+    for r in rows_sorted:
+        result.append(DriverRow(
+            source_platform=r[0],
+            source_url=r[1],
+            source_name=r[2],
+            title=None,          # title not stored in entity_mentions; url is the identifier
+            views=int(r[4]) if r[4] is not None else None,
+            likes=int(r[5]) if r[5] is not None else None,
+            comments_count=int(r[6]) if r[6] is not None else None,
+            engagement_rate=float(r[7]) if r[7] is not None else None,
+            source_score=float(r[8]) if r[8] is not None else None,
+            occurred_at=_fmt_dt(r[9]) if r[9] else None,
+        ))
+    return result
+
+
 def _build_summary(
     em: EntityMarket,
     latest,
@@ -211,6 +270,7 @@ class PerfumeEntityDetail(BaseModel):
     timeseries: List[SnapshotRow] = []
     recent_signals: List[SignalRow] = []
     recent_mentions: List[RecentMentionRow] = []
+    top_drivers: List[DriverRow] = []   # Phase I4 — highest-impact content items
     # Enrichment
     notes_top: List[str] = []
     notes_middle: List[str] = []
@@ -241,6 +301,7 @@ class BrandEntityDetail(BaseModel):
     top_perfumes: List[BrandPerfumeRow] = []   # alias: same list
     timeseries: List[SnapshotRow] = []
     recent_signals: List[SignalRow] = []
+    top_drivers: List[DriverRow] = []   # Phase I4 — highest-impact content items
     # Aggregated notes/accords across brand portfolio
     top_notes: List[str] = []
     top_accords: List[str] = []
@@ -759,6 +820,7 @@ def get_perfume_entity(
         aliases = _aliases_count(db, resolver_id, "perfume") if resolver_id else 0
         notes_top, notes_mid, notes_base, accords, notes_source = _get_perfume_notes(db, em.entity_id, resolver_id)
         similar = _similar_by_notes(db, resolver_id) if resolver_id else []
+        drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "top_drivers")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         return PerfumeEntityDetail(
@@ -779,6 +841,7 @@ def get_perfume_entity(
             timeseries=_build_snapshot_rows(history_rows),
             recent_signals=_build_signal_rows(signal_rows, em, em.brand_name),
             recent_mentions=_build_mention_rows(mention_rows),
+            top_drivers=drivers,
             notes_top=notes_top,
             notes_middle=notes_mid,
             notes_base=notes_base,
@@ -857,6 +920,7 @@ def get_brand_entity(
         catalog_perfumes = _brand_catalog_perfumes(db, em.canonical_name)
         top_notes = _brand_top_notes(db, em.canonical_name)
         top_accords = _brand_top_accords(db, em.canonical_name)
+        drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "brand_top_drivers")
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
@@ -877,6 +941,7 @@ def get_brand_entity(
             top_perfumes=catalog_perfumes,
             timeseries=_build_snapshot_rows(history_rows),
             recent_signals=_build_signal_rows(signal_rows, em, None),
+            top_drivers=drivers,
             top_notes=top_notes,
             top_accords=top_accords,
         )
