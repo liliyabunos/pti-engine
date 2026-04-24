@@ -39,5 +39,11 @@ class EntityTimeSeriesDaily(Base):
     acceleration: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     volatility: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
+    # Phase I2 — source-quality-weighted score (non-destructive, raw score preserved above)
+    # Formula: MIN(100, composite_market_score × (1.0 + avg_source_quality))
+    # avg_source_quality = AVG(mention_sources.source_score) for entity's mentions on this date
+    # NULL when no mentions have been written yet for this date (e.g. carry-forward rows)
+    weighted_signal_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

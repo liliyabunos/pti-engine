@@ -36,6 +36,7 @@ class TopMoverRow(BaseModel):
     name: str                                  # alias for canonical_name — terminal display
     brand_name: Optional[str] = None           # populated for perfumes
     composite_market_score: float
+    weighted_signal_score: Optional[float] = None  # Phase I2 — source-quality-weighted score
     effective_rank_score: float                # composite_market_score × flood dampening
     mention_count: float
     unique_authors: Optional[int] = None       # distinct authors/posts contributing

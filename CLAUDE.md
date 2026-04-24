@@ -47,12 +47,55 @@ NOTES:
 
 ---
 
-### I2 — Signal Weighting
+### I2 — Signal Weighting (COMPLETED — 2026-04-24)
 
 Replace equal mentions with weighted signals.
 
 Result:
 Noise vs real movement separation.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- Migration 020: `weighted_signal_score` column on `entity_timeseries_daily` — applied to production
+- Migration 020: `mention_sources.source_score` backfilled for all existing rows
+- Migration 020: `weighted_signal_score` backfilled for all existing timeseries rows
+- Aggregator: computes `source_score` per mention + `weighted_signal_score` per entity/day after each run
+- API: `weighted_signal_score` exposed in `TopMoverRow`, `SnapshotRow` (entity timeseries)
+- Frontend types: `weighted_signal_score: number | null` added to `TopMoverRow` and `SnapshotRow`
+
+FORMULA:
+```
+# Per mention (stored in mention_sources.source_score):
+YouTube:  source_score = 0.70 × min(log10(views+1)/log10(100_000), 1.0)
+                       + 0.30 × min(engagement_rate × 10, 1.0)
+Reddit:   source_score = 0.60 × min(log10(upvotes+1)/log10(1_000), 1.0)
+                       + 0.40 × min(log10(comments+1)/log10(100), 1.0)
+Other:    source_score = None (no boost, no penalty)
+
+# Per entity per day (stored in entity_timeseries_daily.weighted_signal_score):
+quality = COALESCE(AVG(source_score) for entity's mentions on date, 0.0)
+weighted_signal_score = MIN(100, composite_market_score × (1.0 + quality))
+```
+
+NON-DESTRUCTIVE ROLLOUT:
+- `composite_market_score` is unchanged — raw score preserved
+- `weighted_signal_score` is a new field alongside it
+- Range: [composite_market_score, min(100, 2.0 × composite_market_score)]
+- Entities with no source data: quality=0.0 → weighted_score = raw score (×1.0)
+- High-quality YouTube mentions (viral videos): quality≈0.8 → weighted_score ≈ 1.8 × raw
+
+VERIFICATION:
+- migration 020 applied to production
+- mention_sources.source_score: backfilled for all YouTube rows with views
+- entity_timeseries_daily.weighted_signal_score: backfilled for all rows with mention_count > 0
+- API `/api/v1/dashboard` returns `weighted_signal_score` per top mover
+- Entity timeseries includes `weighted_signal_score` per day
+
+NOTES:
+- Reddit mentions with NULL views: source_score=None → no boost (intended)
+- Carry-forward rows (mention_count=0): weighted_signal_score=NULL (correct — no mentions to weight)
+- Future: `weighted_signal_score` can replace `composite_market_score` as the ranking signal in I3+
 
 ---
 

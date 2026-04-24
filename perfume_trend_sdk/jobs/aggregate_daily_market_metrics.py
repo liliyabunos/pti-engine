@@ -25,6 +25,7 @@ Usage (programmatic):
 import argparse
 import json
 import logging
+import math
 import os
 import re
 import uuid
@@ -544,6 +545,86 @@ def _resolve_source_url(item: dict, fallback_cid: str) -> str:
     return fallback_cid
 
 
+# ---------------------------------------------------------------------------
+# Phase I2 — Source-score computation helpers
+# ---------------------------------------------------------------------------
+
+def _compute_source_score(
+    platform: str,
+    views: Optional[int],
+    likes: Optional[int],
+    comments_count: Optional[int],
+    engagement_rate: Optional[float],
+) -> Optional[float]:
+    """Compute a [0, 1] quality score for a single mention's source signal.
+
+    YouTube:
+        score = 0.70 × view_quality + 0.30 × engagement_bonus
+        view_quality   = min(log10(views+1) / log10(100_000), 1.0)
+        engagement_bonus = min(engagement_rate × 10, 1.0) if engagement_rate else 0
+
+    Reddit:
+        score = 0.60 × upvote_quality + 0.40 × comment_quality
+        upvote_quality  = min(log10(upvotes+1) / log10(1_000), 1.0)
+        comment_quality = min(log10(comments+1) / log10(100), 1.0)
+        Returns None when both upvotes and comments are zero.
+
+    Other platforms: None (no score — no boost, no penalty).
+    """
+    if platform == "youtube":
+        v = max(int(views or 0), 0)
+        view_quality = min(math.log10(v + 1) / math.log10(100_000), 1.0)
+        eng_bonus = min(float(engagement_rate) * 10.0, 1.0) if engagement_rate else 0.0
+        return round(0.70 * view_quality + 0.30 * eng_bonus, 4)
+
+    if platform == "reddit":
+        upvotes = max(int(likes or 0), 0)
+        comments = max(int(comments_count or 0), 0)
+        if upvotes == 0 and comments == 0:
+            return None
+        upvote_q = min(math.log10(upvotes + 1) / math.log10(1_000), 1.0)
+        comment_q = min(math.log10(comments + 1) / math.log10(100), 1.0)
+        return round(0.60 * upvote_q + 0.40 * comment_q, 4)
+
+    return None
+
+
+def _compute_weighted_signal_scores(db: Session, target_date: str) -> int:
+    """Compute and store weighted_signal_score for all timeseries rows on target_date.
+
+    Formula (Phase I2):
+        weighted_signal_score = MIN(100, composite_market_score × (1.0 + avg_source_quality))
+
+    where:
+        avg_source_quality = AVG(mention_sources.source_score) for entity's mentions on date
+                           = 0.0 when no source_score data is available (no boost, no penalty)
+
+    This is non-destructive: composite_market_score is unchanged.
+    High-quality source evidence (high views, high engagement) boosts the weighted score.
+    Entities with no source data maintain their raw composite score (quality=0 → ×1.0).
+
+    Returns the number of timeseries rows updated.
+    """
+    result = db.execute(text("""
+        UPDATE entity_timeseries_daily etd
+        SET weighted_signal_score = LEAST(100.0,
+            etd.composite_market_score * (
+                1.0 + COALESCE((
+                    SELECT AVG(ms.source_score)
+                    FROM entity_mentions em
+                    JOIN mention_sources ms ON ms.mention_id = em.id
+                    WHERE em.entity_id = etd.entity_id
+                      AND em.occurred_at::date = etd.date
+                      AND ms.source_score IS NOT NULL
+                ), 0.0)
+            )
+        )
+        WHERE etd.date = :dt
+          AND etd.mention_count > 0
+    """), {"dt": target_date})
+    return result.rowcount
+
+
 def _write_mentions(
     db: Session,
     content_items: List[Dict[str, Any]],
@@ -669,6 +750,15 @@ def _write_mentions(
                     "source_name": source_name,
                 })
 
+            # Phase I2: compute source_score for weighted signal scoring
+            src_score = _compute_source_score(
+                platform=platform,
+                views=views_raw or None,
+                likes=likes_raw or None,
+                comments_count=comments_raw or None,
+                engagement_rate=eng_rate,
+            )
+
             db.add(MentionSource(
                 mention_id=mention.id,
                 platform=platform,
@@ -678,6 +768,7 @@ def _write_mentions(
                 likes=likes_raw or None,
                 comments_count=comments_raw or None,
                 engagement_rate=eng_rate,
+                source_score=src_score,
                 created_at=_now(),
             ))
             written += 1
@@ -798,9 +889,18 @@ def run(
         identity_resolver=identity_resolver,
     )
 
+    # Phase I2: compute weighted_signal_score after mentions (and their source_scores) are written
+    db.flush()
+    weighted_updated = _compute_weighted_signal_scores(db, target_date)
+    if weighted_updated:
+        logger.info(
+            "weighted_signal_scores_computed date=%s rows=%d",
+            target_date, weighted_updated,
+        )
+
     logger.info(
-        "aggregate_daily_market_metrics_completed date=%s entities=%d brands=%d carry_forward=%d mentions=%d",
-        target_date, len(snapshots), brand_rows_written, cf_written, mentions_written,
+        "aggregate_daily_market_metrics_completed date=%s entities=%d brands=%d carry_forward=%d mentions=%d weighted=%d",
+        target_date, len(snapshots), brand_rows_written, cf_written, mentions_written, weighted_updated,
     )
 
     return {
@@ -809,6 +909,7 @@ def run(
         "brand_rows_written": brand_rows_written,
         "carry_forward": cf_written,
         "mentions_written": mentions_written,
+        "weighted_updated": weighted_updated,
     }
 
 

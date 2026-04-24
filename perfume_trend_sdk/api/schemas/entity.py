@@ -48,6 +48,7 @@ class SnapshotRow(BaseModel):
     unique_authors: int
     engagement_sum: float
     composite_market_score: float
+    weighted_signal_score: Optional[float] = None  # Phase I2 — source-quality-weighted score
     confidence_avg: Optional[float] = None
     momentum: Optional[float] = None
     acceleration: Optional[float] = None

@@ -133,6 +133,7 @@ def get_dashboard(
             name=cr.canonical_name,
             brand_name=cr.brand_name,
             composite_market_score=cr.composite_market_score,
+            weighted_signal_score=cr.weighted_signal_score,
             effective_rank_score=cr.effective_rank_score,
             mention_count=cr.mention_count,
             unique_authors=cr.unique_authors,

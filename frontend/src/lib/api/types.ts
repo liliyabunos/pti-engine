@@ -25,6 +25,8 @@ export interface TopMoverRow {
   name: string;
   brand_name: string | null;
   composite_market_score: number;
+  /** Phase I2 — source-quality-weighted score. Higher when mentions come from high-view sources. */
+  weighted_signal_score: number | null;
   /** Score after flood dampening — used for leaderboard sort order. */
   effective_rank_score: number;
   mention_count: number;
@@ -99,6 +101,8 @@ export interface SnapshotRow {
   unique_authors: number;
   engagement_sum: number;
   composite_market_score: number;
+  /** Phase I2 — source-quality-weighted score. Null on carry-forward/quiet-day rows. */
+  weighted_signal_score: number | null;
   confidence_avg: number | null;
   momentum: number | null;
   acceleration: number | null;

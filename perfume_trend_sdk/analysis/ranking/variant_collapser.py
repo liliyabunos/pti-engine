@@ -77,6 +77,9 @@ class CollapsedRow:
     volatility: Optional[float]   # max
     confidence_avg: Optional[float]  # max
 
+    # Phase I2 — source-quality-weighted score (max across variants, nullable)
+    weighted_signal_score: Optional[float] = None
+
     # Leaderboard ranking fields
     effective_rank_score: float   # composite_market_score * flood_dampening(unique_authors)
     is_flood_dampened: bool       # True when unique_authors < FLOOD_AUTHOR_FLOOR
@@ -200,6 +203,9 @@ def collapse_and_rank(
         total_engagement = sum((s.engagement_sum or 0.0) for _, s in members)
         max_authors = max((s.unique_authors or 0) for _, s in members)
         best_score = max((s.composite_market_score or 0.0) for _, s in members)
+        # Phase I2: max weighted_signal_score across variants (None if not computed yet)
+        weighted_scores = [s.weighted_signal_score for _, s in members if s.weighted_signal_score is not None]
+        best_weighted = max(weighted_scores) if weighted_scores else None
         best_growth = max((s.growth_rate or 0.0) for _, s in members)
         best_momentum = max((s.momentum or 0.0) for _, s in members)
         best_accel = max((abs(s.acceleration) if s.acceleration else 0.0) for _, s in members)
@@ -246,6 +252,7 @@ def collapse_and_rank(
             unique_authors=max_authors,
             engagement_sum=total_engagement,
             composite_market_score=best_score,
+            weighted_signal_score=best_weighted,
             growth_rate=best_growth,
             momentum=best_momentum,
             acceleration=best_accel,
