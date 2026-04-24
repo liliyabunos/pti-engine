@@ -9,6 +9,7 @@ import {
   flexRender,
   createColumnHelper,
   type SortingState,
+  type ColumnDef,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
@@ -107,7 +108,7 @@ function buildColumns(
             <span className="inline-flex items-center">
               <span
                 title={isBrand ? "Brand — score aggregated across perfume portfolio" : row.canonical_name}
-                className="block truncate max-w-[150px] text-xs text-zinc-200 group-hover:text-amber-300"
+                className="block truncate max-w-[150px] text-xs text-zinc-200 group-hover:text-amber-200 group-hover:underline"
               >
                 {c.getValue()}
               </span>
@@ -183,6 +184,17 @@ function buildColumns(
       enableSorting: false,
       cell: (c) => <SignalBadge type={c.getValue()} />,
     }),
+    {
+      id: "_nav",
+      size: 16,
+      enableSorting: false,
+      header: () => null,
+      cell: () => (
+        <span className="text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100">
+          →
+        </span>
+      ),
+    } as ColumnDef<TopMoverRow>,
   ];
 }
 
@@ -277,8 +289,8 @@ export function TopMoversTable({
                 className={clsx(
                   "group cursor-pointer border-b border-zinc-800/40 transition-colors",
                   isSelected
-                    ? isBrand ? "bg-sky-950/20" : "bg-zinc-800/70"
-                    : isBrand ? "hover:bg-sky-950/10" : "hover:bg-zinc-800/30",
+                    ? isBrand ? "bg-sky-950/30" : "bg-zinc-800/70"
+                    : isBrand ? "hover:bg-sky-950/20" : "hover:bg-zinc-800/50",
                 )}
               >
                 {row.getVisibleCells().map((cell, ci) => (
