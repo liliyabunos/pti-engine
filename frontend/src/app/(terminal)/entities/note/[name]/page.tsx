@@ -56,17 +56,18 @@ export default function NoteDetailPage({
           <TerminalPanel noPad>
             <div className="p-4 pb-3">
               <SectionHeader
-                title="Perfumes with this note"
+                title="Top Entities with this Note"
                 subtitle={data ? `${data.top_perfumes.length} shown` : undefined}
               />
             </div>
             {isLoading ? (
-              <TableSkeleton rows={15} cols={3} />
+              <TableSkeleton rows={15} cols={4} />
             ) : (
               <table className="w-full text-[12px]">
                 <thead>
                   <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-600">
-                    <th className="px-4 py-2 font-medium">Perfume</th>
+                    <th className="px-4 py-2 font-medium">Type</th>
+                    <th className="px-4 py-2 font-medium">Name</th>
                     <th className="px-4 py-2 font-medium">Brand</th>
                     <th className="px-4 py-2 font-medium">Status</th>
                   </tr>
@@ -89,6 +90,17 @@ export default function NoteDetailPage({
                           : "opacity-50",
                       )}
                     >
+                      <td className="px-4 py-2">
+                        {p.entity_type === "brand" ? (
+                          <span className="rounded border border-sky-800 bg-sky-950 px-1.5 py-0.5 text-[10px] text-sky-400">
+                            BRAND
+                          </span>
+                        ) : (
+                          <span className="rounded border border-violet-800 bg-violet-950 px-1.5 py-0.5 text-[10px] text-violet-400">
+                            PERFUME
+                          </span>
+                        )}
+                      </td>
                       <td className="px-4 py-2 text-zinc-200">
                         {p.canonical_name}
                       </td>
