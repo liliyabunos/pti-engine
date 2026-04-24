@@ -77,12 +77,12 @@ class CollapsedRow:
     volatility: Optional[float]   # max
     confidence_avg: Optional[float]  # max
 
-    # Phase I2 — source-quality-weighted score (max across variants, nullable)
-    weighted_signal_score: Optional[float] = None
-
     # Leaderboard ranking fields
     effective_rank_score: float   # composite_market_score * flood_dampening(unique_authors)
     is_flood_dampened: bool       # True when unique_authors < FLOOD_AUTHOR_FLOOR
+
+    # Phase I2 — source-quality-weighted score (max across variants, nullable)
+    weighted_signal_score: Optional[float] = None
 
     # Latest signal (best strength across all variants)
     latest_signal: Optional[str] = None
