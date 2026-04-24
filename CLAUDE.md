@@ -1,5 +1,25 @@
 # CLAUDE.md — Perfume Trend Intelligence SDK
 
+## Phase Prefix Registry
+
+| Prefix | Domain | Description |
+|--------|--------|-------------|
+| D | Data Pipeline | Ingestion, aggregation, signal detection, scheduling |
+| E | Entity / UI | Entity hygiene, linking, brand surface, catalog |
+| U | UI Layer | Frontend pages, screener, dashboard, navigation |
+| I | Intelligence Layer | Source weighting, trend drivers, prediction, signal quality |
+| O | Operations | Deployment, infrastructure, runtime, backup |
+| R | Recovery / Migration | DB migrations, schema fixes, data recovery |
+
+**Rule:** Every new phase must declare its prefix based on this registry. If the work spans multiple domains, pick the primary domain. Do not create new prefixes without adding them here first.
+
+**Next available:**
+- I1 — first Intelligence Layer phase (Source Intelligence Layer)
+- E4 — next Entity/UI phase
+- U3 — next UI Layer phase
+
+---
+
 ## Phase Completion Format (MANDATORY)
 
 Every completed phase MUST end with the following block. Do not mark a phase complete without it.
