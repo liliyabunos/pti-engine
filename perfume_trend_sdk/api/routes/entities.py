@@ -204,6 +204,63 @@ def _get_top_drivers(db: Session, entity_uuid, limit: int = 10) -> List[DriverRo
     return result
 
 
+def _get_top_drivers_for_brand(db: Session, brand_canonical_name: str, limit: int = 10) -> List[DriverRow]:
+    """Phase I4 — Top drivers across all perfume entities of a brand.
+
+    Brand entity_market rows don't have direct entity_mentions — individual
+    perfume entities carry those.  This query aggregates across all perfumes
+    whose brand_name matches the brand canonical name.
+    """
+    try:
+        rows = db.execute(text("""
+            SELECT DISTINCT ON (COALESCE(em.source_url, em.id::text))
+                em.source_platform,
+                em.source_url,
+                ms.source_name,
+                ms.views,
+                ms.likes,
+                ms.comments_count,
+                ms.engagement_rate,
+                ms.source_score,
+                em.occurred_at
+            FROM entity_mentions em
+            JOIN entity_market e ON e.id = em.entity_id
+            JOIN mention_sources ms ON ms.mention_id = em.id
+            WHERE LOWER(e.brand_name) = LOWER(:brand)
+              AND e.entity_type = 'perfume'
+              AND ms.source_score IS NOT NULL
+            ORDER BY
+                COALESCE(em.source_url, em.id::text),
+                ms.source_score DESC,
+                COALESCE(ms.views, 0) DESC,
+                em.occurred_at DESC
+        """), {"brand": brand_canonical_name}).fetchall()
+    except Exception as exc:
+        _log.warning("[I4] top_drivers_for_brand query failed: %s", exc)
+        return []
+
+    rows_sorted = sorted(
+        rows,
+        key=lambda r: (-(r[7] or 0.0), -(r[3] or 0)),
+    )[:limit]
+
+    return [
+        DriverRow(
+            source_platform=r[0],
+            source_url=r[1],
+            source_name=r[2],
+            title=None,
+            views=int(r[3]) if r[3] is not None else None,
+            likes=int(r[4]) if r[4] is not None else None,
+            comments_count=int(r[5]) if r[5] is not None else None,
+            engagement_rate=float(r[6]) if r[6] is not None else None,
+            source_score=float(r[7]) if r[7] is not None else None,
+            occurred_at=_fmt_dt(r[8]) if r[8] else None,
+        )
+        for r in rows_sorted
+    ]
+
+
 def _build_summary(
     em: EntityMarket,
     latest,
@@ -920,7 +977,7 @@ def get_brand_entity(
         catalog_perfumes = _brand_catalog_perfumes(db, em.canonical_name)
         top_notes = _brand_top_notes(db, em.canonical_name)
         top_accords = _brand_top_accords(db, em.canonical_name)
-        drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "brand_top_drivers")
+        drivers = _safe(lambda: _get_top_drivers_for_brand(db, em.canonical_name, limit=10), [], "brand_top_drivers")
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
