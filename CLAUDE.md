@@ -4019,6 +4019,38 @@ If auth is fully delegated to Supabase frontend/server flows and the backend doe
 
 ---
 
+## Entity Mentions Integrity Rule
+
+`entity_mentions.entity_id` must always reference `entity_market.id`.
+
+Do NOT write resolver perfume UUIDs or resolver IDs into `entity_mentions.entity_id`.
+
+**Reason:** Entity pages, Recent Mentions, source intelligence, and driver analysis all join
+`entity_mentions.entity_id` → `entity_market.id`. If a different UUID is stored
+(e.g. `perfume_identity_map.market_perfume_uuid`), the join returns zero rows and
+Recent Mentions shows empty — even when signals and timeseries are correct.
+
+**Correct lookup in aggregator:**
+```python
+entity_uuid: Optional[uuid.UUID] = entity_uuid_map.get(canonical)  # entity_market.id
+```
+
+**Forbidden:**
+```python
+# DO NOT use — returns perfume_identity_map.market_perfume_uuid, not entity_market.id
+uuid_str = identity_resolver.perfume_uuid(int(raw_eid))
+```
+
+**Historical fix:** `scripts/backfill_entity_mention_uuids.py` bridges via canonical_name:
+`entity_mentions.entity_id` → `perfume_identity_map` (market_perfume_uuid → canonical_name)
+→ `entity_market` (canonical_name → id). Run as a one-time backfill; idempotent.
+
+**Applied:** 2026-04-24. Fixed 2,171 historical entity_mentions rows (791 exact canonical match,
+1,380 concentration-suffix bridge). Result: 2,202/2,444 correctly linked; 98 signaling entities
+now expose Recent Mentions in the UI.
+
+---
+
 ## D5. Aggregation Layer Rules (Entity Consolidation + Chart Continuity)
 
 ### Core rules (MANDATORY)

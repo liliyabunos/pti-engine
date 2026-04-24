@@ -589,40 +589,23 @@ def _write_mentions(
             canonical = ent.get("canonical_name", "")
             raw_eid = ent.get("entity_id")
 
-            # --- Step 7B / 7.1A: bridge-first UUID resolution ---
-            entity_uuid: Optional[uuid.UUID] = None
+            # --- UUID resolution for entity_mentions ---
+            # ALWAYS use entity_uuid_map (canonical_name → entity_market.id).
+            # entity_mentions.entity_id MUST reference entity_market.id.
+            #
+            # DO NOT use identity_resolver.perfume_uuid() here — it returns
+            # perfume_identity_map.market_perfume_uuid which is a different UUID
+            # than entity_market.id. Mixing them breaks Recent Mentions, source
+            # intelligence, and driver analysis. (Fixed: 2026-04-24)
+            entity_uuid: Optional[uuid.UUID] = entity_uuid_map.get(canonical)
 
-            # Path 1: integer resolver id → market UUID via bridge
-            # Route to perfume or brand lookup based on entity_type.
-            is_int_id = raw_eid is not None and (
-                isinstance(raw_eid, int)
-                or (isinstance(raw_eid, str) and raw_eid.isdigit())
-            )
-            if is_int_id and identity_resolver is not None:
-                if entity_type == "brand":
-                    uuid_str = identity_resolver.brand_uuid(int(raw_eid))
-                else:
-                    uuid_str = identity_resolver.perfume_uuid(int(raw_eid))
-                if uuid_str:
-                    try:
-                        entity_uuid = uuid.UUID(uuid_str)
-                    except ValueError:
-                        pass
-
-            # Path 2: canonical-name in-process map (dev-backfill / new entities)
-            if entity_uuid is None:
-                entity_uuid = entity_uuid_map.get(canonical)
-
-            # Path 3: unmapped — log and skip
             if entity_uuid is None:
                 _emit_unmapped(
                     resolver_entity_id=raw_eid,
                     entity_type=entity_type,
                     canonical_name=canonical,
                     content_item_id=cid,
-                    reason=(
-                        "bridge_miss" if is_int_id else "canonical_not_in_entity_market"
-                    ),
+                    reason="canonical_not_in_entity_market",
                 )
                 continue
 
