@@ -1,5 +1,35 @@
 # CLAUDE.md — Perfume Trend Intelligence SDK
 
+## Phase Completion Format (MANDATORY)
+
+Every completed phase MUST end with the following block. Do not mark a phase complete without it.
+
+```
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- Status: SUCCESS
+- Active: YES
+- Time: <timestamp>
+
+VERIFICATION:
+- Checked: <endpoint / UI page>
+- Result: <what is working>
+
+NOTES:
+- Any limitations or follow-ups
+```
+
+**Rules:**
+- `Status: SUCCESS` means Railway deployment completed without errors
+- `Active: YES` means the feature is live and serving real traffic
+- `Checked` must name a specific URL, endpoint, or UI page — not "tested locally"
+- `Result` must describe what was observed, not what was expected
+- If deployment failed or is pending, use `Status: FAILED` or `Status: PENDING` — never write SUCCESS without verifying
+- If there are no limitations, write `None`
+
+---
+
 ## Frontend Production Verification Rule
 
 Healthcheck success is NOT sufficient production proof.
