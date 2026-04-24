@@ -10,7 +10,7 @@ It enriches signals with meaning, influence, and prediction.
 
 ---
 
-### I1 — Source Intelligence
+### I1 — Source Intelligence (COMPLETED — 2026-04-24)
 
 Add source-level data:
 - who created content
@@ -19,6 +19,31 @@ Add source-level data:
 
 Result:
 System knows WHO drives trends.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- Migration 018: `source_profiles` + `mention_sources` tables — applied to production
+- Migration 019: UNIQUE(mention_id) on mention_sources — applied to production
+- Aggregator: writes MentionSource rows alongside every EntityMention (live pipeline)
+- Backfill: `scripts/backfill_source_intelligence.py --days 30` run successfully
+- API: `recent_mentions` enriched with views/likes/comments_count/engagement_rate
+- API: new endpoint `GET /api/v1/entities/{id}/sources` (top sources by view volume)
+- Frontend: `RecentMentionRow` type extended with source intelligence fields
+
+VERIFICATION:
+- mention_sources: 2,444 rows (one per entity_mention, UNIQUE enforced)
+- source_profiles: 313 unique channel/author profiles
+- 337 rows with real view counts from YouTube engagement data
+- Top source: Scentlegacy 71,330 total views / 6 mentions
+- Correct handling: one video → multiple entity_mentions → separate mention_sources rows (expected)
+
+NOTES:
+- Backfill join uses OR: `cci.id = em.source_url OR cci.source_url = em.source_url`
+  (old entity_mentions use short video ID; new ones use full URL)
+- source_profiles.subscribers not populated — requires separate YouTube Channel API call
+- Reddit mention_sources created with NULL views (Reddit API returns score, not views)
+- Pipeline-daily migration 019 runs automatically via `alembic upgrade head` on next deploy
 
 ---
 
@@ -95,7 +120,7 @@ System becomes monetizable.
 **Rule:** Every new phase must declare its prefix based on this registry. If the work spans multiple domains, pick the primary domain. Do not create new prefixes without adding them here first.
 
 **Next available:**
-- I1 — first Intelligence Layer phase (Source Intelligence Layer)
+- I2 — next Intelligence Layer phase (Signal Weighting)
 - E4 — next Entity/UI phase
 - U3 — next UI Layer phase
 
