@@ -1,5 +1,86 @@
 # CLAUDE.md — Perfume Trend Intelligence SDK
 
+## Phase I — Intelligence Layer
+
+### Purpose
+Transform the system from data tracking into market intelligence.
+
+This layer does NOT modify ingestion (D) or UI (E/U).
+It enriches signals with meaning, influence, and prediction.
+
+---
+
+### I1 — Source Intelligence
+
+Add source-level data:
+- who created content
+- channel size
+- engagement
+
+Result:
+System knows WHO drives trends.
+
+---
+
+### I2 — Signal Weighting
+
+Replace equal mentions with weighted signals.
+
+Result:
+Noise vs real movement separation.
+
+---
+
+### I3 — Trend State
+
+Add directional understanding:
+- emerging
+- rising
+- breakout
+- peak
+- declining
+
+Result:
+System knows WHERE trend is going.
+
+---
+
+### I4 — Driver Analysis
+
+Identify:
+- top videos
+- top posts
+- top creators
+
+Result:
+System knows WHAT caused the trend.
+
+---
+
+### I5 — Topic / Query Intelligence
+
+Track:
+- queries
+- topics
+- keywords
+
+Result:
+System knows WHY the trend exists.
+
+---
+
+### I6 — Intelligence Output
+
+Produce:
+- reports
+- insights
+- sellable signals
+
+Result:
+System becomes monetizable.
+
+---
+
 ## Phase Prefix Registry
 
 | Prefix | Domain | Description |
