@@ -18,6 +18,87 @@ A frontend task is BLOCKED if the shell loads but real dashboard/screener data f
 
 ---
 
+## Dashboard Interaction Rules (CRITICAL)
+
+### Principle
+Dashboard is not a static table. It is a navigation layer into the system.
+
+Every entity row must be an entry point into deeper analysis.
+
+---
+
+### Row Click Behavior
+
+All rows in Dashboard (Top Movers, Signals, etc.) MUST be clickable.
+
+Clicking a row must navigate to the correct entity page:
+
+- perfume → /entities/perfume/{id}
+- brand → /entities/brand/{id}
+
+---
+
+### Clickable Elements
+
+The following elements must trigger navigation:
+
+- entire row
+- entity name
+- ticker
+
+Do NOT require precise clicking — interaction must be forgiving.
+
+---
+
+### Hover State
+
+Rows must have a hover state:
+- subtle background highlight
+- cursor: pointer
+
+This signals interactivity.
+
+---
+
+### Entity Type Awareness
+
+Navigation MUST respect entity_type:
+
+- If entity_type == "brand" → route to brand page
+- If entity_type == "perfume" → route to perfume page
+
+Hardcoding routes is prohibited.
+
+---
+
+### Event Handling
+
+Future interactive elements (e.g. watchlist icon, bookmark, actions) must:
+
+- use stopPropagation()
+- NOT break row navigation
+
+---
+
+### Anti-Pattern (Forbidden)
+
+❌ Static tables with no navigation  
+❌ Clickable only on small elements  
+❌ Client confusion about where to click  
+❌ Rows that display data but do not lead anywhere  
+
+---
+
+### Completion Criteria
+
+Feature is considered COMPLETE only if:
+
+- Clicking any row opens correct entity page
+- Works for both brand and perfume
+- Verified in production UI (not assumed)
+
+---
+
 ## Screener Search Rules
 
 Search in the screener must be **server-side** for all modes. Client-side filtering of a loaded page is not sufficient.

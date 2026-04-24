@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -195,11 +196,18 @@ interface TopMoversTableProps {
   onSelect: (entityId: string) => void;
 }
 
+function entityHref(row: TopMoverRow): string {
+  if (row.entity_type === "brand") return `/entities/brand/${encodeURIComponent(row.entity_id)}`;
+  if (row.entity_type === "perfume") return `/entities/perfume/${encodeURIComponent(row.entity_id)}`;
+  return `/entities/${encodeURIComponent(row.entity_id)}`;
+}
+
 export function TopMoversTable({
   rows,
   selectedId,
   onSelect,
 }: TopMoversTableProps) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = buildColumns(selectedId, onSelect);
@@ -257,10 +265,15 @@ export function TopMoversTable({
             const isSelected = entityId === selectedId;
             const isBrand = row.original.entity_type === "brand";
 
+            const href = entityHref(row.original);
+
             return (
               <tr
                 key={row.id}
-                onClick={() => onSelect(entityId)}
+                onClick={() => {
+                  onSelect(entityId);
+                  router.push(href);
+                }}
                 className={clsx(
                   "group cursor-pointer border-b border-zinc-800/40 transition-colors",
                   isSelected
@@ -268,45 +281,24 @@ export function TopMoversTable({
                     : isBrand ? "hover:bg-sky-950/10" : "hover:bg-zinc-800/30",
                 )}
               >
-                {/* Selected accent — left edge */}
                 {row.getVisibleCells().map((cell, ci) => (
                   <td
                     key={cell.id}
                     className={clsx(
                       "px-2.5 py-2",
-                      // Left-edge accent on first cell
                       ci === 0 && isSelected && isBrand && "border-l-2 border-sky-600",
                       ci === 0 && isSelected && !isBrand && "border-l-2 border-amber-400",
                       ci === 0 && !isSelected && "border-l-2 border-transparent",
                     )}
                   >
-                    {/* Wrap name cell with link; other cells plain */}
                     {cell.column.id === "canonical_name" ? (
-                      <div
+                      <Link
+                        href={href}
                         onClick={(e) => e.stopPropagation()}
-                        className="contents"
+                        className="block"
                       >
-                        <Link
-                          href={
-                            row.original.entity_type === "brand"
-                              ? `/entities/brand/${encodeURIComponent(row.original.entity_id)}`
-                              : row.original.entity_type === "perfume"
-                              ? `/entities/perfume/${encodeURIComponent(row.original.entity_id)}`
-                              : `/entities/${encodeURIComponent(row.original.entity_id)}`
-                          }
-                          onClick={(e) => {
-                            // Allow Ctrl/Cmd+click to open in new tab;
-                            // plain click selects row without navigating
-                            if (!e.metaKey && !e.ctrlKey) e.preventDefault();
-                          }}
-                          className="block"
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
-                        </Link>
-                      </div>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </Link>
                     ) : (
                       flexRender(cell.column.columnDef.cell, cell.getContext())
                     )}
