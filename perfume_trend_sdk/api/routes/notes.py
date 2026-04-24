@@ -96,6 +96,7 @@ def get_note_detail(
             rp.canonical_name,
             rb.canonical_name AS brand_name,
             em.entity_id,
+            em.entity_type,
             CASE WHEN em.id IS NOT NULL THEN true ELSE false END AS has_activity_today
         FROM resolver_perfume_notes rpn
         JOIN resolver_perfumes rp ON rp.id = rpn.resolver_perfume_id
@@ -111,7 +112,8 @@ def get_note_detail(
             "canonical_name": r[0],
             "brand_name": r[1],
             "entity_id": r[2],
-            "has_activity_today": bool(r[3]),
+            "entity_type": r[3],
+            "has_activity_today": bool(r[4]),
         }
         for r in perf_rows
     ]
@@ -154,6 +156,7 @@ def get_accord_detail(
             rp.canonical_name,
             rb.canonical_name AS brand_name,
             em.entity_id,
+            em.entity_type,
             CASE WHEN em.id IS NOT NULL THEN true ELSE false END AS has_activity_today
         FROM resolver_perfume_accords rpa
         JOIN resolver_perfumes rp ON rp.id = rpa.resolver_perfume_id
@@ -169,7 +172,8 @@ def get_accord_detail(
             "canonical_name": r[0],
             "brand_name": r[1],
             "entity_id": r[2],
-            "has_activity_today": bool(r[3]),
+            "entity_type": r[3],
+            "has_activity_today": bool(r[4]),
         }
         for r in perf_rows
     ]

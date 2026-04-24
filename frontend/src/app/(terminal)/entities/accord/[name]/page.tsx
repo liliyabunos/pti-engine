@@ -77,7 +77,9 @@ export default function AccordDetailPage({
                       key={p.canonical_name}
                       onClick={() =>
                         p.entity_id
-                          ? router.push(`/entities/perfume/${p.entity_id}`)
+                          ? router.push(
+                              `/entities/${p.entity_type === "brand" ? "brand" : "perfume"}/${p.entity_id}`,
+                            )
                           : undefined
                       }
                       className={clsx(
