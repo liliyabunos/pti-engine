@@ -224,7 +224,7 @@ NOTES:
 
 ---
 
-### I5 — Topic / Query Intelligence
+### I5 — Topic / Query Intelligence (COMPLETED — 2026-04-24)
 
 Track:
 - queries
@@ -233,6 +233,47 @@ Track:
 
 Result:
 System knows WHY the trend exists.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- Migration 022: `content_topics` + `entity_topic_links` tables — applied to production
+- Extractor: `perfume_trend_sdk/analysis/topic_intelligence/extractor.py` — 40 deterministic regex-based TOPIC_RULES, no AI
+- Extraction job: `perfume_trend_sdk/jobs/extract_entity_topics.py` — processes `canonical_content_items`, links topics to entities via `entity_mentions.source_url`
+- API: `PerfumeEntityDetail` + `BrandEntityDetail` extended with `top_topics`, `top_queries`, `top_subreddits`
+- Brand aggregation: `_get_brand_topics()` aggregates across brand portfolio via `entity_market.brand_name`
+- Frontend: `WhyTrending` component — chip-based, color-coded by type (sky=topic, violet=query, orange=subreddit)
+- Frontend: Added to perfume entity page (after Top Drivers) and brand entity page
+- Fix: `RETURNING id` used for PostgreSQL compatibility (`lastrowid=0` for pg+SQLAlchemy text())
+
+TOPIC TYPES:
+- `query` — YouTube search query that surfaced the content (e.g. "creed aventus review")
+- `subreddit` — Reddit community (e.g. "fragrance", "Colognes", "FemFragLab")
+- `topic` — deterministic regex match from ~40 TOPIC_RULES vocabulary:
+  - Usage: compliment getter, office scent, date night, signature scent, gym/sport, beach/vacation
+  - Discovery: blind buy, gift idea, sample/decant, review, ranking/best of, comparison, dupe/alternative
+  - Trends: trending/viral, new release, flanker, reformulation
+  - Scent: vanilla, oud, fresh/citrus, floral, woody, musk, sweet/gourmand, spicy, smoky/leather, green/earthy
+  - Market: niche fragrance, designer fragrance, affordable, luxury
+  - Gender: men's fragrance, women's fragrance, unisex
+  - Performance: longevity/projection
+  - Season: summer, winter, fall/autumn, spring
+  - Geographic: arab/oriental, french fragrance, italian fragrance
+
+VERIFICATION:
+- Checked: production PostgreSQL + /api/v1/entities/perfume/Yves%20Saint%20Laurent%20Libre (2026-04-24)
+- content_topics: 2,983 rows (1,698 topic + 731 query + 554 subreddit)
+- entity_topic_links: 26 rows
+- YSL Libre: topics=['review', "women's fragrance", 'floral', 'vanilla', 'sample/decant', 'fresh/citrus', 'new release'], queries=['ysl libre perfume', 'ysl libre perfume review']
+- MFK Baccarat Rouge 540: topics=['trending/viral'], queries=['baccarat rouge 540']
+- Brand endpoint /api/v1/entities/brand/brand-creed: top_topics/top_queries/top_subreddits fields present
+- WhyTrending block renders on entity pages when data is present
+
+NOTES:
+- 26 entity_topic_links due to entity_mentions join requiring source_url=canonical_content_items.id match; coverage grows automatically as pipeline accumulates more linked content
+- Brand entities aggregate topics from portfolio perfumes (not direct brand entity_mentions)
+- _safe() wrapping ensures graceful degradation if content_topics table is unavailable in SQLite dev
+- RETURNING id required for PostgreSQL; SQLite uses lastrowid which is 0 for pg+SQLAlchemy text()
 
 ---
 
