@@ -45,5 +45,10 @@ class EntityTimeSeriesDaily(Base):
     # NULL when no mentions have been written yet for this date (e.g. carry-forward rows)
     weighted_signal_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
+    # Phase I3 — directional trend state for this entity/day.
+    # Values: 'breakout' | 'rising' | 'peak' | 'stable' | 'declining' | 'emerging'
+    # NULL = carry-forward row (mention_count == 0) or not yet computed.
+    trend_state: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

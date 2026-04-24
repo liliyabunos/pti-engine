@@ -41,6 +41,8 @@ export interface TopMoverRow {
   volatility: number | null;
   latest_signal: string | null;
   latest_signal_strength: number | null;
+  /** Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging */
+  trend_state: string | null;
   /** Concentration-variant canonical names collapsed into this row. */
   variant_names: string[];
 }
@@ -84,6 +86,8 @@ export interface EntitySummary {
   growth_rate: number | null;
   latest_signal_type: string | null;
   latest_signal_strength: number | null;
+  /** Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging */
+  trend_state: string | null;
   /** Top 3 notes — populated in screener response, empty otherwise */
   top_notes: string[];
 }
@@ -110,6 +114,8 @@ export interface SnapshotRow {
   growth_rate: number | null;
   search_index: number | null;
   retailer_score: number | null;
+  /** Phase I3 — directional trend state for this day: breakout|rising|peak|stable|declining|emerging */
+  trend_state: string | null;
 }
 
 export interface RecentMentionRow {
@@ -193,6 +199,8 @@ export interface PerfumeEntityDetail {
   latest_date: string | null;
   confidence_avg: number | null;
   momentum: number | null;
+  /** Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging */
+  trend_state: string | null;
   timeseries: SnapshotRow[];
   recent_signals: SignalRow[];
   recent_mentions: RecentMentionRow[];
@@ -228,6 +236,8 @@ export interface BrandEntityDetail {
   latest_score: number | null;
   latest_growth: number | null;
   latest_signal: string | null;
+  /** Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging */
+  trend_state: string | null;
   /** All catalog perfumes for the brand (from resolver, up to 100). entity_id=null for untracked. */
   catalog_perfumes: BrandPerfumeRow[];
   /** Alias for catalog_perfumes — kept for backward compat */

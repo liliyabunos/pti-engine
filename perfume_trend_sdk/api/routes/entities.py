@@ -323,6 +323,8 @@ class PerfumeEntityDetail(BaseModel):
     latest_date: Optional[str] = None
     confidence_avg: Optional[float] = None
     momentum: Optional[float] = None
+    # Phase I3 — directional trend state for the most recent active day
+    trend_state: Optional[str] = None
     # Time series + events
     timeseries: List[SnapshotRow] = []
     recent_signals: List[SignalRow] = []
@@ -352,6 +354,8 @@ class BrandEntityDetail(BaseModel):
     latest_score: Optional[float] = None
     latest_growth: Optional[float] = None
     latest_signal: Optional[str] = None
+    # Phase I3 — directional trend state for the most recent active day
+    trend_state: Optional[str] = None
     # Linked perfumes — catalog_perfumes: all from resolver (up to 100)
     # top_perfumes kept for backward compat (same data as catalog_perfumes)
     catalog_perfumes: List[BrandPerfumeRow] = []
@@ -645,6 +649,7 @@ def _build_snapshot_rows(history_rows) -> List[SnapshotRow]:
             growth_rate=r.growth_rate,
             search_index=r.search_index,
             retailer_score=r.retailer_score,
+            trend_state=getattr(r, "trend_state", None),  # Phase I3
         )
         for r in history_rows
     ]
@@ -895,6 +900,7 @@ def get_perfume_entity(
             latest_date=latest.date.isoformat() if latest and latest.date else None,
             confidence_avg=latest.confidence_avg if latest else None,
             momentum=latest.momentum if latest else None,
+            trend_state=getattr(latest, "trend_state", None) if latest else None,  # Phase I3
             timeseries=_build_snapshot_rows(history_rows),
             recent_signals=_build_signal_rows(signal_rows, em, em.brand_name),
             recent_mentions=_build_mention_rows(mention_rows),
@@ -994,6 +1000,7 @@ def get_brand_entity(
             latest_score=latest.composite_market_score if latest else None,
             latest_growth=latest.growth_rate if latest else None,
             latest_signal=latest_sig,
+            trend_state=getattr(latest, "trend_state", None) if latest else None,  # Phase I3
             catalog_perfumes=catalog_perfumes,
             top_perfumes=catalog_perfumes,
             timeseries=_build_snapshot_rows(history_rows),
@@ -1152,6 +1159,7 @@ def get_entity(
             growth_rate=r.growth_rate,
             search_index=r.search_index,
             retailer_score=r.retailer_score,
+            trend_state=getattr(r, "trend_state", None),  # Phase I3
         )
         for r in history_rows
     ]

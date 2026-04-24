@@ -36,6 +36,8 @@ class EntitySummary(BaseModel):
     # Latest signal (if any) for screener/dashboard enrichment
     latest_signal_type: Optional[str] = None
     latest_signal_strength: Optional[float] = None
+    # Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging
+    trend_state: Optional[str] = None
     # Top 3 notes for screener chips (populated only in screener response, empty otherwise)
     top_notes: List[str] = []
 
@@ -56,6 +58,8 @@ class SnapshotRow(BaseModel):
     growth_rate: Optional[float] = None
     search_index: Optional[float] = None
     retailer_score: Optional[float] = None
+    # Phase I3 — directional trend state for this day
+    trend_state: Optional[str] = None
 
 
 class SignalRow(BaseModel):

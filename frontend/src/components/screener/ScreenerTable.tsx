@@ -15,6 +15,7 @@ import { AddToWatchlistModal } from "@/components/entity/AddToWatchlistModal";
 
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
+import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { TableSkeleton } from "@/components/primitives/LoadingSkeleton";
 import { EmptyState } from "@/components/primitives/EmptyState";
 import {
@@ -160,6 +161,12 @@ const COLUMNS = [
     size: 110,
     meta: { sortKey: undefined },
     cell: (c) => <SignalBadge type={c.getValue()} />,
+  }),
+  col.accessor("trend_state", {
+    header: "Trend",
+    size: 76,
+    meta: { sortKey: undefined },
+    cell: (c) => <TrendStateBadge state={c.getValue()} />,
   }),
   col.accessor("top_notes", {
     header: "Notes",

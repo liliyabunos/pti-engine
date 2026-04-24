@@ -84,6 +84,9 @@ class CollapsedRow:
     # Phase I2 — source-quality-weighted score (max across variants, nullable)
     weighted_signal_score: Optional[float] = None
 
+    # Phase I3 — directional trend state (best state across variants by priority order)
+    trend_state: Optional[str] = None
+
     # Latest signal (best strength across all variants)
     latest_signal: Optional[str] = None
     latest_signal_strength: Optional[float] = None
@@ -224,6 +227,21 @@ def collapse_and_rank(
             if em.entity_id != primary_em.entity_id
         ]
 
+        # Phase I3 — trend_state: pick the "most significant" state across variants.
+        # Priority order matches display significance: breakout > rising > peak >
+        # stable > declining > emerging > None.
+        _STATE_PRIORITY = {
+            "breakout": 6, "rising": 5, "peak": 4,
+            "stable": 3, "declining": 2, "emerging": 1,
+        }
+        best_state: Optional[str] = None
+        best_state_rank = -1
+        for _, s in members:
+            ts = getattr(s, "trend_state", None)
+            if ts and _STATE_PRIORITY.get(ts, 0) > best_state_rank:
+                best_state = ts
+                best_state_rank = _STATE_PRIORITY[ts]
+
         # Flood dampening on merged unique_authors
         eff_score, dampened = compute_effective_rank_score(best_score, max_authors)
 
@@ -253,6 +271,7 @@ def collapse_and_rank(
             engagement_sum=total_engagement,
             composite_market_score=best_score,
             weighted_signal_score=best_weighted,
+            trend_state=best_state,
             growth_rate=best_growth,
             momentum=best_momentum,
             acceleration=best_accel,

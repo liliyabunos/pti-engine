@@ -19,6 +19,7 @@ import { AddToWatchlistModal } from "@/components/entity/AddToWatchlistModal";
 import { CreateAlertModal } from "@/components/alerts/CreateAlertModal";
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
+import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum } from "@/lib/formatters";
 import type { EntityChartMetric } from "@/components/entity/EntityChart";
 import type { DriverRow, SimilarPerfumeRow } from "@/lib/api/types";
@@ -424,6 +425,7 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                     )}
                     <StateBadge state={data.state} />
                     {latestSignal && <SignalBadge type={latestSignal} />}
+                    {data.trend_state && <TrendStateBadge state={data.trend_state} />}
                     {data.aliases_count > 0 && (
                       <span className="text-[10px] text-zinc-600">
                         {data.aliases_count} aliases

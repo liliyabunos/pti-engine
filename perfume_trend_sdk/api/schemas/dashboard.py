@@ -48,6 +48,8 @@ class TopMoverRow(BaseModel):
     volatility: Optional[float] = None
     latest_signal: Optional[str] = None        # signal_type of most-recent signal
     latest_signal_strength: Optional[float] = None
+    # Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging
+    trend_state: Optional[str] = None
     variant_names: List[str] = []              # concentration variants collapsed into this row
 
 

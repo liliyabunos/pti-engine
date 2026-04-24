@@ -145,6 +145,7 @@ def get_dashboard(
             volatility=cr.volatility,
             latest_signal=cr.latest_signal,
             latest_signal_strength=cr.latest_signal_strength,
+            trend_state=cr.trend_state,  # Phase I3
             variant_names=cr.variant_names,
         ))
 
@@ -299,6 +300,7 @@ def get_screener(
             growth_rate=snap.growth_rate if snap else None,
             latest_signal_type=sig_info[0] if sig_info else None,
             latest_signal_strength=sig_info[1] if sig_info else None,
+            trend_state=snap.trend_state if snap else None,  # Phase I3
         ))
 
     # Deduplicate by case-insensitive canonical_name: keep the row with the

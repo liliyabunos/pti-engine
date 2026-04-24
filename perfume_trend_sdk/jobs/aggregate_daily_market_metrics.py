@@ -40,6 +40,7 @@ from perfume_trend_sdk.analysis.market_signals.aggregator import (
     DailyAggregator,
     generate_ticker,
 )
+from perfume_trend_sdk.analysis.market_signals.trend_state import compute_trend_state
 from perfume_trend_sdk.bridge.identity_resolver import IdentityResolver
 from perfume_trend_sdk.db.market.brand import Brand
 from perfume_trend_sdk.db.market.entity_mention import EntityMention
@@ -402,16 +403,48 @@ def _rollup_brand_market_data(db: Session, target_date: date) -> int:
             date=target_date,
         ).first()
 
+        gr_val = float(wgt_growth) if wgt_growth is not None else None
+        mom_val = float(avg_momentum) if avg_momentum is not None else None
+        acc_val = float(avg_acceleration) if avg_acceleration is not None else None
+
+        # Phase I3 — brand trend state derived from aggregated perfume metrics.
+        # Prev brand score lookup: use the existing timeseries row for the brand entity
+        # if available (set before this block via a prior aggregation date).
+        prev_brand_score: Optional[float] = None
+        if em is not None:  # em was set earlier in the loop
+            prev_row = (
+                db.query(EntityTimeSeriesDaily)
+                .filter(
+                    EntityTimeSeriesDaily.entity_id == em.id,
+                    EntityTimeSeriesDaily.date < target_date,
+                    EntityTimeSeriesDaily.mention_count > 0,
+                )
+                .order_by(EntityTimeSeriesDaily.date.desc())
+                .first()
+            )
+            if prev_row:
+                prev_brand_score = prev_row.composite_market_score
+
+        brand_trend_state = compute_trend_state(
+            score=wgt_score,
+            prev_score=prev_brand_score,
+            growth_rate=gr_val,
+            momentum=mom_val,
+            acceleration=acc_val,
+            mention_count=total_mentions,
+        )
+
         snap_data = {
             "mention_count":          total_mentions,
             "unique_authors":         total_authors,
             "engagement_sum":         total_engagement,
             "composite_market_score": wgt_score,
-            "growth_rate":            float(wgt_growth) if wgt_growth is not None else None,
-            "momentum":               float(avg_momentum) if avg_momentum is not None else None,
-            "acceleration":           float(avg_acceleration) if avg_acceleration is not None else None,
+            "growth_rate":            gr_val,
+            "momentum":               mom_val,
+            "acceleration":           acc_val,
             "volatility":             float(avg_volatility) if avg_volatility is not None else None,
             "confidence_avg":         float(avg_confidence) if avg_confidence is not None else None,
+            "trend_state":            brand_trend_state,
         }
 
         if existing:
@@ -508,6 +541,7 @@ def _carry_forward_quiet_entities(db: Session, target_date: date) -> int:
             momentum=0.0,
             acceleration=0.0,
             volatility=0.0,
+            trend_state=None,  # Phase I3 — no activity, no trend state
             created_at=now,
             updated_at=now,
         ))
@@ -854,12 +888,22 @@ def run(
         prev_snapshots=prev_snapshots_by_name,
     )
 
-    # Write snapshots using UUID entity_id
+    # Write snapshots using UUID entity_id, including trend_state classification
     for snap in snapshots:
         canonical = snap["entity_id"]
         entity_uuid = entity_uuid_map.get(canonical)
         if entity_uuid is None:
             continue
+        # Phase I3 — compute trend state from current snapshot + previous day context
+        prev = prev_snapshots_by_uuid.get(entity_uuid, {})
+        snap["trend_state"] = compute_trend_state(
+            score=float(snap.get("composite_market_score") or 0.0),
+            prev_score=prev.get("composite_market_score"),
+            growth_rate=snap.get("growth_rate"),
+            momentum=snap.get("momentum"),
+            acceleration=snap.get("acceleration"),
+            mention_count=float(snap.get("mention_count") or 0.0),
+        )
         _upsert_snapshot(db, snap, entity_uuid, target_date_obj)
 
     db.flush()
@@ -898,9 +942,17 @@ def run(
             target_date, weighted_updated,
         )
 
+    # Phase I3 — count trend states written
+    trend_state_counts: dict = {}
+    for snap in snapshots:
+        ts = snap.get("trend_state")
+        if ts:
+            trend_state_counts[ts] = trend_state_counts.get(ts, 0) + 1
+
     logger.info(
-        "aggregate_daily_market_metrics_completed date=%s entities=%d brands=%d carry_forward=%d mentions=%d weighted=%d",
+        "aggregate_daily_market_metrics_completed date=%s entities=%d brands=%d carry_forward=%d mentions=%d weighted=%d trend_states=%s",
         target_date, len(snapshots), brand_rows_written, cf_written, mentions_written, weighted_updated,
+        trend_state_counts,
     )
 
     return {
@@ -910,6 +962,7 @@ def run(
         "carry_forward": cf_written,
         "mentions_written": mentions_written,
         "weighted_updated": weighted_updated,
+        "trend_states": trend_state_counts,
     }
 
 

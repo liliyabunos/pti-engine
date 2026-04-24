@@ -19,6 +19,7 @@ import { AddToWatchlistModal } from "@/components/entity/AddToWatchlistModal";
 import { CreateAlertModal } from "@/components/alerts/CreateAlertModal";
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
+import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { fmtScore, fmtGrowth } from "@/lib/formatters";
 import type { BrandPerfumeRow, DriverRow } from "@/lib/api/types";
 
@@ -360,6 +361,7 @@ export default function BrandEntityPage({ params }: PageProps) {
                     </span>
                     <StateBadge state={data.state} />
                     {latestSignal && <SignalBadge type={latestSignal} />}
+                    {data.trend_state && <TrendStateBadge state={data.trend_state} />}
                   </div>
                   <h1 className="mt-1 text-xl font-bold leading-tight text-zinc-100">
                     {data.canonical_name}

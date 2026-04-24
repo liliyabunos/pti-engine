@@ -102,7 +102,7 @@ NOTES:
 
 ---
 
-### I3 — Trend State
+### I3 — Trend State (COMPLETED — 2026-04-24)
 
 Add directional understanding:
 - emerging
@@ -113,6 +113,49 @@ Add directional understanding:
 
 Result:
 System knows WHERE trend is going.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- Migration 021: `trend_state VARCHAR(20) NULLABLE` column on `entity_timeseries_daily` — applied to production
+- `perfume_trend_sdk/analysis/market_signals/trend_state.py`: pure `compute_trend_state()` function with 6 states + None (carry-forward)
+- Aggregator: computes trend_state per entity/day using current score, prev score, growth_rate, momentum, mention_count
+- Brand rollup: prev brand score looked up via ORM query; brand trend_state computed and stored
+- Carry-forward rows: always trend_state=None (no activity, no trend state)
+- Variant collapser: picks best state across concentration variants via numeric priority dict (breakout=6 > rising=5 > peak=4 > stable=3 > declining=2 > emerging=1)
+- API: `trend_state` exposed in `TopMoverRow`, `EntitySummary` (screener), `SnapshotRow` (timeseries), `PerfumeEntityDetail`, `BrandEntityDetail`
+- Frontend: `TrendStateBadge` primitive with 6 semantic colors (emerald=breakout, green=rising, amber=peak, sky=stable, rose=declining, violet=emerging); 3 variants (pill, dot, label)
+- Frontend: Trend column added to TopMoversTable and ScreenerTable
+- Frontend: TrendStateBadge on perfume and brand entity page headers
+
+CLASSIFICATION THRESHOLDS:
+```
+breakout:  score ≥ 15 AND growth ≥ 35% AND mentions ≥ 2
+           OR signal in (breakout, acceleration_spike) AND score ≥ 10
+declining: prev_score ≥ 10 AND score < 50% of prev
+           OR growth < -30% AND prev_score ≥ 5
+rising:    growth ≥ 15% AND score ≥ 5 AND mentions ≥ 1
+           OR momentum ≥ 0.3 AND score ≥ 5
+peak:      score ≥ 20 AND -5% ≤ growth ≤ +10%
+emerging:  prev_score == 0 AND score > 0 AND mentions ≥ 1
+           OR score < 10 AND growth > 0 AND mentions ≥ 1
+stable:    score > 0 (fallback)
+None:      mention_count == 0 (carry-forward row)
+```
+
+VERIFICATION:
+- Checked: production PostgreSQL after backfill run for 2026-04-24
+- At least 5 distinct trend states across entity set verified
+- Dashboard top movers show Trend column with pills
+- Screener rows show Trend column
+- Perfume and brand entity pages show trend badge in header
+- Version: 1.0.3
+
+NOTES:
+- trend_state is additive — existing signals, scores, and timeseries are unchanged
+- Pure function in trend_state.py allows easy threshold tuning
+- Non-finite growth_rate values (inf/-inf) handled safely via is_finite guard
+- Brand trend states aggregated from brand's own timeseries (not from constituent perfumes)
 
 ---
 

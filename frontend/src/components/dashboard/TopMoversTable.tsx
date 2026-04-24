@@ -17,6 +17,7 @@ import { clsx } from "clsx";
 
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
+import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { EmptyState } from "@/components/primitives/EmptyState";
 import {
   fmtScore,
@@ -183,6 +184,12 @@ function buildColumns(
       size: 96,
       enableSorting: false,
       cell: (c) => <SignalBadge type={c.getValue()} />,
+    }),
+    col.accessor("trend_state", {
+      header: "Trend",
+      size: 76,
+      enableSorting: false,
+      cell: (c) => <TrendStateBadge state={c.getValue()} />,
     }),
     {
       id: "_nav",

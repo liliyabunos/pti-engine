@@ -96,7 +96,7 @@ app = FastAPI(
         "Perfume Trend Intelligence Engine v1 — real-time trend market terminal "
         "for fragrance brands, retail buyers, and content strategists."
     ),
-    version="1.0.2",  # Phase I4 — top_drivers
+    version="1.0.3",  # Phase I3 — trend_state
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
