@@ -14,6 +14,7 @@ import { clsx } from "clsx";
 
 import { fetchScreener } from "@/lib/api/screener";
 import { fetchCatalogPerfumes, fetchCatalogBrands, fetchCatalogCounts } from "@/lib/api/catalog";
+import { fetchTopNotes, fetchTopAccords } from "@/lib/api/notes";
 import { Header } from "@/components/shell/Header";
 import {
   ControlBar,
@@ -28,22 +29,24 @@ import { EmptyState } from "@/components/primitives/EmptyState";
 import { TableSkeleton } from "@/components/primitives/LoadingSkeleton";
 import { ScreenerFilters } from "@/components/screener/ScreenerFilters";
 import { ScreenerTable } from "@/components/screener/ScreenerTable";
-import type { ScreenerParams, CatalogPerfumeRow, CatalogBrandRow } from "@/lib/api/types";
+import type { ScreenerParams, CatalogPerfumeRow, CatalogBrandRow, NoteRow, AccordRow } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
-// Search is server-side in all modes:
-//   Active Today  → q sent to /api/v1/screener?q=... (matches name/brand/ticker)
-//   All Perfumes  → q sent to /api/v1/catalog/perfumes?q=...
-//   All Brands    → q sent to /api/v1/catalog/brands?q=...
+// Architecture:
+//   Layer "market"      → modes: active | catalog_perfumes | catalog_brands
+//   Layer "composition" → modes: notes | accords
 //
-// Client-side filtering of loaded rows is NOT used.
+// Search is server-side in all modes.
 // ---------------------------------------------------------------------------
 
 const PAGE_SIZE = 50;
 
-type ScreenerMode = "active" | "catalog_perfumes" | "catalog_brands";
+type ScreenerLayer = "market" | "composition";
+type MarketMode = "active" | "catalog_perfumes" | "catalog_brands";
+type CompositionMode = "notes" | "accords";
+type ScreenerMode = MarketMode | CompositionMode;
 
-// Preset configurations — each prefills a specific set of screener params
+// Preset configurations for active market mode
 const PRESETS: {
   key: string;
   label: string;
@@ -93,7 +96,7 @@ const PRESETS: {
 ];
 
 // ---------------------------------------------------------------------------
-// URL param serialization helpers
+// URL param serialization
 // ---------------------------------------------------------------------------
 
 function paramsToSearch(p: ScreenerParams, mode: ScreenerMode): string {
@@ -135,10 +138,6 @@ function searchToParams(sp: URLSearchParams): ScreenerParams {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Detect active preset (loose match on key fields)
-// ---------------------------------------------------------------------------
-
 function detectPreset(params: ScreenerParams): string | null {
   for (const p of PRESETS) {
     const keys = Object.keys(p.params) as (keyof ScreenerParams)[];
@@ -153,8 +152,12 @@ function detectPreset(params: ScreenerParams): string | null {
   return null;
 }
 
+function modeToLayer(mode: ScreenerMode): ScreenerLayer {
+  return mode === "notes" || mode === "accords" ? "composition" : "market";
+}
+
 // ---------------------------------------------------------------------------
-// Catalog table (simpler columns for resolver catalog rows)
+// Catalog tables (perfumes / brands)
 // ---------------------------------------------------------------------------
 
 function CatalogPerfumeTable({
@@ -177,63 +180,47 @@ function CatalogPerfumeTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-zinc-800">
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              Name
-            </th>
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              Brand
-            </th>
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              Status
-            </th>
+    <table className="w-full text-[12px]">
+      <thead>
+        <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-600">
+          <th className="px-4 py-2 font-medium">Perfume</th>
+          <th className="px-4 py-2 font-medium">Brand</th>
+          <th className="px-4 py-2 font-medium">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr
+            key={row.resolver_id}
+            onClick={() =>
+              row.entity_id
+                ? router.push(`/entities/perfume/${row.entity_id}`)
+                : undefined
+            }
+            className={clsx(
+              "border-b border-zinc-900 transition-colors",
+              row.entity_id
+                ? "cursor-pointer hover:bg-zinc-900"
+                : "opacity-50",
+            )}
+          >
+            <td className="px-4 py-2 text-zinc-200">{row.canonical_name}</td>
+            <td className="px-4 py-2 text-zinc-500">{row.brand_name ?? "—"}</td>
+            <td className="px-4 py-2">
+              {row.entity_id ? (
+                <span className="rounded border border-emerald-800 bg-emerald-950 px-1.5 py-0.5 text-[10px] text-emerald-400">
+                  Tracked
+                </span>
+              ) : (
+                <span className="rounded border border-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                  In Catalog
+                </span>
+              )}
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const isTracked = !!row.entity_id;
-            const isActive = row.has_activity_today;
-            const href = isTracked
-              ? `/entities/perfume/${encodeURIComponent(row.entity_id!)}`
-              : `/entities/perfume/${row.resolver_id}`;
-            return (
-              <tr
-                key={row.resolver_id}
-                onClick={() => router.push(href)}
-                className="group cursor-pointer border-b border-zinc-800/40 transition-colors hover:bg-zinc-800/30"
-              >
-                <td className="px-3 py-2">
-                  <span className="block max-w-[240px] truncate text-xs text-zinc-200 group-hover:text-amber-300">
-                    {row.canonical_name}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-[11px] text-zinc-500">
-                  {row.brand_name ?? "—"}
-                </td>
-                <td className="px-3 py-2">
-                  {isActive ? (
-                    <span className="inline-flex items-center rounded border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-400">
-                      Active
-                    </span>
-                  ) : isTracked ? (
-                    <span className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-500">
-                      Tracked
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
-                      In Catalog
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -257,68 +244,146 @@ function CatalogBrandTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-zinc-800">
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              Brand
-            </th>
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500 w-20">
-              Perfumes
-            </th>
-            <th className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
-              Status
-            </th>
+    <table className="w-full text-[12px]">
+      <thead>
+        <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-600">
+          <th className="px-4 py-2 font-medium">Brand</th>
+          <th className="px-4 py-2 font-medium">Perfumes</th>
+          <th className="px-4 py-2 font-medium">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr
+            key={row.resolver_id}
+            onClick={() =>
+              row.entity_id
+                ? router.push(`/entities/brand/${row.entity_id}`)
+                : undefined
+            }
+            className={clsx(
+              "border-b border-zinc-900 transition-colors",
+              row.entity_id
+                ? "cursor-pointer hover:bg-zinc-900"
+                : "opacity-50",
+            )}
+          >
+            <td className="px-4 py-2 text-zinc-200">{row.canonical_name}</td>
+            <td className="px-4 py-2 text-zinc-500">{row.perfume_count.toLocaleString()}</td>
+            <td className="px-4 py-2">
+              {row.entity_id ? (
+                <span className="rounded border border-emerald-800 bg-emerald-950 px-1.5 py-0.5 text-[10px] text-emerald-400">
+                  Tracked
+                </span>
+              ) : (
+                <span className="rounded border border-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                  In Catalog
+                </span>
+              )}
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const isTracked = !!row.entity_id;
-            const isActive = row.has_activity_today;
-            const href = isTracked
-              ? `/entities/brand/${encodeURIComponent(row.entity_id!)}`
-              : `/entities/brand/${row.resolver_id}`;
-            return (
-              <tr
-                key={row.resolver_id}
-                onClick={() => router.push(href)}
-                className="group cursor-pointer border-b border-zinc-800/40 transition-colors hover:bg-zinc-800/30"
-              >
-                <td className="px-3 py-2">
-                  <span className="block max-w-[300px] truncate text-xs text-zinc-200 group-hover:text-amber-300">
-                    {row.canonical_name}
-                  </span>
-                </td>
-                <td className="px-3 py-2 tabular-nums text-[11px] text-zinc-500">
-                  {row.perfume_count.toLocaleString()}
-                </td>
-                <td className="px-3 py-2">
-                  {isActive ? (
-                    <span className="inline-flex items-center rounded border border-amber-800 bg-amber-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-400">
-                      Active
-                    </span>
-                  ) : isTracked ? (
-                    <span className="inline-flex items-center rounded border border-emerald-800 bg-emerald-950/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-500">
-                      Tracked
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-600">
-                      In Catalog
-                    </span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Active Today empty state — shown when server-side search returns 0 rows
+// Composition tables (notes / accords)
+// ---------------------------------------------------------------------------
+
+function NotesTable({
+  rows,
+  isLoading,
+  search,
+}: {
+  rows: NoteRow[];
+  isLoading: boolean;
+  search: string;
+}) {
+  const router = useRouter();
+  const filtered = search
+    ? rows.filter((r) => r.note_name.toLowerCase().includes(search.toLowerCase()))
+    : rows;
+
+  if (isLoading) return <TableSkeleton rows={15} cols={2} />;
+  if (!filtered.length) {
+    return <EmptyState message="No notes found" detail="Try a different search term" />;
+  }
+
+  return (
+    <table className="w-full text-[12px]">
+      <thead>
+        <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-600">
+          <th className="px-4 py-2 font-medium">Note</th>
+          <th className="px-4 py-2 font-medium text-right">Perfumes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtered.map((row) => (
+          <tr
+            key={row.note_name}
+            onClick={() => router.push(`/entities/note/${encodeURIComponent(row.note_name)}`)}
+            className="cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900"
+          >
+            <td className="px-4 py-2 text-zinc-200">{row.note_name}</td>
+            <td className="px-4 py-2 text-right tabular-nums text-zinc-500">
+              {row.perfume_count.toLocaleString()}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function AccordsTable({
+  rows,
+  isLoading,
+  search,
+}: {
+  rows: AccordRow[];
+  isLoading: boolean;
+  search: string;
+}) {
+  const router = useRouter();
+  const filtered = search
+    ? rows.filter((r) => r.accord_name.toLowerCase().includes(search.toLowerCase()))
+    : rows;
+
+  if (isLoading) return <TableSkeleton rows={15} cols={2} />;
+  if (!filtered.length) {
+    return <EmptyState message="No accords found" detail="Try a different search term" />;
+  }
+
+  return (
+    <table className="w-full text-[12px]">
+      <thead>
+        <tr className="border-b border-zinc-800 text-left text-[10px] uppercase tracking-wider text-zinc-600">
+          <th className="px-4 py-2 font-medium">Accord</th>
+          <th className="px-4 py-2 font-medium text-right">Perfumes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtered.map((row) => (
+          <tr
+            key={row.accord_name}
+            onClick={() => router.push(`/entities/accord/${encodeURIComponent(row.accord_name)}`)}
+            className="cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900"
+          >
+            <td className="px-4 py-2 text-violet-300">{row.accord_name}</td>
+            <td className="px-4 py-2 text-right tabular-nums text-zinc-500">
+              {row.perfume_count.toLocaleString()}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Active Today empty state
 // ---------------------------------------------------------------------------
 
 function ActiveEmptyState({
@@ -352,17 +417,27 @@ function ActiveEmptyState({
 }
 
 // ---------------------------------------------------------------------------
-// Mode tabs
+// Tab definitions
 // ---------------------------------------------------------------------------
 
-const MODE_TABS: { key: ScreenerMode; label: string; hint: string }[] = [
+const LAYER_TABS: { key: ScreenerLayer; label: string; hint: string }[] = [
+  { key: "market", label: "Market", hint: "Perfumes and brands — scored, ranked, signalled" },
+  { key: "composition", label: "Notes & Accords", hint: "Ingredient intelligence — explains why entities move" },
+];
+
+const MARKET_TABS: { key: MarketMode; label: string; hint: string }[] = [
   { key: "active", label: "Active today", hint: "Entities with market signal data" },
   { key: "catalog_perfumes", label: "All Perfumes", hint: "56k+ perfumes in KB" },
   { key: "catalog_brands", label: "All Brands", hint: "Full brand catalog" },
 ];
 
+const COMPOSITION_TABS: { key: CompositionMode; label: string; hint: string }[] = [
+  { key: "notes", label: "Notes", hint: "Ingredient notes across perfume catalog" },
+  { key: "accords", label: "Accords", hint: "Scent accords across perfume catalog" },
+];
+
 // ---------------------------------------------------------------------------
-// Inner page — reads URL search params
+// Inner page
 // ---------------------------------------------------------------------------
 
 function ScreenerPageInner() {
@@ -370,18 +445,15 @@ function ScreenerPageInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Mode: active (default) | catalog_perfumes | catalog_brands
-  const [mode, setMode] = useState<ScreenerMode>(
-    () => (searchParams.get("mode") as ScreenerMode) ?? "active",
-  );
+  const urlMode = (searchParams.get("mode") as ScreenerMode) ?? "active";
+  const [mode, setMode] = useState<ScreenerMode>(urlMode);
+  const layer = modeToLayer(mode);
 
-  // Initialize screener params from URL
   const [params, setParams] = useState<ScreenerParams>(() =>
     searchToParams(searchParams),
   );
 
-  // Search — server-side in all modes
-  // debouncedSearch drives API calls; search drives the input value
+  // Search — server-side in market modes; client-side filter for notes/accords (already loaded)
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -391,19 +463,15 @@ function ScreenerPageInner() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setDebouncedSearch(value);
-      // For active mode: reset offset when search changes
       setParams((prev) => ({ ...prev, offset: 0 }));
     }, 300);
   }, []);
 
-  // Catalog-specific pagination
   const [catalogOffset, setCatalogOffset] = useState(0);
-
-  // Filter sidebar open/close (local — not synced to URL)
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // ---------------------------------------------------------------------------
-  // Update params — syncs to URL
+  // URL / param sync
   // ---------------------------------------------------------------------------
 
   const pushParams = useCallback(
@@ -432,6 +500,19 @@ function ScreenerPageInner() {
       }
       setCatalogOffset(0);
       pushParams(params, nextMode);
+    },
+    [params, pushParams],
+  );
+
+  const switchLayer = useCallback(
+    (nextLayer: ScreenerLayer) => {
+      const defaultMode: ScreenerMode =
+        nextLayer === "market" ? "active" : "notes";
+      setSearch("");
+      setDebouncedSearch("");
+      setCatalogOffset(0);
+      setMode(defaultMode);
+      pushParams(params, defaultMode);
     },
     [params, pushParams],
   );
@@ -477,46 +558,43 @@ function ScreenerPageInner() {
       limit: PAGE_SIZE,
       offset: 0,
       note: undefined,
+      entity_type: undefined,
+      signal_type: undefined,
+      has_signals: undefined,
+      min_score: undefined,
+      min_confidence: undefined,
+      min_mentions: undefined,
     };
     setSearch("");
     setDebouncedSearch("");
     setParams(next);
     pushParams(next, mode);
+    setFiltersOpen(false);
   }, [pushParams, mode]);
 
-  const goPage = useCallback(
-    (dir: 1 | -1) => {
-      if (mode === "active") {
-        const next = {
-          ...params,
-          offset: Math.max(0, (params.offset ?? 0) + dir * PAGE_SIZE),
-        };
-        setParams(next);
-        pushParams(next, mode);
-      } else {
-        setCatalogOffset((prev) => Math.max(0, prev + dir * PAGE_SIZE));
-      }
-    },
-    [params, pushParams, mode],
-  );
-
-  // "Search full catalog" — switch to catalog_perfumes with current query
   const handleSearchCatalog = useCallback(() => {
     switchMode("catalog_perfumes", true);
   }, [switchMode]);
 
-  // ---------------------------------------------------------------------------
-  // Catalog counts (for header)
-  // ---------------------------------------------------------------------------
-  const { data: catalogCounts } = useQuery({
-    queryKey: ["catalog-counts"],
-    queryFn: fetchCatalogCounts,
-    staleTime: 5 * 60_000,
-  });
+  const goPage = useCallback(
+    (delta: number) => {
+      if (layer === "market") {
+        if (mode === "active") {
+          const next = { ...params, offset: (params.offset ?? 0) + delta * PAGE_SIZE };
+          setParams(next);
+          pushParams(next, mode);
+        } else {
+          setCatalogOffset((o) => o + delta * PAGE_SIZE);
+        }
+      }
+    },
+    [layer, mode, params, pushParams],
+  );
 
   // ---------------------------------------------------------------------------
-  // Active mode query — q is sent server-side
+  // Queries — Market
   // ---------------------------------------------------------------------------
+
   const activeQuery = useQuery({
     queryKey: ["screener", params, debouncedSearch],
     queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined }),
@@ -524,9 +602,6 @@ function ScreenerPageInner() {
     enabled: mode === "active",
   });
 
-  // ---------------------------------------------------------------------------
-  // Catalog perfumes query
-  // ---------------------------------------------------------------------------
   const catalogPerfumesQuery = useQuery({
     queryKey: ["catalog-perfumes", debouncedSearch, catalogOffset],
     queryFn: () =>
@@ -539,9 +614,6 @@ function ScreenerPageInner() {
     enabled: mode === "catalog_perfumes",
   });
 
-  // ---------------------------------------------------------------------------
-  // Catalog brands query
-  // ---------------------------------------------------------------------------
   const catalogBrandsQuery = useQuery({
     queryKey: ["catalog-brands", debouncedSearch, catalogOffset],
     queryFn: () =>
@@ -554,9 +626,34 @@ function ScreenerPageInner() {
     enabled: mode === "catalog_brands",
   });
 
+  const { data: catalogCounts } = useQuery({
+    queryKey: ["catalog-counts"],
+    queryFn: fetchCatalogCounts,
+    staleTime: 5 * 60_000,
+  });
+
   // ---------------------------------------------------------------------------
-  // Derived totals / pagination
+  // Queries — Composition (load once, filter client-side)
   // ---------------------------------------------------------------------------
+
+  const notesQuery = useQuery({
+    queryKey: ["screener-notes"],
+    queryFn: () => fetchTopNotes(200),
+    staleTime: 10 * 60_000,
+    enabled: layer === "composition",
+  });
+
+  const accordsQuery = useQuery({
+    queryKey: ["screener-accords"],
+    queryFn: () => fetchTopAccords(200),
+    staleTime: 10 * 60_000,
+    enabled: layer === "composition",
+  });
+
+  // ---------------------------------------------------------------------------
+  // Derived state
+  // ---------------------------------------------------------------------------
+
   const currentOffset =
     mode === "active" ? (params.offset ?? 0) : catalogOffset;
 
@@ -565,7 +662,11 @@ function ScreenerPageInner() {
       ? (activeQuery.data?.total ?? 0)
       : mode === "catalog_perfumes"
       ? (catalogPerfumesQuery.data?.total ?? 0)
-      : (catalogBrandsQuery.data?.total ?? 0);
+      : mode === "catalog_brands"
+      ? (catalogBrandsQuery.data?.total ?? 0)
+      : mode === "notes"
+      ? (notesQuery.data?.length ?? 0)
+      : (accordsQuery.data?.length ?? 0);
 
   const currentPage = Math.floor(currentOffset / PAGE_SIZE) + 1;
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
@@ -582,9 +683,6 @@ function ScreenerPageInner() {
       (params.min_confidence ?? 0) > 0 ||
       (params.min_mentions ?? 0) > 0);
 
-  // ---------------------------------------------------------------------------
-  // Header subtitle — show catalog totals when available
-  // ---------------------------------------------------------------------------
   const headerSubtitle = catalogCounts
     ? `${catalogCounts.known_perfumes.toLocaleString()} perfumes · ${catalogCounts.known_brands.toLocaleString()} brands · ${catalogCounts.active_today} active today`
     : mode === "active"
@@ -593,23 +691,23 @@ function ScreenerPageInner() {
       : undefined
     : undefined;
 
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
-
   const isError =
     mode === "active"
       ? activeQuery.isError
       : mode === "catalog_perfumes"
       ? catalogPerfumesQuery.isError
-      : catalogBrandsQuery.isError;
+      : mode === "catalog_brands"
+      ? catalogBrandsQuery.isError
+      : false;
 
   const error =
     mode === "active"
       ? activeQuery.error
       : mode === "catalog_perfumes"
       ? catalogPerfumesQuery.error
-      : catalogBrandsQuery.error;
+      : mode === "catalog_brands"
+      ? catalogBrandsQuery.error
+      : null;
 
   const refetch =
     mode === "active"
@@ -623,7 +721,35 @@ function ScreenerPageInner() {
       ? activeQuery.isLoading
       : mode === "catalog_perfumes"
       ? catalogPerfumesQuery.isLoading
-      : catalogBrandsQuery.isLoading;
+      : mode === "catalog_brands"
+      ? catalogBrandsQuery.isLoading
+      : mode === "notes"
+      ? notesQuery.isLoading
+      : accordsQuery.isLoading;
+
+  const panelTitle =
+    mode === "active" ? "Results"
+    : mode === "catalog_perfumes" ? "Perfume Catalog"
+    : mode === "catalog_brands" ? "Brand Catalog"
+    : mode === "notes" ? "Notes"
+    : "Accords";
+
+  // For composition, total is the filtered count (client-side)
+  const compositionTotal = layer === "composition"
+    ? (mode === "notes"
+        ? (notesQuery.data ?? []).filter((r) =>
+            !search || r.note_name.toLowerCase().includes(search.toLowerCase())
+          ).length
+        : (accordsQuery.data ?? []).filter((r) =>
+            !search || r.accord_name.toLowerCase().includes(search.toLowerCase())
+          ).length)
+    : total;
+
+  const displayTotal = layer === "composition" ? compositionTotal : total;
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -651,18 +777,39 @@ function ScreenerPageInner() {
         }
       />
 
-      {/* ── Mode tabs ───────────────────────────────────────────────────── */}
+      {/* ── Layer tabs (Market | Notes & Accords) ───────────────────────── */}
       <div className="flex items-center gap-0 border-b border-zinc-800 bg-zinc-950 px-4">
-        {MODE_TABS.map((tab) => (
+        {LAYER_TABS.map((tab) => (
           <button
             key={tab.key}
             title={tab.hint}
-            onClick={() => switchMode(tab.key)}
+            onClick={() => switchLayer(tab.key)}
+            className={clsx(
+              "border-b-2 px-4 py-2.5 text-[12px] font-semibold transition-colors",
+              layer === tab.key
+                ? "border-amber-400 text-amber-400"
+                : "border-transparent text-zinc-500 hover:text-zinc-300",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Sub-tabs ────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-0 border-b border-zinc-800/60 bg-zinc-950 px-4">
+        {(layer === "market" ? MARKET_TABS : COMPOSITION_TABS).map((tab) => (
+          <button
+            key={tab.key}
+            title={tab.hint}
+            onClick={() => switchMode(tab.key as ScreenerMode)}
             className={clsx(
               "border-b-2 px-3 py-2 text-[11px] font-medium transition-colors",
               mode === tab.key
-                ? "border-amber-400 text-amber-400"
-                : "border-transparent text-zinc-500 hover:text-zinc-300",
+                ? layer === "composition"
+                  ? "border-violet-400 text-violet-400"
+                  : "border-sky-400 text-sky-400"
+                : "border-transparent text-zinc-600 hover:text-zinc-400",
             )}
           >
             {tab.label}
@@ -674,7 +821,6 @@ function ScreenerPageInner() {
       <ControlBar
         left={
           <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
-            {/* Search — server-side in all modes */}
             <SearchInput
               value={search}
               onChange={handleSearchChange}
@@ -683,14 +829,17 @@ function ScreenerPageInner() {
                   ? "Search name / brand / ticker…"
                   : mode === "catalog_perfumes"
                   ? "Search perfumes…"
-                  : "Search brands…"
+                  : mode === "catalog_brands"
+                  ? "Search brands…"
+                  : mode === "notes"
+                  ? "Filter notes…"
+                  : "Filter accords…"
               }
               className="w-48 shrink-0"
             />
             {mode === "active" && (
               <>
                 <ControlBarDivider />
-                {/* Presets */}
                 <div className="flex shrink-0 items-center gap-1">
                   {PRESETS.map((p) => (
                     <FilterChip
@@ -730,7 +879,7 @@ function ScreenerPageInner() {
 
       {/* ── Main layout ─────────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        {/* Filter sidebar (active mode only) */}
+        {/* Filter sidebar (active market mode only) */}
         {filtersOpen && mode === "active" && (
           <aside className="w-56 shrink-0 overflow-y-auto border-r border-zinc-800 bg-zinc-950">
             <ScreenerFilters params={params} onChange={updateParams} />
@@ -752,16 +901,12 @@ function ScreenerPageInner() {
               {/* Panel header */}
               <div className="flex items-center justify-between px-4 py-3">
                 <SectionHeader
-                  title={
-                    mode === "active"
-                      ? "Results"
-                      : mode === "catalog_perfumes"
-                      ? "Perfume Catalog"
-                      : "Brand Catalog"
-                  }
+                  title={panelTitle}
                   subtitle={
                     !isLoading
-                      ? `${total.toLocaleString()} total · page ${currentPage} of ${totalPages}`
+                      ? layer === "composition"
+                        ? `${displayTotal.toLocaleString()} ${mode === "notes" ? "notes" : "accords"}`
+                        : `${displayTotal.toLocaleString()} total · page ${currentPage} of ${totalPages}`
                       : undefined
                   }
                 />
@@ -769,6 +914,7 @@ function ScreenerPageInner() {
 
               {/* Scrollable table */}
               <div className="flex-1 overflow-y-auto">
+                {/* Market modes */}
                 {mode === "active" && (
                   activeQuery.isFetched && activeRows.length === 0 ? (
                     <ActiveEmptyState
@@ -797,35 +943,53 @@ function ScreenerPageInner() {
                     isLoading={isLoading}
                   />
                 )}
+
+                {/* Composition modes */}
+                {mode === "notes" && (
+                  <NotesTable
+                    rows={notesQuery.data ?? []}
+                    isLoading={notesQuery.isLoading}
+                    search={search}
+                  />
+                )}
+                {mode === "accords" && (
+                  <AccordsTable
+                    rows={accordsQuery.data ?? []}
+                    isLoading={accordsQuery.isLoading}
+                    search={search}
+                  />
+                )}
               </div>
 
-              {/* Pagination footer */}
-              <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2">
-                <span className="text-[11px] text-zinc-500">
-                  Showing {total === 0 ? 0 : currentOffset + 1}–
-                  {Math.min(currentOffset + PAGE_SIZE, total)} of{" "}
-                  {total.toLocaleString()}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    disabled={currentPage <= 1}
-                    onClick={() => goPage(-1)}
-                    className="rounded border border-zinc-700 p-1 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-                  <span className="px-1.5 text-[11px] tabular-nums text-zinc-500">
-                    {currentPage} / {totalPages}
+              {/* Pagination footer — only for market modes */}
+              {layer === "market" && (
+                <div className="flex items-center justify-between border-t border-zinc-800 px-4 py-2">
+                  <span className="text-[11px] text-zinc-500">
+                    Showing {total === 0 ? 0 : currentOffset + 1}–
+                    {Math.min(currentOffset + PAGE_SIZE, total)} of{" "}
+                    {total.toLocaleString()}
                   </span>
-                  <button
-                    disabled={currentPage >= totalPages}
-                    onClick={() => goPage(1)}
-                    className="rounded border border-zinc-700 p-1 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
-                  >
-                    <ChevronRight size={13} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={currentPage <= 1}
+                      onClick={() => goPage(-1)}
+                      className="rounded border border-zinc-700 p-1 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
+                    <span className="px-1.5 text-[11px] tabular-nums text-zinc-500">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      disabled={currentPage >= totalPages}
+                      onClick={() => goPage(1)}
+                      className="rounded border border-zinc-700 p-1 text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 disabled:cursor-not-allowed disabled:opacity-30"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </TerminalPanel>
           )}
         </div>
@@ -835,7 +999,7 @@ function ScreenerPageInner() {
 }
 
 // ---------------------------------------------------------------------------
-// Page export — Suspense required for useSearchParams in static pages
+// Page export
 // ---------------------------------------------------------------------------
 
 export default function ScreenerPage() {

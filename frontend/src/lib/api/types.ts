@@ -392,3 +392,28 @@ export interface AlertHistoryResponse {
   events: AlertEventRow[];
   total: number;
 }
+
+// ---------------------------------------------------------------------------
+// Notes & Accords detail
+// ---------------------------------------------------------------------------
+
+export interface NoteDetailPerfumeRow {
+  canonical_name: string;
+  brand_name: string | null;
+  entity_id: string | null;
+  has_activity_today: boolean;
+}
+
+export interface NoteDetail {
+  note_name: string;
+  perfume_count: number;
+  top_perfumes: NoteDetailPerfumeRow[];
+  related_accords: { accord_name: string; co_count: number }[];
+}
+
+export interface AccordDetail {
+  accord_name: string;
+  perfume_count: number;
+  top_perfumes: NoteDetailPerfumeRow[];
+  related_notes: { note_name: string; co_count: number }[];
+}

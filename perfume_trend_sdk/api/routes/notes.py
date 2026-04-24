@@ -75,3 +75,121 @@ def search_notes(
         LIMIT :lim
     """, {"q": f"%{q.strip()}%", "lim": limit})
     return [{"note_name": r[0]} for r in rows]
+
+
+@router.get("/notes/{note_name}")
+def get_note_detail(
+    note_name: str,
+    perfume_limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    """Detail page for a single note: perfume count, top perfumes, related accords."""
+    # Perfume count
+    count_rows = _safe_query(db, """
+        SELECT COUNT(*) FROM resolver_perfume_notes WHERE LOWER(note_name) = LOWER(:n)
+    """, {"n": note_name})
+    perfume_count = int(count_rows[0][0]) if count_rows else 0
+
+    # Top perfumes using this note (prefer tracked entities)
+    perf_rows = _safe_query(db, """
+        SELECT
+            rp.canonical_name,
+            rb.canonical_name AS brand_name,
+            em.entity_id,
+            CASE WHEN em.id IS NOT NULL THEN true ELSE false END AS has_activity_today
+        FROM resolver_perfume_notes rpn
+        JOIN resolver_perfumes rp ON rp.id = rpn.resolver_perfume_id
+        LEFT JOIN resolver_brands rb ON rb.id = rp.brand_id
+        LEFT JOIN entity_market em ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+        WHERE LOWER(rpn.note_name) = LOWER(:n)
+        ORDER BY has_activity_today DESC, rp.canonical_name
+        LIMIT :lim
+    """, {"n": note_name, "lim": perfume_limit})
+
+    top_perfumes = [
+        {
+            "canonical_name": r[0],
+            "brand_name": r[1],
+            "entity_id": r[2],
+            "has_activity_today": bool(r[3]),
+        }
+        for r in perf_rows
+    ]
+
+    # Related accords — accords that co-occur most with this note
+    accord_rows = _safe_query(db, """
+        SELECT rpa.accord_name, COUNT(*) AS co_count
+        FROM resolver_perfume_notes rpn
+        JOIN resolver_perfume_accords rpa ON rpa.resolver_perfume_id = rpn.resolver_perfume_id
+        WHERE LOWER(rpn.note_name) = LOWER(:n)
+        GROUP BY rpa.accord_name
+        ORDER BY co_count DESC
+        LIMIT 15
+    """, {"n": note_name})
+
+    related_accords = [{"accord_name": r[0], "co_count": int(r[1])} for r in accord_rows]
+
+    return {
+        "note_name": note_name,
+        "perfume_count": perfume_count,
+        "top_perfumes": top_perfumes,
+        "related_accords": related_accords,
+    }
+
+
+@router.get("/accords/{accord_name}")
+def get_accord_detail(
+    accord_name: str,
+    perfume_limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db_session),
+) -> Dict[str, Any]:
+    """Detail page for a single accord: perfume count, top perfumes, related notes."""
+    count_rows = _safe_query(db, """
+        SELECT COUNT(*) FROM resolver_perfume_accords WHERE LOWER(accord_name) = LOWER(:a)
+    """, {"a": accord_name})
+    perfume_count = int(count_rows[0][0]) if count_rows else 0
+
+    perf_rows = _safe_query(db, """
+        SELECT
+            rp.canonical_name,
+            rb.canonical_name AS brand_name,
+            em.entity_id,
+            CASE WHEN em.id IS NOT NULL THEN true ELSE false END AS has_activity_today
+        FROM resolver_perfume_accords rpa
+        JOIN resolver_perfumes rp ON rp.id = rpa.resolver_perfume_id
+        LEFT JOIN resolver_brands rb ON rb.id = rp.brand_id
+        LEFT JOIN entity_market em ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+        WHERE LOWER(rpa.accord_name) = LOWER(:a)
+        ORDER BY has_activity_today DESC, rp.canonical_name
+        LIMIT :lim
+    """, {"a": accord_name, "lim": perfume_limit})
+
+    top_perfumes = [
+        {
+            "canonical_name": r[0],
+            "brand_name": r[1],
+            "entity_id": r[2],
+            "has_activity_today": bool(r[3]),
+        }
+        for r in perf_rows
+    ]
+
+    # Related notes — notes that co-occur most with this accord
+    note_rows = _safe_query(db, """
+        SELECT rpn.note_name, COUNT(*) AS co_count
+        FROM resolver_perfume_accords rpa
+        JOIN resolver_perfume_notes rpn ON rpn.resolver_perfume_id = rpa.resolver_perfume_id
+        WHERE LOWER(rpa.accord_name) = LOWER(:a)
+        GROUP BY rpn.note_name
+        ORDER BY co_count DESC
+        LIMIT 15
+    """, {"a": accord_name})
+
+    related_notes = [{"note_name": r[0], "co_count": int(r[1])} for r in note_rows]
+
+    return {
+        "accord_name": accord_name,
+        "perfume_count": perfume_count,
+        "top_perfumes": top_perfumes,
+        "related_notes": related_notes,
+    }

@@ -1,4 +1,4 @@
-import type { NoteRow, AccordRow } from "./types";
+import type { NoteRow, AccordRow, NoteDetail, AccordDetail } from "./types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
@@ -20,5 +20,17 @@ export async function fetchNotesSearch(q: string, limit = 20): Promise<NoteRow[]
   const params = new URLSearchParams({ q: q.trim(), limit: String(limit) });
   const res = await fetch(`${API_BASE}/api/v1/notes/search?${params}`);
   if (!res.ok) throw new Error(`fetchNotesSearch: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchNoteDetail(noteName: string): Promise<NoteDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/notes/${encodeURIComponent(noteName)}`);
+  if (!res.ok) throw new Error(`fetchNoteDetail: ${res.status}`);
+  return res.json();
+}
+
+export async function fetchAccordDetail(accordName: string): Promise<AccordDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/accords/${encodeURIComponent(accordName)}`);
+  if (!res.ok) throw new Error(`fetchAccordDetail: ${res.status}`);
   return res.json();
 }
