@@ -7870,3 +7870,216 @@ Signal detection after backfill: 63 new signals (Apr 22) + 28 new signals (Apr 2
 - [x] Dashboard Brand toggle returns brand entities
 - [x] Screener entity_type=brand filter returns brand entities
 - [x] Brand entity pages navigable via `brand-{slug}` entity_id format
+
+---
+
+## Phase G1 — YouTube Query Expansion / Growth Diagnostics
+
+### Target Type
+CONFIG_ONLY (no schema, no migrations, no scoring changes)
+
+### Authoritative Targets
+- `configs/watchlists/perfume_queries.yaml` — only file to be changed
+
+### Requires Commit / Push / Deploy
+YES — when YAML is approved and explicitly confirmed for implementation
+
+### Expected UI Change
+INDIRECT — more entities appear in timeseries/signals as ingestion coverage widens
+
+### Status
+APPROVED FOR CONFIG-ONLY IMPLEMENTATION
+NOT DEPLOYED YET — YAML NOT CHANGED YET
+
+---
+
+### Problem
+
+Current production YouTube ingestion uses only 14 static queries. These queries cover
+a very small subset of the perfume market. The market layer, signal engine, and frontend
+are all stable — growth is limited by query universe, not by entity_market, frontend,
+or Railway infrastructure.
+
+### Current Query State
+
+- File: `configs/watchlists/perfume_queries.yaml`
+- Current count: **14 queries**
+- Current type: static, entity-based (specific perfume names only)
+- Missing coverage:
+  - brand discovery queries
+  - intent/discovery queries (best of, blind buy, gift)
+  - dupe/comparison queries
+  - Arabic / Middle Eastern fragrance queries
+  - community/content trend queries (viral, compliment getter)
+  - mainstream/designer high-volume terms
+
+---
+
+### Quota Calculation
+
+```
+YouTube search.list = 100 units per query call
+videos.list overhead = ~28 units/run (low, batch-fetched)
+
+Current:
+  14 queries × 100 units × 2 runs/day = 2,800 units/day
+  + videos.list overhead ≈ 28 units/run × 2 = 56 units/day
+  Total: ~2,856 units/day
+
+Phase G1 target:
+  47 queries × 100 units × 2 runs/day = 9,400 units/day
+  + videos.list overhead ≈ 56 units/day (unchanged)
+  Total: ~9,456 units/day
+
+Daily quota limit: 10,000 units
+Estimated headroom: ~544 units/day
+
+Hard ceiling: do not exceed 47 total queries at 2 runs/day
+unless YouTube quota is explicitly increased beyond 10,000 units.
+```
+
+---
+
+### Approved G1 Scope
+
+- Expand `configs/watchlists/perfume_queries.yaml` from **14 to exactly 47 total queries**
+- Keep all original 14 queries unchanged at the top of the file
+- Add exactly 33 new queries
+- Organize YAML with commented section headers:
+  1. Original core queries (14 — do not remove)
+  2. Core entity expansions (broader terms for tracked perfumes/brands)
+  3. Viral / mainstream high-volume queries
+  4. Niche luxury queries
+  5. Intent / discovery queries (blind buy, gift, best of, rankings)
+  6. Dupe / affordable queries
+  7. Arabic / Middle Eastern fragrance queries
+
+---
+
+### Required Query Strategy
+
+- Replace any year-specific queries (e.g. "best perfume 2025") with current year (2026) versions
+- Strengthen intent coverage: blind buy, gift, compliment getter, ranking
+- Strengthen Arabic / Middle Eastern fragrance coverage (Lattafa, Armaf, Ajmal, Arabian Oud)
+- Avoid ambiguous single-brand queries like "fragrance world lattafa khamrah" (too specific to a niche reseller)
+- Avoid duplicating terms already covered by existing 14 queries
+
+**Priority order for query slots:**
+1. Original 14 (untouched)
+2. Intent/discovery queries
+3. Arabic / Middle Eastern fragrance queries
+4. Viral mainstream queries
+5. Niche luxury queries
+6. Dupe / affordable queries
+
+---
+
+### Explicit Non-Goals
+
+Phase G1 must NOT:
+- Change any schema or database tables
+- Run any Alembic migrations
+- Change scoring weights or composite market score formula
+- Change signal detection thresholds
+- Change any frontend component or page
+- Change `entity_market` rows or aggregation logic
+- Enable automatic candidate promotion (`promote_candidates --allow-create`)
+- Change auth, Supabase, or Railway service structure
+- Add new pipeline steps to `start_pipeline.sh` or `start_pipeline_evening.sh`
+
+---
+
+### Verification Plan
+
+**Step 1 — Local test before deploy:**
+```bash
+python3 scripts/ingest_youtube.py --max-results 5 --lookback-days 1
+```
+Expected: no errors, each new query fetches 5 videos, resolver attempts entity matching.
+
+**Step 2 — Railway production verification after deploy:**
+- Confirm pipeline starts normally (no import error, no YAML parse error)
+- Confirm no YouTube quota exceeded error in logs
+- Confirm `canonical_content_items` count increases day-over-day
+- Confirm `entity_mentions` count increases day-over-day
+- Confirm `fragrance_candidates` receives new unresolved entries
+- Confirm `entity_timeseries_daily` active entity count holds or grows
+- Confirm signals do not explode into obvious noise (spot-check top signals)
+
+**SQL verification queries (run before and after first G1 pipeline cycle):**
+
+```sql
+-- Content items ingested per day by source
+SELECT DATE(collected_at) AS day, source_platform, COUNT(*) AS items
+FROM canonical_content_items
+WHERE DATE(collected_at) >= CURRENT_DATE - INTERVAL '3 days'
+GROUP BY 1, 2
+ORDER BY 1 DESC, 2;
+
+-- Entity mentions per day (total + distinct entities)
+SELECT DATE(occurred_at) AS day,
+       COUNT(*) AS total_mentions,
+       COUNT(DISTINCT entity_id) AS distinct_entities
+FROM entity_mentions
+WHERE DATE(occurred_at) >= CURRENT_DATE - INTERVAL '3 days'
+GROUP BY 1
+ORDER BY 1 DESC;
+
+-- Candidate queue growth per day by validation status
+SELECT DATE(last_seen) AS day,
+       validation_status,
+       COUNT(*) AS candidates
+FROM fragrance_candidates
+WHERE DATE(last_seen) >= CURRENT_DATE - INTERVAL '3 days'
+GROUP BY 1, 2
+ORDER BY 1 DESC, 2;
+
+-- Active entities in timeseries per day
+SELECT date,
+       COUNT(*) AS total_rows,
+       SUM(CASE WHEN mention_count > 0 THEN 1 ELSE 0 END) AS active_entities
+FROM entity_timeseries_daily
+WHERE date >= CURRENT_DATE - INTERVAL '3 days'
+GROUP BY date
+ORDER BY date DESC;
+
+-- Signals generated per day by type
+SELECT DATE(detected_at) AS day, signal_type, COUNT(*) AS count
+FROM signals
+WHERE DATE(detected_at) >= CURRENT_DATE - INTERVAL '3 days'
+GROUP BY 1, 2
+ORDER BY 1 DESC, 3 DESC;
+```
+
+---
+
+### Rollback Plan
+
+If the expanded YAML causes problems (quota error, noise spike, parse failure):
+
+```bash
+# Option A — revert entire commit
+git revert HEAD --no-edit
+git push origin main
+
+# Option B — restore only the YAML file
+git checkout HEAD~1 -- configs/watchlists/perfume_queries.yaml
+git commit -m "revert: restore original YouTube query watchlist (14 queries)"
+git push origin main
+```
+
+Railway auto-deploys on push. The next pipeline cycle uses the restored 14-query file.
+No DB rollback required — ingested data from G1 queries is additive and harmless.
+
+---
+
+### Next Step
+
+1. Prepare final proposed YAML with exactly 47 queries (33 new + 14 original)
+2. Review and explicitly approve the YAML content
+3. Edit `configs/watchlists/perfume_queries.yaml`
+4. Commit and push
+5. Run local verification test (`--max-results 5 --lookback-days 1`)
+6. Monitor first production pipeline cycle after deploy
+
+**Do not commit YAML until explicitly approved.**
