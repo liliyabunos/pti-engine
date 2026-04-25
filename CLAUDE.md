@@ -7888,8 +7888,11 @@ YES — when YAML is approved and explicitly confirmed for implementation
 INDIRECT — more entities appear in timeseries/signals as ingestion coverage widens
 
 ### Status
-APPROVED FOR CONFIG-ONLY IMPLEMENTATION
-NOT DEPLOYED YET — YAML NOT CHANGED YET
+STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-25)
+
+Commits:
+- `d8141fa` — documented Phase G1 plan in CLAUDE.md
+- `8a294dd` — expanded `configs/watchlists/perfume_queries.yaml` to 47 queries
 
 ---
 
@@ -8073,13 +8076,43 @@ No DB rollback required — ingested data from G1 queries is additive and harmle
 
 ---
 
-### Next Step
+### Production Verification Results (2026-04-25)
 
-1. Prepare final proposed YAML with exactly 47 queries (33 new + 14 original)
-2. Review and explicitly approve the YAML content
-3. Edit `configs/watchlists/perfume_queries.yaml`
-4. Commit and push
-5. Run local verification test (`--max-results 5 --lookback-days 1`)
-6. Monitor first production pipeline cycle after deploy
+| Metric | Apr 24 (pre-G1) | Apr 25 (G1) | Delta |
+|--------|-----------------|-------------|-------|
+| YouTube items | 44 | **252** | +5.7× |
+| Entity mentions | 13 | **16** | +23% |
+| Distinct entities | 4 | **7** | +75% |
+| Fragrance candidates | 919 | **5,317** | +5.8× |
+| Active entities | 16 | **23** | +44% |
+| Total signals | 12 | **12** | Stable |
+| new_entry signals | 1 | **3** | +200% |
 
-**Do not commit YAML until explicitly approved.**
+Additional verification checks passed:
+- No YouTube quota or auth errors
+- No fatal pipeline errors
+- `validate_candidates` completed — no `pending` rows remaining
+- No signal noise explosion — thresholds held correctly
+- `verify_market_state` passed — 100% real data, no synthetic content
+- All 47 queries loaded and executed inside Railway infrastructure
+
+### Next Bottleneck
+
+G1 increased raw YouTube and candidate coverage significantly.
+
+**The next growth bottleneck is resolver recall, alias sparsity, and candidate promotion** —
+not the query input layer.
+
+- More queries → more unresolved candidates → gap is now in resolution, not ingestion
+- Do not lower signal thresholds
+- Do not change scoring
+- Do not change entity_market
+
+### Next Phase
+
+**Phase G2** (not yet approved) should focus on one of:
+- Reddit coverage expansion (Reddit items dropped to 0 on Apr 24–25 — investigate lookback/dedup)
+- Alias expansion from Phase 4P promotion pipeline (resolver recall improvement)
+- Candidate promotion batch (Phase 4P.2 follow-on) to convert high-confidence candidates to KB entities
+
+No G2 implementation has been approved yet.
