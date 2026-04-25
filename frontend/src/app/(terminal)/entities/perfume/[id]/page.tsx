@@ -24,6 +24,7 @@ import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum } from "@/lib
 import type { EntityChartMetric } from "@/components/entity/EntityChart";
 import type { DriverRow, SimilarPerfumeRow } from "@/lib/api/types";
 import { WhyTrending } from "@/components/entity/WhyTrending";
+import { MarketInsight } from "@/components/entity/MarketInsight";
 
 // ---------------------------------------------------------------------------
 // State badge
@@ -568,6 +569,13 @@ export default function PerfumeEntityPage({ params }: PageProps) {
               positioning={data.positioning}
               intents={data.intents}
               top_subreddits={data.top_subreddits}
+            />
+
+            {/* ── Market Insight (Phase I8) ────────────────────────────────── */}
+            <MarketInsight
+              narrative={data.narrative}
+              opportunities={data.opportunities}
+              competitors={data.competitors}
             />
 
             {/* ── Signals + mentions (tracked only) ──────────────────────── */}

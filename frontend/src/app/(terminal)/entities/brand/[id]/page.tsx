@@ -23,6 +23,7 @@ import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { fmtScore, fmtGrowth } from "@/lib/formatters";
 import type { BrandPerfumeRow, DriverRow } from "@/lib/api/types";
 import { WhyTrending } from "@/components/entity/WhyTrending";
+import { MarketInsight } from "@/components/entity/MarketInsight";
 
 // ---------------------------------------------------------------------------
 // State badge
@@ -501,6 +502,13 @@ export default function BrandEntityPage({ params }: PageProps) {
               positioning={data.positioning}
               intents={data.intents}
               top_subreddits={data.top_subreddits}
+            />
+
+            {/* ── Market Insight (Phase I8) ────────────────────────────────── */}
+            <MarketInsight
+              narrative={data.narrative}
+              opportunities={data.opportunities}
+              competitors={data.competitors}
             />
 
             {/* ── Signal timeline (tracked only) ─────────────────────────── */}

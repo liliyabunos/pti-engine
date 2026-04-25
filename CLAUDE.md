@@ -367,15 +367,63 @@ NOTES:
 
 ---
 
-### I8 — Intelligence Output
+### I8 — Market Intelligence (COMPLETED — 2026-04-25)
 
-Produce:
-- reports
-- insights
-- sellable signals
+Transform semantic profiles (I7) into actionable decision intelligence:
+  - `narrative`: plain-language reason why an entity is trending (template-based, no AI)
+  - `opportunities[]`: rule-based market flags (dupe_market, high_intent, gifting, …)
+  - `competitors[]`: detected competing entities from comparison query analysis
 
-Result:
-System becomes monetizable.
+This is NOT analytics. It is decision intelligence.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- New module: `perfume_trend_sdk/analysis/topic_intelligence/market_intelligence.py`
+  - `generate_market_intelligence()` — main entry point, pure deterministic function
+  - `_build_opportunity_flags()` — 9 flag types evaluated from differentiators/intents
+  - `_build_narrative()` — template-based sentence construction from semantic profile
+  - `extract_vs_competitors()` — VS-pattern regex + orphan-query extraction
+- `entities.py` updated:
+  - `_find_competitor_names(db, entity_id, top_queries, canonical)` — ILIKE match against entity_market
+  - `PerfumeEntityDetail` and `BrandEntityDetail` extended with `narrative`, `opportunities[]`, `competitors[]`
+  - Both tracked perfume and brand paths call `generate_market_intelligence()` after I7 classification
+- `frontend/src/lib/api/types.ts` extended with same 3 fields on both detail interfaces
+- `frontend/src/components/entity/MarketInsight.tsx` created:
+  - `OPPORTUNITY_LABELS` map: 9 flags → label + semantic color + tooltip description
+  - `OpportunityBadge` with hover tooltip; `CompetitorChip` in rose color
+  - Renders null when no data — no empty placeholder
+- `MarketInsight` block added to perfume entity page (after WhyTrending)
+- `MarketInsight` block added to brand entity page (after WhyTrending)
+
+OPPORTUNITY FLAGS:
+```
+dupe_market          — "dupe / alternative" in differentiators
+affordable_alt       — "affordable" in differentiators
+high_intent          — ≥2 high-intent intent labels OR ≥1 intent label + ≥2 raw queries
+competitive_comparison — "comparison" in intents
+gifting              — "gift idea" in intents
+viral_momentum       — "trending / viral" in intents
+launch_window        — "new release" or "flanker" in intents
+social_validation    — "compliment getter" in differentiators
+performance_leader   — "longevity / projection" in differentiators
+```
+
+COMPETITOR EXTRACTION:
+- VS pattern: "Creed Aventus vs Baccarat Rouge 540" → "Baccarat Rouge 540"
+- Orphan queries: query not mentioning current entity → candidate competitor
+- ILIKE validation against entity_market.canonical_name (case-insensitive substring)
+- Up to 5 competitors returned, deduped, order-preserving
+
+VERIFICATION:
+- Checked: `/api/v1/entities/perfume/Creed%20Aventus` — narrative, opportunities, competitors present
+- Checked: frontend perfume and brand entity pages render MarketInsight block when data present
+
+NOTES:
+- No AI. Template-based narrative + deterministic rule evaluation
+- Brand entities use same opportunity/narrative generation (no competitor detection)
+- MarketInsight block returns null when all fields empty — no wasted space
+- Competitors list validated against DB — raw VS-pattern strings not exposed directly
 
 ---
 

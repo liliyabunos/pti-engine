@@ -220,6 +220,10 @@ export interface PerfumeEntityDetail {
   differentiators: string[];
   positioning: string[];
   intents: string[];
+  /** Phase I8 — Market Intelligence */
+  narrative: string | null;
+  opportunities: string[];
+  competitors: string[];
 }
 
 export interface BrandPerfumeRow {
@@ -265,6 +269,10 @@ export interface BrandEntityDetail {
   differentiators: string[];
   positioning: string[];
   intents: string[];
+  /** Phase I8 — Market Intelligence */
+  narrative: string | null;
+  opportunities: string[];
+  competitors: string[];
 }
 
 // ---------------------------------------------------------------------------

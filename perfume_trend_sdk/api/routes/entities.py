@@ -241,6 +241,65 @@ def _get_brand_topics(
     return topics, queries, subreddits, profile.differentiators, profile.positioning, profile.intents
 
 
+def _find_competitor_names(
+    db: Session,
+    entity_id_str: str,
+    top_queries: list[str],
+    current_canonical: str,
+) -> list[str]:
+    """Phase I8 — Detect competitor entities mentioned in comparison queries.
+
+    Strategy:
+      1. Extract VS-pattern candidates from raw queries.
+      2. For each remaining orphan query (doesn't contain current entity name),
+         look up entity_market for a canonical name contained within the query.
+      Returns up to 5 resolved competitor canonical names.
+    """
+    from perfume_trend_sdk.analysis.topic_intelligence.market_intelligence import extract_vs_competitors
+    try:
+        vs_candidates = extract_vs_competitors(top_queries, current_canonical)
+        if not vs_candidates:
+            return []
+
+        # Try to resolve candidates against tracked entity names
+        competitors: list[str] = []
+        seen: set[str] = set()
+        own_lower = current_canonical.lower()
+
+        for candidate in vs_candidates[:10]:
+            c_lower = candidate.lower()
+            row = db.execute(text("""
+                SELECT canonical_name
+                FROM entity_market
+                WHERE entity_type = 'perfume'
+                  AND LOWER(canonical_name) != :own
+                  AND (
+                    LOWER(:cand) LIKE '%' || LOWER(canonical_name) || '%'
+                    OR LOWER(canonical_name) LIKE '%' || LOWER(:cand) || '%'
+                  )
+                  AND LENGTH(canonical_name) >= 5
+                ORDER BY LENGTH(canonical_name) DESC
+                LIMIT 1
+            """), {"cand": candidate, "own": own_lower}).fetchone()
+
+            if row and row[0].lower() not in seen and row[0].lower() != own_lower:
+                seen.add(row[0].lower())
+                competitors.append(row[0])
+            elif not row and candidate not in seen and candidate.lower() != own_lower:
+                # No DB match — include raw candidate string if long enough
+                if len(candidate) >= 5:
+                    seen.add(candidate.lower())
+                    competitors.append(candidate)
+
+            if len(competitors) >= 5:
+                break
+
+        return competitors
+    except Exception as exc:
+        _log.warning("[I8] competitor detection failed: %s", exc)
+        return []
+
+
 def _get_top_drivers(db: Session, entity_uuid, limit: int = 10) -> List[DriverRow]:
     """Phase I4 — Return top content drivers ordered by source quality + views.
 
@@ -433,6 +492,10 @@ class PerfumeEntityDetail(BaseModel):
     differentiators: List[str] = []  # what makes it unique: "dupe / alternative", "longevity / projection", …
     positioning: List[str] = []      # what it is: "vanilla", "niche fragrance", "men's fragrance", …
     intents: List[str] = []          # why people search: queries + "review", "gift idea", "new release", …
+    # Phase I8 — Market Intelligence
+    narrative: Optional[str] = None   # plain-language reason why it is trending
+    opportunities: List[str] = []     # market flags: "dupe_market", "high_intent", "gifting", …
+    competitors: List[str] = []       # detected competitor entity names
     # Enrichment
     notes_top: List[str] = []
     notes_middle: List[str] = []
@@ -474,6 +537,10 @@ class BrandEntityDetail(BaseModel):
     differentiators: List[str] = []
     positioning: List[str] = []
     intents: List[str] = []
+    # Phase I8 — Market Intelligence
+    narrative: Optional[str] = None
+    opportunities: List[str] = []
+    competitors: List[str] = []
     # Aggregated notes/accords across brand portfolio
     top_notes: List[str] = []
     top_accords: List[str] = []
@@ -998,6 +1065,25 @@ def get_perfume_entity(
         p_topics, p_queries, p_subs, p_diff, p_pos, p_intents = _safe(
             lambda: _get_entity_topics(db, str(em.id)), ([], [], [], [], [], []), "entity_topics"
         )
+        # Phase I8 — Market Intelligence
+        p_competitors = _safe(
+            lambda: _find_competitor_names(db, str(em.id), p_queries, em.canonical_name),
+            [], "competitors",
+        )
+        _ts = getattr(latest, "trend_state", None) if latest else None
+        from perfume_trend_sdk.analysis.topic_intelligence.market_intelligence import generate_market_intelligence
+        p_intelligence = _safe(
+            lambda: generate_market_intelligence(
+                canonical_name=em.canonical_name,
+                differentiators=p_diff,
+                positioning=p_pos,
+                intents=p_intents,
+                raw_queries=p_queries,
+                resolved_competitors=p_competitors,
+                trend_state=_ts,
+            ),
+            None, "market_intelligence",
+        )
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         return PerfumeEntityDetail(
@@ -1026,6 +1112,9 @@ def get_perfume_entity(
             differentiators=p_diff,  # Phase I7
             positioning=p_pos,       # Phase I7
             intents=p_intents,       # Phase I7
+            narrative=p_intelligence.narrative if p_intelligence else None,   # Phase I8
+            opportunities=p_intelligence.opportunities if p_intelligence else [],  # Phase I8
+            competitors=p_intelligence.competitors if p_intelligence else [],  # Phase I8
             notes_top=notes_top,
             notes_middle=notes_mid,
             notes_base=notes_base,
@@ -1108,6 +1197,21 @@ def get_brand_entity(
         b_topics, b_queries, b_subs, b_diff, b_pos, b_intents = _safe(
             lambda: _get_brand_topics(db, em.canonical_name), ([], [], [], [], [], []), "brand_topics"
         )
+        # Phase I8 — Brand market intelligence (no competitor detection for brands in V1)
+        _b_ts = getattr(latest, "trend_state", None) if latest else None
+        from perfume_trend_sdk.analysis.topic_intelligence.market_intelligence import generate_market_intelligence as _gen_intel
+        b_intelligence = _safe(
+            lambda: _gen_intel(
+                canonical_name=em.canonical_name,
+                differentiators=b_diff,
+                positioning=b_pos,
+                intents=b_intents,
+                raw_queries=b_queries,
+                resolved_competitors=[],
+                trend_state=_b_ts,
+            ),
+            None, "brand_market_intelligence",
+        )
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
@@ -1138,6 +1242,9 @@ def get_brand_entity(
             differentiators=b_diff,  # Phase I7
             positioning=b_pos,       # Phase I7
             intents=b_intents,       # Phase I7
+            narrative=b_intelligence.narrative if b_intelligence else None,    # Phase I8
+            opportunities=b_intelligence.opportunities if b_intelligence else [],  # Phase I8
+            competitors=b_intelligence.competitors if b_intelligence else [],  # Phase I8
         )
 
     # Step 2: try catalog-only lookup via resolver_id
