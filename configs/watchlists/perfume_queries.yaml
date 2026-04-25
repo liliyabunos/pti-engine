@@ -1,26 +1,75 @@
-# Tracked entity queries — aligned with entity_market catalog
-# Edit this file to add or remove search queries for YouTube ingestion.
-# Each query maps to at least one entity in the market engine.
+# YouTube ingestion query watchlist — Phase G1 expansion (2026-04-25)
+# Quota: 47 queries × 100 units × 2 runs/day = 9,400 units/day (limit: 10,000)
+# Do not exceed 47 queries unless YouTube API quota is increased.
+#
+# Sections:
+#   1. Original core queries (14) — do not remove or reorder
+#   2. Core entity expansions
+#   3. Intent / discovery queries
+#   4. Arabic / Middle Eastern fragrance queries
+#   5. Viral / mainstream high-volume queries
+#   6. Niche luxury queries
+#   7. Dupe / affordable queries
+
 queries:
-  # Parfums de Marly Delina
+
+  # ── Section 1: Original core queries (do not remove) ──────────────────────
   - "parfums de marly delina perfume"
   - "delina perfume review"
-  # Maison Francis Kurkdjian Baccarat Rouge 540
   - "baccarat rouge 540 review"
   - "maison francis kurkdjian baccarat rouge"
-  # Byredo Gypsy Water
   - "byredo gypsy water perfume"
-  # Xerjoff Erba Pura
   - "xerjoff erba pura perfume"
   - "erba pura review"
-  # Yves Saint Laurent Libre
   - "ysl libre perfume review"
   - "yves saint laurent libre"
-  # Montale Velvet Fantasy
   - "montale velvet fantasy perfume"
-  # Creed Aventus
   - "creed aventus review"
   - "creed aventus perfume"
-  # Tom Ford Black Orchid
   - "tom ford black orchid review"
   - "tom ford black orchid perfume"
+
+  # ── Section 2: Core entity expansions ────────────────────────────────────
+  - "parfums de marly layton review"
+  - "creed silver mountain water review"
+  - "tom ford oud wood review"
+  - "byredo bal d'afrique perfume"
+  - "maison francis kurkdjian grand soir"
+
+  # ── Section 3: Intent / discovery queries ─────────────────────────────────
+  - "best blind buy fragrance 2026"
+  - "most complimented perfume men 2026"
+  - "most complimented perfume women 2026"
+  - "best gift fragrance 2026"
+  - "top 10 fragrances 2026"
+  - "best niche perfume 2026"
+  - "signature scent recommendation 2026"
+  - "best office scent fragrance"
+  - "best date night perfume men"
+
+  # ── Section 4: Arabic / Middle Eastern fragrance queries ──────────────────
+  - "lattafa perfume review"
+  - "lattafa oud mood review"
+  - "armaf club de nuit review"
+  - "ajmal evoke perfume review"
+  - "arabian oud perfume review"
+  - "swiss arabian perfume review"
+  - "rasasi perfume review"
+
+  # ── Section 5: Viral / mainstream high-volume queries ─────────────────────
+  - "dior sauvage review"
+  - "chanel bleu de chanel review"
+  - "ysl black opium review"
+  - "paco rabanne 1 million review"
+  - "carolina herrera good girl review"
+
+  # ── Section 6: Niche luxury queries ───────────────────────────────────────
+  - "kilian angels share review"
+  - "initio side effect perfume"
+  - "mancera cedrat boise review"
+  - "amouage reflection perfume"
+
+  # ── Section 7: Dupe / affordable queries ──────────────────────────────────
+  - "baccarat rouge 540 dupe 2026"
+  - "creed aventus dupe affordable"
+  - "best affordable niche alternative fragrance"
