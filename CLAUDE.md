@@ -8399,17 +8399,117 @@ DELETE FROM resolver_fragrance_master WHERE source = 'g2_entity_seed';
 
 ---
 
-### Batch 2 — NOT YET APPROVED
+### Batch 2 — STATUS: COMPLETE — PRODUCTION APPLIED (2026-04-25)
+
+Commit: `3773269`
+
+#### Dry-Run Summary
+
+| Metric | Value |
+|--------|-------|
+| CREATE targets | 3 |
+| ALIAS_TO_EXISTING targets | 0 |
+| would_create | 3 |
+| would_insert aliases | 6 |
+| missing brand | 0 |
+| CONFLICT_OTHER_ENTITY | 0 — none of the 6 alias strings existed in resolver_aliases |
+
+#### Apply Results
+
+**Created — `resolver_perfumes` (+3):**
+
+| id | canonical_name | brand_id |
+|----|---------------|----------|
+| 113594 | Armaf Club de Nuit | 1467 |
+| 113595 | Armaf Club de Nuit Intense Man | 1467 |
+| 113596 | Rasasi Hawas | 296 |
+
+**Created — `resolver_fragrance_master` (+3, source=`g2_entity_seed`):**
+
+| fragrance_id | brand | perfume | perfume_id |
+|-------------|-------|---------|------------|
+| g2e_armaf_club_de_nuit | Armaf | Club de Nuit | 113594 |
+| g2e_armaf_cdn_intense_man | Armaf | Club de Nuit Intense Man | 113595 |
+| g2e_rasasi_hawas | Rasasi | Hawas | 113596 |
+
+**Created — `resolver_aliases` (+6, match_type=`g2_entity_seed`):**
+
+| alias_text | → entity_id | canonical |
+|-----------|-------------|----------|
+| club de nuit | 113594 | Armaf Club de Nuit |
+| armaf club de nuit | 113594 | Armaf Club de Nuit |
+| club de nuit intense man | 113595 | Armaf Club de Nuit Intense Man |
+| armaf club de nuit intense man | 113595 | Armaf Club de Nuit Intense Man |
+| hawas | 113596 | Rasasi Hawas |
+| rasasi hawas | 113596 | Rasasi Hawas |
+
+#### Cumulative g2_entity_seed counts (Batch 1 + 2)
+
+| Table | Count |
+|-------|-------|
+| resolver_perfumes (via FM join) | 6 |
+| resolver_fragrance_master | 6 |
+| resolver_aliases | 13 |
+
+#### Verification Results
+
+```
+Alias spot-check (all 6):            PASS ✅
+Duplicate normalized_name check:     0 duplicates ✅
+No pipeline/migration/scoring changes ✅
+```
+
+#### Rollback (Batch 2 only)
+
+```sql
+DELETE FROM resolver_aliases
+WHERE match_type = 'g2_entity_seed'
+  AND normalized_alias_text IN (
+    'club de nuit',
+    'armaf club de nuit',
+    'club de nuit intense man',
+    'armaf club de nuit intense man',
+    'hawas',
+    'rasasi hawas'
+  );
+
+DELETE FROM resolver_fragrance_master
+WHERE source = 'g2_entity_seed'
+  AND canonical_name IN (
+    'Armaf Club de Nuit',
+    'Armaf Club de Nuit Intense Man',
+    'Rasasi Hawas'
+  );
+
+DELETE FROM resolver_perfumes
+WHERE id IN (113594, 113595, 113596);
+```
+
+Full rollback for all batches:
+```sql
+DELETE FROM resolver_aliases WHERE match_type = 'g2_entity_seed';
+DELETE FROM resolver_perfumes
+  WHERE id IN (
+    SELECT perfume_id FROM resolver_fragrance_master
+    WHERE source = 'g2_entity_seed' AND perfume_id IS NOT NULL
+  );
+DELETE FROM resolver_fragrance_master WHERE source = 'g2_entity_seed';
+```
+
+---
+
+### Batch 3 — NOT YET APPROVED
 
 Candidate targets (require dry-run before apply):
 
-| Target | brand_id | Notes |
-|--------|----------|-------|
-| Armaf Club de Nuit | 1467 | ~30 CDN variants exist but no base entity |
-| Armaf Club de Nuit Intense Man | 1467 | id=19153 has brand mid-name suffix; no clean base |
-| Rasasi Hawas | 296 | 3 variants (for Her/Him/Ice); create base as men's canonical |
+| Target | Notes |
+|--------|-------|
+| Al Haramain Amber Oud | High-traffic Arabic perfume, absent from Parfumo dataset |
+| Paco Rabanne 1 Million | Mainstream designer; verify no existing base entity first |
+| Yves Saint Laurent Black Opium | Major designer; verify no existing base entity first |
 
-Rules for Batch 2:
+Rules for Batch 3:
 - Dry-run must pass before --apply
-- Add Batch 2 targets to `seed_g2_missing_perfumes.py` BATCH_2_CREATES
-- Do NOT add Batch 3 (Al Haramain Amber Oud, Paco Rabanne 1 Million, YSL Black Opium) until Batch 2 is verified
+- Look up brand_ids before adding to script: Al Haramain (id=451), Paco Rabanne (look up), YSL (id=1064)
+- Check if canonical base names already exist in resolver_perfumes before creating
+- Do NOT apply until Batch 2 is confirmed stable in production ingestion
