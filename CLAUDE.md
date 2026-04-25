@@ -8513,3 +8513,136 @@ Rules for Batch 3:
 - Look up brand_ids before adding to script: Al Haramain (id=451), Paco Rabanne (look up), YSL (id=1064)
 - Check if canonical base names already exist in resolver_perfumes before creating
 - Do NOT apply until Batch 2 is confirmed stable in production ingestion
+
+---
+
+## G2 Re-resolution and Historical Backfill
+
+### STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-25)
+
+### Root Cause
+
+188 content items were resolved at 16:19–16:20 UTC on 2026-04-25, before G2 aliases and
+entities were seeded (16:59–17:52 UTC). Evening pipeline ingestion deduplicated the same
+videos without re-resolving them. As a result, G2-relevant entities (Armaf Club de Nuit,
+Rasasi Hawas, Lattafa Yara, Angels' Share, MFK Baccarat Rouge 540 via `rouge 540`/`br540`
+shorthands) were missing from `resolved_signals` for all content ingested that day.
+
+Because resolved_signals feeds the aggregation layer, all historical aggregation rows for
+dates where this content was published were also missing these entity links.
+
+---
+
+### Remediation Script
+
+**`scripts/reresolve_g2_stale_content.py`** — commit `a6800bc`
+
+- Standalone, self-contained (psycopg2 only, no SDK dependency)
+- Pre-loads all 12,477+ `resolver_aliases` rows into memory in one query
+- Applies sliding window matching locally (mirrors `perfume_resolver.py`, `_MAX_WINDOW=6`)
+- Stale cutoff: `resolved_signals.created_at < '2026-04-25 16:59:00'`
+- G2 keyword filter: 24 terms (lattafa, armaf, rasasi, al haramain, ajmal, oud mood, khamrah,
+  yara, club de nuit, hawas, amber oud, evoke, angels share, rouge 540, br540, etc.)
+- Default dry-run; `--apply` flag required for writes
+- UPSERT on `resolved_signals.content_item_id` — idempotent, safe to re-run
+- Tags updated rows with `resolver_version='1.1-g2-rereresolve'`
+
+**Re-resolution results:**
+- Items checked: 188
+- Items gaining new entities: 117
+- Total new entity links written: 206
+- Top recovered entities: MFK Baccarat Rouge 540 (52×), Armaf Club de Nuit (20×),
+  Creed Aventus (19×), Rasasi Hawas (7×)
+
+---
+
+### 17-Date Historical Aggregation + Signal Backfill
+
+After re-resolving `resolved_signals`, aggregation and signal detection were re-run for all
+17 dates containing affected published_at content, newest-first:
+
+2026-04-24, 2026-04-23, 2026-04-22, 2026-04-21, 2026-04-20, 2026-04-19, 2026-04-18,
+2026-04-17, 2026-04-16, 2026-04-15, 2026-04-14, 2026-04-13, 2026-04-11, 2026-04-10,
+2026-04-09, 2026-04-08, 2026-04-07
+
+Commands used per date:
+```bash
+DATABASE_URL=<prod-url> python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date YYYY-MM-DD
+DATABASE_URL=<prod-url> python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date YYYY-MM-DD
+```
+
+Signal detection is idempotent — stale signals are cleared before re-detection on each run
+(`detect_breakout_signals_cleared_stale` logged per date). No duplicate signals produced.
+
+---
+
+### Final Verification Results
+
+**All 17 dates populated — no gaps, no errors, no duplicate signals.**
+
+| Date | Active Entities | Total Mentions | Signals |
+|------|----------------|----------------|---------|
+| 2026-04-24 | 43 | 121 | 36 |
+| 2026-04-23 | 93 | 191 | 42 |
+| 2026-04-22 | 85 | 195 | 67 |
+| 2026-04-21 | 34 | 76 | 13 |
+| 2026-04-20 | 66 | 176 | 37 |
+| 2026-04-19 | 91 | 200 | 41 |
+| 2026-04-18 | 54 | 168 | 32 |
+| 2026-04-17 | 129 | 334 | 101 |
+| 2026-04-16 | 37 | 110 | 30 |
+| 2026-04-15 | 20 | 53 | 14 |
+| 2026-04-14 | 18 | 31 | 6 |
+| 2026-04-13 | 82 | 122 | 77 |
+| 2026-04-11 | 12 | 26 | 8 |
+| 2026-04-10 | 12 | 34 | 9 |
+| 2026-04-09 | 26 | 65 | 23 |
+| 2026-04-08 | 10 | 22 | 11 |
+| 2026-04-07 | 6 | 10 | 6 |
+
+**G2 entity mentions confirmed in `entity_mentions` table:**
+- MFK Baccarat Rouge 540 — every date Apr 07–25 (retroactive `rouge 540`/`br540` aliases firing)
+- Armaf Club de Nuit — Apr 15–25
+- Armaf Club de Nuit Intense Man — Apr 15–25
+- Rasasi Hawas — Apr 18–25
+- Lattafa Yara — Apr 13, Apr 23, Apr 24
+- Lattafa Khamrah — Apr 17, Apr 24
+- Angels' Share — Apr 09, Apr 24, Apr 25
+
+**entity_market rows created (4 of 6 G2 entities):**
+- Armaf Club de Nuit ✅
+- Armaf Club de Nuit Intense Man ✅
+- Lattafa Yara ✅
+- Rasasi Hawas ✅
+- Lattafa Oud Mood — not yet (aliases seeded, no ingested content matched yet — expected)
+- Ajmal Evoke — not yet (aliases seeded, no ingested content matched yet — expected)
+
+**Resolver funnel (Apr 07–25):**
+- entity_mentions: 2,876
+- fragrance_candidates: 37,296
+- mention-to-candidate ratio: 7.71%
+
+---
+
+### Operational Note — Future Alias/Entity Seeds
+
+If resolver aliases or entities are seeded AFTER content has already been ingested and
+resolved, a targeted re-resolution + date-specific aggregation backfill is required to
+surface those entities in historical timeseries and signals.
+
+Pattern:
+1. Identify stale content (resolved before seed cutoff, containing relevant keywords)
+2. Re-resolve using in-memory alias table (pre-load all aliases in one query)
+3. UPSERT `resolved_signals` for affected items
+4. Re-run `aggregate_daily_market_metrics --date` for each affected published_at date
+5. Re-run `detect_breakout_signals --date` for each affected date (idempotent)
+
+---
+
+### Explicit Non-Goals (as of 2026-04-25)
+
+- No further backfill is needed for G2
+- G2.1 Batch 3 (Al Haramain Amber Oud, Paco Rabanne 1 Million, YSL Black Opium) is NOT YET APPROVED
+- Do not change signal thresholds or scoring
+- Do not modify entity_market directly
+- Do not run ingestion for historical dates
