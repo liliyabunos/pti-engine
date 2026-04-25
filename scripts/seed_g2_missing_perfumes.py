@@ -155,8 +155,47 @@ BATCH_1_ALIAS_TO_EXISTING: list[AliasToExistingTarget] = [
     ),
 ]
 
+# ---------------------------------------------------------------------------
+# Batch 2 data
+# ---------------------------------------------------------------------------
+
+BATCH_2_CREATES: list[CreateTarget] = [
+    CreateTarget(
+        brand_name="Armaf",
+        perfume_name="Club de Nuit",
+        brand_id=1467,
+        alias_texts=["club de nuit", "armaf club de nuit"],
+        fragrance_id="g2e_armaf_club_de_nuit",
+        batch=2,
+    ),
+    CreateTarget(
+        brand_name="Armaf",
+        perfume_name="Club de Nuit Intense Man",
+        brand_id=1467,
+        alias_texts=["club de nuit intense man", "armaf club de nuit intense man"],
+        fragrance_id="g2e_armaf_cdn_intense_man",
+        batch=2,
+    ),
+    CreateTarget(
+        brand_name="Rasasi",
+        perfume_name="Hawas",
+        brand_id=296,
+        alias_texts=["hawas", "rasasi hawas"],
+        fragrance_id="g2e_rasasi_hawas",
+        batch=2,
+    ),
+]
+# Note: "club de nuit" may match existing CDN concentration variants (ids ~19150-19181).
+# The audit will report CONFLICT_OTHER_ENTITY for those aliases — review carefully before apply.
+# "hawas" may match Hawas variants (ids ~31192-31194). Same reporting applies.
+# ON CONFLICT only blocks exact (alias, entity_type, entity_id) — multi-entity aliases
+# increase resolver candidates but do not corrupt the KB.
+
+BATCH_2_ALIAS_TO_EXISTING: list[AliasToExistingTarget] = []
+
 ALL_BATCHES: dict[int, tuple[list[CreateTarget], list[AliasToExistingTarget]]] = {
     1: (BATCH_1_CREATES, BATCH_1_ALIAS_TO_EXISTING),
+    2: (BATCH_2_CREATES, BATCH_2_ALIAS_TO_EXISTING),
 }
 
 
@@ -255,6 +294,16 @@ def _entity_exists(cur, entity_id: int) -> bool:
     return cur.fetchone() is not None
 
 
+def _alias_other_entity_ids(cur, normalized_alias: str, entity_type: str) -> list[int]:
+    """Return entity_ids that already have this alias (any entity — for conflict detection)."""
+    cur.execute(
+        "SELECT entity_id FROM resolver_aliases "
+        "WHERE normalized_alias_text = %s AND entity_type = %s",
+        (normalized_alias, entity_type),
+    )
+    return [row[0] for row in cur.fetchall()]
+
+
 # ---------------------------------------------------------------------------
 # Audit phases
 # ---------------------------------------------------------------------------
@@ -295,12 +344,22 @@ def _audit_create(cur, target: CreateTarget) -> CreateResult:
         )
         return result
 
-    # 4. Alias pre-flight (will point to whichever id gets created)
-    #    We can only check for alias conflicts after we know the target entity_id.
-    #    For dry-run we just report WOULD_INSERT for all aliases since entity is new.
+    # 4. Alias pre-flight — entity is new so no same-entity conflict possible.
+    #    But an alias may already point to a DIFFERENT entity (e.g. a concentration variant).
+    #    The UNIQUE constraint is (norm_alias, entity_type, entity_id) so ON CONFLICT won't
+    #    block the insert, but the resolver will get multiple matches — worth reporting.
     for alias_text in target.alias_texts:
         norm = _normalize(alias_text)
-        result.alias_results.append((alias_text, norm, "WOULD_INSERT"))
+        other_ids = _alias_other_entity_ids(cur, norm, "perfume")
+        if other_ids:
+            status = f"CONFLICT_OTHER_ENTITY({','.join(str(i) for i in other_ids)})"
+            log.warning(
+                "  [ALIAS_CONFLICT] %r norm=%r already points to entity_id(s)=%s",
+                alias_text, norm, other_ids,
+            )
+        else:
+            status = "WOULD_INSERT"
+        result.alias_results.append((alias_text, norm, status))
 
     result.status = "WOULD_CREATE"
     log.info(
@@ -610,7 +669,7 @@ Rollback after --apply:
         "--batch",
         type=int,
         default=1,
-        help="Which batch to run (default: 1). Currently only batch 1 is implemented.",
+        help="Which batch to run (default: 1). Batches 1 and 2 are implemented.",
     )
     args = parser.parse_args()
 
