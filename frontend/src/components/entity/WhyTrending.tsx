@@ -29,7 +29,17 @@ function Chip({ label, variant }: { label: string; variant: "topic" | "query" | 
 
 export function WhyTrending({ top_topics = [], top_queries = [], top_subreddits = [] }: WhyTrendingProps) {
   const hasData = top_topics.length > 0 || top_queries.length > 0 || top_subreddits.length > 0;
-  if (!hasData) return null;
+
+  if (!hasData) {
+    return (
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-4">
+        <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+          Why It&apos;s Trending
+        </h3>
+        <p className="text-xs text-zinc-600 italic">Low signal — insufficient data to determine topics</p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">

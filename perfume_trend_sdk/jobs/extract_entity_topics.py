@@ -58,6 +58,8 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="Preview — no DB writes")
     parser.add_argument("--limit", type=int, default=0, help="Process at most N content items (0=all)")
     parser.add_argument("--force", action="store_true", help="Re-process content items that already have topics")
+    parser.add_argument("--rebuild-links", action="store_true",
+                        help="Clear entity_topic_links and rebuild from existing content_topics (faster than --force)")
     args = parser.parse_args()
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -69,8 +71,17 @@ def main() -> None:
     try:
         from sqlalchemy import text
 
+        # ── 0. Rebuild-links fast path ─────────────────────────────────────
+        if args.rebuild_links and not args.dry_run:
+            deleted = db.execute(text("DELETE FROM entity_topic_links")).rowcount
+            db.commit()
+            logger.info("--rebuild-links: cleared %d entity_topic_links rows", deleted)
+            # Skip topic extraction — go straight to re-linking from existing content_topics
+
         # ── 1. Load content items ───────────────────────────────────────────
-        if args.force:
+        if args.rebuild_links and not args.dry_run:
+            cci_rows = []  # No extraction needed — topics already exist
+        elif args.force:
             cci_rows = db.execute(text(
                 "SELECT id, source_platform, title, text_content, query, media_metadata_json "
                 "FROM canonical_content_items " +
@@ -90,29 +101,49 @@ def main() -> None:
 
         logger.info("Content items to process: %d", len(cci_rows))
 
-        # ── 2. Load entity mention lookup: source_url → list[(entity_id, source_score)] ──
-        # entity_mentions.source_url = YouTube video ID = canonical_content_items.id
+        # ── 2. Load entity mention lookup: cci_id → list[(entity_id, entity_type, source_score)] ──
+        #
+        # Join entity_mentions → canonical_content_items so the map key is cci.id
+        # (the same key used in content_topics.content_item_id).
+        #
+        # Three join strategies handle old and new source_url formats:
+        #   A) cci.id = em.source_url         — old style: bare video ID stored in source_url
+        #   B) cci.source_url = em.source_url — new style: full URL stored in source_url (YouTube + Reddit)
+        #   C) em.source_url IS NULL          — skip rows with no URL
         try:
             mention_rows = db.execute(text("""
-                SELECT em.source_url, em.entity_id, em.entity_type,
+                SELECT DISTINCT ON (em.id) cci.id as cci_id,
+                       em.entity_id, em.entity_type,
                        ms.source_score
                 FROM entity_mentions em
+                JOIN canonical_content_items cci
+                  ON (cci.id = em.source_url OR cci.source_url = em.source_url)
                 LEFT JOIN mention_sources ms ON ms.mention_id = em.id
                 WHERE em.source_url IS NOT NULL
             """)).fetchall()
         except Exception:
-            # Fallback for SQLite dev where mention_sources table may not exist
-            mention_rows = db.execute(text("""
-                SELECT source_url, entity_id, entity_type, NULL as source_score
-                FROM entity_mentions
-                WHERE source_url IS NOT NULL
-            """)).fetchall()
+            # SQLite fallback: no DISTINCT ON, simpler join
+            try:
+                mention_rows = db.execute(text("""
+                    SELECT cci.id, em.entity_id, em.entity_type, NULL as source_score
+                    FROM entity_mentions em
+                    JOIN canonical_content_items cci
+                      ON (cci.id = em.source_url OR cci.source_url = em.source_url)
+                    WHERE em.source_url IS NOT NULL
+                """)).fetchall()
+            except Exception:
+                # Last resort: bare source_url match (original behaviour)
+                mention_rows = db.execute(text("""
+                    SELECT source_url, entity_id, entity_type, NULL as source_score
+                    FROM entity_mentions
+                    WHERE source_url IS NOT NULL
+                """)).fetchall()
 
-        # Build lookup: content_item_id → list of (entity_id_str, entity_type, source_score)
+        # Build lookup: cci_id → list of (entity_id_str, entity_type, source_score)
         mention_map: dict[str, list[tuple[str, str, Optional[float]]]] = {}
-        for source_url, entity_id, entity_type, source_score in mention_rows:
+        for cci_id, entity_id, entity_type, source_score in mention_rows:
             entity_id_str = str(entity_id)
-            mention_map.setdefault(source_url, []).append(
+            mention_map.setdefault(str(cci_id), []).append(
                 (entity_id_str, entity_type, source_score)
             )
 
@@ -200,6 +231,38 @@ def main() -> None:
 
         if not args.dry_run:
             db.commit()
+
+        # ── 3b. Rebuild-links: link all existing content_topics to entities ──
+        if args.rebuild_links and not args.dry_run:
+            logger.info("Rebuild-links: linking all existing content_topics to entities...")
+            # Load all content_topics
+            all_ct = db.execute(text(
+                "SELECT id, content_item_id, topic_text, topic_type FROM content_topics"
+            )).fetchall()
+            logger.info("  content_topics to link: %d", len(all_ct))
+            rl_links = 0
+            rl_batch = 0
+            for ct_id, ct_cci_id, topic_text, topic_type in all_ct:
+                entity_list = mention_map.get(str(ct_cci_id), [])
+                for entity_id_str, entity_type, source_score in entity_list:
+                    db.execute(text("""
+                        INSERT INTO entity_topic_links
+                        (entity_id, entity_type, content_topic_id, topic_text, topic_type, source_score)
+                        VALUES (:eid, :etype, :ctid, :tx, :tt, :ss)
+                        ON CONFLICT DO NOTHING
+                    """), {
+                        "eid": entity_id_str, "etype": entity_type,
+                        "ctid": ct_id, "tx": topic_text, "tt": topic_type,
+                        "ss": source_score,
+                    })
+                    rl_links += 1
+                rl_batch += 1
+                if rl_batch % 500 == 0:
+                    db.commit()
+                    logger.info("  rebuild-links progress: %d topics processed, %d links", rl_batch, rl_links)
+            db.commit()
+            links_written += rl_links
+            logger.info("Rebuild-links complete: %d entity_topic_links written", rl_links)
 
         logger.info(
             "Done. items_with_topics=%d items_with_links=%d topics_written=%d links_written=%d%s",
