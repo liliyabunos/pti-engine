@@ -53,6 +53,11 @@ echo "[pipeline] Step 4 — Market state verification"
 timeout 300 python3 -m perfume_trend_sdk.jobs.verify_market_state || \
   echo "[pipeline] WARNING: verify_market_state reported issues — check logs"
 
+# Step 4b: Topic/Query Intelligence (Phase I5/I6) — extract new topics, rebuild links
+echo "[pipeline] Step 4b — Topic extraction + entity link rebuild (Phase I5/I6)"
+timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links || \
+  echo "[pipeline] WARNING: extract_entity_topics failed — continuing"
+
 # Step 5: Coverage maintenance (Phase 5) — runs morning-only, non-blocking
 echo "[pipeline] Step 5 — Coverage maintenance (stale + metadata detection + runner)"
 timeout 300 python3 -m perfume_trend_sdk.jobs.detect_stale_entities --stale-days 14 || \

@@ -277,7 +277,53 @@ NOTES:
 
 ---
 
-### I6 — Intelligence Output
+### I6 — Topic Coverage Expansion (COMPLETED — 2026-04-25)
+
+Increase entity_topic_links coverage from ~1% to ≥70% of active entities.
+
+STATUS: COMPLETE
+
+ROOT CAUSE:
+`entity_mentions.source_url` = full URL (`https://youtube.com/watch?v=VIDEO_ID`)
+`canonical_content_items.id` = bare video ID (`PLfRPNG_ij0`)
+Old join: `em.source_url = cci.id` — matched only 11 of 2,457 entity_mentions.
+
+FIX:
+New join: `cci.id = em.source_url OR cci.source_url = em.source_url`
+Maps entity_mentions to canonical_content_items via full URL match.
+mention_map key = `cci.id` (same as content_topics.content_item_id).
+
+JOIN COVERAGE (production):
+- Old match (em.source_url = cci.id): 11 rows
+- New match (em.source_url = cci.source_url): 2,447 rows
+- YouTube video ID extracted: 841 rows
+- Reddit post ID extracted: 1,605 rows
+- Total covered: 2,447 unique entity_mention rows
+
+DEPLOYMENT:
+- `extract_entity_topics.py`: new DISTINCT ON join via `OR cci.source_url = em.source_url`
+- `--rebuild-links` flag: clears entity_topic_links, rebuilds from existing content_topics without re-extracting
+- `WhyTrending` component: shows "Low signal" placeholder for entities with no data (not hidden)
+- Pipeline integration: `--rebuild-links` added to `start_pipeline.sh` Step 4b and `start_pipeline_evening.sh` Step 3b
+- `scripts/diagnose_topic_coverage.py`: coverage diagnostic script
+
+RESULTS (before → after):
+- entity_topic_links: 26 → 2,912
+- entity coverage: 9 perfume entities → 177/182 perfume entities
+- Coverage: 1.4% → 97.3%
+
+EXAMPLES:
+- Creed Aventus (was empty): topics=['review','luxury','woody','fresh/citrus',"men's fragrance",'dupe/alternative'], queries=['creed aventus perfume','creed aventus review'], subs=['colognes','fragrance']
+- Yves Saint Laurent Libre: topics=['review',"women's fragrance",'floral','vanilla','new release'], queries=['ysl libre perfume','ysl libre perfume review']
+- brand-creed: topics=['review','luxury','woody','fresh/citrus'], queries=['creed aventus perfume','creed aventus review'], subs=['colognes','fragrance']
+
+ONGOING:
+- Pipeline now runs extract_entity_topics --rebuild-links after every ingest cycle
+- Coverage will grow as more content is ingested and linked
+
+---
+
+### I7 — Intelligence Output
 
 Produce:
 - reports

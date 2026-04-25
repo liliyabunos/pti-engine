@@ -50,4 +50,9 @@ timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.aggregate_daily_market
 echo "[pipeline-evening] Step 3 — Signal detection for date=$TODAY"
 timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date "$TODAY"
 
+# Step 3b: Topic/Query Intelligence (Phase I5/I6) — extract new topics, rebuild links
+echo "[pipeline-evening] Step 3b — Topic extraction + entity link rebuild (Phase I5/I6)"
+timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links || \
+  echo "[pipeline-evening] WARNING: extract_entity_topics failed — continuing"
+
 echo "[pipeline-evening] Complete for date=$TODAY"
