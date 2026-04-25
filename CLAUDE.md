@@ -8245,3 +8245,171 @@ These require controlled entity creation in `resolver_perfumes` +
 - Do NOT lower signal thresholds or change scoring to compensate
 - Do NOT modify entity_market to work around missing resolver entries
 - Entity creation must be explicit, bounded, and dry-run verified first
+
+→ Phase G2.1 Batch 1 — COMPLETED 2026-04-25 (see section below)
+
+---
+
+## Phase G2.1 — Controlled Missing Perfume Entity Seed
+
+### Target Type
+PRODUCTION_TARGETED (resolver_perfumes + resolver_fragrance_master + resolver_aliases writes only)
+
+### Authoritative Targets
+- Production PostgreSQL (`resolver_perfumes`, `resolver_fragrance_master`, `resolver_aliases`)
+- `scripts/seed_g2_missing_perfumes.py` (standalone, idempotent, psycopg2 only)
+
+### Requires Commit / Push / Deploy
+YES (script committed; entities written directly via DATABASE_URL public proxy)
+
+### Expected UI Change
+INDIRECT — resolver recall improves; Arabic/ME perfume mentions now resolve instead
+of going to fragrance_candidates
+
+---
+
+### Purpose
+
+Seed resolver KB with high-value perfume entities absent from the Parfumo/Kaggle
+Phase 5 import. Uses two operation types:
+
+- **CREATE** — inserts new entity into `resolver_perfumes` + `resolver_fragrance_master` + aliases
+- **ALIAS_TO_EXISTING** — inserts alias rows only, pointing to an already-existing entity
+
+Source tagging:
+- `resolver_fragrance_master.source = 'g2_entity_seed'`
+- `resolver_aliases.match_type = 'g2_entity_seed'`
+
+Script: `scripts/seed_g2_missing_perfumes.py` — default dry-run, `--apply` required for writes.
+Batch-controlled via `--batch N`.
+
+---
+
+### Batch 1 — STATUS: COMPLETE — PRODUCTION APPLIED (2026-04-25)
+
+Commit: `988765d`
+
+#### Dry-Run Summary
+
+| Metric | Value |
+|--------|-------|
+| CREATE targets | 3 |
+| ALIAS_TO_EXISTING targets | 2 |
+| would_create | 3 |
+| would_insert aliases | 7 |
+| missing brand | 0 |
+| ambiguous | 0 |
+| Initio Side Effect alias | EXISTING — already seeded, skipped |
+
+#### Apply Results
+
+**Created — `resolver_perfumes` (+3):**
+
+| id | canonical_name | brand_id |
+|----|---------------|----------|
+| 113591 | Lattafa Oud Mood | 9 |
+| 113592 | Lattafa Yara | 9 |
+| 113593 | Ajmal Evoke | 308 |
+
+**Created — `resolver_fragrance_master` (+3, source=`g2_entity_seed`):**
+
+| fragrance_id | brand | perfume | perfume_id |
+|-------------|-------|---------|------------|
+| g2e_lattafa_oud_mood | Lattafa | Oud Mood | 113591 |
+| g2e_lattafa_yara | Lattafa | Yara | 113592 |
+| g2e_ajmal_evoke | Ajmal | Evoke | 113593 |
+
+**Created — `resolver_aliases` (+7, match_type=`g2_entity_seed`):**
+
+| alias_text | → entity_id | canonical |
+|-----------|-------------|----------|
+| oud mood | 113591 | Lattafa Oud Mood |
+| lattafa oud mood | 113591 | Lattafa Oud Mood |
+| yara | 113592 | Lattafa Yara |
+| lattafa yara | 113592 | Lattafa Yara |
+| ajmal evoke | 113593 | Ajmal Evoke |
+| angels share | 9119 | Angels' Share (Kilian) — ALIAS_TO_EXISTING |
+| kilian angels share | 9119 | Angels' Share (Kilian) — ALIAS_TO_EXISTING |
+
+**Important notes:**
+- Angels' Share was NOT created as a new entity. Aliases point to existing `resolver_perfumes.id=9119` under Kilian (brand_id=670). By Kilian (brand_id=158) has no Angels perfumes — creating there would split the KB.
+- Initio Side Effect alias (`initio side effect` → id=50629) already existed and was correctly skipped.
+
+#### Production Count Deltas
+
+| Table | Before | After | Delta |
+|-------|--------|-------|-------|
+| resolver_perfumes | 56,068 | 56,071 | +3 |
+| resolver_fragrance_master | 56,068 | 56,071 | +3 |
+| resolver_aliases | 12,898 | 12,905 | +7 |
+
+#### Verification Results
+
+```
+g2_entity_seed perfumes (via FM join):  3   ✅
+g2_entity_seed fragrance_master:        3   ✅
+g2_entity_seed aliases:                 7   ✅
+Alias spot-check (all 7):               PASS ✅
+Angels' Share → id=9119 (Kilian):       PASS ✅
+Duplicate normalized_name check:        0 duplicates ✅
+```
+
+#### Safety Constraints (Batch 1)
+
+- No migrations run
+- No pipeline files modified
+- No scoring changes
+- No signal threshold changes
+- No entity_market changes
+- No `promote_candidates --allow-create` used
+- Script is idempotent (ON CONFLICT DO NOTHING)
+
+#### Rollback (Batch 1 only)
+
+```sql
+DELETE FROM resolver_aliases
+WHERE match_type = 'g2_entity_seed'
+  AND normalized_alias_text IN (
+    'oud mood', 'lattafa oud mood',
+    'yara', 'lattafa yara',
+    'ajmal evoke',
+    'angels share', 'kilian angels share'
+  );
+
+DELETE FROM resolver_fragrance_master
+WHERE source = 'g2_entity_seed'
+  AND canonical_name IN (
+    'Lattafa Oud Mood', 'Lattafa Yara', 'Ajmal Evoke'
+  );
+
+DELETE FROM resolver_perfumes
+WHERE id IN (113591, 113592, 113593);
+```
+
+Full rollback for all batches (when multiple batches applied):
+```sql
+DELETE FROM resolver_aliases WHERE match_type = 'g2_entity_seed';
+DELETE FROM resolver_perfumes
+  WHERE id IN (
+    SELECT perfume_id FROM resolver_fragrance_master
+    WHERE source = 'g2_entity_seed' AND perfume_id IS NOT NULL
+  );
+DELETE FROM resolver_fragrance_master WHERE source = 'g2_entity_seed';
+```
+
+---
+
+### Batch 2 — NOT YET APPROVED
+
+Candidate targets (require dry-run before apply):
+
+| Target | brand_id | Notes |
+|--------|----------|-------|
+| Armaf Club de Nuit | 1467 | ~30 CDN variants exist but no base entity |
+| Armaf Club de Nuit Intense Man | 1467 | id=19153 has brand mid-name suffix; no clean base |
+| Rasasi Hawas | 296 | 3 variants (for Her/Him/Ice); create base as men's canonical |
+
+Rules for Batch 2:
+- Dry-run must pass before --apply
+- Add Batch 2 targets to `seed_g2_missing_perfumes.py` BATCH_2_CREATES
+- Do NOT add Batch 3 (Al Haramain Amber Oud, Paco Rabanne 1 Million, YSL Black Opium) until Batch 2 is verified
