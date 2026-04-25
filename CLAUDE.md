@@ -8110,9 +8110,138 @@ not the query input layer.
 
 ### Next Phase
 
-**Phase G2** (not yet approved) should focus on one of:
-- Reddit coverage expansion (Reddit items dropped to 0 on Apr 24–25 — investigate lookback/dedup)
-- Alias expansion from Phase 4P promotion pipeline (resolver recall improvement)
-- Candidate promotion batch (Phase 4P.2 follow-on) to convert high-confidence candidates to KB entities
+→ Phase G2 — Targeted Resolver Alias Seed (COMPLETED 2026-04-25)
 
-No G2 implementation has been approved yet.
+---
+
+## Phase G2 — Targeted Resolver Alias Seed
+
+### Target Type
+PRODUCTION_TARGETED (alias writes only — no migrations, no entity creation)
+
+### Authoritative Targets
+- Production PostgreSQL (`resolver_aliases` table)
+- `scripts/seed_g2_aliases.py` (standalone, idempotent, psycopg2 only)
+
+### Requires Commit / Push / Deploy
+YES (script committed; aliases written directly via DATABASE_URL public proxy)
+
+### Expected UI Change
+INDIRECT — resolver recall improves; brand/perfume mentions in new content resolve
+instead of going to fragrance_candidates
+
+### Status
+STATUS: COMPLETE — PRODUCTION APPLIED (2026-04-25)
+
+Commit: `ddb145b` — feat: seed targeted G2 resolver aliases
+
+---
+
+### Audit Findings (pre-seed)
+
+| Metric | Value |
+|--------|-------|
+| resolver_perfumes | 56,068 |
+| resolver_aliases (before) | 12,889 |
+| Perfumes with zero aliases | 53,822 (96%) |
+| Avg aliases per perfume | 0.23 |
+| Estimated resolver hit rate after G1 | ~0.3% |
+| Total candidates in queue | 37,213 |
+
+Root cause: 96% of the resolver catalog had no alias entries. The resolver hot-path
+matches via `resolver_aliases.normalized_alias_text` — entities with no alias rows are
+unreachable by any variant of their name. All G1 Arabic/ME query traffic was going to
+`fragrance_candidates` instead of `entity_mentions`.
+
+---
+
+### Dry-Run Summary (no DB writes)
+
+| Result | Count |
+|--------|-------|
+| Total targets | 33 |
+| Found in KB | 14 |
+| MISSING (perfumes not in resolver_perfumes) | 19 |
+| AMBIGUOUS | 0 |
+| Already existing aliases | 5 |
+| Would insert | 9 |
+
+Already-existing (seeded by prior Phase 4P runs): `lattafa`, `khamrah`,
+`lattafa khamrah`, `cedrat boise`, `mancera cedrat boise`.
+
+---
+
+### Apply Result
+
+9 aliases inserted — exactly matching dry-run would-insert count. No new entities created.
+
+| Alias | Type | entity_id | Target |
+|-------|------|-----------|--------|
+| `armaf` | brand | 1467 | Armaf |
+| `rasasi` | brand | 296 | Rasasi |
+| `al haramain` | brand | 451 | Al Haramain |
+| `ajmal` | brand | 308 | Ajmal |
+| `swiss arabian` | brand | 708 | Swiss Arabian |
+| `arabian oud` | brand | 366 | Arabian Oud |
+| `initio side effect` | perfume | 50629 | Initio Side Effect |
+| `rouge 540` | perfume | 2 | Maison Francis Kurkdjian Baccarat Rouge 540 |
+| `br540` | perfume | 2 | Maison Francis Kurkdjian Baccarat Rouge 540 |
+
+### Production counts after apply
+
+| Table | Before | After | Delta |
+|-------|--------|-------|-------|
+| resolver_aliases | 12,889 | 12,898 | +9 |
+| resolver_perfumes | 56,068 | 56,068 | 0 |
+| resolver_brands | 1,608 | 1,608 | 0 |
+| resolver_fragrance_master | 56,068 | 56,068 | 0 |
+
+---
+
+### Rollback
+
+```sql
+DELETE FROM resolver_aliases WHERE match_type = 'g2_seed';
+```
+
+All G2 aliases are tagged `match_type='g2_seed'` — fully reversible in one statement.
+
+---
+
+### Safety Constraints (ENFORCED)
+
+- No new resolver_perfumes rows created
+- No new resolver_fragrance_master rows created
+- No new resolver_brands rows created
+- No migrations run
+- No pipeline files modified
+- No scoring changes
+- No signal threshold changes
+- No entity_market changes
+- Script is idempotent (ON CONFLICT DO NOTHING)
+
+---
+
+### Next Bottleneck — 19 Missing Perfumes
+
+19 high-value perfume targets were MISSING from `resolver_perfumes` entirely.
+These are real, high-traffic perfumes absent from the Parfumo/Kaggle dataset used
+for Phase 5 catalog import:
+
+- Armaf Club de Nuit, Armaf Club de Nuit Intense Man
+- Lattafa Oud Mood, Lattafa Yara
+- Rasasi Hawas
+- Al Haramain Amber Oud
+- Ajmal Evoke
+- By Kilian Angels' Share
+- Paco Rabanne 1 Million
+- Yves Saint Laurent Black Opium
+
+These require controlled entity creation in `resolver_perfumes` +
+`resolver_fragrance_master` before aliases can point to them.
+
+**Rules for next phase (G2.1):**
+- Do NOT auto-create entities via `promote_candidates --allow-create` for these
+- Do NOT lower signal thresholds or change scoring to compensate
+- Do NOT modify entity_market to work around missing resolver entries
+- Entity creation must be explicit, bounded, and dry-run verified first
