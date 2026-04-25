@@ -562,10 +562,11 @@ export default function PerfumeEntityPage({ params }: PageProps) {
               <TopDrivers drivers={data.top_drivers} />
             )}
 
-            {/* ── Why It's Trending (Phase I5) ────────────────────────────── */}
+            {/* ── Why It's Trending (Phase I7) ────────────────────────────── */}
             <WhyTrending
-              top_topics={data.top_topics}
-              top_queries={data.top_queries}
+              differentiators={data.differentiators}
+              positioning={data.positioning}
+              intents={data.intents}
               top_subreddits={data.top_subreddits}
             />
 

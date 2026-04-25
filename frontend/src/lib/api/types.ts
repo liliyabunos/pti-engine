@@ -212,10 +212,14 @@ export interface PerfumeEntityDetail {
   /** "fragrantica" | "parfumo" | null */
   notes_source: string | null;
   similar_perfumes: SimilarPerfumeRow[];
-  /** Phase I5 — Topic Intelligence */
+  /** Phase I5 — Topic Intelligence (raw) */
   top_topics: string[];
   top_queries: string[];
   top_subreddits: string[];
+  /** Phase I7 — Semantic profile */
+  differentiators: string[];
+  positioning: string[];
+  intents: string[];
 }
 
 export interface BrandPerfumeRow {
@@ -253,10 +257,14 @@ export interface BrandEntityDetail {
   top_notes: string[];
   /** Top accords aggregated across brand portfolio */
   top_accords: string[];
-  /** Phase I5 — Topic Intelligence */
+  /** Phase I5 — Topic Intelligence (raw) */
   top_topics: string[];
   top_queries: string[];
   top_subreddits: string[];
+  /** Phase I7 — Semantic profile */
+  differentiators: string[];
+  positioning: string[];
+  intents: string[];
 }
 
 // ---------------------------------------------------------------------------

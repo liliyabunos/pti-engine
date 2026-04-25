@@ -150,17 +150,23 @@ def _get_entity_topics(
     db: Session,
     entity_id_str: str,
     limit_per_type: int = 8,
-) -> tuple[list[str], list[str], list[str]]:
-    """Phase I5 — Return (top_topics, top_queries, top_subreddits) for an entity.
+) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str]]:
+    """Phase I5/I7 — Return (top_topics, top_queries, top_subreddits, differentiators, positioning, intents).
 
     Aggregates entity_topic_links grouped by (topic_type, topic_text) ordered by
     occurrence count DESC, then avg source_score DESC.
 
-    Returns three lists:
+    Phase I5 fields (raw):
       top_topics     — semantic topic labels (e.g. "compliment getter", "blind buy")
       top_queries    — YouTube search queries (e.g. "creed aventus review")
       top_subreddits — Reddit communities (e.g. "fragrance")
+
+    Phase I7 semantic fields (classified):
+      differentiators — uniqueness/value signals ("dupe / alternative", "compliment getter", …)
+      positioning     — identity tags ("vanilla", "niche fragrance", "men's fragrance", …)
+      intents         — search intent (queries + intent labels like "review", "gift idea", …)
     """
+    from perfume_trend_sdk.analysis.topic_intelligence.semantic import classify_entity_topics
     try:
         rows = db.execute(text("""
             SELECT topic_type, topic_text,
@@ -173,7 +179,7 @@ def _get_entity_topics(
         """), {"eid": entity_id_str}).fetchall()
     except Exception as exc:
         _log.warning("[I5] entity_topics query failed: %s", exc)
-        return [], [], []
+        return [], [], [], [], [], []
 
     topics: list[str] = []
     queries: list[str] = []
@@ -185,18 +191,24 @@ def _get_entity_topics(
             queries.append(ttext)
         elif ttype == "subreddit" and len(subreddits) < limit_per_type:
             subreddits.append(ttext)
-    return topics, queries, subreddits
+
+    # Phase I7 — semantic classification
+    raw_for_classify = [(r[0], r[1], int(r[2]), float(r[3])) for r in rows]
+    profile = classify_entity_topics(raw_for_classify)
+    return topics, queries, subreddits, profile.differentiators, profile.positioning, profile.intents
 
 
 def _get_brand_topics(
     db: Session,
     brand_name: str,
     limit_per_type: int = 8,
-) -> tuple[list[str], list[str], list[str]]:
-    """Phase I5 — Aggregate topics across all perfumes under a brand.
+) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str]]:
+    """Phase I5/I7 — Aggregate topics across all perfumes under a brand.
 
     Joins entity_topic_links → entity_market filtered by brand_name='perfume'.
+    Returns (top_topics, top_queries, top_subreddits, differentiators, positioning, intents).
     """
+    from perfume_trend_sdk.analysis.topic_intelligence.semantic import classify_entity_topics
     try:
         rows = db.execute(text("""
             SELECT etl.topic_type, etl.topic_text,
@@ -210,7 +222,7 @@ def _get_brand_topics(
         """), {"bname": brand_name}).fetchall()
     except Exception as exc:
         _log.warning("[I5] brand_topics query failed: %s", exc)
-        return [], [], []
+        return [], [], [], [], [], []
 
     topics: list[str] = []
     queries: list[str] = []
@@ -222,7 +234,11 @@ def _get_brand_topics(
             queries.append(ttext)
         elif ttype == "subreddit" and len(subreddits) < limit_per_type:
             subreddits.append(ttext)
-    return topics, queries, subreddits
+
+    # Phase I7 — semantic classification
+    raw_for_classify = [(r[0], r[1], int(r[2]), float(r[3])) for r in rows]
+    profile = classify_entity_topics(raw_for_classify)
+    return topics, queries, subreddits, profile.differentiators, profile.positioning, profile.intents
 
 
 def _get_top_drivers(db: Session, entity_uuid, limit: int = 10) -> List[DriverRow]:
@@ -413,6 +429,10 @@ class PerfumeEntityDetail(BaseModel):
     top_topics: List[str] = []     # semantic labels: "compliment getter", "blind buy", …
     top_queries: List[str] = []    # YouTube search queries that surfaced this entity
     top_subreddits: List[str] = [] # Reddit communities discussing this entity
+    # Phase I7 — Semantic profile (classified from I5/I6 topic links)
+    differentiators: List[str] = []  # what makes it unique: "dupe / alternative", "longevity / projection", …
+    positioning: List[str] = []      # what it is: "vanilla", "niche fragrance", "men's fragrance", …
+    intents: List[str] = []          # why people search: queries + "review", "gift idea", "new release", …
     # Enrichment
     notes_top: List[str] = []
     notes_middle: List[str] = []
@@ -450,6 +470,10 @@ class BrandEntityDetail(BaseModel):
     top_topics: List[str] = []
     top_queries: List[str] = []
     top_subreddits: List[str] = []
+    # Phase I7 — Semantic profile (classified from I5/I6 topic links)
+    differentiators: List[str] = []
+    positioning: List[str] = []
+    intents: List[str] = []
     # Aggregated notes/accords across brand portfolio
     top_notes: List[str] = []
     top_accords: List[str] = []
@@ -970,9 +994,9 @@ def get_perfume_entity(
         notes_top, notes_mid, notes_base, accords, notes_source = _get_perfume_notes(db, em.entity_id, resolver_id)
         similar = _similar_by_notes(db, resolver_id) if resolver_id else []
         drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "top_drivers")
-        # Phase I5 — topic/query intelligence
-        p_topics, p_queries, p_subs = _safe(
-            lambda: _get_entity_topics(db, str(em.id)), ([], [], []), "entity_topics"
+        # Phase I5/I7 — topic/query intelligence + semantic profile
+        p_topics, p_queries, p_subs, p_diff, p_pos, p_intents = _safe(
+            lambda: _get_entity_topics(db, str(em.id)), ([], [], [], [], [], []), "entity_topics"
         )
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
@@ -999,6 +1023,9 @@ def get_perfume_entity(
             top_topics=p_topics,    # Phase I5
             top_queries=p_queries,  # Phase I5
             top_subreddits=p_subs,  # Phase I5
+            differentiators=p_diff,  # Phase I7
+            positioning=p_pos,       # Phase I7
+            intents=p_intents,       # Phase I7
             notes_top=notes_top,
             notes_middle=notes_mid,
             notes_base=notes_base,
@@ -1078,8 +1105,8 @@ def get_brand_entity(
         top_notes = _brand_top_notes(db, em.canonical_name)
         top_accords = _brand_top_accords(db, em.canonical_name)
         drivers = _safe(lambda: _get_top_drivers_for_brand(db, em.canonical_name, limit=10), [], "brand_top_drivers")
-        b_topics, b_queries, b_subs = _safe(
-            lambda: _get_brand_topics(db, em.canonical_name), ([], [], []), "brand_topics"
+        b_topics, b_queries, b_subs, b_diff, b_pos, b_intents = _safe(
+            lambda: _get_brand_topics(db, em.canonical_name), ([], [], [], [], [], []), "brand_topics"
         )
 
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
@@ -1108,6 +1135,9 @@ def get_brand_entity(
             top_topics=b_topics,
             top_queries=b_queries,
             top_subreddits=b_subs,
+            differentiators=b_diff,  # Phase I7
+            positioning=b_pos,       # Phase I7
+            intents=b_intents,       # Phase I7
         )
 
     # Step 2: try catalog-only lookup via resolver_id

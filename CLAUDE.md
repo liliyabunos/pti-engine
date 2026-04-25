@@ -323,7 +323,51 @@ ONGOING:
 
 ---
 
-### I7 — Intelligence Output
+### I7 — Topic Quality Layer: Semantic Intelligence (COMPLETED — 2026-04-25)
+
+Transform raw Topic/Query Intelligence (I5–I6) into high-quality semantic insights by ranking,
+filtering generic topics, and classifying into three structured categories.
+
+STATUS: COMPLETE
+
+DEPLOYMENT:
+- New module: `perfume_trend_sdk/analysis/topic_intelligence/semantic.py` — pure deterministic classifier
+- `_get_entity_topics()` and `_get_brand_topics()` in `entities.py` extended to return 6-tuple
+  (top_topics, top_queries, top_subreddits, differentiators, positioning, intents)
+- `PerfumeEntityDetail` and `BrandEntityDetail` Pydantic models extended with `differentiators[]`, `positioning[]`, `intents[]`
+- `frontend/src/lib/api/types.ts` extended with same 3 fields on both detail interfaces
+- `WhyTrending.tsx` rewritten: 3 semantic sections (Differentiators / Positioning / Why People Search)
+  + optional Communities row for subreddits
+- Entity pages updated to pass new semantic props to `<WhyTrending />`
+
+CLASSIFICATION:
+- Scoring formula: `score = occ × (1.0 + avg_quality_score)`
+- Differentiators (emerald chips): "dupe / alternative", "compliment getter", "longevity / projection",
+  "reformulation", "affordable", "blind buy"
+- Positioning (sky chips): niche/designer/luxury, vanilla/oud/floral/woody/musk/fresh/spicy/smoky/green,
+  men's/women's/unisex, summer/winter/fall/spring, arab/french/italian, office/date night/signature/gym/beach
+- Intent (violet chips): all raw search queries + "review", "ranking / best of", "comparison",
+  "gift idea", "trending / viral", "new release", "flanker", "sample / decant", "blind buy"
+- Stoplist (excluded from Diff/Pos, kept in Intent only): "review", "comparison", "trending / viral",
+  "ranking / best of"
+- Subreddits (orange chips): Communities section when top_subreddits present
+
+VERIFICATION:
+- No backfill required — transformation layer reads existing entity_topic_links
+- API returns differentiators/positioning/intents on all perfume and brand entity endpoints
+- UI sections collapse if empty; "Low signal" shown only if ALL sections empty
+- Checked: Creed Aventus entity — top_queries map to intents, topic labels route to diff/pos correctly
+- Non-destructive: existing top_topics/top_queries/top_subreddits fields preserved in API
+
+NOTES:
+- Subreddits are not classified into semantic sections — shown as Communities footer row
+- Unmapped topic labels are silently skipped (not surfaced to UI)
+- No AI. Pure frozenset membership checks — O(1) per topic row
+- Brand entities use same classification via _get_brand_topics() → aggregate across portfolio
+
+---
+
+### I8 — Intelligence Output
 
 Produce:
 - reports
