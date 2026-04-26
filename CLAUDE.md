@@ -9214,3 +9214,76 @@ Railway fallback URL (`pti-frontend-production.up.railway.app`) remains active a
 - The Railway URL can be used for internal debugging or infrastructure access without affecting
   the user-facing domain
 
+---
+
+## TODO — Dashboard Date Range Controls / KPI Period Layer
+
+### Problem
+
+- Current dashboard KPI cards appear to show calendar `CURRENT_DATE` only.
+- This is misleading because YouTube/Reddit ingestion enriches prior `published_at` dates —
+  a video published yesterday is ingested today, aggregated for yesterday's date, not today's.
+- A current partial day may show 0 signals even while the latest completed market date has
+  strong activity.
+- Recent Signals and Movers may show historical/latest-date data while KPI cards show
+  today-only data, creating visible UX inconsistency.
+
+### Required UX
+
+Add a date/period selector to the dashboard. Supported periods:
+
+- Today
+- Yesterday
+- Last 7 days
+- Last 30 days
+- Last 90 days
+- YTD
+- Custom date range
+
+Rules:
+- KPI cards must reflect the selected period.
+- Movers table must reflect the selected period.
+- Recent Signals should either respect the selected period or be clearly labeled "Recent 7 days".
+- Charts should align with the selected period.
+- Dashboard header should show: selected period, latest data timestamp, and latest completed
+  market date (the most recent date with `mention_count > 0` in `entity_timeseries_daily`).
+
+### Backend / API Requirements
+
+Dashboard endpoints must accept:
+- `start_date` / `end_date` (explicit range)
+- `period` preset (e.g. `yesterday`, `7d`, `30d`, `90d`, `ytd`)
+
+Backend must support:
+- Current calendar date
+- Latest completed market date (max date with real activity — not just carry-forward)
+- Rolling windows
+- Custom date ranges
+
+**Do not hardcode `CURRENT_DATE` in dashboard summary logic.** The API should return the
+`as_of_date` it actually used so the frontend can display it transparently.
+
+### Implementation Notes
+
+1. Audit existing dashboard endpoints (`/api/v1/dashboard`) and frontend components to
+   determine exactly where `CURRENT_DATE` is used vs. where latest market date is derived.
+2. Compare current KPI card date logic with `latest_signal.detected_at` and
+   `entity_timeseries_daily` max active date.
+3. Fix likely requires both backend query params (`start_date`/`end_date`) and a frontend
+   period selector component in the dashboard ControlBar.
+4. Do not change scoring or signal detection thresholds for this task.
+
+### Priority
+
+Medium-high product UX priority.
+
+- Do after current pipeline/data integrity work (stale identity_map fix, Reddit gap investigation).
+- Complete before public user onboarding / fragranceindex.ai soft launch expansion if possible.
+
+### Non-Goals
+
+- Do not change signal detection logic or thresholds.
+- Do not change scoring weights or composite market score formula.
+- Do not change `entity_market` schema unless a follow-up audit proves it is required.
+- Do not mix with domain migration or auth work.
+
