@@ -19,10 +19,10 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-export function createOtpClient() {
+export function createOtpClient(anonKey: string) {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    anonKey,
     {
       auth: {
         flowType: "implicit",

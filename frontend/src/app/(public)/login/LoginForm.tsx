@@ -26,7 +26,7 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
   "https://pti-frontend-production.up.railway.app";
 
-export default function LoginForm() {
+export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string }) {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>("idle");
@@ -58,7 +58,7 @@ export default function LoginForm() {
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "ssr",
       });
 
-      const supabase = createOtpClient();
+      const supabase = createOtpClient(supabaseAnonKey);
       const { error } = await supabase.auth.signInWithOtp({
         email: normalized,
         options: { emailRedirectTo },
