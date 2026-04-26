@@ -8498,21 +8498,62 @@ DELETE FROM resolver_fragrance_master WHERE source = 'g2_entity_seed';
 
 ---
 
-### Batch 3 — NOT YET APPROVED
+### Batch 3 — STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-26)
 
-Candidate targets (require dry-run before apply):
+Commit: `a8d6389`
 
-| Target | Notes |
-|--------|-------|
-| Al Haramain Amber Oud | High-traffic Arabic perfume, absent from Parfumo dataset |
-| Paco Rabanne 1 Million | Mainstream designer; verify no existing base entity first |
-| Yves Saint Laurent Black Opium | Major designer; verify no existing base entity first |
+#### Entities created (`resolver_perfumes` +3, `resolver_fragrance_master` +3)
 
-Rules for Batch 3:
-- Dry-run must pass before --apply
-- Look up brand_ids before adding to script: Al Haramain (id=451), Paco Rabanne (look up), YSL (id=1064)
-- Check if canonical base names already exist in resolver_perfumes before creating
-- Do NOT apply until Batch 2 is confirmed stable in production ingestion
+| id | canonical_name | brand_id | source |
+|----|---------------|----------|--------|
+| 113597 | Al Haramain Amber Oud | 451 | g2_entity_seed |
+| 113598 | Paco Rabanne 1 Million | 326 | g2_entity_seed |
+| 113599 | Yves Saint Laurent Black Opium | 4 | g2_entity_seed |
+
+#### Aliases added (`resolver_aliases` +6, match_type=`g2_entity_seed`)
+
+| alias_text | → entity |
+|-----------|---------|
+| `al haramain amber oud` | Al Haramain Amber Oud |
+| `1 million` | Paco Rabanne 1 Million |
+| `paco rabanne 1 million` | Paco Rabanne 1 Million |
+| `black opium` | Yves Saint Laurent Black Opium |
+| `ysl black opium` | Yves Saint Laurent Black Opium |
+| `yves saint laurent black opium` | Yves Saint Laurent Black Opium |
+
+#### Alias conflict handled
+
+`"amber oud"` was intentionally NOT added for Al Haramain Amber Oud.
+Reason: entity id=3113 (PARFUMS DE NICOLAI Amber Oud EDP) already holds
+alias `normalized_alias_text='amber oud'` with `match_type='exact', confidence=1.0`.
+The lower-id entity wins in the in-memory resolver — adding the same alias for
+Al Haramain (id=113597) would shadow it. Only `'al haramain amber oud'` is used.
+
+#### Generic EDP alias cleanup (KB hygiene fix)
+
+Four generic EDP aliases for entity id=408 (Alguien Eau De Parfum) were removed
+from `resolver_aliases` because they caused false-positive Alguien matches on any
+content containing the phrase "eau de parfum":
+
+| Deleted id | alias_text |
+|-----------|-----------|
+| 2036 | `eau de parfum` |
+| 2037 | `eau de parfum eau de parfum` |
+| 2038 | `eau de parfum eau de parfum perfume` |
+| 2039 | `eau de parfum perfume` |
+
+Kept intact: id=2034 (`alguien eau de parfum`) and id=2035 (`alguien eau de parfum eau de parfum`).
+These are specific enough to not trigger false positives on unrelated content.
+
+After cleanup: Alguien false positives in Batch 3 re-resolution dry-run = 0.
+
+#### Cumulative g2_entity_seed counts (Batches 1 + 2 + 3)
+
+| Table | Count |
+|-------|-------|
+| resolver_perfumes (via FM join) | 9 |
+| resolver_fragrance_master | 9 |
+| resolver_aliases | 19 |
 
 ---
 
@@ -8639,10 +8680,73 @@ Pattern:
 
 ---
 
-### Explicit Non-Goals (as of 2026-04-25)
+---
 
-- No further backfill is needed for G2
-- G2.1 Batch 3 (Al Haramain Amber Oud, Paco Rabanne 1 Million, YSL Black Opium) is NOT YET APPROVED
+## G2 Batch 3 Re-resolution and Historical Backfill
+
+### STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-26)
+
+Commit: `a5eac76`
+
+### Root Cause
+
+27 content items were resolved before Batch 3 aliases were seeded (cutoff 2026-04-26 02:55:16 UTC).
+These items contained Batch 3 keywords (al haramain, paco rabanne, 1 million, black opium,
+yves saint laurent) but could not resolve to the new entities because the aliases did not
+exist at resolution time.
+
+### Remediation Script
+
+**`scripts/reresolve_g2_stale_content.py`** extended with `--batch` and `--cutoff` flags
+(commit `a5eac76`). Added `BATCH_CONFIGS` dict:
+
+- Batch 1: original G2 seed (cutoff 2026-04-25 16:59:00, resolver_version `1.1-g2-rereresolve`)
+- Batch 3: Al Haramain / Paco Rabanne / YSL Black Opium (cutoff 2026-04-26 02:55:16,
+  resolver_version `1.2-g2-b3-reresolve`)
+
+Default behavior (no flags → batch 1) is unchanged. Fully idempotent UPSERT.
+
+### Batch 3 Re-resolution Results
+
+- Items checked: 41
+- Items gaining new entities: 27
+- Total new entity links written: 27
+- Top recovered:
+  - Yves Saint Laurent Libre: 19×
+  - Yves Saint Laurent Black Opium: 3×
+  - Al Haramain Amber Oud: 3×
+  - Paco Rabanne 1 Million: 2×
+
+### 12-Date Historical Aggregation + Signal Backfill
+
+Dates affected (published_at of re-resolved content):
+
+2026-04-24, 2026-04-23, 2026-04-22, 2026-04-19, 2026-04-18, 2026-04-17,
+2026-04-16, 2026-04-15, 2026-04-14, 2026-04-11, 2026-04-10, 2026-04-09
+
+All 12 dates: exit code 0, no errors, no duplicate signals.
+
+### Verification Results
+
+**All 3 Batch 3 entities in `entity_market` — all `trend_state=rising`:**
+- Al Haramain Amber Oud ✅ (latest score=31.53, mentions confirmed Apr 09, 11, 24)
+- Paco Rabanne 1 Million ✅ (latest score=31.94, mentions confirmed Apr 22, 24)
+- Yves Saint Laurent Black Opium ✅ (latest score=30.21, mentions confirmed Apr 09, 17, 19)
+
+**YSL Libre entity mentions confirmed across all 12 backfill dates.**
+
+**Known issue — `entity_market.brand_name` truncation:**
+The 3 new Batch 3 entities have truncated `brand_name` values in `entity_market`
+(`"Al Haramain Amber"`, `"Paco Rabanne 1"`, `"Yves Saint Laurent Black"`).
+This is caused by existing `_rollup_brand_market_data` behavior that parses brand_name
+from canonical_name rather than looking up the resolver brand table.
+It does NOT affect resolution, signal detection, or entity page routing.
+Deferred as a future brand-rollup display cleanup task.
+
+### Explicit Non-Goals (as of 2026-04-26)
+
+- No further G2 backfill is required
 - Do not change signal thresholds or scoring
 - Do not modify entity_market directly
 - Do not run ingestion for historical dates
+- Do not patch `brand_name` truncation in this step
