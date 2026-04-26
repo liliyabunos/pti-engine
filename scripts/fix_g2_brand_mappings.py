@@ -375,9 +375,10 @@ def run(apply: bool) -> None:
     # Must come AFTER deleting dependent perfumes.brand_id links (done in Step B above)
     # and after phantom entity_market rows are gone (Step F).
     # Also need to check that no perfumes still reference these brand IDs.
+    # phantom_brand_ids are UUID objects — cast explicitly for ANY() comparison.
     if phantom_brand_ids:
         cur.execute(
-            "SELECT COUNT(*) FROM perfumes WHERE brand_id = ANY(%s)",
+            "SELECT COUNT(*) FROM perfumes WHERE brand_id = ANY(%s::uuid[])",
             (phantom_brand_ids,),
         )
         remaining_perfume_refs = cur.fetchone()[0]
@@ -388,7 +389,7 @@ def run(apply: bool) -> None:
             )
         else:
             cur.execute(
-                "DELETE FROM brands WHERE id = ANY(%s)",
+                "DELETE FROM brands WHERE id = ANY(%s::uuid[])",
                 (phantom_brand_ids,),
             )
             log.info("Deleted %d phantom market brand rows", cur.rowcount)
