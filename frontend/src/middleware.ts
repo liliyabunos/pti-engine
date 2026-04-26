@@ -45,19 +45,31 @@ export async function middleware(request: NextRequest) {
 }
 
 /**
- * For public pages: refresh the Supabase session (renew token if near expiry)
- * without blocking the response.
+ * For public pages: just continue — no auth check, no Supabase call.
+ *
+ * Calling createServerClient here is wrong for two reasons:
+ * 1. Public routes don't need session refreshing.
+ * 2. If NEXT_PUBLIC_SUPABASE_ANON_KEY is undefined at build time,
+ *    createServerClient throws synchronously, crashing the middleware
+ *    and rendering <html id="__next_error__"> for every public route.
  */
-async function refreshSessionAndContinue(request: NextRequest) {
-  const response = NextResponse.next();
-  buildSupabaseClient(request, response); // wires cookie refresh as a side effect
-  return response;
+function refreshSessionAndContinue(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 /**
  * For protected pages: verify Supabase session only.
+ * Fails safe (→ /login) if Supabase credentials are not configured.
  */
 async function guardProtectedRoute(request: NextRequest, pathname: string) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Fail safe: if credentials are missing, treat user as unauthenticated.
+  if (!url || !key) {
+    return redirectToLogin(request, pathname);
+  }
+
   const response = NextResponse.next();
   const supabase = buildSupabaseClient(request, response);
 
