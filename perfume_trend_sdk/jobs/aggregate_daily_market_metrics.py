@@ -246,10 +246,11 @@ def _upsert_brand_and_perfume_catalog_first(
 
     1. If the perfume slug already exists in the catalog, trust its existing
        brand link and return — no heuristic derivation attempted.
-    2. Only if the perfume is genuinely absent from the catalog, fall back to
-       splitting the canonical name to derive a brand name. This is the 'new
-       entity not yet in seed' path (e.g. a trending niche perfume that hasn't
-       been seeded yet).
+    2. If the perfume exists in resolver_fragrance_master (e.g. g2_entity_seed
+       entities seeded via scripts/seed_g2_missing_perfumes.py), use the
+       resolver's brand_name — authoritative, no heuristic needed.
+    3. Only if both lookups fail, fall back to splitting the canonical name to
+       derive a brand name. This is the 'new entity not yet in any seed' path.
     """
     slug = _slugify(canonical_name)
     existing = db.query(Perfume).filter_by(slug=slug).first()
@@ -257,9 +258,34 @@ def _upsert_brand_and_perfume_catalog_first(
         # Perfume is already in catalog with its authoritative brand link.
         return
 
-    # Heuristic: last-word split as last resort for un-seeded entities.
-    parts = canonical_name.rsplit(" ", 1)
-    brand_name = parts[0] if len(parts) > 1 else canonical_name
+    # Step 2: Try resolver_fragrance_master for the correct brand name.
+    # Handles entities seeded into resolver_perfumes (e.g. via g2_entity_seed)
+    # that have not yet appeared in the market perfumes table.
+    # Wrapped in try/except — resolver_* tables are Postgres-only; SQLite dev
+    # environments will fall through to the heuristic below.
+    brand_name: Optional[str] = None
+    norm = slug.replace("-", " ")  # "al-haramain-amber-oud" → "al haramain amber oud"
+    try:
+        rfm_row = db.execute(
+            text(
+                "SELECT rfm.brand_name "
+                "FROM resolver_fragrance_master rfm "
+                "JOIN resolver_perfumes rp ON rp.id = rfm.perfume_id "
+                "WHERE rp.normalized_name = :norm "
+                "LIMIT 1"
+            ),
+            {"norm": norm},
+        ).fetchone()
+        if rfm_row:
+            brand_name = rfm_row[0]
+    except Exception:
+        pass  # resolver tables unavailable in SQLite dev — fall through
+
+    # Step 3: Last-word-split heuristic as final fallback for truly unknown entities.
+    if not brand_name:
+        parts = canonical_name.rsplit(" ", 1)
+        brand_name = parts[0] if len(parts) > 1 else canonical_name
+
     brand = _upsert_brand(db, brand_name)
     _upsert_perfume(db, canonical_name, brand, ticker)
 
