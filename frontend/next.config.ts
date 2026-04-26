@@ -13,8 +13,13 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_URL:
       process.env.NEXT_PUBLIC_SUPABASE_URL ??
       "https://ewdwufoovhzbhaeiqjmw.supabase.co",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    // NEXT_PUBLIC_SUPABASE_ANON_KEY is intentionally NOT in this env block.
+    // Reason: placing it here causes Next.js to bake the build-time value (undefined
+    // when Nixpacks doesn't expose it during build) into the bundle everywhere —
+    // including Server Components — overriding runtime process.env reads.
+    // Instead, LoginPage (Server Component) reads it from runtime process.env directly
+    // and passes it to LoginForm as an explicit prop. This way Railway's runtime env
+    // is always used, never a stale build-time snapshot.
     NEXT_PUBLIC_SITE_URL:
       process.env.NEXT_PUBLIC_SITE_URL ??
       "https://pti-frontend-production.up.railway.app",

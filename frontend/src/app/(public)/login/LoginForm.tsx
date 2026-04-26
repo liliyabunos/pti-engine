@@ -26,7 +26,12 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
   "https://pti-frontend-production.up.railway.app";
 
-export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string }) {
+interface LoginFormProps {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}
+
+export default function LoginForm({ supabaseUrl, supabaseAnonKey }: LoginFormProps) {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>("idle");
@@ -40,6 +45,18 @@ export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string
     setInAppBrowser(detectInAppBrowser());
   }, []);
 
+  // Safe client-side diagnostic — booleans and length only, no secret values
+  useEffect(() => {
+    console.log("[PTI LOGIN FORM] client diagnostics", {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasAnonKey: !!supabaseAnonKey,
+      anonKeyLength: supabaseAnonKey?.length ?? 0,
+    });
+  }, [supabaseUrl, supabaseAnonKey]);
+
+  // Visible config error — show instead of crashing
+  const isMisconfigured = !supabaseUrl || !supabaseAnonKey;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const normalized = email.trim().toLowerCase();
@@ -49,6 +66,12 @@ export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string
       setState("idle");
       setErrorDetail(null);
 
+      if (isMisconfigured) {
+        setErrorDetail("Authentication is not configured. Please contact support.");
+        setState("error");
+        return;
+      }
+
       const emailRedirectTo = `${SITE_URL}/auth/callback?next=${encodeURIComponent(next)}`;
 
       console.log("[PTI LOGIN] attempting signInWithOtp", {
@@ -56,9 +79,11 @@ export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string
         emailRedirectTo,
         origin: typeof window !== "undefined" ? window.location.origin : "ssr",
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "ssr",
+        hasAnonKey: !!supabaseAnonKey,
+        anonKeyLength: supabaseAnonKey?.length ?? 0,
       });
 
-      const supabase = createOtpClient(supabaseAnonKey);
+      const supabase = createOtpClient(supabaseUrl, supabaseAnonKey);
       const { error } = await supabase.auth.signInWithOtp({
         email: normalized,
         options: { emailRedirectTo },
@@ -91,6 +116,19 @@ export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string
               You&apos;re opening PTI inside {inAppBrowser}. For sign-in to work
               correctly, please open this page in{" "}
               <strong>Safari</strong> or your default browser first.
+            </p>
+          </div>
+        )}
+
+        {/* ── Misconfiguration error (visible instead of crash) ── */}
+        {isMisconfigured && (
+          <div className="mb-6 rounded border border-red-800/50 bg-red-950/40 px-4 py-3">
+            <p className="text-xs leading-relaxed text-red-300">
+              Authentication is not configured on this deployment. Please contact{" "}
+              <a href="mailto:access@pti.market" className="underline">
+                access@pti.market
+              </a>
+              .
             </p>
           </div>
         )}
@@ -144,11 +182,14 @@ export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
+                disabled={isMisconfigured}
                 className={[
                   "w-full rounded border bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100",
                   "placeholder:text-zinc-700",
                   "focus:outline-none focus:ring-1",
-                  state === "error"
+                  isMisconfigured
+                    ? "opacity-50 cursor-not-allowed border-zinc-700"
+                    : state === "error"
                     ? "border-red-800 focus:ring-red-700/40"
                     : "border-zinc-700 focus:border-amber-500 focus:ring-amber-500/30",
                 ].join(" ")}
@@ -164,7 +205,7 @@ export default function LoginForm({ supabaseAnonKey }: { supabaseAnonKey: string
 
             <button
               type="submit"
-              disabled={isPending || !email.trim()}
+              disabled={isPending || !email.trim() || isMisconfigured}
               className="w-full rounded bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400 disabled:opacity-50 transition-colors"
             >
               {isPending ? "Sending…" : "Send magic link →"}

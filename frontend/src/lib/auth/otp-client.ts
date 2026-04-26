@@ -14,22 +14,21 @@
  * @supabase/ssr browser client reads the hash via detectSessionInUrl:true
  * and stores the session in cookies — exactly as before.
  *
+ * Both supabaseUrl and anonKey are passed as explicit params from the Server
+ * Component (LoginPage) — the client never reads process.env in the browser.
+ *
  * Use ONLY for signInWithOtp. Do not use for getSession / signOut / user checks.
  */
 
 import { createClient } from "@supabase/supabase-js";
 
-export function createOtpClient(anonKey: string) {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    anonKey,
-    {
-      auth: {
-        flowType: "implicit",
-        persistSession: false, // OTP client has no session to persist
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
+export function createOtpClient(supabaseUrl: string, anonKey: string) {
+  return createClient(supabaseUrl, anonKey, {
+    auth: {
+      flowType: "implicit",
+      persistSession: false, // OTP client has no session to persist
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
 }
