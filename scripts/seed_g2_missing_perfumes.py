@@ -43,6 +43,16 @@ Batch 1 (--batch 1, default):
                            aliases: angels share / kilian angels share)
     - Initio Side Effect (→ existing resolver_perfumes.id=50629,
                            aliases: initio side effect)
+
+Batch 3 (--batch 3):
+  CREATE (if not already in KB):
+    - Al Haramain Amber Oud       (brand_id=451, aliases: amber oud / al haramain amber oud)
+    - Paco Rabanne 1 Million      (brand_id=326, aliases: 1 million / paco rabanne 1 million)
+    - Yves Saint Laurent Black Opium (brand_id=4, aliases: black opium / ysl black opium /
+                                      yves saint laurent black opium)
+  NOTE: These are edition-rich families. Dry-run reports all close variants/flankers
+  found under each brand so the operator can confirm the base entity does not already
+  exist under a different normalized name before --apply is used.
 """
 from __future__ import annotations
 
@@ -193,9 +203,48 @@ BATCH_2_CREATES: list[CreateTarget] = [
 
 BATCH_2_ALIAS_TO_EXISTING: list[AliasToExistingTarget] = []
 
+# ---------------------------------------------------------------------------
+# Batch 3 data
+# ---------------------------------------------------------------------------
+
+BATCH_3_CREATES: list[CreateTarget] = [
+    CreateTarget(
+        brand_name="Al Haramain",
+        perfume_name="Amber Oud",
+        brand_id=451,
+        alias_texts=["al haramain amber oud"],
+        fragrance_id="g2e_al_haramain_amber_oud",
+        batch=3,
+    ),
+    CreateTarget(
+        brand_name="Paco Rabanne",
+        perfume_name="1 Million",
+        brand_id=326,
+        alias_texts=["1 million", "paco rabanne 1 million"],
+        fragrance_id="g2e_paco_rabanne_1_million",
+        batch=3,
+    ),
+    CreateTarget(
+        brand_name="Yves Saint Laurent",
+        perfume_name="Black Opium",
+        brand_id=4,
+        alias_texts=["black opium", "ysl black opium", "yves saint laurent black opium"],
+        fragrance_id="g2e_ysl_black_opium",
+        batch=3,
+    ),
+]
+# NOTE: Edition-rich families — dry-run reports all variants/flankers under each brand_id.
+# "amber oud" → Al Haramain Amber Oud base (Gold, Black, Silver, etc. are flankers)
+# "1 million" → Paco Rabanne 1 Million base (Lucky, Parfum, Intense, etc. are flankers)
+# "black opium" → YSL Black Opium base (Neon, Illicit, Over Red, etc. are flankers)
+# Review the flanker report in dry-run output before --apply.
+
+BATCH_3_ALIAS_TO_EXISTING: list[AliasToExistingTarget] = []
+
 ALL_BATCHES: dict[int, tuple[list[CreateTarget], list[AliasToExistingTarget]]] = {
     1: (BATCH_1_CREATES, BATCH_1_ALIAS_TO_EXISTING),
     2: (BATCH_2_CREATES, BATCH_2_ALIAS_TO_EXISTING),
+    3: (BATCH_3_CREATES, BATCH_3_ALIAS_TO_EXISTING),
 }
 
 
@@ -302,6 +351,25 @@ def _alias_other_entity_ids(cur, normalized_alias: str, entity_type: str) -> lis
         (normalized_alias, entity_type),
     )
     return [row[0] for row in cur.fetchall()]
+
+
+# ---------------------------------------------------------------------------
+# Variant / flanker detection (edition-rich families)
+# ---------------------------------------------------------------------------
+
+def _find_variants(cur, brand_id: int, keyword: str, limit: int = 30) -> list[tuple[int, str]]:
+    """
+    Return (id, canonical_name) for resolver_perfumes under brand_id whose
+    canonical_name contains keyword (case-insensitive). Used to surface
+    flankers / editions before creating a new base entity.
+    """
+    cur.execute(
+        "SELECT id, canonical_name FROM resolver_perfumes "
+        "WHERE brand_id = %s AND LOWER(canonical_name) LIKE %s "
+        "ORDER BY id LIMIT %s",
+        (brand_id, f"%{keyword.lower()}%", limit),
+    )
+    return [(row[0], row[1]) for row in cur.fetchall()]
 
 
 # ---------------------------------------------------------------------------
@@ -531,6 +599,37 @@ def run(batch: int, apply: bool) -> None:
         for t in alias_to_existing:
             alias_results.append(_audit_alias_to_existing(cur, t))
 
+        # ── Flanker report (Batch 3 — edition-rich families) ─────────────
+        if batch == 3:
+            log.info("── Flanker / variant scan (Batch 3) ──")
+            _BATCH3_KEYWORDS: dict[int, list[str]] = {
+                451: ["amber oud"],           # Al Haramain
+                326: ["1 million", "million"],  # Paco Rabanne
+                4:   ["black opium", "opium"],  # YSL
+            }
+            for t in creates:
+                keywords = _BATCH3_KEYWORDS.get(t.brand_id, [t.perfume_name])
+                all_variants: list[tuple[int, str]] = []
+                for kw in keywords:
+                    variants = _find_variants(cur, t.brand_id, kw)
+                    for v in variants:
+                        if v not in all_variants:
+                            all_variants.append(v)
+                if all_variants:
+                    log.info(
+                        "  Variants under brand_id=%d for %r (%d found):",
+                        t.brand_id, t.canonical_name, len(all_variants),
+                    )
+                    for vid, vname in all_variants[:20]:
+                        log.info("    id=%-8d  %s", vid, vname)
+                    if len(all_variants) > 20:
+                        log.info("    ... and %d more", len(all_variants) - 20)
+                else:
+                    log.info(
+                        "  No variants found under brand_id=%d for %r — safe to CREATE",
+                        t.brand_id, t.canonical_name,
+                    )
+
         # ── Phase 2: Write pass (--apply only) ────────────────────────────
         if apply:
             log.warning("Phase 2 — Writing (--apply is active)")
@@ -669,7 +768,13 @@ Rollback after --apply:
         "--batch",
         type=int,
         default=1,
-        help="Which batch to run (default: 1). Batches 1 and 2 are implemented.",
+        help=(
+            "Which batch to run (default: 1). "
+            "Batch 1: Lattafa Oud Mood, Lattafa Yara, Ajmal Evoke + Angels Share/Initio aliases. "
+            "Batch 2: Armaf Club de Nuit, Armaf Club de Nuit Intense Man, Rasasi Hawas. "
+            "Batch 3: Al Haramain Amber Oud, Paco Rabanne 1 Million, YSL Black Opium "
+            "(edition-rich families — includes flanker scan in dry-run)."
+        ),
     )
     args = parser.parse_args()
 
