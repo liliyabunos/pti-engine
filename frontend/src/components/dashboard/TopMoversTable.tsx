@@ -180,10 +180,14 @@ function buildColumns(
       ),
     }),
     col.accessor("latest_signal", {
-      header: "Signal",
+      header: "Last Signal",
       size: 96,
       enableSorting: false,
-      cell: (c) => <SignalBadge type={c.getValue()} />,
+      cell: (c) => (
+        <span title="Most recent signal detected for this entity">
+          <SignalBadge type={c.getValue()} />
+        </span>
+      ),
     }),
     col.accessor("trend_state", {
       header: "Trend",
