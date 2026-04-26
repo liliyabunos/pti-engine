@@ -4778,21 +4778,53 @@ No hardcoded secrets. Works regardless of whether Nixpacks embeds the var at bui
 
 ---
 
-### Completion Criteria — Verified
+### Completion Criteria — Status
 
-- [x] Login page returns HTTP 200 (no SSR crash)
-- [x] Login page renders the email form (BAILOUT_TO_CLIENT_SIDE_RENDERING is expected, not a bug)
-- [x] `NEXT_PUBLIC_SUPABASE_URL` embedded as literal string in JS bundle (hardcoded fallback)
-- [x] `NEXT_PUBLIC_SUPABASE_ANON_KEY` passed from server runtime to client prop
-- [x] OTP dispatch uses server-provided key (not undefined browser process.env)
-- [x] No hardcoded anon key in source
-- [x] All three commits pushed to main → Railway auto-deploy triggered
+> ⚠️ Prior D1.0 report (commit 169f415) incorrectly claimed login page renders.
+> Browser DevTools showed `<html id="__next_error__">` — the form was NOT rendering.
+> HTTP 200 does NOT prove SSR succeeded. Root cause was a 4th problem (see below).
 
-### Not Yet Verified (requires test with real email on deployed build 169f415)
+**Problem 4 — Middleware crashes for all public routes (actual root cause of __next_error__)**
 
-- [ ] Magic link email received after OTP dispatch
-- [ ] `/auth/callback` sets session and redirects to `/dashboard`
-- [ ] Dashboard loads with real data after auth
+`refreshSessionAndContinue()` was calling `buildSupabaseClient()` even for public
+routes like `/login`. `buildSupabaseClient` calls `createServerClient(url, anon_key, ...)`.
+If `NEXT_PUBLIC_SUPABASE_ANON_KEY` is undefined at build time, `createServerClient`
+throws `"supabaseKey is required"` synchronously inside middleware. A synchronous
+throw in Next.js middleware causes the framework to render `<html id="__next_error__">`
+for every affected request — including `/login` — even with HTTP 200 status.
+
+**Fix — commit 679c319:**
+- `refreshSessionAndContinue` now just returns `NextResponse.next()` — no Supabase call.
+  Public routes need no session refreshing.
+- `guardProtectedRoute` now guards against missing credentials (fails safe → redirect to login
+  instead of crashing) before calling `buildSupabaseClient`.
+
+**Lesson learned:** HTTP 200 + `__next_error__` in HTML is a valid combination in Next.js.
+Always check the rendered HTML in DevTools Elements, not just the network status code.
+
+---
+
+### Verification Required After Railway Deploy (commit 679c319)
+
+- [ ] `/login` renders the email form in browser (no `__next_error__`, no console crash)
+- [ ] DevTools Elements no longer shows `<html id="__next_error__">`
+- [ ] Browser Console tab shows no fatal errors (supabaseKey, process, undefined)
+- [ ] Submit email → OTP request fires → Supabase dispatches magic link
+- [ ] Magic link email received
+- [ ] `/auth/callback` sets session → redirects to `/dashboard`
+- [ ] Dashboard loads with real data
+
+---
+
+### All commits in D1.0
+
+| Commit | Effect |
+|--------|--------|
+| `a84e180` | Added Supabase vars to `next.config.ts` env block; `?? ""` fallback caused HTTP 500 |
+| `41f0559` | Removed `?? ""` fallback — 500 gone; URL embedded; anon key still undefined in browser |
+| `169f415` | Server-prop: LoginPage passes anon key to LoginForm; `createOtpClient(anonKey)` param |
+| `687e44c` | Docs: added D1.0 section (SUPERSEDED by this correction) |
+| `679c319` | **Real fix**: middleware no longer calls createServerClient for public routes |
 
 ---
 
