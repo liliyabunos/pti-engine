@@ -178,9 +178,20 @@ def fetch_dashboard_kpis(
     """
     brand_name_map = brand_name_map or {}
 
-    # Determine the most-recent date present in the loaded snapshots
-    dates = [snap.date for _, snap in rows if snap is not None]
-    latest_date: Optional[date] = max(dates) if dates else None
+    # Determine the most-recent date with real market activity (mention_count > 0).
+    # Carry-forward rows (mention_count=0) advance the global max date without
+    # any real signal activity, causing KPI cards to show 0 signals for a quiet
+    # carry-forward day while Recent Signals and Movers show prior-day activity.
+    # Using the latest active date keeps KPIs consistent with the rest of the dashboard.
+    active_dates = [
+        snap.date
+        for _, snap in rows
+        if snap is not None and (snap.mention_count or 0) > 0
+    ]
+    _global_latest: Optional[date] = max(
+        (snap.date for _, snap in rows if snap is not None), default=None
+    )
+    latest_date: Optional[date] = max(active_dates) if active_dates else _global_latest
 
     # tracked_perfumes: entity_market rows with entity_type='perfume'
     tracked_perfumes = sum(1 for em, _ in rows if em.entity_type == "perfume")
