@@ -69,6 +69,40 @@ G2_SEED_CUTOFF_UTC = "2026-04-25 16:59:00"
 _MAX_WINDOW = 6
 RESOLVER_VERSION = "1.1-g2-rereresolve"
 
+# ---------------------------------------------------------------------------
+# Batch-specific overrides
+# ---------------------------------------------------------------------------
+
+# Batch 3: Al Haramain Amber Oud / Paco Rabanne 1 Million / YSL Black Opium
+# Applied 2026-04-26 02:55:16 UTC.
+# NOTE: "amber oud" intentionally excluded — already belongs to
+#       PARFUMS DE NICOLAI Amber Oud EDP (entity_id=3113). Adding it here
+#       would create resolver ambiguity. Only "al haramain amber oud" is used.
+BATCH3_KEYWORDS: list[str] = [
+    "al haramain",
+    "paco rabanne",
+    "1 million",
+    "black opium",
+    "yves saint laurent",
+]
+BATCH3_CUTOFF_UTC = "2026-04-26 02:55:16"
+BATCH3_RESOLVER_VERSION = "1.2-g2-b3-reresolve"
+
+BATCH_CONFIGS: dict[int, dict] = {
+    1: {
+        "keywords":         G2_KEYWORDS,
+        "cutoff":           G2_SEED_CUTOFF_UTC,
+        "resolver_version": RESOLVER_VERSION,
+        "label":            "G2 Batch 1 (original g2_seed)",
+    },
+    3: {
+        "keywords":         BATCH3_KEYWORDS,
+        "cutoff":           BATCH3_CUTOFF_UTC,
+        "resolver_version": BATCH3_RESOLVER_VERSION,
+        "label":            "G2 Batch 3 (Al Haramain / Paco Rabanne / YSL Black Opium)",
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Normalization (mirrors alias_generator.py exactly)
@@ -164,24 +198,24 @@ def resolve_text(text: str, alias_table: dict[str, dict]) -> list[dict]:
 # Load stale content items
 # ---------------------------------------------------------------------------
 
-def _build_keyword_clauses() -> tuple[str, list[str]]:
+def _build_keyword_clauses(keywords: list[str]) -> tuple[str, list[str]]:
     clauses = " OR ".join(
         "COALESCE(text_content, '') ILIKE %s OR COALESCE(title, '') ILIKE %s"
-        for _ in G2_KEYWORDS
+        for _ in keywords
     )
     params = []
-    for kw in G2_KEYWORDS:
+    for kw in keywords:
         params.append(f"%{kw}%")
         params.append(f"%{kw}%")
     return clauses, params
 
 
-def load_stale_content(conn) -> list[dict]:
+def load_stale_content(conn, keywords: list[str], cutoff: str) -> list[dict]:
     """
-    Return canonical_content_items rows resolved BEFORE G2_SEED_CUTOFF_UTC
-    that contain G2-relevant text.
+    Return canonical_content_items rows resolved BEFORE `cutoff`
+    that contain keyword-relevant text.
     """
-    kw_clauses, kw_params = _build_keyword_clauses()
+    kw_clauses, kw_params = _build_keyword_clauses(keywords)
 
     sql = f"""
         SELECT
@@ -198,7 +232,7 @@ def load_stale_content(conn) -> list[dict]:
             AND ({kw_clauses})
         ORDER BY cci.id
     """
-    params = [G2_SEED_CUTOFF_UTC] + kw_params
+    params = [cutoff] + kw_params
 
     cur = conn.cursor()
     cur.execute(sql, params)
@@ -243,7 +277,8 @@ def _build_resolved_entities(text: str, hits: list[dict]) -> list[dict]:
 # Write updated resolved_signals (--apply only)
 # ---------------------------------------------------------------------------
 
-def write_resolved_signal(conn, content_item_id: str, resolved_entities: list[dict]) -> None:
+def write_resolved_signal(conn, content_item_id: str, resolved_entities: list[dict],
+                          resolver_version: str = RESOLVER_VERSION) -> None:
     sql = """
         INSERT INTO resolved_signals
             (content_item_id, resolver_version, resolved_entities_json,
@@ -256,7 +291,7 @@ def write_resolved_signal(conn, content_item_id: str, resolved_entities: list[di
     cur = conn.cursor()
     cur.execute(sql, (
         content_item_id,
-        RESOLVER_VERSION,
+        resolver_version,
         json.dumps(resolved_entities),
         json.dumps([]),   # preserve unresolved empty for now
         json.dumps([]),
@@ -267,12 +302,26 @@ def write_resolved_signal(conn, content_item_id: str, resolved_entities: list[di
 # Main
 # ---------------------------------------------------------------------------
 
-def run(apply: bool) -> None:
+def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None:
+    if batch not in BATCH_CONFIGS:
+        log.error("Unknown batch %d. Available: %s", batch, sorted(BATCH_CONFIGS))
+        sys.exit(1)
+
+    cfg = BATCH_CONFIGS[batch]
+    keywords        = cfg["keywords"]
+    cutoff          = cutoff_override if cutoff_override else cfg["cutoff"]
+    resolver_ver    = cfg["resolver_version"]
+    label           = cfg["label"]
+
+    log.info("Batch %d — %s", batch, label)
+    log.info("Cutoff: %s  |  Keywords: %d  |  resolver_version: %s",
+             cutoff, len(keywords), resolver_ver)
+
     conn = _get_conn()
 
-    log.info("Loading stale content items (resolved before %s) …", G2_SEED_CUTOFF_UTC)
-    rows = load_stale_content(conn)
-    log.info("Found %d stale G2-relevant content items", len(rows))
+    log.info("Loading stale content items (resolved before %s) …", cutoff)
+    rows = load_stale_content(conn, keywords, cutoff)
+    log.info("Found %d stale content items matching Batch %d keywords", len(rows), batch)
 
     if not rows:
         log.warning("No stale items — nothing to do.")
@@ -319,7 +368,7 @@ def run(apply: bool) -> None:
 
             if apply:
                 new_entities_list = _build_resolved_entities(text, hits)
-                write_resolved_signal(conn, row["id"], new_entities_list)
+                write_resolved_signal(conn, row["id"], new_entities_list, resolver_ver)
 
         if items_checked % 25 == 0:
             log.info("  Processed %d/%d — %d gained so far",
@@ -337,8 +386,10 @@ def run(apply: bool) -> None:
     sep = "=" * 70
     print()
     print(sep)
-    print(f"G2 Re-resolution — {'** DRY RUN ** (no DB writes)' if not apply else 'APPLIED'}")
+    print(f"G2 Re-resolution Batch {batch} — {'** DRY RUN ** (no DB writes)' if not apply else 'APPLIED'}")
+    print(f"  {label}")
     print(sep)
+    print(f"  Cutoff                    : {cutoff}")
     print(f"  Stale items found         : {len(rows)}")
     print(f"  Items checked             : {items_checked}")
     print(f"  Items gaining entities    : {items_gaining}")
@@ -363,13 +414,13 @@ def run(apply: bool) -> None:
     if not apply:
         print()
         print("Dry-run complete — zero DB writes performed.")
-        print("To apply:")
-        print("  DATABASE_URL=<prod-url> python3 scripts/reresolve_g2_stale_content.py --apply")
+        print(f"To apply (Batch {batch}):")
+        print(f"  DATABASE_URL=<prod-url> python3 scripts/reresolve_g2_stale_content.py --batch {batch} --apply")
         print()
-        print("After --apply, re-run aggregation for 2026-04-25 to generate entity_mentions:")
-        print("  python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date 2026-04-25")
+        print("After --apply, re-run aggregation for each affected published_at date:")
+        print("  python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date YYYY-MM-DD")
         print("Then signal detection:")
-        print("  python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date 2026-04-25")
+        print("  python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date YYYY-MM-DD")
         print()
         print("Rollback note: resolved_signals is updated in-place (UPSERT). Old JSON is")
         print("overwritten. Revert via DB snapshot or by restoring the old JSON manually.")
@@ -378,8 +429,8 @@ def run(apply: bool) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description=(
-            "G2 Re-resolution: re-resolve stale content items processed before G2 aliases "
-            "were seeded. Default is DRY-RUN. Pass --apply to write."
+            "G2 Re-resolution: re-resolve stale content items processed before a G2 alias "
+            "batch was seeded. Default is DRY-RUN. Pass --apply to write."
         )
     )
     parser.add_argument(
@@ -388,6 +439,26 @@ if __name__ == "__main__":
         default=False,
         help="Write updated resolved_signals rows. Without this flag: dry-run only.",
     )
+    parser.add_argument(
+        "--batch",
+        type=int,
+        default=1,
+        help=(
+            "Which alias batch to re-resolve against (default: 1). "
+            "Batch 1: original G2 seed (cutoff 2026-04-25 16:59:00). "
+            "Batch 3: Al Haramain Amber Oud / Paco Rabanne 1 Million / YSL Black Opium "
+            "(cutoff 2026-04-26 02:55:16)."
+        ),
+    )
+    parser.add_argument(
+        "--cutoff",
+        type=str,
+        default=None,
+        help=(
+            "Override the cutoff timestamp (UTC, format: 'YYYY-MM-DD HH:MM:SS'). "
+            "If not set, uses the batch default."
+        ),
+    )
     args = parser.parse_args()
 
     if args.apply:
@@ -395,4 +466,4 @@ if __name__ == "__main__":
     else:
         log.info("Dry-run mode (default): no DB writes will occur.")
 
-    run(apply=args.apply)
+    run(apply=args.apply, batch=args.batch, cutoff_override=args.cutoff)
