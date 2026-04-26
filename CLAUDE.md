@@ -9287,3 +9287,131 @@ Medium-high product UX priority.
 - Do not change `entity_market` schema unless a follow-up audit proves it is required.
 - Do not mix with domain migration or auth work.
 
+---
+
+## Stale Identity Map Cleanup / Invisible Mentions Fix
+
+### STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-26)
+
+**Script:** `scripts/fix_stale_identity_map_mentions.py`
+**Commit:** `61186d4` (included in push `50f5298`)
+
+---
+
+### Root Cause
+
+`perfume_identity_map.resolver_perfume_id` had a systematic **+6 offset corruption**.
+The old forbidden aggregator path `identity_resolver.perfume_uuid(int(raw_eid))` looked up
+`market_perfume_uuid` via this column — returning the UUID of the wrong entity (e.g., Creed
+Aventus content mapped to Lattafa Ameer Al Oudh's UUID). This wrote stale duplicate
+`entity_mentions` rows alongside the correct mentions already written by the `entity_uuid_map`
+path. The stale rows used entity_ids not present in `entity_market`, making them invisible to
+all downstream joins (timeseries, signals, entity pages, dashboard).
+
+---
+
+### Deletion Strategy
+
+DELETE entity_mentions where:
+1. `entity_id` NOT in `entity_market` (stale — no market row)
+2. AND same `source_url` has at least one `entity_mentions` row where `entity_id` IS in
+   `entity_market` (correct mention confirmed — the stale one is a duplicate)
+
+PRESERVE entity_mentions where:
+- `entity_id` is stale AND `source_url` has NO correct sibling
+- These may be genuine mentions of niche brands not yet in entity_market; deleting them
+  would lose real data with no confirmed duplicate
+
+---
+
+### Apply Result (production, 2026-04-26)
+
+| Metric | Value |
+|--------|-------|
+| Total stale mentions audited | 242 |
+| Stale duplicate false positives deleted | **142** |
+| Isolated niche mentions preserved | **100** |
+| Stale duplicate mentions remaining | **0** |
+| Schema changes | None |
+| Migrations | None |
+| Scoring changes | None |
+| Signal threshold changes | None |
+| Ingestion changes | None |
+
+Top deleted UUIDs (ALL false-positive duplicates, same source_url had correct sibling):
+
+| PIM entity | Mentions deleted |
+|-----------|-----------------|
+| Lattafa Ameer Al Oudh | 46 |
+| Electimuss Auster EDP | 20 |
+| Initio Atomic Rose | 16 |
+| MFK Baccarat Rouge 540 (stale UUID) | 15 |
+| Une Nuit Nomade Suma Oriental EDP | 7 |
+| Versace Bright Crystal | 6 |
+| Akro Dark EDP | 6 |
+| Comme des Garcons Concrete EDP | 6 |
+
+Top preserved UUIDs (isolated — no correct sibling, potentially real niche mentions):
+
+| PIM entity | Mentions kept |
+|-----------|--------------|
+| Keiko Mecheri Peau de Peche EDP | 12 |
+| Alguien EDP (partial) | 6 |
+| Juliette Has a Gun Vanilla Vibes | 9 |
+| Divine L'Inspiratrice EDP | 9 |
+| Bortnikoff Sir Winston Attar | 6 |
+
+---
+
+### Reaggregation Result
+
+9 affected dates re-aggregated and signals re-detected after cleanup. All idempotent:
+
+| Date | Active entities | Total mentions | Signals |
+|------|----------------|----------------|---------|
+| 2026-04-23 | 93 | 194.4 | 35 |
+| 2026-04-22 | 86 | 199.2 | 71 |
+| 2026-04-21 | 34 | 75.6 | 10 |
+| 2026-04-20 | 65 | 176.4 | 29 |
+| 2026-04-19 | 94 | 208.8 | 42 |
+| 2026-04-18 | 53 | 179.6 | 38 |
+| 2026-04-17 | 130 | 336.4 | 107 |
+| 2026-04-15 | 21 | 57.6 | 14 |
+| 2026-04-14 | 20 | 36.0 | 8 |
+
+**Total signals across affected dates: 354**
+
+---
+
+### Verification Results (all PASS)
+
+- `stale_duplicate_mentions_remaining = 0` ✅
+- `invisible_mentions_remaining = 100` (intentionally preserved isolated niche) ✅
+- All 9 affected dates populated in `entity_timeseries_daily` ✅
+- Signal detection completed with no errors for all 9 dates ✅
+- No pipeline, scoring, or schema regressions ✅
+
+---
+
+### Operational Note
+
+**Future aggregator writes must not use the `perfume_identity_map` PIM lookup path.**
+
+The correct entity UUID to write to `entity_mentions.entity_id` is `entity_market.id`,
+looked up via `entity_uuid_map.get(canonical_name)`. This path is always consistent with
+the market layer. The old path `identity_resolver.perfume_uuid(int(raw_eid))` uses
+`resolver_perfume_id` — which is corruptible and not guaranteed to match the market UUID.
+
+Rule: `entity_mentions.entity_id` must always reference `entity_market.id` directly via
+the `entity_uuid_map` built from `entity_market` at aggregation time. Never use PIM as
+an intermediary for this write.
+
+---
+
+### Next Bottleneck
+
+**Reddit gap investigation** — Reddit ran on Apr 19, 20, 22, 23, 25 but was absent from
+Apr 21, Apr 24, and Apr 26. Check `pipeline-daily` and `pipeline-evening` Railway service
+logs for those dates to determine whether the cause is rate limiting, connection errors,
+or a cron scheduling gap in the evening pipeline script.
+
