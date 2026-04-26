@@ -8750,3 +8750,121 @@ Deferred as a future brand-rollup display cleanup task.
 - Do not modify entity_market directly
 - Do not run ingestion for historical dates
 - Do not patch `brand_name` truncation in this step
+
+---
+
+## Brand Name Truncation Fix / G2 Brand Rollup Cleanup
+
+### STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-26)
+
+Commits:
+- `52c4170` — aggregator fix: resolver lookup before heuristic split + `scripts/fix_g2_brand_mappings.py`
+- `a675de2` — UUID cast fix in remediation script Step G (`ANY(%s)` → `ANY(%s::uuid[])`)
+
+---
+
+### Root Cause
+
+`_upsert_brand_and_perfume_catalog_first` in `aggregate_daily_market_metrics.py` used a
+`rsplit(" ", 1)` heuristic to derive a brand name when a perfume was first encountered in
+ingestion but not yet present in the market `perfumes` table.
+
+G2-seeded entities exist in `resolver_perfumes` + `resolver_fragrance_master` but NOT in
+the market `perfumes` table until aggregation first writes them. The heuristic fires on
+multi-word perfume parts and produces truncated phantom brand names:
+
+| Canonical name | Phantom brand created | Correct brand |
+|----------------|----------------------|---------------|
+| Armaf Club de Nuit | Armaf Club de | Armaf |
+| Armaf Club de Nuit Intense Man | Armaf Club de Nuit Intense | Armaf |
+| Al Haramain Amber Oud | Al Haramain Amber | Al Haramain |
+| Paco Rabanne 1 Million | Paco Rabanne 1 | Paco Rabanne |
+| Yves Saint Laurent Black Opium | Yves Saint Laurent Black | Yves Saint Laurent |
+
+The phantom brand cascade: wrong brand name → wrong market `brands` row →
+wrong `perfumes.brand_id` → `_resolve_brand_name` reads it back → wrong
+`entity_market.brand_name` → wrong brand rollup entity_id slug.
+
+---
+
+### Fix — `_upsert_brand_and_perfume_catalog_first`
+
+Added resolver lookup as step 2 before the heuristic (now step 3):
+
+1. If the perfume slug already exists in market `perfumes` — return (no change needed)
+2. **NEW**: Look up `resolver_fragrance_master JOIN resolver_perfumes` by `normalized_name` →
+   use `rfm.brand_name` if found (authoritative, no heuristic)
+3. Fallback to `rsplit(" ", 1)` only if resolver lookup returns nothing (new entity not
+   in any seed — rare path)
+
+Wrapped in `try/except` for SQLite dev compatibility (`resolver_*` tables are Postgres-only).
+
+---
+
+### Data Remediation Applied — `scripts/fix_g2_brand_mappings.py`
+
+Executed in 7 sequential steps in a single transaction (FK order):
+
+| Step | Action | Result |
+|------|--------|--------|
+| A | Find/create correct market brand rows | Al Haramain, Armaf, Paco Rabanne created |
+| B | `UPDATE perfumes SET brand_id` → correct brands | 5 rows updated |
+| C | `UPDATE entity_market SET brand_name` for perfume rows | 5 rows updated |
+| D | `DELETE FROM signals` under phantom brand entity_market UUIDs | 18 rows deleted |
+| E | `DELETE FROM entity_timeseries_daily` under phantom UUIDs | 25 rows deleted |
+| F | `DELETE FROM entity_market` phantom brand rows | 5 rows deleted |
+| G | `DELETE FROM brands` phantom brand rows | 5 rows deleted (required `ANY(%s::uuid[])` cast) |
+
+---
+
+### 12-Date Aggregation + Signal Detection Backfill
+
+After data remediation, re-ran aggregation + signal detection for all affected dates:
+
+```
+2026-04-25  2026-04-24  2026-04-23  2026-04-22  2026-04-20  2026-04-19
+2026-04-18  2026-04-17  2026-04-16  2026-04-15  2026-04-11  2026-04-09
+```
+
+Signal detection is idempotent — clears stale signals before re-detecting. All 12 dates:
+exit code 0, no errors, no duplicate signals.
+
+Correct brand rollups created across affected dates:
+
+| entity_id | canonical_name | entity_type |
+|-----------|---------------|-------------|
+| brand-armaf | Armaf | brand |
+| brand-al-haramain | Al Haramain | brand |
+| brand-paco-rabanne | Paco Rabanne | brand |
+| brand-yves-saint-laurent | Yves Saint Laurent | brand |
+
+---
+
+### Verification Results (all PASS)
+
+- **A** — perfumes point to correct brands: ✅ 5/5
+- **B** — entity_market.brand_name corrected: ✅ 5/5
+- **C** — phantom brands gone: ✅ 0 rows
+- **D** — phantom entity_market rows gone: ✅ 0 rows
+- **E** — correct brand rollups exist: ✅ brand-armaf, brand-al-haramain, brand-paco-rabanne, brand-yves-saint-laurent
+- **F** — signals clean and populated across all 12 dates: ✅
+
+---
+
+### Safety Constraints (all confirmed)
+
+- No migrations run
+- No schema changes
+- No scoring changes
+- No signal threshold changes
+- No ingestion changes
+- No pipeline script changes
+
+---
+
+### Operational Note — Future Resolver-Seeded Entities
+
+For any future resolver-seeded perfumes (via `seed_g2_missing_perfumes.py` or equivalent),
+the aggregator now correctly derives brand_name from `resolver_fragrance_master.brand_name`
+via a `JOIN resolver_perfumes ON normalized_name` lookup before falling back to the
+`rsplit` heuristic. Phantom brand creation for multi-word perfume names is prevented.
