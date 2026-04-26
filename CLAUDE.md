@@ -9126,3 +9126,91 @@ no pipeline, no aggregation, no signal detection — none of these were touched.
 
 All D1.0 blockers resolved. D1.1 may proceed.
 
+---
+
+## Phase D1.1 — Custom Domain Migration (COMPLETED — 2026-04-26)
+
+### Target Type
+INFRASTRUCTURE + CONFIG — no code changes, documentation only
+
+### Status
+COMPLETE — verified end-to-end on custom domain
+
+---
+
+### Domain
+
+**Production domain:** `https://fragranceindex.ai`
+**Registrar:** Squarespace
+**Fallback (Railway technical URL):** `https://pti-frontend-production.up.railway.app`
+
+---
+
+### Railway Configuration
+
+Custom domains added to the `pti-frontend` Railway service:
+- `fragranceindex.ai`
+- `www.fragranceindex.ai`
+
+DNS records configured via Squarespace to point both apex and www to Railway's load balancer.
+
+---
+
+### Supabase Configuration
+
+Redirect URL added to Supabase Auth settings:
+- `https://www.fragranceindex.ai/auth/callback`
+
+This allows Supabase to send magic link emails with the callback URL pointing to the custom domain.
+
+---
+
+### Environment Variable
+
+`NEXT_PUBLIC_SITE_URL` updated on `pti-frontend` Railway service:
+- **Before:** `https://pti-frontend-production.up.railway.app`
+- **After:** `https://www.fragranceindex.ai`
+
+This variable controls the `emailRedirectTo` value in `LoginForm.tsx`:
+```typescript
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://pti-frontend-production.up.railway.app";
+```
+
+---
+
+### Root vs www Routing
+
+Both `fragranceindex.ai` and `www.fragranceindex.ai` are registered as Railway custom domains.
+
+`NEXT_PUBLIC_SITE_URL` is set to `https://www.fragranceindex.ai` (www-prefixed).
+
+Magic links are sent to `https://www.fragranceindex.ai/auth/callback` — this is the canonical
+callback URL. Root domain (`fragranceindex.ai`) serves the site but auth redirect targets www.
+
+Railway fallback URL (`pti-frontend-production.up.railway.app`) remains active and functional.
+
+---
+
+### Verification (2026-04-26)
+
+| Check | Status |
+|-------|--------|
+| `https://fragranceindex.ai` loads landing page | ✅ |
+| `https://fragranceindex.ai/login` loads login form | ✅ |
+| Magic link email dispatched successfully | ✅ |
+| `/auth/callback` finalizes session on custom domain | ✅ |
+| Authenticated dashboard loads at custom domain | ✅ |
+| Railway fallback URL still functional | ✅ |
+
+---
+
+### Notes
+
+- No code changes were required for the domain migration
+- Auth flow (OTP dispatch, callback, session finalization) works identically on the custom domain
+  as on the Railway URL — same env var pattern, same Server Component prop-passing architecture from D1.0
+- The Railway URL can be used for internal debugging or infrastructure access without affecting
+  the user-facing domain
+
