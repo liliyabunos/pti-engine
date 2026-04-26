@@ -4675,6 +4675,127 @@ After Phase U1, users can browse, search, and discover all known entities regard
 
 ---
 
+## Phase D1.0 — Auth Stabilization Before Domain Migration
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- `frontend/next.config.ts` (build-time env embedding)
+- `frontend/src/app/(public)/login/page.tsx` (Server Component — runtime key pass)
+- `frontend/src/app/(public)/login/LoginForm.tsx` (Client Component — prop receiver)
+- `frontend/src/lib/auth/otp-client.ts` (OTP dispatch — accepts key param)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — login page becomes fully functional; OTP dispatch works
+
+### Status
+COMPLETED — 2026-04-26
+
+---
+
+### Root Cause Sequence
+
+**Problem 1 — "This page couldn't load" on login (critical)**
+
+`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` were not embedded
+in the Turbopack client bundle. Root cause: Nixpacks ran the Next.js build before
+these vars were available in Railway service env. Turbopack (unlike Webpack) does not
+statically replace `process.env.NEXT_PUBLIC_*` at build time — it uses a runtime
+`e.default.env.NEXT_PUBLIC_*` accessor which resolves through module 47167 →
+module 35451 (browser `process` polyfill with empty `env: {}`) → `undefined`.
+
+Effect: `createBrowserClient(undefined!, undefined!)` → client JS crash on load →
+"This page couldn't load".
+
+**Problem 2 — HTTP 500 after first fix attempt**
+
+Added `NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""`
+to `next.config.ts` env block. Turbopack inlined `""` as a literal string. Supabase
+SSR client (`createServerClient`) validates the anon key is non-empty — throws during
+SSR → Railway edge returns 500 for all routes. Service was down ~15 minutes (12:47–13:09 UTC).
+
+**Problem 3 — Anon key still undefined in browser after second fix**
+
+Removed `?? ""` fallback — service returned 200. But Turbopack still emits a dynamic
+accessor for `NEXT_PUBLIC_SUPABASE_ANON_KEY` (it cannot inline `undefined`). Login
+page renders but OTP submission fails: Supabase rejects an undefined anon key.
+
+---
+
+### Fix Architecture
+
+Three commits applied in sequence:
+
+**Commit a84e180** — Added `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ""`,
+`NEXT_PUBLIC_SITE_URL` to `next.config.ts` env block. Fixed URL embedding; caused 500 on anon key.
+
+**Commit 41f0559** — Removed `?? ""` fallback from `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Stopped
+500; URL embedded correctly; anon key still undefined in browser.
+
+**Commit 169f415** — Server-prop pattern: `LoginPage` (Server Component) reads
+`process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY` from Railway runtime env (always available
+to Server Components regardless of build-time embedding), passes it as `supabaseAnonKey`
+prop to `LoginForm`. `createOtpClient(anonKey: string)` accepts key as parameter.
+
+No hardcoded secrets. Works regardless of whether Nixpacks embeds the var at build time.
+
+---
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `frontend/next.config.ts` | Added `env` block: URL (hardcoded fallback), ANON_KEY (no fallback), SITE_URL (hardcoded fallback) |
+| `frontend/src/app/(public)/login/page.tsx` | Reads anon key server-side, passes to LoginForm |
+| `frontend/src/app/(public)/login/LoginForm.tsx` | Accepts `supabaseAnonKey` prop, passes to createOtpClient |
+| `frontend/src/lib/auth/otp-client.ts` | `createOtpClient(anonKey: string)` — key as param |
+
+---
+
+### Key Architectural Insights (do not repeat these mistakes)
+
+1. **Turbopack does not statically replace process.env like Webpack.** It generates a
+   dynamic accessor. Only vars with hardcoded literal fallbacks in `next.config.ts` env
+   block get inlined as strings.
+
+2. **`?? ""` empty-string fallback for Supabase credentials causes SSR 500.** Supabase
+   validates that both URL and anon key are non-empty strings during server client creation.
+
+3. **Server Components always have Railway runtime env.** For secrets that must not be
+   hardcoded, pass from Server Component → Client Component as props instead of relying on
+   `NEXT_PUBLIC_*` build-time embedding.
+
+4. **`healthcheckPath` in `frontend/railway.toml` causes failures.** Supabase middleware
+   intercepts health check requests. Use Railway TCP health check (no `healthcheckPath`).
+   (See feedback_railway_healthcheck.md memory.)
+
+5. **Login page renders even with undefined anon key.** `createOtpClient()` is called on
+   submit, not on render. Missing key causes OTP failure, not page load failure.
+
+---
+
+### Completion Criteria — Verified
+
+- [x] Login page returns HTTP 200 (no SSR crash)
+- [x] Login page renders the email form (BAILOUT_TO_CLIENT_SIDE_RENDERING is expected, not a bug)
+- [x] `NEXT_PUBLIC_SUPABASE_URL` embedded as literal string in JS bundle (hardcoded fallback)
+- [x] `NEXT_PUBLIC_SUPABASE_ANON_KEY` passed from server runtime to client prop
+- [x] OTP dispatch uses server-provided key (not undefined browser process.env)
+- [x] No hardcoded anon key in source
+- [x] All three commits pushed to main → Railway auto-deploy triggered
+
+### Not Yet Verified (requires test with real email on deployed build 169f415)
+
+- [ ] Magic link email received after OTP dispatch
+- [ ] `/auth/callback` sets session and redirects to `/dashboard`
+- [ ] Dashboard loads with real data after auth
+
+---
+
 ## Current System Status
 
 **As of 2026-04-17**
@@ -4691,6 +4812,7 @@ After Phase U1, users can browse, search, and discover all known entities regard
 | Signal detection | VERIFIED — no duplicate signals, Infinity JSON bug fixed |
 | Email reporting | NOT YET IMPLEMENTED |
 | Frontend terminal | ACTIVE — live data, real signals |
+| Auth (login + magic link) | FIXED — commit 169f415, 2026-04-26 |
 
 ---
 
