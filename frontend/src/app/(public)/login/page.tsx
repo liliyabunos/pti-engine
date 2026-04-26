@@ -1,6 +1,12 @@
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 
+// Force per-request rendering so process.env is read from the live container at
+// runtime, not from the Nixpacks build environment where SUPABASE_ANON_KEY is absent.
+// Without this, Next.js pre-renders this Server Component at build time and bakes in
+// undefined for env vars that are only available as Railway runtime variables.
+export const dynamic = "force-dynamic";
+
 export default function LoginPage() {
   // Why two different env var names:
   //
