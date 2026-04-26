@@ -9022,3 +9022,107 @@ For any future resolver-seeded perfumes (via `seed_g2_missing_perfumes.py` or eq
 the aggregator now correctly derives brand_name from `resolver_fragrance_master.brand_name`
 via a `JOIN resolver_perfumes ON normalized_name` lookup before falling back to the
 `rsplit` heuristic. Phantom brand creation for multi-word perfume names is prevented.
+
+---
+
+## Phase D1.0C — Dashboard Signal Verification After Auth Repair (2026-04-26)
+
+### Target Type
+READ-ONLY INVESTIGATION — no schema changes, no migrations, no code changes
+
+### Status
+COMPLETE — data healthy, inconsistency explained and documented
+
+---
+
+### Auth Status (cumulative D1.0 summary)
+
+| Component | Status |
+|-----------|--------|
+| `/login` page renders form | ✅ FIXED — commit 385b0f4 (force-dynamic) |
+| Magic link email delivery | ✅ FIXED — commit 701ebc7 (SUPABASE_ANON_KEY server-side var) |
+| `/auth/callback` session finalization | ✅ FIXED — commit adea99c (CallbackClient Server Component wrapper) |
+| Dashboard loads authenticated | ✅ VERIFIED |
+| Domain migration (D1.1) | ✅ CLEARED — no blockers remaining |
+
+Root pattern across all three fixes: `NEXT_PUBLIC_*` variables are statically inlined into
+the browser bundle at Next.js build time. Railway Nixpacks does not expose service variables
+to the `next build` step. Every page/component that called `createBrowserClient(url, undefined)`
+crashed. Fix: Server Component reads `SUPABASE_ANON_KEY` (non-NEXT_PUBLIC_, always runtime)
+and passes credentials as explicit React props to Client Components. `export const dynamic =
+"force-dynamic"` ensures Server Component pages execute per-request, not at build time.
+
+---
+
+### Dashboard Signal Verification
+
+**Endpoints used by dashboard:**
+- KPI cards + top movers + recent signals: `GET /api/v1/dashboard?top_n=20&signal_days=7`
+- Catalog scale counts: `GET /api/v1/catalog/counts`
+- Notes/Accords composition: `GET /api/v1/notes/top`, `GET /api/v1/accords/top`
+- Chart data: entity timeseries via `GET /api/v1/entities/{type}/{id}`
+
+**Production API state (queried 2026-04-26 ~14:40 UTC):**
+
+```
+as_of_date:              2026-04-26
+active_today:            4
+breakout_signals_today:  0
+accel_spikes_today:      0
+total_signals_today:     0
+avg_market_score_today:  0.1501
+recent_signals (7d):     20 (all dated 2026-04-25)
+top movers latest_signal: "breakout" (historical, from Apr 25)
+top movers trend_state:   "declining" (computed from Apr 26 timeseries)
+```
+
+**Root cause of Signals=0 vs Top Movers showing BREAKOUT:**
+
+This is **expected behavior**, not a bug.
+
+`latest_signal` on a top mover row = the most recent signal EVER in the `signals` table
+for that entity (`SELECT MAX(detected_at)` per entity). This can be from any historical date.
+
+`total_signals_today` KPI = count of signals where `detected_at.date() == latest_date`
+(today's detection run). This counts only what `detect_breakout_signals` fired today.
+
+On 2026-04-26:
+- Apr 26 morning pipeline ran successfully
+- Only 4 entities have real mentions (`mention_count=1.2`, `is_flood_dampened=true`)
+- Scores are ~9.35 (below `breakout_min_score=15.0` threshold)
+- Growth rate is -0.87 (massive decline from Apr 25 peak)
+- `detect_breakout_signals` found no qualifying signals for Apr 26 → `total_signals_today=0`
+- Creed Aventus's `latest_signal="breakout"` dates from Apr 25 (yesterday's detection run)
+- Creed Aventus's `trend_state="declining"` is computed fresh from Apr 26 timeseries data
+
+The two fields are measured at different points in time and have different semantics. Both
+values are correct.
+
+**UI label ambiguity:**
+The `Signal` column header in TopMoversTable implies current signal status, but the field
+shows the last-ever signal type. A future UI improvement could label this column
+"Last Signal" instead of "Signal", or suppress the badge when the signal is stale (e.g.
+`detected_at` > 48 hours old). This is a non-blocking cosmetic issue.
+
+**`is_flood_dampened=true` on all 4 active movers:**
+Flood dampening fires when multiple mentions come from the same source within a short window.
+Raw mention count may have been 2+ but is dampened to 1.2. This is correct behavior —
+prevents a single creator with multiple uploads from inflating the score.
+
+**Pipeline health (Apr 26):**
+- `entity_timeseries_daily` rows exist for 2026-04-26 (confirmed via `as_of_date`)
+- 4 active entities with real mentions (not carry-forward)
+- Signal detection ran, correctly found 0 qualifying signals
+- DB: 318 total tracked entities; 4 with real activity today
+
+**No regression from auth/env fixes:**
+Auth repair commits only touched: `frontend/next.config.ts`, `frontend/src/app/(public)/login/*`,
+`frontend/src/app/auth/callback/*`, `frontend/src/lib/auth/otp-client.ts`. No backend,
+no pipeline, no aggregation, no signal detection — none of these were touched.
+
+---
+
+### D1.1 Domain Migration — CLEARED
+
+All D1.0 blockers resolved. D1.1 may proceed.
+
