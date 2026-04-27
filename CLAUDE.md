@@ -9557,3 +9557,156 @@ and exit 1, causing Railway to record the run as failed.
 scheduled runs. If CRITICAL failures appear consistently, next phase is Reddit OAuth
 (PRAW authenticated API) — only `client.py` requires changes, all other interfaces are stable.
 
+---
+
+## Phase G4 — Candidate Promotion / Alias Intelligence Batch 1
+
+### STATUS: COMPLETE — PRODUCTION VERIFIED (2026-04-27)
+
+Commits:
+- `554c484` — feat: seed G4 batch 1 aliases (`scripts/seed_g4_aliases.py`)
+- `abed21a` — feat: extend re-resolution support for G4 aliases
+
+---
+
+### Step 1 — Candidate Promotion Audit
+
+`promote_candidates.py` queue was exhausted — all high-confidence candidates had already
+been processed in prior Phase 4P batches.
+
+No `--allow-create` was used. No new `resolver_perfumes` or `resolver_brands` rows were created.
+
+Decision: safe path chosen — manual allowlist alias-only seed targeting high-value short-form
+variants that the auto-promotion pipeline cannot safely generate (EDP concentration shorthands,
+brand "by X" patterns, punctuation-stripped brand abbreviations).
+
+---
+
+### Step 2 — G4 Batch 1 Alias Seed
+
+**Script:** `scripts/seed_g4_aliases.py` — standalone psycopg2, default dry-run, `--apply` required for writes.
+
+**4 aliases inserted** — `match_type='g4_seed'`, `confidence=0.90`:
+
+| alias_text | entity_type | entity_id | canonical |
+|-----------|-------------|-----------|----------|
+| `baccarat rouge 540 edp` | perfume | 2 | Maison Francis Kurkdjian Baccarat Rouge 540 |
+| `rouge 540 edp` | perfume | 2 | Maison Francis Kurkdjian Baccarat Rouge 540 |
+| `ds durga` | brand | 370 | D.S. & Durga |
+| `by lattafa` | brand | 9 | Lattafa |
+
+**Explicitly excluded** (not safe for alias-only addition):
+- `nuit intense` — ambiguous across CDN Intense variants
+- `good girl` / `carolina herrera good girl` — no base Good Girl entity in KB
+- `maison margiela replica` — Replica is a line, not a single perfume
+- bare concentration terms (`edp`, `eau de parfum`, `extrait`, `intense`)
+- all dupe/context terms
+
+**Verification:**
+- `g4_seed` count = 4 ✅
+- all 4 aliases present in resolver_aliases ✅
+- 0 duplicates ✅
+
+**Rollback:** `DELETE FROM resolver_aliases WHERE match_type = 'g4_seed';`
+
+---
+
+### Step 3 — G4 Targeted Re-resolution
+
+**Script:** `scripts/reresolve_g2_stale_content.py` extended with `--batch g4` support.
+
+**Key changes to reresolve script:**
+- `BATCH_CONFIGS` keys changed from `int` to `str` to support `"g4"` key
+- G4 cutoff: `2026-04-27 07:00:35` UTC (apply log timestamp)
+- G4 keywords: `baccarat rouge 540`, `rouge 540`, `durga`, `lattafa`
+- `load_alias_table()` extended with LEFT JOIN `resolver_brands` — required for brand-type G4 aliases
+- `resolve_text()` dedup key updated to `(entity_id, entity_type, canonical_name)` for brand/perfume safety
+- `_build_resolved_entities()` uses `entity_type` from hit (not hardcoded `"perfume"`)
+- Tags: `resolver_version='1.3-g4-reresolve'`
+
+**Results:**
+- Stale content items checked: 139
+- Items gaining new entities: 89
+- Total new entity links written: 137
+- Top recovered: MFK Baccarat Rouge 540 (via `rouge 540 edp` / `baccarat rouge 540 edp`),
+  Angels' Share, Lattafa Khamrah, Lattafa Yara, D.S. and Durga
+
+---
+
+### Step 4 — Historical Aggregation + Signal Backfill
+
+All 17 affected `published_at` dates re-aggregated and signals re-detected. All idempotent.
+
+| Date | Active Entities | Total Mentions | Signals |
+|------|----------------|----------------|---------|
+| 2026-04-26 | 110 | 262.8 | 64 |
+| 2026-04-25 | 130 | 325.2 | 121 |
+| 2026-04-24 | 48 | 139.2 | 28 |
+| 2026-04-23 | 93 | 194.4 | 34 |
+| 2026-04-22 | 86 | 199.2 | 71 |
+| 2026-04-21 | 34 | 75.6 | 11 |
+| 2026-04-20 | 65 | 176.4 | 29 |
+| 2026-04-19 | 94 | 208.8 | 42 |
+| 2026-04-18 | 53 | 179.6 | 38 |
+| 2026-04-17 | 130 | 336.4 | 107 |
+| 2026-04-16 | 38 | 114.8 | 30 |
+| 2026-04-15 | 21 | 57.6 | 14 |
+| 2026-04-14 | 20 | 36.0 | 7 |
+| 2026-04-13 | 82 | 122.0 | 80 |
+| 2026-04-11 | 16 | 31.2 | 6 |
+| 2026-04-10 | 12 | 38.4 | 13 |
+| 2026-04-09 | 29 | 69.6 | 25 |
+
+Background tasks exit code 0. No failures.
+
+**Known non-fatal issue (Apr 20):** SQLAlchemy e3q8 trend_state lookback error for
+`entity_id=afe1da98-913b-45c7-bf50-8b2c7d579793` — same class of error seen in prior
+backfill runs. Aggregation and signal detection completed successfully for that date.
+
+---
+
+### Step 5 — Verification Results
+
+**G4 recovered entity mentions confirmed across affected dates:**
+- Maison Francis Kurkdjian Baccarat Rouge 540 ✅ (across multiple dates via EDP shorthand aliases)
+- Angels' Share ✅
+- Lattafa Khamrah / Lattafa Yara ✅
+- D.S. and Durga ✅
+
+**G4 brand entity_market rows:**
+
+| entity_id | max_score | total_mentions | trend_state |
+|-----------|-----------|----------------|-------------|
+| brand-maison-francis-kurkdjian | 68.49 | 103.4 | stable |
+| brand-lattafa | 37.00 | 7.4 | rising |
+| brand-ds-and-durga | 37.00 | 14.4 | rising |
+
+---
+
+### Safety Constraints (all observed)
+
+- No Alembic migrations
+- No schema changes
+- No scoring weight changes
+- No signal threshold changes
+- No ingestion changes
+- No pipeline schedule changes
+- No `promote_candidates --allow-create`
+- No new `resolver_perfumes` or `resolver_brands` rows
+- Script is idempotent (ON CONFLICT DO NOTHING)
+
+---
+
+### Next Phase — G4 Batch 2 (PENDING)
+
+G4 Batch 2 must only proceed after a fresh candidate audit against the current
+`fragrance_candidates` queue. Potential areas for future alias-only seeds:
+
+- `nuit intense` — requires context validation to resolve ambiguity across CDN Intense variants
+- `good girl` / `carolina herrera good girl` — requires base Good Girl entity to be created first
+- Additional high-confidence EDP/EDT/Extrait shorthand variants for top tracked entities
+- Better Reddit n-gram noise filtering before candidate promotion (reduces review queue size)
+
+**Rule:** Do NOT lower signal thresholds or change scoring to compensate for unresolved entities.
+Entity resolution improvement is the correct path.
+
