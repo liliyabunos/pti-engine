@@ -88,18 +88,43 @@ BATCH3_KEYWORDS: list[str] = [
 BATCH3_CUTOFF_UTC = "2026-04-26 02:55:16"
 BATCH3_RESOLVER_VERSION = "1.2-g2-b3-reresolve"
 
-BATCH_CONFIGS: dict[int, dict] = {
-    1: {
+# ---------------------------------------------------------------------------
+# G4 keyword filter
+# Content items must match at least one of these in text_content OR title.
+# Broad enough to surface content mentioning the EDP qualifier or DS/Durga brand.
+# ---------------------------------------------------------------------------
+
+G4_KEYWORDS: list[str] = [
+    "baccarat rouge 540",   # catches "baccarat rouge 540 edp" (substring match)
+    "rouge 540",            # catches "rouge 540 edp"
+    "durga",                # catches "DS Durga", "D.S. & Durga", "ds durga"
+    "lattafa",              # catches "by lattafa", "by LATTAFA"
+]
+
+# G4 Batch 1 aliases seeded 2026-04-27 07:00:35 UTC (Phase 2 committed).
+# Items resolved before that timestamp won't have the G4 aliases.
+G4_SEED_CUTOFF_UTC = "2026-04-27 07:00:35"
+G4_RESOLVER_VERSION = "1.3-g4-reresolve"
+
+
+BATCH_CONFIGS: dict[str, dict] = {
+    "1": {
         "keywords":         G2_KEYWORDS,
         "cutoff":           G2_SEED_CUTOFF_UTC,
         "resolver_version": RESOLVER_VERSION,
         "label":            "G2 Batch 1 (original g2_seed)",
     },
-    3: {
+    "3": {
         "keywords":         BATCH3_KEYWORDS,
         "cutoff":           BATCH3_CUTOFF_UTC,
         "resolver_version": BATCH3_RESOLVER_VERSION,
         "label":            "G2 Batch 3 (Al Haramain / Paco Rabanne / YSL Black Opium)",
+    },
+    "g4": {
+        "keywords":         G4_KEYWORDS,
+        "cutoff":           G4_SEED_CUTOFF_UTC,
+        "resolver_version": G4_RESOLVER_VERSION,
+        "label":            "G4 Batch 1 (baccarat rouge 540 edp / rouge 540 edp / ds durga / by lattafa)",
     },
 }
 
@@ -139,36 +164,43 @@ def _get_conn():
 
 def load_alias_table(conn) -> dict[str, dict]:
     """
-    Returns {normalized_alias_text: {perfume_id, canonical_name, match_type, confidence}}
-    for ALL perfume-type aliases in resolver_aliases.
+    Returns {normalized_alias_text: {entity_id, entity_type, canonical_name, match_type, confidence}}
+    for ALL perfume AND brand aliases in resolver_aliases.
 
     One query — avoids per-lookup roundtrips.
+    `entity_type` is stored in each entry so resolution can produce correct output.
     """
     sql = """
         SELECT a.normalized_alias_text,
-               p.id            AS perfume_id,
-               p.canonical_name,
+               a.entity_type,
+               a.entity_id,
+               COALESCE(p.canonical_name, b.canonical_name) AS canonical_name,
                a.match_type,
                a.confidence
-        FROM   resolver_aliases  a
-        JOIN   resolver_perfumes p
-          ON   a.entity_type = 'perfume'
-         AND   a.entity_id   = p.id
+        FROM   resolver_aliases a
+        LEFT JOIN resolver_perfumes p
+          ON  a.entity_type = 'perfume' AND a.entity_id = p.id
+        LEFT JOIN resolver_brands b
+          ON  a.entity_type = 'brand'   AND a.entity_id = b.id
+        WHERE  a.entity_type IN ('perfume', 'brand')
     """
     cur = conn.cursor()
     cur.execute(sql)
     rows = cur.fetchall()
     alias_table: dict[str, dict] = {}
-    for norm_alias, perfume_id, canonical_name, match_type, confidence in rows:
-        # Keep first occurrence if duplicates (lowest-id entity wins)
+    for norm_alias, entity_type, entity_id, canonical_name, match_type, confidence in rows:
+        if canonical_name is None:
+            continue   # orphan alias — no matching resolver entity
+        # Keep first occurrence per alias text (lowest-id entity wins)
         if norm_alias not in alias_table:
             alias_table[norm_alias] = {
-                "perfume_id":     int(perfume_id),
+                "entity_id":      int(entity_id),
+                "entity_type":    str(entity_type),
                 "canonical_name": str(canonical_name),
                 "match_type":     str(match_type),
                 "confidence":     float(confidence) if confidence is not None else 1.0,
             }
-    log.info("Loaded %d aliases into memory", len(alias_table))
+    log.info("Loaded %d aliases into memory (perfume + brand)", len(alias_table))
     return alias_table
 
 
@@ -180,14 +212,14 @@ def resolve_text(text: str, alias_table: dict[str, dict]) -> list[dict]:
     normalized = normalize_text(text)
     tokens = normalized.split()
     matches: list[dict] = []
-    seen: set[tuple[int, str]] = set()
+    seen: set[tuple[int, str, str]] = set()   # (entity_id, entity_type, canonical_name)
 
     for size in range(_MAX_WINDOW, 0, -1):
         for i in range(len(tokens) - size + 1):
             phrase = " ".join(tokens[i: i + size])
             hit = alias_table.get(phrase)
             if hit:
-                key = (hit["perfume_id"], hit["canonical_name"])
+                key = (hit["entity_id"], hit["entity_type"], hit["canonical_name"])
                 if key not in seen:
                     seen.add(key)
                     matches.append(hit)
@@ -262,8 +294,8 @@ def _entity_set(entities_json: str | None) -> set[str]:
 def _build_resolved_entities(text: str, hits: list[dict]) -> list[dict]:
     return [
         {
-            "entity_type":    "perfume",
-            "entity_id":      str(h["perfume_id"]),
+            "entity_type":    h["entity_type"],
+            "entity_id":      str(h["entity_id"]),
             "canonical_name": h["canonical_name"],
             "matched_from":   text[:200],
             "confidence":     h["confidence"],
@@ -302,9 +334,9 @@ def write_resolved_signal(conn, content_item_id: str, resolved_entities: list[di
 # Main
 # ---------------------------------------------------------------------------
 
-def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None:
+def run(apply: bool, batch: str = "1", cutoff_override: str | None = None) -> None:
     if batch not in BATCH_CONFIGS:
-        log.error("Unknown batch %d. Available: %s", batch, sorted(BATCH_CONFIGS))
+        log.error("Unknown batch %r. Available: %s", batch, sorted(BATCH_CONFIGS))
         sys.exit(1)
 
     cfg = BATCH_CONFIGS[batch]
@@ -313,7 +345,7 @@ def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None
     resolver_ver    = cfg["resolver_version"]
     label           = cfg["label"]
 
-    log.info("Batch %d — %s", batch, label)
+    log.info("Batch %s — %s", batch, label)
     log.info("Cutoff: %s  |  Keywords: %d  |  resolver_version: %s",
              cutoff, len(keywords), resolver_ver)
 
@@ -321,7 +353,7 @@ def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None
 
     log.info("Loading stale content items (resolved before %s) …", cutoff)
     rows = load_stale_content(conn, keywords, cutoff)
-    log.info("Found %d stale content items matching Batch %d keywords", len(rows), batch)
+    log.info("Found %d stale content items matching Batch %s keywords", len(rows), batch)
 
     if not rows:
         log.warning("No stale items — nothing to do.")
@@ -338,7 +370,7 @@ def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None
     entity_gain_counts: dict[str, int] = defaultdict(int)
     sample_matches: list[dict] = []
 
-    log.info("Re-resolving %d items in-memory (dry_run=%s) …", len(rows), not apply)
+    log.info("Re-resolving %d items in-memory (batch=%s, dry_run=%s) …", len(rows), batch, not apply)
 
     for row in rows:
         items_checked += 1
@@ -386,7 +418,7 @@ def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None
     sep = "=" * 70
     print()
     print(sep)
-    print(f"G2 Re-resolution Batch {batch} — {'** DRY RUN ** (no DB writes)' if not apply else 'APPLIED'}")
+    print(f"Re-resolution Batch {batch} — {'** DRY RUN ** (no DB writes)' if not apply else 'APPLIED'}")
     print(f"  {label}")
     print(sep)
     print(f"  Cutoff                    : {cutoff}")
@@ -415,7 +447,7 @@ def run(apply: bool, batch: int = 1, cutoff_override: str | None = None) -> None
         print()
         print("Dry-run complete — zero DB writes performed.")
         print(f"To apply (Batch {batch}):")
-        print(f"  DATABASE_URL=<prod-url> python3 scripts/reresolve_g2_stale_content.py --batch {batch} --apply")
+        print(f"  DATABASE_URL=<prod-url> python3 scripts/reresolve_g2_stale_content.py --batch '{batch}' --apply")
         print()
         print("After --apply, re-run aggregation for each affected published_at date:")
         print("  python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date YYYY-MM-DD")
@@ -441,13 +473,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--batch",
-        type=int,
-        default=1,
+        type=str,
+        default="1",
         help=(
-            "Which alias batch to re-resolve against (default: 1). "
-            "Batch 1: original G2 seed (cutoff 2026-04-25 16:59:00). "
-            "Batch 3: Al Haramain Amber Oud / Paco Rabanne 1 Million / YSL Black Opium "
-            "(cutoff 2026-04-26 02:55:16)."
+            "Which alias batch to re-resolve against (default: '1'). "
+            "'1': original G2 seed (cutoff 2026-04-25 16:59:00). "
+            "'3': Al Haramain / Paco Rabanne / YSL Black Opium (cutoff 2026-04-26 02:55:16). "
+            "'g4': G4 Batch 1 EDP shorthands + DS Durga + by Lattafa (cutoff 2026-04-27 07:00:35)."
         ),
     )
     parser.add_argument(
@@ -466,4 +498,4 @@ if __name__ == "__main__":
     else:
         log.info("Dry-run mode (default): no DB writes will occur.")
 
-    run(apply=args.apply, batch=args.batch, cutoff_override=args.cutoff)
+    run(apply=args.apply, batch=str(args.batch), cutoff_override=args.cutoff)
