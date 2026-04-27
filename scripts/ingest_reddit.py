@@ -170,6 +170,9 @@ def run(
     total_normalized = 0
     total_resolved = 0
     total_entities_found = 0
+    fetch_errors = 0          # subreddits that raised an exception
+    zero_post_subreddits = 0  # subreddits that returned 0 posts (no error)
+    active_subreddits = len(subreddits)
 
     for subreddit in subreddits:
         print(f"  [r/{subreddit}]")
@@ -181,7 +184,8 @@ def run(
                 published_after=published_after,
             )
         except Exception as exc:
-            print(f"    [warn] fetch error: {exc}")
+            fetch_errors += 1
+            print(f"    [error] fetch failed for r/{subreddit}: {exc}")
             continue
 
         if fetch_result.warnings:
@@ -189,7 +193,8 @@ def run(
                 print(f"    [warn] {w}")
 
         if not fetch_result.raw_items:
-            print(f"    [info] 0 posts returned")
+            zero_post_subreddits += 1
+            print(f"    [info] 0 posts returned for r/{subreddit} (lookback filter or quiet subreddit)")
             continue
 
         run_id = _run_id(subreddit)
@@ -235,7 +240,9 @@ def run(
         total_entities_found += entities_found
 
     summary = {
-        "subreddits": len(subreddits),
+        "subreddits": active_subreddits,
+        "fetch_errors": fetch_errors,
+        "zero_post_subreddits": zero_post_subreddits,
         "total_fetched": total_fetched,
         "total_normalized": total_normalized,
         "total_resolved": total_resolved,
@@ -246,12 +253,40 @@ def run(
 
     print()
     print("[ingest_reddit] Done.")
-    print(f"  subreddits:        {summary['subreddits']}")
+    print(f"  subreddits active: {summary['subreddits']}")
+    print(f"  fetch errors:      {summary['fetch_errors']}")
+    print(f"  zero-post subs:    {summary['zero_post_subreddits']}")
     print(f"  posts fetched:     {summary['total_fetched']}")
     print(f"  items normalized:  {summary['total_normalized']}")
     print(f"  items resolved:    {summary['total_resolved']}")
     print(f"  entities matched:  {summary['total_entities_found']}")
     print()
+
+    # Partial success: at least one subreddit had errors but some posts were fetched.
+    if fetch_errors > 0 and total_fetched > 0:
+        print(
+            f"[ingest_reddit] WARNING: {fetch_errors}/{active_subreddits} subreddit(s) "
+            f"failed but {total_fetched} posts were fetched from the rest — continuing."
+        )
+
+    # Total failure: all subreddits raised exceptions.
+    if active_subreddits > 0 and fetch_errors == active_subreddits:
+        print(
+            f"[ingest_reddit] CRITICAL: all {active_subreddits} subreddit(s) raised "
+            f"fetch errors — possible IP block, rate limit, or network issue. "
+            f"Exiting non-zero so pipeline can record the failure."
+        )
+        sys.exit(1)
+
+    # Total silence: no fetch errors but still 0 posts across all subreddits.
+    if active_subreddits > 0 and total_fetched == 0:
+        print(
+            f"[ingest_reddit] CRITICAL: 0 posts fetched from all {active_subreddits} "
+            f"subreddit(s) with no exceptions — possible silent bot-detection (HTML 200) "
+            f"or extremely quiet subreddits. Exiting non-zero to surface this in pipeline logs."
+        )
+        sys.exit(1)
+
     today = datetime.now(timezone.utc).date().isoformat()
     print("Next step — run aggregation:")
     print(

@@ -200,6 +200,14 @@ class RedditWatchlistClient:
                     f"Reddit API error HTTP {resp.status_code} for {url}: {resp.text[:300]}"
                 )
 
+            content_type = resp.headers.get("Content-Type", "")
+            if "json" not in content_type.lower():
+                raise RedditAPIError(
+                    f"Reddit returned non-JSON response (possible bot-detection page). "
+                    f"HTTP {resp.status_code}  Content-Type={content_type!r}  "
+                    f"body_prefix={resp.text[:200]!r}"
+                )
+
             return resp.json()
 
         raise RedditAPIError(
