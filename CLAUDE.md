@@ -9410,7 +9410,7 @@ an intermediary for this write.
 
 ## Reddit Ingestion Observability / Silent Failure Fix
 
-### STATUS: COMPLETE — DEPLOYED TO MAIN (2026-04-27)
+### STATUS: COMPLETE — VERIFIED ON SCHEDULED RUN (2026-04-27)
 
 **Commit:** `9244a53`
 
@@ -9532,4 +9532,28 @@ Long-term fix: migrate to official Reddit API (OAuth2 PRAW) for authenticated re
 at higher rate limits, from a registered app identity. Only `client.py` needs to change —
 connector, parser, normalizer interfaces are stable. Requires `REDDIT_CLIENT_ID` and
 `REDDIT_CLIENT_SECRET` env vars in Railway `pipeline-daily` and `pipeline-evening` services.
+
+---
+
+### Scheduled Run Verification (2026-04-27)
+
+**Run verified:** Apr 26 23:00 UTC — evening pipeline
+
+| Metric | Result |
+|--------|--------|
+| Reddit ingestion | SUCCESS ✅ |
+| Reddit items collected | 75 |
+| Latest Reddit timestamp | `2026-04-26T23:13:59 UTC` |
+| YouTube items collected | 220 |
+| CRITICAL logs | None |
+| IP block / HTML 200 | Not triggered |
+| Pipeline exit | 0 (clean) |
+
+Reddit returned valid JSON for all 3 subreddits. Fix `9244a53` is working as intended:
+silent failure modes eliminated. Any future Railway IP block will now emit a CRITICAL log
+and exit 1, causing Railway to record the run as failed.
+
+**Ongoing monitoring:** Continue checking Apr 27 11:00 UTC morning run and subsequent 1–2
+scheduled runs. If CRITICAL failures appear consistently, next phase is Reddit OAuth
+(PRAW authenticated API) — only `client.py` requires changes, all other interfaces are stable.
 
