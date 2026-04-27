@@ -9408,10 +9408,128 @@ an intermediary for this write.
 
 ---
 
-### Next Bottleneck
+## Reddit Ingestion Observability / Silent Failure Fix
 
-**Reddit gap investigation** — Reddit ran on Apr 19, 20, 22, 23, 25 but was absent from
-Apr 21, Apr 24, and Apr 26. Check `pipeline-daily` and `pipeline-evening` Railway service
-logs for those dates to determine whether the cause is rate limiting, connection errors,
-or a cron scheduling gap in the evening pipeline script.
+### STATUS: COMPLETE — DEPLOYED TO MAIN (2026-04-27)
+
+**Commit:** `9244a53`
+
+---
+
+### Root Cause
+
+Reddit's public JSON API intermittently blocks Railway datacenter IPs with HTTP 200 responses
+containing HTML bot-detection pages (not JSON). Two silent failure modes existed:
+
+1. **HTML 200 silent failure:** `resp.ok` was True → no error check fired → `resp.json()` raised
+   `json.JSONDecodeError` → caught by the generic `except Exception` → logged as `[warn]` →
+   `scripts/ingest_reddit.py` continued and exited 0 → `run_ingestion.py` saw exit 0 →
+   Reddit recorded as "succeeded" with 0 posts.
+
+2. **All-subreddits failure silent exit:** When all 3 subreddits raised exceptions, the script
+   printed warnings and exited 0. `run_ingestion.py` never added Reddit to its `failures` list.
+   Pipeline reported healthy. The gap was invisible.
+
+**Production SQL evidence (gap confirmed):**
+```sql
+-- reddit items in canonical_content_items per day
+SELECT SUBSTR(collected_at, 1, 10) AS day, COUNT(*) AS items
+FROM canonical_content_items
+WHERE source_platform = 'reddit'
+  AND SUBSTR(collected_at, 1, 10) >= '2026-04-20'
+GROUP BY 1 ORDER BY 1;
+```
+Results showed 0 items for 2026-04-21, 2026-04-24, 2026-04-26 — confirmed missing runs,
+not deduplication suppression (PgNormalizedContentStore updates `collected_at` on re-fetch,
+so zero rows = zero posts processed, not zero new posts).
+
+---
+
+### Fix
+
+**File 1 — `perfume_trend_sdk/connectors/reddit_watchlist/client.py`**
+
+Added Content-Type guard before `resp.json()` in `_get()` to catch HTML bot-detection
+pages returned with HTTP 200:
+
+```python
+content_type = resp.headers.get("Content-Type", "")
+if "json" not in content_type.lower():
+    raise RedditAPIError(
+        f"Reddit returned non-JSON response (possible bot-detection page). "
+        f"HTTP {resp.status_code}  Content-Type={content_type!r}  "
+        f"body_prefix={resp.text[:200]!r}"
+    )
+```
+
+**File 2 — `scripts/ingest_reddit.py`**
+
+Added per-subreddit failure tracking and hard `sys.exit(1)` conditions:
+
+- `fetch_errors` counter incremented on each subreddit exception (`[warn]` → `[error]`)
+- `zero_post_subreddits` counter for subreddits returning 0 posts without error
+- `active_subreddits = len(subreddits)` for ratio reporting
+- Summary dict extended with three new fields
+- Three exit conditions after summary:
+  - Partial success (`fetch_errors > 0` but `total_fetched > 0`): print `WARNING`, exit 0
+  - Total failure (`fetch_errors == active_subreddits`): print `CRITICAL`, `sys.exit(1)`
+  - Total silence (0 fetched, 0 errors): print `CRITICAL`, `sys.exit(1)`
+
+| Condition | Old behavior | New behavior |
+|-----------|-------------|--------------|
+| All subreddits → exception | exit 0, silent | `sys.exit(1)`, CRITICAL logged |
+| HTML 200 bot-detection page | silent `[warn]`, exit 0 | `RedditAPIError` raised, counted as fetch_error |
+| 0 posts, 0 exceptions | exit 0, ambiguous | `sys.exit(1)` if all subreddits affected |
+| Some subreddits fail, some succeed | all counted as errors | partial warning, exit 0 (pipeline continues) |
+| Normal success | exit 0 | exit 0 (unchanged) |
+
+---
+
+### Smoke Test (local, 2026-04-27)
+
+```bash
+PTI_DB_PATH=outputs/pti.db \
+  python3 scripts/ingest_reddit.py --limit 5 --lookback-days 1 \
+  --resolver-db data/resolver/pti.db
+```
+
+| Metric | Result |
+|--------|--------|
+| Exit code | 0 ✅ |
+| Posts fetched | 15 (5 per subreddit) ✅ |
+| Subreddits active | 3 ✅ |
+| fetch_errors | 0 ✅ |
+| zero_post_subreddits | 0 ✅ |
+| Content-Type guard | fired correctly on first test run (caught HTML page), raised `RedditAPIError` ✅ |
+| New counters in summary | printed correctly ✅ |
+
+---
+
+### Monitoring Instructions
+
+**Next Railway run (23:00 UTC evening pipeline / 11:00 UTC morning pipeline):**
+
+Check `pipeline-daily` and `pipeline-evening` Railway service logs for:
+
+1. **Success indicators:**
+   - `[ingest_reddit] Done.` present
+   - `fetch errors: 0`
+   - `posts fetched: N` where N > 0
+   - `run_ingestion` exit 0
+
+2. **IP block detected (new visibility):**
+   - `[error] fetch failed for r/fragrance: Reddit returned non-JSON response (possible bot-detection page)`
+   - `[ingest_reddit] CRITICAL: all 3 subreddit(s) raised fetch errors`
+   - `run_ingestion` → `failures: ['reddit']` → pipeline exits 1 → Railway records failure
+
+3. **Partial block (new visibility):**
+   - `[error] fetch failed for r/fragrance: ...`
+   - `[ingest_reddit] WARNING: 1/3 subreddit(s) failed but N posts were fetched`
+   - Exit 0 — pipeline continues with partial data
+
+**If Railway logs show repeated CRITICAL exits:** Reddit IP blocking is systematic.
+Long-term fix: migrate to official Reddit API (OAuth2 PRAW) for authenticated requests
+at higher rate limits, from a registered app identity. Only `client.py` needs to change —
+connector, parser, normalizer interfaces are stable. Requires `REDDIT_CLIENT_ID` and
+`REDDIT_CLIENT_SECRET` env vars in Railway `pipeline-daily` and `pipeline-evening` services.
 
