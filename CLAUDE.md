@@ -9710,3 +9710,118 @@ G4 Batch 2 must only proceed after a fresh candidate audit against the current
 **Rule:** Do NOT lower signal thresholds or change scoring to compensate for unresolved entities.
 Entity resolution improvement is the correct path.
 
+---
+
+### First Scheduled Pipeline Verification After G4 Batch 1
+
+**STATUS: PASS — HEALTHY LIVE RUN**
+
+**Verification date:** 2026-04-27 UTC
+**G4 aliases seeded:** 2026-04-27 ~07:00 UTC
+**First post-G4 pipeline cycle:** Morning 11:00 UTC + Evening 23:00 UTC
+
+---
+
+#### Pipeline Counts
+
+| Metric | Value |
+|--------|-------|
+| YouTube items — morning (11:00 UTC) | 76 |
+| YouTube items — evening (23:00 UTC) | 223 |
+| YouTube total | **299** |
+| Reddit items — evening (23:00 UTC) | 75 |
+| Total content collected | **374** |
+| Reddit CRITICAL logs | None |
+| Pipeline status | **HEALTHY** |
+
+Reddit observability fix (commit `9244a53`) remains effective — all 3 subreddits returned valid JSON, no HTML 200 bot-detection events.
+
+---
+
+#### G4 Fresh Alias Behavior
+
+| Alias | Phrase in fresh Apr 27 content | Resolver behavior |
+|-------|-------------------------------|-------------------|
+| `by lattafa` | ✅ Present (5 items) | Lattafa resolved in **13** Apr 27 content items |
+| `baccarat rouge 540 edp` | ❌ Not in fresh content | No fresh impact yet — awaiting matching content |
+| `rouge 540 edp` | ❌ Not in fresh content | No fresh impact yet — awaiting matching content |
+| `ds durga` | ❌ Not in fresh content | D.S. & Durga has no `entity_market` row yet |
+
+**`by lattafa` is active:** The live resolver (version `1.1`) is correctly picking up the G4
+brand alias in fresh pipeline content. 13 items in Apr 27 `resolved_signals` have `Lattafa`
+in `resolved_entities_json`. One item still shows `by lattafa` in `unresolved_mentions_json` —
+expected when the phrase is crowded out by surrounding token windows.
+
+**EDP aliases and `ds durga`:** No fresh content contained these exact phrases on Apr 27.
+Impact will accumulate in future cycles as matching content is ingested. This is expected
+behavior — alias seeds are passive until phrases appear in ingested text.
+
+**Resolver version:** Fresh pipeline items tagged `resolver_version='1.1'` (live resolver);
+G4 re-resolution backfill items tagged `resolver_version='1.3-g4-reresolve'`. Both are
+correct and represent different code paths loading the same resolver_aliases table.
+
+---
+
+#### Apr 27 Market Data
+
+| Metric | Value |
+|--------|-------|
+| entity_mentions | 19 |
+| distinct entities in mentions | 13 (9 YouTube + 4 Reddit) |
+| active entities (timeseries) | 74 |
+| total mentions (timeseries) | 154.8 |
+| signals — new_entry | 14 |
+| signals — breakout | 10 |
+| signals — acceleration_spike | 10 |
+| signals — reversal | 3 |
+| signals — total | **37** |
+
+Apr 27 signal and mention counts are lower than Apr 25–26, which were inflated by G4
+historical backfill re-resolution. Apr 27 represents a clean cold-start with live pipeline
+data only — 74 active entities on a typical content day is healthy.
+
+---
+
+#### G4 Candidate Status
+
+All 4 G4 aliases remain in `fragrance_candidates` as `accepted_rule_based`. This is correct
+behavior — the candidates table is a write-through accumulator. Seeding resolver_aliases does
+not remove candidates; it intercepts matching content and routes it to `entity_mentions` instead.
+
+| normalized_text | status | occurrences | last_seen |
+|----------------|--------|-------------|-----------|
+| `baccarat rouge 540 edp` | accepted_rule_based | 15 | 2026-04-26 |
+| `rouge 540 edp` | accepted_rule_based | 15 | 2026-04-26 |
+| `by lattafa` | accepted_rule_based | 14 | 2026-04-27 |
+| `ds durga` | accepted_rule_based | 13 | 2026-04-25 |
+
+`by lattafa` last_seen=2026-04-27 confirms the phrase appeared in fresh content and was processed.
+
+---
+
+#### Warnings / Issues
+
+| Issue | Severity | Notes |
+|-------|----------|-------|
+| `by lattafa` still unresolved in 1 item | Low | Token crowding — expected edge case |
+| D.S. & Durga — no `entity_market` row | Info | No fresh `ds durga` content ingested yet |
+| Apr 27 mentions lower than Apr 25–26 | Info | Expected — Apr 25–26 boosted by G4 backfill |
+
+No noise explosion. No signal threshold violations. No pipeline errors.
+
+---
+
+#### Conclusion
+
+G4 Batch 1 is behaving correctly on fresh scheduled pipeline runs.
+
+- `by lattafa` alias is active and producing resolver matches in live content ✅
+- EDP shorthands and `ds durga` are passive — correctly waiting for matching content ✅
+- Signal engine clean — 37 signals, no breakout spam ✅
+- Reddit pipeline healthy — observability fix holding ✅
+- Primary G4 value delivered via historical backfill; fresh behavioral impact accumulating
+
+**Monitoring rule:** Monitor 2–3 more scheduled pipeline cycles before evaluating G4 Batch 2.
+Do NOT start G4 Batch 2 until a fresh candidate audit confirms new safe alias opportunities.
+Do NOT change signal thresholds or scoring to compensate for aliases not yet appearing in content.
+
