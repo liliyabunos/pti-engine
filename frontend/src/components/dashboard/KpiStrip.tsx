@@ -53,7 +53,7 @@ export function KpiStrip({ kpis, catalogCounts }: KpiStripProps) {
         value={activeToday != null ? activeToday : kpis.active_movers}
         sub="with signal data"
         accent="green"
-        href="/screener"
+        href="/screener?mode=active"
       />
 
       <KpiCard
