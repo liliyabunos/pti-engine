@@ -193,16 +193,13 @@ function CatalogPerfumeTable({
           <tr
             key={row.resolver_id}
             onClick={() =>
-              row.entity_id
-                ? router.push(`/entities/perfume/${row.entity_id}`)
-                : undefined
+              router.push(
+                row.entity_id
+                  ? `/entities/perfume/${row.entity_id}`
+                  : `/entities/perfume/${row.resolver_id}`,
+              )
             }
-            className={clsx(
-              "border-b border-zinc-900 transition-colors",
-              row.entity_id
-                ? "cursor-pointer hover:bg-zinc-900"
-                : "opacity-50",
-            )}
+            className="cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900"
           >
             <td className="px-4 py-2 text-zinc-200">{row.canonical_name}</td>
             <td className="px-4 py-2 text-zinc-500">{row.brand_name ?? "—"}</td>
@@ -212,7 +209,7 @@ function CatalogPerfumeTable({
                   Tracked
                 </span>
               ) : (
-                <span className="rounded border border-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-500">
                   In Catalog
                 </span>
               )}
@@ -257,16 +254,13 @@ function CatalogBrandTable({
           <tr
             key={row.resolver_id}
             onClick={() =>
-              row.entity_id
-                ? router.push(`/entities/brand/${row.entity_id}`)
-                : undefined
+              router.push(
+                row.entity_id
+                  ? `/entities/brand/${row.entity_id}`
+                  : `/entities/brand/${row.resolver_id}`,
+              )
             }
-            className={clsx(
-              "border-b border-zinc-900 transition-colors",
-              row.entity_id
-                ? "cursor-pointer hover:bg-zinc-900"
-                : "opacity-50",
-            )}
+            className="cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900"
           >
             <td className="px-4 py-2 text-zinc-200">{row.canonical_name}</td>
             <td className="px-4 py-2 text-zinc-500">{row.perfume_count.toLocaleString()}</td>
@@ -276,7 +270,7 @@ function CatalogBrandTable({
                   Tracked
                 </span>
               ) : (
-                <span className="rounded border border-zinc-800 px-1.5 py-0.5 text-[10px] text-zinc-600">
+                <span className="rounded border border-zinc-700 px-1.5 py-0.5 text-[10px] text-zinc-500">
                   In Catalog
                 </span>
               )}
