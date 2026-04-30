@@ -31,7 +31,7 @@ function EntityTypePill({ type }: { type: string }) {
   if (type === "brand") {
     return (
       <span
-        title="Brand — composite score aggregated across perfume portfolio"
+        title="Brand-level market signal"
         className="ml-1 inline-flex cursor-default items-center rounded border border-sky-800/70 bg-sky-950/40 px-1 py-px text-[8px] font-semibold uppercase tracking-wide text-sky-500"
       >
         Brand
@@ -110,7 +110,7 @@ function buildColumns(
           <div className="min-w-0">
             <span className="inline-flex items-center">
               <span
-                title={isBrand ? "Brand — score aggregated across perfume portfolio" : row.canonical_name}
+                title={isBrand ? "Brand-level market signal" : row.canonical_name}
                 className="block truncate max-w-[150px] text-xs text-zinc-200 hover:text-amber-200"
               >
                 {c.getValue()}
@@ -130,7 +130,7 @@ function buildColumns(
             )}
             {isBrand && (
               <span className="block text-[10px] text-sky-700/70">
-                portfolio aggregate
+                Brand portfolio
               </span>
             )}
           </div>

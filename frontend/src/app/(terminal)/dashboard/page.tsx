@@ -211,11 +211,6 @@ export default function DashboardPage() {
                 title={hint}
               />
             ))}
-            {entityTypeFilter === "brand" && (
-              <span className="text-[10px] text-sky-700/80">
-                ↳ scores roll up from portfolio
-              </span>
-            )}
           </div>
         }
         right={
