@@ -504,6 +504,8 @@ class PerfumeEntityDetail(BaseModel):
     accords: List[str] = []
     notes_source: Optional[str] = None   # "fragrantica" | "parfumo"
     similar_perfumes: List[SimilarPerfumeRow] = []
+    # Brand navigation — entity_id slug for the brand entity page (if the brand is tracked)
+    brand_entity_id: Optional[str] = None
 
 
 class BrandEntityDetail(BaseModel):
@@ -580,6 +582,17 @@ def _resolver_id_for(db: Session, canonical_name: str, entity_type: str) -> Opti
         {"n": canonical_name},
     ).fetchone(), None, f"resolver_id({entity_type})")
     return int(row[0]) if row else None
+
+
+def _brand_entity_id_for(db: Session, brand_name: Optional[str]) -> Optional[str]:
+    """Return the entity_id slug for a brand from entity_market, or None."""
+    if not brand_name:
+        return None
+    row = _safe(lambda: db.execute(
+        text("SELECT entity_id FROM entity_market WHERE entity_type='brand' AND LOWER(canonical_name) = LOWER(:n) LIMIT 1"),
+        {"n": brand_name},
+    ).fetchone(), None, "brand_entity_id")
+    return str(row[0]) if row else None
 
 
 def _aliases_count(db: Session, resolver_id: int, entity_type: str) -> int:
@@ -1089,6 +1102,7 @@ def get_perfume_entity(
         )
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
+        brand_entity_id = _brand_entity_id_for(db, em.brand_name)
         return PerfumeEntityDetail(
             id=em.entity_id,
             resolver_id=resolver_id,
@@ -1124,6 +1138,7 @@ def get_perfume_entity(
             accords=accords,
             notes_source=notes_source,
             similar_perfumes=similar,
+            brand_entity_id=brand_entity_id,
         )
 
     # Step 2: try catalog-only lookup via resolver_id
@@ -1149,6 +1164,7 @@ def get_perfume_entity(
     cat_top, cat_mid, cat_base, cat_acc = _resolver_notes(db, resolver_id)
     cat_source = "parfumo" if (cat_top or cat_mid or cat_base or cat_acc) else None
     similar = _similar_by_notes(db, resolver_id)
+    brand_entity_id = _brand_entity_id_for(db, rp_row[2])
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
@@ -1162,6 +1178,7 @@ def get_perfume_entity(
         accords=cat_acc,
         notes_source=cat_source,
         similar_perfumes=similar,
+        brand_entity_id=brand_entity_id,
     )
 
 

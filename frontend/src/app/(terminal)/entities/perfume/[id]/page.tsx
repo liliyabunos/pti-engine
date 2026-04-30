@@ -442,7 +442,16 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                     {data.canonical_name}
                   </h1>
                   {data.brand_name && (
-                    <p className="mt-0.5 text-xs text-zinc-500">{data.brand_name}</p>
+                    data.brand_entity_id ? (
+                      <Link
+                        href={`/entities/brand/${encodeURIComponent(data.brand_entity_id)}`}
+                        className="mt-0.5 block text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                      >
+                        {data.brand_name}
+                      </Link>
+                    ) : (
+                      <p className="mt-0.5 text-xs text-zinc-500">{data.brand_name}</p>
+                    )
                   )}
                 </div>
 

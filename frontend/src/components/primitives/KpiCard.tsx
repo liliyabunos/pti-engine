@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { clsx } from "clsx";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
@@ -27,6 +28,8 @@ interface KpiCardProps {
   deltaFmt?: string;
   accent?: KpiAccent;
   className?: string;
+  /** When provided, wraps card in a Next.js Link */
+  href?: string;
 }
 
 const VALUE_COLOR: Record<KpiAccent, string> = {
@@ -58,11 +61,13 @@ export function KpiCard({
   deltaFmt,
   accent = "default",
   className,
+  href,
 }: KpiCardProps) {
-  return (
+  const inner = (
     <div
       className={clsx(
         "flex flex-col gap-1 rounded border border-zinc-800 bg-zinc-900 px-4 py-3",
+        href && "transition-colors hover:border-zinc-600 hover:bg-zinc-800/60 cursor-pointer",
         className,
       )}
     >
@@ -100,4 +105,8 @@ export function KpiCard({
       </div>
     </div>
   );
+  if (href) {
+    return <Link href={href}>{inner}</Link>;
+  }
+  return inner;
 }

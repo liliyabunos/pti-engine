@@ -212,6 +212,8 @@ export interface PerfumeEntityDetail {
   /** "fragrantica" | "parfumo" | null */
   notes_source: string | null;
   similar_perfumes: SimilarPerfumeRow[];
+  /** Brand entity_id slug for navigation to brand page (null if brand not tracked) */
+  brand_entity_id: string | null;
   /** Phase I5 — Topic Intelligence (raw) */
   top_topics: string[];
   top_queries: string[];

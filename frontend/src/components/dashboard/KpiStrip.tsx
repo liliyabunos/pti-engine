@@ -28,6 +28,7 @@ export function KpiStrip({ kpis, catalogCounts }: KpiStripProps) {
             ? `${kpis.tracked_brands} tracked`
             : "tracked"
         }
+        href="/screener?mode=catalog_brands"
       />
 
       {/* Known Perfumes — catalog scale if available, else tracked count */}
@@ -43,6 +44,7 @@ export function KpiStrip({ kpis, catalogCounts }: KpiStripProps) {
             ? `${kpis.tracked_perfumes} tracked`
             : "tracked"
         }
+        href="/screener?mode=catalog_perfumes"
       />
 
       {/* Active Today — from catalog counts if available, else active_movers */}
@@ -51,6 +53,7 @@ export function KpiStrip({ kpis, catalogCounts }: KpiStripProps) {
         value={activeToday != null ? activeToday : kpis.active_movers}
         sub="with signal data"
         accent="green"
+        href="/screener"
       />
 
       <KpiCard
@@ -58,17 +61,20 @@ export function KpiStrip({ kpis, catalogCounts }: KpiStripProps) {
         value={kpis.breakout_signals_today}
         sub="today"
         accent={kpis.breakout_signals_today > 0 ? "amber" : "default"}
+        href="/screener?signal_type=breakout&has_signals=true"
       />
       <KpiCard
         label="Accel Spikes"
         value={kpis.acceleration_signals_today}
         sub="today"
         accent={kpis.acceleration_signals_today > 0 ? "sky" : "default"}
+        href="/screener?signal_type=acceleration_spike&has_signals=true"
       />
       <KpiCard
         label="Signals"
         value={kpis.total_signals_today}
         sub="total today"
+        href="/screener?has_signals=true"
       />
       <KpiCard
         label="Avg Score"
