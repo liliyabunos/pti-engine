@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -259,6 +260,18 @@ _HIGH_PRIORITY_TIERS = frozenset(["tier_1", "tier_2"])
 # Categories that automatically qualify.
 _HIGH_PRIORITY_CATEGORIES = frozenset(["reviewer"])
 
+# URL pattern — matches http:// and https:// links including query strings.
+_URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
+
+
+def _text_without_urls(s: str) -> str:
+    """Strip all http/https URLs from a string before term matching.
+
+    Prevents boilerplate footer links (e.g. https://example.com/fragrance-shop)
+    from triggering a fragrance-context match on non-fragrance content.
+    """
+    return _URL_RE.sub(" ", s)
+
 
 def _is_short(raw_item: Dict[str, Any]) -> bool:
     """Return True if the video is a YouTube Short (≤ 60 seconds)."""
@@ -281,11 +294,15 @@ def _is_short(raw_item: Dict[str, Any]) -> bool:
 
 
 def _has_fragrance_context(raw_item: Dict[str, Any]) -> bool:
-    """Return True if title or description contains any fragrance-related term."""
+    """Return True if title or description (minus URLs) contains a fragrance term.
+
+    URLs are stripped first so boilerplate footer links containing the word
+    'fragrance' (e.g. https://example.com/accessories-fragrance01) do not
+    trigger a false positive on non-fragrance videos.
+    """
     snippet = raw_item.get("search_item", {}).get("snippet", {})
-    combined = (
-        snippet.get("title", "") + " " + snippet.get("description", "")
-    ).lower()
+    raw_text = snippet.get("title", "") + " " + snippet.get("description", "")
+    combined = _text_without_urls(raw_text).lower()
     return any(term in combined for term in _FRAGRANCE_TERMS)
 
 
