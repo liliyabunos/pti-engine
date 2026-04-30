@@ -124,17 +124,25 @@ def _log(video_id: str, title: str, channel: str, status: str,
 def _get_conn():
     if DATABASE_URL:
         import psycopg2
-        return psycopg2.connect(DATABASE_URL), "pg"
+        import psycopg2.extras
+        conn = psycopg2.connect(DATABASE_URL)
+        return conn, "pg"
     import sqlite3
     conn = sqlite3.connect(PTI_DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn, "sqlite"
 
 
-def _fetchall_dict(cur, dialect: str) -> list[dict]:
+def _cursor(conn, dialect: str):
+    """Return a dict-like cursor."""
     if dialect == "pg":
-        return [dict(r) for r in cur.fetchall()]
-    return [dict(r) for r in cur.fetchall()]  # sqlite3.Row also supports dict()
+        import psycopg2.extras
+        return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    return conn.cursor()  # sqlite3 with row_factory=sqlite3.Row already dict-like
+
+
+def _fetchall_dict(cur, dialect: str) -> list[dict]:
+    return [dict(r) for r in cur.fetchall()]
 
 
 # ---------------------------------------------------------------------------
@@ -170,11 +178,8 @@ def _select_queue(conn, dialect: str, limit: int, channel_id: Optional[str]) -> 
     sql += f"ORDER BY cci.published_at DESC\nLIMIT {ph}"
     params.append(limit)
 
-    cur = conn.cursor()
-    if dialect == "pg":
-        cur.execute(sql, params)
-    else:
-        cur.execute(sql, params)
+    cur = _cursor(conn, dialect)
+    cur.execute(sql, params)
     rows = _fetchall_dict(cur, dialect)
     cur.close()
     return rows
@@ -224,7 +229,7 @@ def _upsert_transcript(
         params = (str(uuid.uuid4()), content_item_id, TRANSCRIPT_SOURCE, transcript_text,
                   language, _now_iso(), word_count, processing_ms, error)
 
-    cur = conn.cursor()
+    cur = _cursor(conn, dialect)
     cur.execute(sql, params)
     cur.close()
 
@@ -236,7 +241,7 @@ def _update_status(conn, dialect: str, content_item_id: str, status: str) -> Non
         SET transcript_status = {ph}
         WHERE id = {ph}
     """
-    cur = conn.cursor()
+    cur = _cursor(conn, dialect)
     cur.execute(sql, (status, content_item_id))
     cur.close()
 
