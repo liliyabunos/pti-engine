@@ -557,40 +557,6 @@ export default function PerfumeEntityPage({ params }: PageProps) {
               </div>
             )}
 
-            {/* ── Notes & Accords ─────────────────────────────────────────── */}
-            <NotesSection
-              top={data.notes_top}
-              middle={data.notes_middle}
-              base={data.notes_base}
-              accords={data.accords}
-              source={data.notes_source}
-            />
-
-            {/* ── Similar by notes ────────────────────────────────────────── */}
-            {data.similar_perfumes?.length > 0 && (
-              <SimilarByNotes rows={data.similar_perfumes} />
-            )}
-
-            {/* ── Top Drivers (Phase I4, tracked only) ───────────────────── */}
-            {isTracked && data.top_drivers?.length > 0 && (
-              <TopDrivers drivers={data.top_drivers} />
-            )}
-
-            {/* ── Why It's Trending (Phase I7) ────────────────────────────── */}
-            <WhyTrending
-              differentiators={data.differentiators}
-              positioning={data.positioning}
-              intents={data.intents}
-              top_subreddits={data.top_subreddits}
-            />
-
-            {/* ── Market Insight (Phase I8) ────────────────────────────────── */}
-            <MarketInsight
-              narrative={data.narrative}
-              opportunities={data.opportunities}
-              competitors={data.competitors}
-            />
-
             {/* ── Signals + mentions (tracked only) ──────────────────────── */}
             {isTracked && (
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -620,6 +586,40 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                   </div>
                 </TerminalPanel>
               </div>
+            )}
+
+            {/* ── Top Drivers (Phase I4, tracked only) ───────────────────── */}
+            {isTracked && data.top_drivers?.length > 0 && (
+              <TopDrivers drivers={data.top_drivers} />
+            )}
+
+            {/* ── Why It's Trending (Phase I7) ────────────────────────────── */}
+            <WhyTrending
+              differentiators={data.differentiators}
+              positioning={data.positioning}
+              intents={data.intents}
+              top_subreddits={data.top_subreddits}
+            />
+
+            {/* ── Market Insight (Phase I8) ────────────────────────────────── */}
+            <MarketInsight
+              narrative={data.narrative}
+              opportunities={data.opportunities}
+              competitors={data.competitors}
+            />
+
+            {/* ── Notes & Accords ─────────────────────────────────────────── */}
+            <NotesSection
+              top={data.notes_top}
+              middle={data.notes_middle}
+              base={data.notes_base}
+              accords={data.accords}
+              source={data.notes_source}
+            />
+
+            {/* ── Similar by notes ────────────────────────────────────────── */}
+            {data.similar_perfumes?.length > 0 && (
+              <SimilarByNotes rows={data.similar_perfumes} />
             )}
           </div>
         )}
