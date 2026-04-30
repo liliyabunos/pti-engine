@@ -8,7 +8,7 @@ IMPORTANT — run locally, not on Railway.
     Run this script from your local machine against the production Postgres public proxy URL:
 
         DATABASE_URL="<production-public-url>" \\
-          python3 scripts/fetch_transcripts.py --limit 5 --channel-id UCzKrJ5NSA9o7RHYRG12kHZw
+          python3 scripts/fetch_transcripts.py --limit 5 --channel-id UCmI_XvSIsVJC7vAn0Vshf9A
 
     If the script exits with "RequestBlocked / IpBlocked", your current IP is blocked.
     Wait a few minutes and retry, or use a VPN exit node.
