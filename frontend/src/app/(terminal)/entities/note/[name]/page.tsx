@@ -73,21 +73,19 @@ export default function NoteDetailPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {(data?.top_perfumes ?? []).map((p) => (
+                  {(data?.top_perfumes ?? []).map((p) => {
+                    const dest = p.entity_id
+                      ? `/entities/${p.entity_type === "brand" ? "brand" : "perfume"}/${p.entity_id}`
+                      : p.resolver_id != null
+                      ? `/entities/perfume/${p.resolver_id}`
+                      : null;
+                    return (
                     <tr
                       key={p.canonical_name}
-                      onClick={() =>
-                        p.entity_id
-                          ? router.push(
-                              `/entities/${p.entity_type === "brand" ? "brand" : "perfume"}/${p.entity_id}`,
-                            )
-                          : undefined
-                      }
+                      onClick={dest ? () => router.push(dest) : undefined}
                       className={clsx(
                         "border-b border-zinc-900 transition-colors",
-                        p.entity_id
-                          ? "cursor-pointer hover:bg-zinc-900"
-                          : "opacity-50",
+                        dest ? "cursor-pointer hover:bg-zinc-900" : "opacity-40",
                       )}
                     >
                       <td className="px-4 py-2">
@@ -119,7 +117,8 @@ export default function NoteDetailPage({
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

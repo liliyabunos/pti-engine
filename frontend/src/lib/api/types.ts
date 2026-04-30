@@ -461,6 +461,7 @@ export interface NoteDetailPerfumeRow {
   canonical_name: string;
   brand_name: string | null;
   entity_id: string | null;
+  resolver_id: number | null;
   entity_type: "perfume" | "brand" | null;
   has_activity_today: boolean;
 }
