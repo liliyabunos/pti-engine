@@ -9947,9 +9947,152 @@ Every surface in the terminal is now an entry point into the entity graph.
 
 ### Next Phases
 
-**E-UX2** — Restructure perfume detail pages into market-first layout: score, trend state, and signals above the fold; notes/accords and similar perfumes below.
+**E-UX2** — Restructure perfume detail pages into market-first layout: score, trend state, and signals above the fold; notes/accords and similar perfumes below. Step 1 (pure block reorder) is COMPLETE — see Phase E-UX2 Step 1 below.
 
 **E-UX3** — Restructure brand detail pages into portfolio/market-first layout: brand-level KPIs, top perfumes by score, signals, and notes/accords aggregation.
 
-**Dashboard date range controls** — Separate TODO / product UX phase (see existing TODO section above). Should allow period selection (Today / Yesterday / 7d / 30d) on dashboard KPIs and movers table.
+**Dashboard date range controls** — Separate TODO / product UX phase. Should allow period selection (Today / Yesterday / 7d / 30d) on dashboard KPIs and movers table.
+
+---
+
+## Phase E-UX1.1 — Dashboard Interaction Refinement
+
+### STATUS: COMPLETE — PRODUCTION DEPLOYED
+
+Extends E-UX1. All commits are production-deployed to `fragranceindex.ai`.
+
+---
+
+### Subphases
+
+#### Recent Signals — Non-Mover Navigation Fix
+**Commit:** `839235f`
+**Files:** `frontend/src/components/dashboard/SignalFeed.tsx`, `frontend/src/app/(terminal)/dashboard/page.tsx`
+
+**Problem:** Clicking a Recent Signals row for a non-mover entity (e.g. Roja Parfums Qatar, Diptyque Do Son) showed the wrong preview chart — the `useEffect` auto-select guard immediately reset `selectedEntityId` to `filteredMovers[0]` because the signal entity was not in the filtered movers list.
+
+**Fix:**
+- `SignalFeed` now accepts `moverEntityIds?: Set<string>` prop.
+- Mover signal rows: call `onSelectEntity(id)` → update preview chart (existing behavior).
+- Non-mover signal rows: call `router.push(entityHref)` → navigate to entity page directly. No preview change; no misleading chart shown.
+- `dashboard/page.tsx`: computes `moverEntityIds = useMemo(() => new Set(data?.top_movers.map(m => m.entity_id)), [data?.top_movers])` and passes to `<SignalFeed>`.
+- `SignalFeed.tsx`: added `"use client"` + `useRouter`.
+
+**Behavior after fix:**
+
+| Signal row type | Click behavior |
+|-----------------|---------------|
+| Entity in Top Movers | Update dashboard preview chart |
+| Entity not in Top Movers | Navigate to entity detail page |
+
+---
+
+#### Top Movers — Preview/Navigation Separation
+**Commit:** `d2b99fd`
+**File:** `frontend/src/components/dashboard/TopMoversTable.tsx`
+
+**Problem:** Row click called `onSelect(entityId)` AND `router.push(href)` simultaneously — every mover click navigated away, making the preview chart unusable.
+
+**Fix:**
+- `tr onClick` now calls `onSelect(entityId)` only (preview chart, no navigation).
+- `canonical_name` cell is wrapped in a `Link` with `e.stopPropagation()` — name click navigates to entity page, does not trigger row `onSelect`.
+- Ticker cell: added `cursor-pointer hover:text-yellow-300 transition-colors` + `title="Click to preview chart"`.
+- Name Link: added `hover:underline underline-offset-2` for direct hover affordance.
+- Removed unused `useRouter` import.
+
+**Behavior after fix:**
+
+| Interaction | Behavior |
+|-------------|----------|
+| Click row / ticker | Preview chart (no navigation) |
+| Click entity name | Navigate to `/entities/{type}/{entity_id}` |
+| Hover ticker | `text-yellow-300` accent |
+| Hover name | Underline |
+
+---
+
+#### EntityChartPanel — Typed Entity Route
+**Commit:** `98325f8`
+**File:** `frontend/src/components/dashboard/EntityChartPanel.tsx`
+
+**Problem:** Mini-header `ArrowUpRight` link used bare `/entities/{entity_id}`, which 404s for brand entities (correct route is `/entities/brand/{entity_id}`).
+
+**Fix:** One-line change on the `Link href`:
+```ts
+// Before
+href={`/entities/${encodeURIComponent(mover.entity_id)}`}
+
+// After
+href={`/entities/${mover.entity_type ?? "perfume"}/${encodeURIComponent(mover.entity_id)}`}
+```
+`entity_type` is always present on `TopMoverRow` — no prop changes needed.
+
+---
+
+#### Dashboard Brand Copy Cleanup
+**Commit:** `28d0d90`
+**Files:** `frontend/src/components/dashboard/TopMoversTable.tsx`, `frontend/src/app/(terminal)/dashboard/page.tsx`
+
+**Problem:** Brand rows used internal backend language that confused users.
+
+**Changes:**
+
+| Location | Before | After |
+|----------|--------|-------|
+| Brand row subline | `portfolio aggregate` | `Brand portfolio` |
+| Brand badge tooltip | `Brand — composite score aggregated across perfume portfolio` | `Brand-level market signal` |
+| Brand filter helper text | `↳ scores roll up from portfolio` | Removed entirely |
+
+---
+
+### Final Dashboard Interaction Model (post E-UX1.1)
+
+```
+Top Movers row click  → preview chart
+Top Movers ticker     → preview chart (styled accent)
+Top Movers name       → entity detail page
+Chart mini-header ↗   → entity detail page (typed route)
+
+Signal row (mover)    → preview chart
+Signal row (non-mover)→ entity detail page
+
+KPI cards             → screener (filtered views)
+```
+
+---
+
+## Phase E-UX2 Step 1 — Perfume Detail Market-First Block Reorder
+
+### STATUS: COMPLETE — PRODUCTION DEPLOYED
+
+**Commit:** `4956d3c`
+**File:** `frontend/src/app/(terminal)/entities/perfume/[id]/page.tsx`
+
+**Change:** Pure JSX block reorder — no new components, no API changes, no backend changes.
+
+**Section order before:**
+1. Catalog quiet state
+2. Header
+3. Chart + Metrics
+4. Notes & Accords
+5. Similar by Notes
+6. Top Drivers
+7. WhyTrending
+8. MarketInsight
+9. Signal Timeline + Recent Mentions
+
+**Section order after:**
+1. Catalog quiet state
+2. Header
+3. Chart + Metrics
+4. **Signal Timeline + Recent Mentions** ← moved up
+5. Top Drivers
+6. WhyTrending
+7. MarketInsight
+8. **Notes & Accords** ← moved down
+9. **Similar by Notes** ← moved down
+
+**Rationale:** Signal Timeline and Recent Mentions are market-intelligence content (answers "what is happening now?"). Notes & Accords and Similar by Notes are reference/enrichment content. Market terminal should show market data first.
+
+**Safety constraints:** No migrations, no schema changes, no scoring changes, no pipeline changes, no ingestion changes.
 
