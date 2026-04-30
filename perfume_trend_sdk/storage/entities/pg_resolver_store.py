@@ -6,9 +6,11 @@ Postgres-backed resolver store.
 Mirrors the interface of FragranceMasterStore but writes to the
 resolver_* tables created by Alembic migration 014.
 
-Hot read path: get_perfume_by_alias() hits ix_resolver_aliases_lookup
-(normalized_alias_text, entity_type) which is the covering index for
-the most frequent query pattern in PerfumeResolver.resolve_text().
+Hot read path: get_perfume_by_alias() uses an in-memory alias cache loaded
+at __init__ time.  Loading all ~13k aliases in one bulk SELECT (~0.5s) and
+doing dict lookups avoids the O(N²) network round-trips that would otherwise
+be required — one query per token window per content item — which degrades
+to minutes over remote Postgres connections.
 
 All writes are idempotent (ON CONFLICT DO NOTHING / DO UPDATE).
 Schema is owned by Alembic — init_schema() is a no-op here.
@@ -16,7 +18,7 @@ Schema is owned by Alembic — init_schema() is a no-op here.
 
 import logging
 import os
-from typing import Iterable
+from typing import Dict, Iterable, Optional
 
 from sqlalchemy import text
 
@@ -51,10 +53,47 @@ class PgResolverStore:
 
     Implements the same public interface as FragranceMasterStore so
     PerfumeResolver can swap stores without any logic changes.
+
+    Alias resolution is in-memory: all resolver_aliases rows are loaded
+    once at construction time into self._alias_cache (dict keyed by
+    normalized_alias_text).  get_perfume_by_alias() is then an O(1)
+    dict lookup — no per-call DB roundtrip.
     """
 
     def __init__(self) -> None:
         self._engine = get_engine()
+        self._alias_cache: Dict[str, dict] = {}
+        self._load_alias_cache()
+
+    def _load_alias_cache(self) -> None:
+        """Bulk-load all perfume aliases into memory.
+
+        One query at startup replaces per-call DB lookups in resolve_text().
+        With ~13k aliases this takes ~0.5s and uses ~3MB RAM.
+        """
+        sql = text(
+            """
+            SELECT a.normalized_alias_text, p.id, p.canonical_name
+            FROM   resolver_aliases  a
+            JOIN   resolver_perfumes p
+              ON   a.entity_type = 'perfume'
+             AND   a.entity_id   = p.id
+            """
+        )
+        cache: Dict[str, dict] = {}
+        with self._engine.connect() as conn:
+            rows = conn.execute(sql).fetchall()
+        for row in rows:
+            norm_alias = str(row[0])
+            if norm_alias not in cache:  # keep first hit (lowest entity_id wins)
+                cache[norm_alias] = {
+                    "perfume_id": int(row[1]),
+                    "canonical_name": str(row[2]),
+                    "confidence": 1.0,
+                    "match_type": "exact",
+                }
+        self._alias_cache = cache
+        _log.info("[resolver] alias cache loaded: %d entries", len(cache))
 
     # ------------------------------------------------------------------
     # Schema — no-op: Alembic manages this
@@ -72,7 +111,7 @@ class PgResolverStore:
 
         Not called in dev/test environments.
         """
-        count = self.count_rows("aliases")
+        count = len(self._alias_cache) if self._alias_cache else self.count_rows("aliases")
         if count < _MIN_ALIAS_ROWS_PRODUCTION:
             raise RuntimeError(
                 f"Postgres resolver_aliases has only {count} rows "
@@ -82,34 +121,12 @@ class PgResolverStore:
             )
 
     # ------------------------------------------------------------------
-    # Hot read path — called for every token window in resolve_text()
+    # Hot read path — O(1) in-memory dict lookup
     # ------------------------------------------------------------------
 
-    def get_perfume_by_alias(self, normalized_alias: str) -> dict | None:
-        """Return resolver hit for normalized_alias or None."""
-        sql = text(
-            """
-            SELECT p.id, p.canonical_name
-            FROM   resolver_aliases  a
-            JOIN   resolver_perfumes p
-              ON   a.entity_type = 'perfume'
-             AND   a.entity_id   = p.id
-            WHERE  a.normalized_alias_text = :alias
-            LIMIT  1
-            """
-        )
-        with self._engine.connect() as conn:
-            row = conn.execute(sql, {"alias": normalized_alias}).fetchone()
-
-        if row is None:
-            return None
-
-        return {
-            "perfume_id": int(row[0]),
-            "canonical_name": str(row[1]),
-            "confidence": 1.0,
-            "match_type": "exact",
-        }
+    def get_perfume_by_alias(self, normalized_alias: str) -> Optional[dict]:
+        """Return resolver hit for normalized_alias or None (in-memory lookup)."""
+        return self._alias_cache.get(normalized_alias)
 
     # ------------------------------------------------------------------
     # Writes — used by migration script, not by live ingest

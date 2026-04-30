@@ -314,15 +314,15 @@ def poll_channel(
         # Step 4: Fetch stats (batch)
         stats_map = client.fetch_video_stats(video_ids)
 
-        # Merge stats into shaped items (same format as connector)
+        # Wrap items in the same structure the normalizer expects:
+        # {"search_item": <search-shaped item>, "video_details": <full videos.list item>}
+        # This matches what perfume_trend_sdk/connectors/youtube/mappers.py produces.
         raw_items = []
         for shaped, vid_id in zip(search_shaped_items, video_ids):
-            stats = stats_map.get(vid_id, {})
-            merged = {**shaped}
-            if stats:
-                merged["statistics"] = stats.get("statistics", {})
-                merged["contentDetails"] = stats.get("contentDetails", {})
-            raw_items.append(merged)
+            raw_items.append({
+                "search_item": shaped,
+                "video_details": stats_map.get(vid_id, {}),
+            })
 
         # Step 5: Store raw + normalize
         run_id = _run_id(channel_id)

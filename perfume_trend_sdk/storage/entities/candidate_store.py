@@ -5,8 +5,13 @@ from __future__ import annotations
 Design:
   - upsert on normalized_text (unique key)
   - on conflict: increment occurrences + update last_seen
-  - batch_upsert_candidates() collects all phrases from a resolved_items list
-    and issues ONE upsert per unique normalized_text, minimising round-trips
+  - batch_upsert_candidates() collects all phrases from a resolved_items list,
+    aggregates in-memory, then issues a SINGLE bulk upsert (Postgres) or
+    per-row upserts (SQLite fallback).
+
+Hot path: Postgres uses psycopg2 execute_values — one network round trip for
+all phrases regardless of count.  Without this, N per-phrase roundtrips over
+a remote proxy (Railway) degrade to O(N) × latency seconds.
 
 Usage::
 
@@ -17,6 +22,7 @@ Usage::
 """
 
 import logging
+import os
 import re
 import unicodedata
 from datetime import datetime, timezone
@@ -52,12 +58,13 @@ def batch_upsert_candidates(
 ) -> int:
     """Extract unresolved mentions from resolved_items and upsert to fragrance_candidates.
 
-    Returns the number of candidate phrases processed.
+    Returns the number of unique candidate phrases processed.
 
     Strategy:
       1. Collect all unresolved_mentions across all resolved items.
-      2. Aggregate by normalized_text in-memory — count occurrences + pick first raw_text.
-      3. One SQL upsert per unique normalized_text.
+      2. Aggregate by normalized_text in-memory (count occurrences, keep first raw_text).
+      3. Postgres: one bulk INSERT ... ON CONFLICT via psycopg2 execute_values (1 roundtrip).
+         SQLite: per-row INSERT OR IGNORE + UPDATE (existing behaviour).
     """
     now = datetime.now(timezone.utc).isoformat()
 
@@ -78,21 +85,66 @@ def batch_upsert_candidates(
     if not aggregated:
         return 0
 
-    # Upsert each unique normalized phrase
-    for normalized_text, meta in aggregated.items():
-        _upsert_one(
-            db=db,
-            raw_text=meta["raw"],
-            normalized_text=normalized_text,
-            source_platform=source_platform,
-            delta=meta["count"],
-            now=now,
-        )
+    dialect = db.bind.dialect.name if db.bind else "sqlite"
+
+    if dialect == "postgresql":
+        _bulk_upsert_postgres(aggregated, source_platform, now)
+    else:
+        for normalized_text, meta in aggregated.items():
+            _upsert_one_sqlite(
+                db=db,
+                raw_text=meta["raw"],
+                normalized_text=normalized_text,
+                source_platform=source_platform,
+                delta=meta["count"],
+                now=now,
+            )
 
     return len(aggregated)
 
 
-def _upsert_one(
+def _bulk_upsert_postgres(
+    aggregated: dict[str, dict],
+    source_platform: str,
+    now: str,
+) -> None:
+    """Single-roundtrip bulk upsert for Postgres using psycopg2 execute_values.
+
+    Replaces N per-phrase DB roundtrips with one network call regardless of
+    how many unique phrases were aggregated.
+    """
+    import psycopg2
+    import psycopg2.extras
+
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if not database_url:
+        raise RuntimeError("batch_upsert_candidates: DATABASE_URL not set for Postgres bulk upsert")
+
+    sql = (
+        "INSERT INTO fragrance_candidates "
+        "(raw_text, normalized_text, source_platform, occurrences, first_seen, last_seen, confidence_score, status) "
+        "VALUES %s "
+        "ON CONFLICT (normalized_text) DO UPDATE SET "
+        "  occurrences = fragrance_candidates.occurrences + EXCLUDED.occurrences, "
+        "  last_seen = EXCLUDED.last_seen"
+    )
+    rows = [
+        (meta["raw"], norm, source_platform, meta["count"], now, now, 0.0, "new")
+        for norm, meta in aggregated.items()
+    ]
+
+    conn = psycopg2.connect(database_url)
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                psycopg2.extras.execute_values(cur, sql, rows, page_size=500)
+    finally:
+        conn.close()
+
+    logger.debug("[candidates] bulk upserted %d phrases to fragrance_candidates", len(rows))
+
+
+def _upsert_one_sqlite(
     db: Session,
     raw_text: str,
     normalized_text: str,
@@ -100,49 +152,27 @@ def _upsert_one(
     delta: int,
     now: str,
 ) -> None:
-    """Insert new candidate or increment occurrences + update last_seen."""
-    dialect = db.bind.dialect.name if db.bind else "unknown"
-
-    if dialect == "postgresql":
-        db.execute(
-            text(
-                "INSERT INTO fragrance_candidates "
-                "(raw_text, normalized_text, source_platform, occurrences, first_seen, last_seen, confidence_score, status) "
-                "VALUES (:raw, :norm, :src, :delta, :now, :now, 0.0, 'new') "
-                "ON CONFLICT (normalized_text) DO UPDATE SET "
-                "  occurrences = fragrance_candidates.occurrences + :delta, "
-                "  last_seen = :now"
-            ),
-            {
-                "raw": raw_text,
-                "norm": normalized_text,
-                "src": source_platform,
-                "delta": delta,
-                "now": now,
-            },
-        )
-    else:
-        # SQLite — INSERT OR IGNORE then UPDATE
-        db.execute(
-            text(
-                "INSERT OR IGNORE INTO fragrance_candidates "
-                "(raw_text, normalized_text, source_platform, occurrences, first_seen, last_seen, confidence_score, status) "
-                "VALUES (:raw, :norm, :src, :delta, :now, :now, 0.0, 'new')"
-            ),
-            {
-                "raw": raw_text,
-                "norm": normalized_text,
-                "src": source_platform,
-                "delta": delta,
-                "now": now,
-            },
-        )
-        db.execute(
-            text(
-                "UPDATE fragrance_candidates SET "
-                "  occurrences = occurrences + :delta, "
-                "  last_seen = :now "
-                "WHERE normalized_text = :norm"
-            ),
-            {"delta": delta, "now": now, "norm": normalized_text},
-        )
+    """SQLite fallback: INSERT OR IGNORE then UPDATE."""
+    db.execute(
+        text(
+            "INSERT OR IGNORE INTO fragrance_candidates "
+            "(raw_text, normalized_text, source_platform, occurrences, first_seen, last_seen, confidence_score, status) "
+            "VALUES (:raw, :norm, :src, :delta, :now, :now, 0.0, 'new')"
+        ),
+        {
+            "raw": raw_text,
+            "norm": normalized_text,
+            "src": source_platform,
+            "delta": delta,
+            "now": now,
+        },
+    )
+    db.execute(
+        text(
+            "UPDATE fragrance_candidates SET "
+            "  occurrences = occurrences + :delta, "
+            "  last_seen = :now "
+            "WHERE normalized_text = :norm"
+        ),
+        {"delta": delta, "now": now, "norm": normalized_text},
+    )

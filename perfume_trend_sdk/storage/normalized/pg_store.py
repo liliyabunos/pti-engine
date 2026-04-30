@@ -33,9 +33,9 @@ class PgNormalizedContentStore:
                 source_account_type, source_url, external_content_id, published_at, collected_at,
                 content_type, title, caption, text_content, hashtags_json, mentions_raw_json,
                 media_metadata_json, engagement_json, language, region, raw_payload_ref,
-                normalizer_version, query
+                normalizer_version, query, ingestion_method
             )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (id) DO UPDATE SET
                 schema_version        = EXCLUDED.schema_version,
                 source_platform       = EXCLUDED.source_platform,
@@ -58,7 +58,8 @@ class PgNormalizedContentStore:
                 region                = EXCLUDED.region,
                 raw_payload_ref       = EXCLUDED.raw_payload_ref,
                 normalizer_version    = EXCLUDED.normalizer_version,
-                query                 = EXCLUDED.query
+                query                 = EXCLUDED.query,
+                ingestion_method      = EXCLUDED.ingestion_method
         """
         rows = [
             (
@@ -85,6 +86,7 @@ class PgNormalizedContentStore:
                 item["raw_payload_ref"],
                 item["normalizer_version"],
                 item.get("query"),
+                item.get("ingestion_method", "search"),
             )
             for item in items
         ]
