@@ -233,6 +233,99 @@ def _playlist_item_to_search_item(snippet: Dict[str, Any], video_id: str) -> Dic
 
 
 # ---------------------------------------------------------------------------
+# Transcript queue logic
+# ---------------------------------------------------------------------------
+
+# Terms that signal a video is likely about fragrances.
+# Case-insensitive substring match on title + description.
+_FRAGRANCE_TERMS = frozenset([
+    "fragrance", "perfume", "cologne", "parfum", "scent",
+    "eau de parfum", "edp", "edt", "eau de toilette", "extrait",
+    "oud", "musk", "ambergris",
+    "niche fragrance", "designer fragrance",
+    "blind buy", "dupe", "clone",
+    "fragrance review", "perfume review", "cologne review",
+    "best fragrance", "best perfume", "top fragrance",
+    "compliment", "longevity", "projection", "sillage",
+    "fragrance collection", "perfume collection",
+    "baccarat rouge", "creed aventus", "dior sauvage",
+    "fragranceone", "fragrance one",   # Jeremy's brand
+    "#fragrance", "#perfume", "#cologne",
+])
+
+# Tiers that automatically qualify for transcript extraction.
+_HIGH_PRIORITY_TIERS = frozenset(["tier_1", "tier_2"])
+
+# Categories that automatically qualify.
+_HIGH_PRIORITY_CATEGORIES = frozenset(["reviewer"])
+
+
+def _is_short(raw_item: Dict[str, Any]) -> bool:
+    """Return True if the video is a YouTube Short (≤ 60 seconds)."""
+    details = raw_item.get("video_details", {})
+    duration = details.get("contentDetails", {}).get("duration", "")
+    # ISO 8601 duration: PT30S, PT1M, PT10M30S, etc.
+    # Shorts are always < 1 minute (no M component, only S).
+    if not duration:
+        return False
+    if "M" in duration:
+        return False   # at least 1 minute — not a Short
+    # Check for #Shorts tag in title/description as a fallback signal
+    snippet = raw_item.get("search_item", {}).get("snippet", {})
+    title = snippet.get("title", "").lower()
+    desc = snippet.get("description", "").lower()
+    if "#shorts" in title or "#shorts" in desc:
+        return True
+    # Pure seconds only — almost certainly a Short
+    return True
+
+
+def _has_fragrance_context(raw_item: Dict[str, Any]) -> bool:
+    """Return True if title or description contains any fragrance-related term."""
+    snippet = raw_item.get("search_item", {}).get("snippet", {})
+    combined = (
+        snippet.get("title", "") + " " + snippet.get("description", "")
+    ).lower()
+    return any(term in combined for term in _FRAGRANCE_TERMS)
+
+
+def _classify_transcript_priority(
+    raw_item: Dict[str, Any],
+    channel: Dict[str, Any],
+) -> tuple[str, str]:
+    """
+    Return (transcript_status, transcript_priority) for a single normalized item.
+
+    Rules (evaluated in order — first match wins):
+      1. Channel tier_1 or tier_2 → needed / high
+      2. Channel category = reviewer → needed / high
+      3. Video has fragrance context terms in title/description → needed / high
+      4. Video is a Short (≤ 60 s) AND channel is a known fragrance creator
+         (has ANY fragrance term in the channel title OR is already tier_1/tier_2) → needed / high
+      5. Otherwise → none / none
+    """
+    quality_tier = channel.get("quality_tier", "unrated")
+    category = channel.get("category", "unknown")
+
+    if quality_tier in _HIGH_PRIORITY_TIERS:
+        return "needed", "high"
+
+    if category in _HIGH_PRIORITY_CATEGORIES:
+        return "needed", "high"
+
+    if _has_fragrance_context(raw_item):
+        return "needed", "high"
+
+    # Short from a channel whose title contains fragrance terms
+    if _is_short(raw_item):
+        ch_title = (channel.get("title") or "").lower()
+        if any(t in ch_title for t in _FRAGRANCE_TERMS):
+            return "needed", "high"
+
+    return "none", "none"
+
+
+# ---------------------------------------------------------------------------
 # Core polling loop
 # ---------------------------------------------------------------------------
 
@@ -335,6 +428,10 @@ def poll_channel(
             n["ingestion_method"] = "channel_poll"
             n["media_metadata"]["source_type"] = classify_source(n)
             n["media_metadata"]["influence_score"] = compute_influence(n)
+            # Transcript queue classification
+            ts, tp = _classify_transcript_priority(raw_item, channel)
+            n["transcript_status"] = ts
+            n["transcript_priority"] = tp
             normalized_items.append(n)
 
         normalized_store.save_content_items(normalized_items)
@@ -347,8 +444,12 @@ def poll_channel(
             batch_upsert_candidates(db, resolved_items, source_platform="youtube")
 
         entities_found = sum(len(r.get("resolved_entities", [])) for r in resolved_items)
+        transcript_needed = sum(1 for n in normalized_items if n.get("transcript_status") == "needed")
 
-        print(f"    [ok] {len(video_ids)} videos → {entities_found} entity links")
+        print(
+            f"    [ok] {len(video_ids)} videos → {entities_found} entity links"
+            f"  transcript_needed={transcript_needed}"
+        )
 
         _update_channel_after_poll(
             conn, channel_id,
@@ -358,7 +459,12 @@ def poll_channel(
             status="ok",
         )
 
-        return {"channel_id": channel_id, "status": "ok", "video_count": len(video_ids)}
+        return {
+            "channel_id": channel_id,
+            "status": "ok",
+            "video_count": len(video_ids),
+            "transcript_needed": transcript_needed,
+        }
 
     except Exception as exc:
         error_msg = str(exc)[:500]
@@ -496,17 +602,19 @@ def main() -> None:
     errors = sum(1 for r in results if r["status"] == "error")
     dry = sum(1 for r in results if r["status"] == "dry_run")
     total_videos = sum(r.get("video_count", 0) for r in results)
+    total_transcript_needed = sum(r.get("transcript_needed", 0) for r in results)
 
     print()
     print("=" * 60)
     print(f"[ingest_youtube_channels] Done.")
-    print(f"  channels polled: {len(results)}")
-    print(f"  ok:              {ok}")
-    print(f"  empty:           {empty}")
-    print(f"  errors:          {errors}")
+    print(f"  channels polled:     {len(results)}")
+    print(f"  ok:                  {ok}")
+    print(f"  empty:               {empty}")
+    print(f"  errors:              {errors}")
     if dry:
-        print(f"  dry_run:         {dry}")
-    print(f"  total videos:    {total_videos}")
+        print(f"  dry_run:             {dry}")
+    print(f"  total videos:        {total_videos}")
+    print(f"  transcript_needed:   {total_transcript_needed}")
     print("=" * 60)
 
 
