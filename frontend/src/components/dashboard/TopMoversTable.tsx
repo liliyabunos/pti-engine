@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
@@ -92,7 +91,10 @@ function buildColumns(
       size: 60,
       enableSorting: false,
       cell: (c) => (
-        <span className="font-mono text-[11px] font-bold text-amber-400">
+        <span
+          title="Click to preview chart"
+          className="font-mono text-[11px] font-bold text-amber-400 cursor-pointer transition-colors hover:text-yellow-300"
+        >
           {c.getValue()}
         </span>
       ),
@@ -109,7 +111,7 @@ function buildColumns(
             <span className="inline-flex items-center">
               <span
                 title={isBrand ? "Brand — score aggregated across perfume portfolio" : row.canonical_name}
-                className="block truncate max-w-[150px] text-xs text-zinc-200 group-hover:text-amber-200 group-hover:underline"
+                className="block truncate max-w-[150px] text-xs text-zinc-200 hover:text-amber-200"
               >
                 {c.getValue()}
               </span>
@@ -230,7 +232,6 @@ export function TopMoversTable({
   selectedId,
   onSelect,
 }: TopMoversTableProps) {
-  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const columns = buildColumns(selectedId, onSelect);
@@ -287,16 +288,13 @@ export function TopMoversTable({
             const entityId = row.original.entity_id;
             const isSelected = entityId === selectedId;
             const isBrand = row.original.entity_type === "brand";
-
             const href = entityHref(row.original);
 
             return (
               <tr
                 key={row.id}
-                onClick={() => {
-                  onSelect(entityId);
-                  router.push(href);
-                }}
+                // Row click = preview chart only. Name click navigates via Link below.
+                onClick={() => onSelect(entityId)}
                 className={clsx(
                   "group cursor-pointer border-b border-zinc-800/40 transition-colors",
                   isSelected
@@ -318,7 +316,7 @@ export function TopMoversTable({
                       <Link
                         href={href}
                         onClick={(e) => e.stopPropagation()}
-                        className="block"
+                        className="block hover:underline underline-offset-2"
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </Link>
