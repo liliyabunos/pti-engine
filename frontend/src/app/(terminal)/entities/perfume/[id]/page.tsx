@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { fetchPerfumeEntity, startTracking } from "@/lib/api/entities";
@@ -54,11 +55,14 @@ function StateBadge({ state }: { state: string }) {
 // Notes section
 // ---------------------------------------------------------------------------
 
-function NotesPill({ name }: { name: string }) {
+function NotesPill({ name, href }: { name: string; href: string }) {
   return (
-    <span className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400">
+    <Link
+      href={href}
+      className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
+    >
       {name}
-    </span>
+    </Link>
   );
 }
 
@@ -109,7 +113,7 @@ function NotesSection({
             </p>
             <div className="flex flex-wrap gap-1">
               {accords.map((a) => (
-                <NotesPill key={a} name={a} />
+                <NotesPill key={a} name={a} href={`/entities/accord/${encodeURIComponent(a)}`} />
               ))}
             </div>
           </div>
@@ -121,7 +125,7 @@ function NotesSection({
             </p>
             <div className="flex flex-wrap gap-1">
               {top.map((n) => (
-                <NotesPill key={n} name={n} />
+                <NotesPill key={n} name={n} href={`/entities/note/${encodeURIComponent(n)}`} />
               ))}
             </div>
           </div>
@@ -133,7 +137,7 @@ function NotesSection({
             </p>
             <div className="flex flex-wrap gap-1">
               {middle.map((n) => (
-                <NotesPill key={n} name={n} />
+                <NotesPill key={n} name={n} href={`/entities/note/${encodeURIComponent(n)}`} />
               ))}
             </div>
           </div>
@@ -145,7 +149,7 @@ function NotesSection({
             </p>
             <div className="flex flex-wrap gap-1">
               {base.map((n) => (
-                <NotesPill key={n} name={n} />
+                <NotesPill key={n} name={n} href={`/entities/note/${encodeURIComponent(n)}`} />
               ))}
             </div>
           </div>

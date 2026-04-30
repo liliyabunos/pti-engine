@@ -32,7 +32,7 @@ export function SignalFeed({ signals, selectedEntityId, onSelectEntity }: Signal
             <SignalBadge type={sig.signal_type} />
             <div className="min-w-0 flex-1">
               <Link
-                href={`/entities/${encodeURIComponent(sig.entity_id)}`}
+                href={`/entities/${sig.entity_type ?? "perfume"}/${encodeURIComponent(sig.entity_id)}`}
                 onClick={(e) => {
                   if (!e.metaKey && !e.ctrlKey) e.preventDefault();
                 }}

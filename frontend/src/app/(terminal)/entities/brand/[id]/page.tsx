@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { clsx } from "clsx";
 
@@ -460,12 +461,13 @@ export default function BrandEntityPage({ params }: PageProps) {
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {data.top_accords.map((a) => (
-                          <span
+                          <Link
                             key={a}
-                            className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                            href={`/entities/accord/${encodeURIComponent(a)}`}
+                            className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
                           >
                             {a}
-                          </span>
+                          </Link>
                         ))}
                       </div>
                     </div>
@@ -477,12 +479,13 @@ export default function BrandEntityPage({ params }: PageProps) {
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {data.top_notes.map((n) => (
-                          <span
+                          <Link
                             key={n}
-                            className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400"
+                            href={`/entities/note/${encodeURIComponent(n)}`}
+                            className="inline-flex rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[10px] text-zinc-400 transition-colors hover:border-zinc-500 hover:text-zinc-200"
                           >
                             {n}
-                          </span>
+                          </Link>
                         ))}
                       </div>
                     </div>
