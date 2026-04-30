@@ -343,6 +343,34 @@ def _classify_transcript_priority(
 
 
 # ---------------------------------------------------------------------------
+# Resolver input gating — channel_poll uses title-only
+# ---------------------------------------------------------------------------
+
+def _resolver_input(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a resolver-ready copy of the item.
+
+    For ``channel_poll`` ingestion the description is NOT used as resolver input.
+    YouTube descriptions contain repeated channel-footer boilerplate (affiliate
+    links, social handles, sponsor lines) that is identical across every video
+    in a channel.  Common words and digit strings in these footers (e.g. "cologne",
+    "Don", "11", "21" embedded in URLs) match perfume aliases and create false-
+    positive ``resolved_signals`` rows for videos that have nothing to do with
+    those entities.
+
+    Fix: for ``channel_poll`` items, set ``text_content`` to the video title only.
+    The full description remains stored in ``canonical_content_items`` for future
+    transcript-based re-resolution (after ``fetch_transcripts.py`` runs and quality
+    checks pass).
+
+    For all other ingestion methods (``search``, ``api``, …) the item is returned
+    unchanged so existing behaviour is not affected.
+    """
+    if item.get("ingestion_method") == "channel_poll":
+        return {**item, "text_content": item.get("title") or ""}
+    return item
+
+
+# ---------------------------------------------------------------------------
 # Core polling loop
 # ---------------------------------------------------------------------------
 
@@ -453,8 +481,11 @@ def poll_channel(
 
         normalized_store.save_content_items(normalized_items)
 
-        # Step 6: Resolve
-        resolved_items = [resolver.resolve_content_item(item) for item in normalized_items]
+        # Step 6: Resolve (title-only for channel_poll — see _resolver_input docstring)
+        resolved_items = [
+            resolver.resolve_content_item(_resolver_input(item))
+            for item in normalized_items
+        ]
         signal_store.save_resolved_signals(resolved_items)
 
         with session_scope() as db:
