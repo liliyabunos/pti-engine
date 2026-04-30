@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { EmptyState } from "@/components/primitives/EmptyState";
 import { fmtDatetime } from "@/lib/formatters";
@@ -8,9 +11,13 @@ interface SignalFeedProps {
   signals: SignalRow[];
   selectedEntityId?: string | null;
   onSelectEntity?: (entityId: string) => void;
+  /** Set of entity_ids present in the top movers list. Non-mover signals navigate directly. */
+  moverEntityIds?: Set<string>;
 }
 
-export function SignalFeed({ signals, selectedEntityId, onSelectEntity }: SignalFeedProps) {
+export function SignalFeed({ signals, selectedEntityId, onSelectEntity, moverEntityIds }: SignalFeedProps) {
+  const router = useRouter();
+
   if (!signals.length) {
     return <EmptyState compact message="No recent signals" />;
   }
@@ -18,7 +25,10 @@ export function SignalFeed({ signals, selectedEntityId, onSelectEntity }: Signal
   return (
     <ul className="space-y-1">
       {signals.map((sig, i) => {
-        const isSelected = sig.entity_id === selectedEntityId;
+        const isInMovers = !moverEntityIds || moverEntityIds.has(sig.entity_id);
+        const isSelected = isInMovers && sig.entity_id === selectedEntityId;
+        const entityHref = `/entities/${sig.entity_type ?? "perfume"}/${encodeURIComponent(sig.entity_id)}`;
+
         return (
           <li
             key={`${sig.entity_id}-${sig.detected_at}-${i}`}
@@ -26,15 +36,27 @@ export function SignalFeed({ signals, selectedEntityId, onSelectEntity }: Signal
               isSelected
                 ? "bg-zinc-800/70"
                 : "hover:bg-zinc-800/40"
-            } ${onSelectEntity ? "cursor-pointer" : ""}`}
-            onClick={() => onSelectEntity?.(sig.entity_id)}
+            } cursor-pointer`}
+            onClick={() => {
+              if (isInMovers) {
+                onSelectEntity?.(sig.entity_id);
+              } else {
+                router.push(entityHref);
+              }
+            }}
           >
             <SignalBadge type={sig.signal_type} />
             <div className="min-w-0 flex-1">
               <Link
-                href={`/entities/${sig.entity_type ?? "perfume"}/${encodeURIComponent(sig.entity_id)}`}
+                href={entityHref}
                 onClick={(e) => {
-                  if (!e.metaKey && !e.ctrlKey) e.preventDefault();
+                  if (isInMovers) {
+                    // mover row: suppress navigation; li click drives preview chart
+                    if (!e.metaKey && !e.ctrlKey) e.preventDefault();
+                  } else {
+                    // non-mover row: allow navigation, but stop li from double-navigating
+                    e.stopPropagation();
+                  }
                 }}
                 className={`block truncate text-xs font-medium hover:text-amber-300 ${
                   isSelected ? "text-amber-300" : "text-zinc-200"

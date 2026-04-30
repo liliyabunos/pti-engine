@@ -123,6 +123,11 @@ export default function DashboardPage() {
   // Client-side filtering of movers list (dashboard — limited set, OK here)
   // ---------------------------------------------------------------------------
 
+  const moverEntityIds = useMemo(
+    () => new Set((data?.top_movers ?? []).map((m) => m.entity_id)),
+    [data?.top_movers],
+  );
+
   const filteredMovers = useMemo<TopMoverRow[]>(() => {
     const movers = data?.top_movers ?? [];
     return movers.filter((m) => {
@@ -300,6 +305,7 @@ export default function DashboardPage() {
                       signals={data?.recent_signals ?? []}
                       selectedEntityId={selectedEntityId}
                       onSelectEntity={setSelectedEntityId}
+                      moverEntityIds={moverEntityIds}
                     />
                   )}
                 </div>
