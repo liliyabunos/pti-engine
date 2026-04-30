@@ -96,26 +96,28 @@ function LinkedPerfumesTable({ rows, totalCount }: { rows: BrandPerfumeRow[]; to
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, i) => (
+          {rows.map((row, i) => {
+            const destination = row.entity_id
+              ? `/entities/perfume/${encodeURIComponent(row.entity_id)}`
+              : row.resolver_id != null
+              ? `/entities/perfume/${row.resolver_id}`
+              : null;
+            return (
             <tr
-              key={row.entity_id ?? `${row.canonical_name}-${i}`}
-              onClick={
-                row.entity_id
-                  ? () => router.push(`/entities/perfume/${encodeURIComponent(row.entity_id!)}`)
-                  : undefined
-              }
+              key={row.entity_id ?? row.resolver_id ?? `${row.canonical_name}-${i}`}
+              onClick={destination ? () => router.push(destination) : undefined}
               className={clsx(
                 "border-b border-zinc-800/40 transition-colors",
-                row.entity_id
+                destination
                   ? "group cursor-pointer hover:bg-zinc-800/30"
-                  : "opacity-50",
+                  : "opacity-40",
               )}
             >
               <td className="px-3 py-2">
                 <span
                   className={clsx(
                     "block max-w-[280px] truncate text-xs",
-                    row.entity_id
+                    destination
                       ? "text-zinc-200 group-hover:text-amber-300"
                       : "text-zinc-500",
                   )}
@@ -145,7 +147,8 @@ function LinkedPerfumesTable({ rows, totalCount }: { rows: BrandPerfumeRow[]; to
                 )}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
       {totalCount > rows.length && (

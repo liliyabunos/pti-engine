@@ -445,6 +445,7 @@ def _build_summary(
 
 class BrandPerfumeRow(BaseModel):
     entity_id: Optional[str] = None
+    resolver_id: Optional[int] = None
     canonical_name: str
     has_activity_today: bool = False
     latest_score: Optional[float] = None
@@ -779,7 +780,8 @@ def _brand_catalog_perfumes(db: Session, brand_canonical_name: str, limit: int =
             rp.canonical_name,
             etd.composite_market_score,
             etd.mention_count,
-            CASE WHEN etd.mention_count > 0 THEN true ELSE false END AS has_activity_today
+            CASE WHEN etd.mention_count > 0 THEN true ELSE false END AS has_activity_today,
+            rp.id AS resolver_id
         FROM resolver_perfumes rp
         JOIN resolver_brands rb ON rp.brand_id = rb.id
         LEFT JOIN entity_market em
@@ -806,6 +808,7 @@ def _brand_catalog_perfumes(db: Session, brand_canonical_name: str, limit: int =
             latest_score=float(r[2]) if r[2] is not None else None,
             mention_count=float(r[3]) if r[3] is not None else None,
             has_activity_today=bool(r[4]) if r[4] is not None else False,
+            resolver_id=int(r[5]) if r[5] is not None else None,
         )
         for r in rows
     ]

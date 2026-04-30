@@ -228,6 +228,7 @@ export interface PerfumeEntityDetail {
 
 export interface BrandPerfumeRow {
   entity_id: string | null;
+  resolver_id: number | null;
   canonical_name: string;
   has_activity_today: boolean;
   latest_score: number | null;
