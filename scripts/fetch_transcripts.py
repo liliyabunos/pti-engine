@@ -3,6 +3,16 @@
 Usage:
     python3 scripts/fetch_transcripts.py [--limit N] [--channel-id ID] [--dry-run]
 
+IMPORTANT — run locally, not on Railway.
+    YouTube blocks caption requests from cloud/datacenter IPs (same constraint as Fragrantica).
+    Run this script from your local machine against the production Postgres public proxy URL:
+
+        DATABASE_URL="<production-public-url>" \\
+          python3 scripts/fetch_transcripts.py --limit 5 --channel-id UCzKrJ5NSA9o7RHYRG12kHZw
+
+    If the script exits with "RequestBlocked / IpBlocked", your current IP is blocked.
+    Wait a few minutes and retry, or use a VPN exit node.
+
 Reads:
     canonical_content_items WHERE transcript_status='needed'
                                 AND transcript_priority='high'
@@ -11,6 +21,7 @@ Reads:
 Writes:
     content_transcripts (upsert on content_item_id)
     canonical_content_items.transcript_status → 'fetched' | 'unavailable' | 'failed'
+    NOTE: RequestBlocked / IpBlocked does NOT change transcript_status (queue preserved).
 
 Does NOT:
     - Call any LLM
@@ -50,10 +61,17 @@ try:
     from youtube_transcript_api import YouTubeTranscriptApi
     from youtube_transcript_api._errors import (
         CouldNotRetrieveTranscript,
+        IpBlocked,
         NoTranscriptFound,
+        RequestBlocked,
         TranscriptsDisabled,
         VideoUnavailable,
     )
+    # AgeRestricted available in v1.x
+    try:
+        from youtube_transcript_api._errors import AgeRestricted
+    except ImportError:
+        AgeRestricted = Exception  # type: ignore[misc,assignment]
 except ImportError as exc:
     sys.exit(
         "youtube-transcript-api is not installed.\n"
@@ -292,24 +310,32 @@ def _fetch_one(row: dict, dry_run: bool, conn, dialect: str) -> str:
         return "queued"
 
     # --- real fetch ---
+    # v1.x API: instance-based, api.list() / api.fetch()
+    api = YouTubeTranscriptApi()
     t0 = time.perf_counter()
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        # Prefer manually-created transcript, fall back to auto-generated
+        transcript_list = api.list(video_id)
+        # Prefer manually-created English transcript, fall back to auto-generated, then any
+        lang: Optional[str] = None
         try:
             transcript = transcript_list.find_manually_created_transcript(["en"])
+            lang = getattr(transcript, "language_code", "en")
         except Exception:
             try:
                 transcript = transcript_list.find_generated_transcript(["en"])
+                lang = getattr(transcript, "language_code", "en")
             except Exception:
-                # Accept any available language
                 transcript = next(iter(transcript_list))
+                lang = getattr(transcript, "language_code", None)
 
         segments = transcript.fetch()
-        lang = getattr(transcript, "language_code", None)
         processing_ms = int((time.perf_counter() - t0) * 1000)
 
-        text = _join_segments(segments)
+        # v1.x segments: each may be a FetchedTranscriptSnippet object or dict
+        text = _join_segments([
+            {"text": getattr(s, "text", s.get("text", "") if isinstance(s, dict) else "")}
+            for s in segments
+        ])
         word_count = len(text.split()) if text else 0
 
         _upsert_transcript(conn, dialect, content_item_id,
@@ -328,7 +354,19 @@ def _fetch_one(row: dict, dry_run: bool, conn, dialect: str) -> str:
         )
         return "fetched"
 
-    except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable) as exc:
+    except (RequestBlocked, IpBlocked) as exc:
+        # IP-level block from YouTube — do NOT change transcript_status, abort entire run
+        err_msg = f"[ABORT] {type(exc).__name__}: YouTube is blocking requests from this IP."
+        print(f"[fetch_transcripts] CRITICAL {err_msg}", file=sys.stderr)
+        print(
+            "[fetch_transcripts] No status updated — queue preserved. "
+            "Run from a different IP (local machine / VPN).",
+            file=sys.stderr,
+        )
+        conn.close()
+        sys.exit(2)
+
+    except (TranscriptsDisabled, NoTranscriptFound, VideoUnavailable, AgeRestricted) as exc:
         processing_ms = int((time.perf_counter() - t0) * 1000)
         err_msg = type(exc).__name__
 
