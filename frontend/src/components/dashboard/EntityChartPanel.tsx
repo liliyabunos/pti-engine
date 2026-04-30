@@ -73,7 +73,7 @@ function EntityMiniHeader({ mover }: EntityMiniHeaderProps) {
           <SignalBadge type={mover.latest_signal} />
         )}
         <Link
-          href={`/entities/${encodeURIComponent(mover.entity_id)}`}
+          href={`/entities/${mover.entity_type ?? "perfume"}/${encodeURIComponent(mover.entity_id)}`}
           className="flex items-center gap-0.5 text-[10px] text-zinc-600 hover:text-amber-400"
           title="Open entity page"
         >
