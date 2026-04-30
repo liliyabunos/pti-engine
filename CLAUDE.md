@@ -9825,3 +9825,131 @@ G4 Batch 1 is behaving correctly on fresh scheduled pipeline runs.
 Do NOT start G4 Batch 2 until a fresh candidate audit confirms new safe alias opportunities.
 Do NOT change signal thresholds or scoring to compensate for aliases not yet appearing in content.
 
+---
+
+## Phase E-UX1 — Entity Navigation / Clickable Market Graph
+
+### STATUS: COMPLETE — PRODUCTION DEPLOYED
+
+### Goal
+
+Transform the product from a collection of isolated pages into a connected market graph where every entity is reachable from any other, and every KPI, signal, or note/accord reference acts as a navigation entry point.
+
+---
+
+### Subphases
+
+#### E-UX1 — Signal Feed Routes + Notes/Accords Clickability
+**Commit:** `83ab6cc`
+
+- Fixed Dashboard Recent Signals feed: typed entity routing now correctly routes to `/entities/perfume/{id}` or `/entities/brand/{id}` based on `entity_type`.
+- Made perfume detail page notes/accords chips clickable — each note/accord navigates to its note or accord detail page.
+- Made brand detail page notes/accords chips clickable — same behavior.
+
+#### E-UX1b — Screener Catalog Clickability (All 55,622 Perfumes + 1,608 Brands)
+**Commit:** `adda3b4`
+**File:** `frontend/src/app/(terminal)/screener/page.tsx`
+
+- Made all Screener rows navigable — catalog perfumes and catalog brands — not just tracked entities.
+- All 55,622 catalog perfumes and 1,608 catalog brands now link to entity pages.
+
+#### E-UX1c — Brand Portfolio Perfumes Clickability
+**Commit:** `c505e7f`
+
+- Made all brand portfolio perfume rows on brand entity pages navigable.
+- Added `resolver_id` to `BrandPerfumeRow` API schema.
+- Tracked portfolio perfume routes to `entity_id` slug.
+- Catalog-only portfolio perfume routes to `resolver_id` integer.
+
+#### E-UX1d — Note/Accord Top Perfumes Clickability
+
+- Made note and accord detail page `top_perfumes` list rows navigable for catalog-only entries.
+- Added `resolver_id` to note/accord API row data.
+- Tracked rows: `/entities/perfume/{entity_id}`.
+- Catalog-only rows: `/entities/perfume/{resolver_id}`.
+
+#### E-UX1e — Dashboard KPI Navigation + Perfume Brand Link
+**Commit:** `d87b4c5`
+**Files:** `frontend/src/components/primitives/KpiCard.tsx`, `frontend/src/components/dashboard/KpiStrip.tsx`, `frontend/src/app/(terminal)/entities/perfume/[id]/page.tsx`, `perfume_trend_sdk/api/routes/entities.py`, `frontend/src/lib/api/types.ts`
+
+**KPI navigation:**
+
+| KPI Card | Route |
+|----------|-------|
+| Known Brands | `/screener?mode=catalog_brands` |
+| Known Perfumes | `/screener?mode=catalog_perfumes` |
+| Active Today | `/screener?mode=active` |
+| Breakouts | `/screener?signal_type=breakout&has_signals=true` |
+| Accel Spikes | `/screener?signal_type=acceleration_spike&has_signals=true` |
+| Signals | `/screener?has_signals=true` |
+| Avg Score | *(non-clickable — no applicable filter)* |
+| Avg Confidence | *(non-clickable — no applicable filter)* |
+
+**Perfume brand link:**
+- Backend: new `_brand_entity_id_for()` helper queries `entity_market` for the brand row matching `brand_name`.
+- `brand_entity_id: Optional[str]` added to `PerfumeEntityDetail` API response and `frontend/src/lib/api/types.ts`.
+- Perfume page: brand name renders as `<Link href="/entities/brand/{brand_entity_id}">` when `brand_entity_id` is available; plain text otherwise.
+- Styling: `text-zinc-400 underline underline-offset-4 decoration-zinc-700 hover:text-zinc-200 hover:decoration-zinc-400 transition-colors cursor-pointer`.
+
+---
+
+### URL Route Strategy
+
+| Entity | Tracked | Catalog-only |
+|--------|---------|--------------|
+| Perfume | `/entities/perfume/{entity_id}` e.g. `/entities/perfume/creed-aventus` | `/entities/perfume/{resolver_id}` e.g. `/entities/perfume/42371` |
+| Brand | `/entities/brand/{entity_id}` e.g. `/entities/brand/brand-creed` | `/entities/brand/{resolver_id}` e.g. `/entities/brand/1142` |
+
+---
+
+### Tracked vs Catalog-Only Behavior
+
+**Tracked entities** (have `entity_market` row + timeseries data):
+- Full market intelligence view: score, trend state, signals, mentions, chart, top drivers, notes/accords.
+- Signal badges, TrendStateBadge, and history chart visible.
+
+**Catalog-only entities** (resolver-known but no ingested content yet):
+- Catalog/reference mode: "In Catalog" badge, notes/accords from dataset if available.
+- "No market signals yet" / "Start Tracking" placeholder messaging.
+- No fake `entity_market` rows created.
+- No fake signals created.
+- Becomes tracked automatically when real ingested content resolves to it.
+
+---
+
+### Connected Graph Result
+
+```
+Dashboard KPIs → Screener
+Screener rows → entity pages (tracked or catalog-only)
+Entity pages → brand pages (via brand name link)
+Brand pages → portfolio perfume pages
+Note/accord pages → perfume entity pages
+Signal feed → entity pages
+```
+
+Every surface in the terminal is now an entry point into the entity graph.
+
+---
+
+### Safety Constraints
+
+- No migrations
+- No schema changes (except `brand_entity_id` field addition to `PerfumeEntityDetail`)
+- No scoring changes
+- No signal threshold changes
+- No pipeline changes
+- No ingestion changes
+- No fake entity_market rows
+- No fake signals
+
+---
+
+### Next Phases
+
+**E-UX2** — Restructure perfume detail pages into market-first layout: score, trend state, and signals above the fold; notes/accords and similar perfumes below.
+
+**E-UX3** — Restructure brand detail pages into portfolio/market-first layout: brand-level KPIs, top perfumes by score, signals, and notes/accords aggregation.
+
+**Dashboard date range controls** — Separate TODO / product UX phase (see existing TODO section above). Should allow period selection (Today / Yesterday / 7d / 30d) on dashboard KPIs and movers table.
+
