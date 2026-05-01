@@ -10546,11 +10546,164 @@ ORDER BY 1 DESC;
 
 ---
 
-#### Next decision: Phase 1C Step 2
+### Phase 1C — Scheduled Pipeline Integration (PRODUCTION VERIFIED — 2026-05-01)
 
-Add a non-fatal channel polling step to `start_pipeline.sh` and `start_pipeline_evening.sh`.
+**STATUS: PRODUCTION VERIFIED**
 
-This requires explicit approval before implementation. Do NOT modify pipeline scripts until Phase 1C Step 2 is approved.
+Step 1a channel polling is now integrated into both `start_pipeline.sh` and `start_pipeline_evening.sh`.
+
+---
+
+#### What was integrated
+
+Step 1a added to both pipeline scripts (non-fatal, timeout 600s):
+
+```sh
+# Step 1a: Channel polling — poll due YouTube channels (adaptive gating via next_poll_after)
+echo "[pipeline-*] Step 1a — YouTube channel polling"
+timeout 600 python3 scripts/ingest_youtube_channels.py --limit 50 || \
+  echo "[pipeline-*] WARNING: ingest_youtube_channels failed or timed out — continuing"
+```
+
+- Non-fatal: pipeline continues through aggregation, signal detection, and all subsequent steps even if Step 1a fails or times out.
+- Position: after Step 1 (search ingestion), before Step 1b (aggregate candidates).
+- `--limit 50`: caps channels polled per cycle (adaptive due-channel filter further reduces actual count).
+
+---
+
+#### Production verification — 2026-05-01 23:00 UTC evening run
+
+**Evening run (23:00 UTC):**
+- Channels polled: **46**
+- Videos collected: **1,088**
+- All `last_poll_status = 'ok'`
+- Timestamps clustered at 23:03–23:04 UTC — Step 1a ran before Steps 1b, 2, 3
+
+**Morning run (11:00 UTC):**
+- Channels polled: **8**
+- Videos collected: **195**
+
+**24-hour totals (morning + evening):**
+- Unique channels polled: **51**
+- Total channel_poll videos: **1,283**
+
+---
+
+#### Due-channel filter — VERIFIED
+
+5 channels polled in the morning at ~11:43 UTC had `next_poll_after` ≈ 23:43 UTC.
+Evening pipeline ran at 23:03 UTC — 40 minutes before they were due.
+These 5 channels were correctly **skipped** by the `next_poll_after <= NOW()` filter.
+They will be picked up in the next morning run.
+
+Channels skipped: The Perfume Guy, Gents Scents, Chaos Fragrances, Redolessence, Stay Fresh Productions.
+
+---
+
+#### Adaptive `next_poll_after` — VERIFIED
+
+| Condition | Interval assigned |
+|-----------|------------------|
+| tier_1, last_video_count ≥ 3 | +12h (e.g. 2026-05-02 11:04 UTC) |
+| tier_2, Chad Secrets (2 videos) | +24h (2026-05-02 23:04 UTC) |
+| tier_3, Gentlemen's Gazette (1 video) | +24h (2026-05-02 23:04 UTC) |
+| tier_1, Demi Rawling (0 videos) | +24h, `consecutive_empty_polls = 1` |
+
+**Demi Rawling** confirmed backoff: `last_video_count=0`, `consecutive_empty_polls=1`, `next_poll_after` extended to +24h (not 12h). Counter resets to 0 on next non-empty poll.
+
+No channels due at time of verification — all scheduled in the future.
+
+---
+
+#### Non-fatal pipeline continuation — VERIFIED
+
+After Step 1a, all subsequent steps completed:
+- Step 1b (aggregate candidates) — ran
+- Step 1c (validate candidates) — ran
+- Step 2 (aggregation) — ran
+- Step 3 (signal detection) — ran
+- Step 3b (topic extraction) — ran
+
+**Signals produced on 2026-05-01:**
+
+| Signal type | Count |
+|-------------|-------|
+| new_entry | 29 |
+| breakout | 10 |
+| reversal | 9 |
+| acceleration_spike | 5 |
+| **Total** | **53** |
+
+---
+
+#### Data integrity checks — ALL PASS
+
+| Check | Result |
+|-------|--------|
+| Duplicate content (last 24h) | ✅ Zero duplicates |
+| Deleted dangerous alias IDs (536, 11325, 11753, 12349, 11947, 12125, 539, 11328) | ✅ All absent |
+| Dangerous single-word aliases (don, 11, 21, pink, cologne) | ✅ Absent |
+| `divine` id=676 | ✅ Present — legitimate brand alias → brand `Divine` (brand_id=66), not the deleted perfume alias id=11875 |
+
+---
+
+#### channel_poll entity resolution — VERIFIED (title-only resolver active)
+
+Entities resolved from channel video titles in the last 24h:
+
+| Entity | Mentions |
+|--------|---------|
+| Tom Ford Black Orchid | 10 |
+| Chanel Bleu de Chanel | 8 |
+| Yves Saint Laurent Libre | 6 |
+| Paco Rabanne 1 Million | 4 |
+| Maison Francis Kurkdjian Baccarat Rouge 540 | 3 |
+| Parfums de Marly Layton | 2 |
+| Viktor & Rolf Flowerbomb | 1 |
+| Rasasi Hawas | 1 |
+
+Title-only resolution (not description) is correctly active for all `ingestion_method='channel_poll'` items.
+Single-word alias safety guards and `_BLOCKED_SINGLE_WORD_ALIASES` are in effect.
+
+---
+
+#### Current channel_poll scale
+
+| Ingestion method | Total items in DB |
+|-----------------|------------------|
+| search | 1,742 |
+| channel_poll | 1,426 |
+
+Channel_poll has grown to 45% of search volume after the first fully scheduled 24h cycle.
+
+---
+
+#### Transcript pipeline — EXISTS, NOT SCHEDULED
+
+- `scripts/fetch_transcripts.py` is implemented and locally verified.
+- Transcript queue (`transcript_status='needed'`, `transcript_priority='high'`) is active and populated for all channel_poll items.
+- Transcript fetching requires a local/non-Railway execution environment — YouTube blocks caption requests from Railway datacenter IPs.
+- No scheduled Railway job exists for transcript fetching.
+- Do NOT add transcript fetching to `start_pipeline.sh` or `start_pipeline_evening.sh` until a local-bridge or proxy approach is confirmed.
+
+---
+
+#### Search-based ingestion — UNCHANGED
+
+47-query `configs/watchlists/perfume_queries.yaml` continues to run unchanged in Step 1 of both pipelines. Channel polling runs in addition to search, not instead of it. Quota position remains within safe operating range.
+
+---
+
+#### Next possible phases (not yet approved)
+
+| Phase | Description |
+|-------|-------------|
+| Transcript enrichment | Local-bridge transcript fetch → LLM extraction from video transcripts |
+| Resolver improvement from channel content | Use channel_poll titles to surface new alias candidates |
+| Reduce search query load | After monitoring shows channel_poll covers sufficient entities, consider reducing search.list queries to reclaim quota headroom |
+| Channel registry expansion | Add more tier_1/tier_2 channels as coverage gaps are identified |
+
+**Rule:** Do NOT reduce search queries or add transcript scheduling without a dedicated phase approval and monitoring data.
 
 ---
 
