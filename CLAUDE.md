@@ -10098,6 +10098,70 @@ KPI cards             → screener (filtered views)
 
 ---
 
+## Phase L1 — Public Landing Page (COMPLETED — 2026-05-01)
+
+### Target Type
+FRONTEND_ONLY — no backend, no schema, no pipeline changes
+
+### Authoritative Targets
+- `frontend/src/app/page.tsx` (replaced)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+YES — new 10-section public landing page at `/`
+
+### Commit
+`36af1f2`
+
+---
+
+### What was implemented
+
+Replaced minimal 130-line placeholder with a comprehensive 10-section public marketing page.
+
+**10 sections:**
+
+| # | Section | Content |
+|---|---------|---------|
+| 1 | Hero | "The Market Terminal for Fragrance Trends" headline · live stats strip · animated Early Access badge |
+| 2 | Problem | Delayed signals / no attribution / market noise — 3 problem cards |
+| 3 | What It Does | 6 capability cards (Top Movers, Signal Detection, Screener, Entity Intelligence, Brand Portfolios, Source Intelligence) with emerald/amber/cyan/violet/rose/sky accents |
+| 4 | Dashboard Preview | Inline mock terminal — KPI strip + 4 entity rows (score, trend badge, signal type, growth) |
+| 5 | Example Signal | Creed Aventus breakout card with strength bar, top drivers, semantic topics, source attribution |
+| 6 | Use Cases | Fragrance Brand / Retail Buyer / Content Strategist — 4 bullets each |
+| 7 | Reports | 6 report sections + honest "in development" note (no false delivery promises) |
+| 8 | Methodology | 5 steps: Ingest → Resolve → Score → Detect → Enrich — "deterministic by design" |
+| 9 | Early Access Value | Full access now vs coming next — two columns |
+| 10 | Final CTA | "Enter the Terminal" → `/login` |
+
+**Design:** Dark zinc-950 background, emerald/amber/cyan/violet/rose/sky accent colors. Background grid in hero. Animate-pulse badge. Terminal-style mock with monospace fonts.
+
+**Stats verified accurate at time of commit:**
+- "55,000+" perfumes: `resolver_perfumes` = 56,067 ✅ (conservative claim)
+- "1,600+" brands: `resolver_brands` = 1,608 ✅ (accurate claim)
+- "2×" daily: `pipeline-daily` at 11:00 UTC + `pipeline-evening` at 23:00 UTC ✅
+- "YouTube + Reddit": both verified active sources ✅
+
+**Claims explicitly excluded:**
+- No TikTok (deferred — Research API not approved)
+- No paid subscription or Stripe (not live)
+- No "beta" terminology
+- No subscription pricing tiers
+
+### Safety constraints
+
+- No migrations
+- No schema changes
+- No env vars added to page
+- No secrets in page
+- Auth routes (`/login`, `/auth/callback`, `/dashboard`) completely untouched
+- Build: clean (`○` static route confirmed at `/`)
+- TypeScript: no new errors
+
+---
+
 ## YouTube Channel-First Ingestion — Phase 1A/1B/1B.2
 
 ### STATUS: PRODUCTION VERIFIED — MANUAL/STANDALONE ONLY
