@@ -10380,16 +10380,86 @@ ORDER BY 1 DESC;
 
 ---
 
-### Phase 1C (NOT APPROVED — PENDING)
+### Phase 1C Step 1 — Adaptive Due-Channel Polling (COMPLETED — 2026-05-01)
 
-Phase 1C integration into `start_pipeline.sh` / `start_pipeline_evening.sh` is explicitly NOT in scope for 1A/1B.
+**STATUS: VERIFIED IN PRODUCTION — scheduled pipeline integration NOT yet enabled**
 
-Phase 1C will:
-- Reduce `perfume_queries.yaml` from 47 to ~20 queries
-- Add channel polling as Step 1a in both pipeline scripts
-- Transfer freed quota budget (~5,500 units/day) to channel polling
+---
 
-Phase 1C requires explicit approval before implementation. Do NOT modify pipeline scripts or the queries YAML until Phase 1C is approved.
+#### What was implemented
+
+**Alembic migration 025** (`alembic/versions/025_add_next_poll_after_to_youtube_channels.py`):
+- `youtube_channels.next_poll_after TIMESTAMPTZ NULLABLE` — computed due time for next poll
+  - `NULL` = never polled → always eligible
+  - Populated after every poll based on channel activity and quality_tier
+- Index `idx_youtube_channels_next_poll` on `(next_poll_after, status)` — O(log n) due-channel lookup
+
+**`scripts/ingest_youtube_channels.py`** updated:
+- New `_compute_next_poll_after(last_video_count, consecutive_empty_polls, quality_tier) -> datetime`
+- Due-channel WHERE filter in `_load_channels()` (bypass with `--force-all`):
+  `status = 'active' AND (next_poll_after IS NULL OR next_poll_after <= NOW())`
+- `next_poll_after` written back in all 3 poll-exit paths (ok, empty, error)
+
+**Interval logic:**
+
+| Condition | Interval |
+|-----------|----------|
+| `consecutive_empty_polls >= 14` | 168h (7 days) |
+| `consecutive_empty_polls >= 7` | 72h |
+| `consecutive_empty_polls >= 3` | 48h |
+| `last_video_count >= 3` AND `consecutive_empty_polls == 0` | 12h |
+| otherwise | 24h |
+
+**Tier floors applied after base interval:**
+
+| Tier | Max interval |
+|------|-------------|
+| `tier_1` | 24h (min(hours, 24)) |
+| `tier_2` | 72h (min(hours, 72)) |
+| `tier_3` / `unrated` | no cap |
+
+`consecutive_empty_polls` resets to 0 whenever `last_video_count > 0`.
+
+---
+
+#### Production verification (2026-05-01)
+
+**Real poll — 3 tier_2 channels:**
+
+| Channel | Videos | Entity links | next_poll_after (UTC) |
+|---------|--------|-------------|----------------------|
+| Chad Secrets | 35 | 4 | 2026-05-01 22:31:58 |
+| Noel Deyzel Fragrances | 29 | 0 | 2026-05-01 22:31:58 |
+| Rotten Rebels | 21 | 1 | 2026-05-01 22:31:59 |
+
+- **Total videos collected:** 85
+- **next_poll_after interval:** +12h for all 3 (last_video_count ≥ 3, consecutive_empty_polls = 0, below tier_2 72h cap)
+- **Transcript queue:** 85 items set to `transcript_status='needed', transcript_priority='high'`
+- **API units used:** ~17 units (channels.list × 3 + playlistItems pages + videos.list batches)
+
+**Dry-run after real poll:**
+- Command: `python3 scripts/ingest_youtube_channels.py --quality-tier tier_2 --dry-run`
+- Result: `No channels found matching filters. Exiting.`
+- All 3 channels skipped — `next_poll_after` in the future
+- Zero API calls, zero DB writes confirmed
+
+---
+
+#### Current state
+
+- Migration 025 applied to production ✅
+- Adaptive polling logic active in `ingest_youtube_channels.py` ✅
+- Due-channel filter confirmed working end-to-end ✅
+- `start_pipeline.sh` and `start_pipeline_evening.sh` NOT modified ✅
+- Channel polling is still manual/standalone only
+
+---
+
+#### Next decision: Phase 1C Step 2
+
+Add a non-fatal channel polling step to `start_pipeline.sh` and `start_pipeline_evening.sh`.
+
+This requires explicit approval before implementation. Do NOT modify pipeline scripts until Phase 1C Step 2 is approved.
 
 ---
 
