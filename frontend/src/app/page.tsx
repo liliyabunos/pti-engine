@@ -168,12 +168,17 @@ export default function LandingPage() {
 
         <div className="relative mx-auto w-full max-w-5xl px-6 py-24 sm:py-32">
           {/* Badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
             <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-emerald-400">
               Live · Early Access
             </span>
           </div>
+
+          {/* FTI byline */}
+          <p className="mb-4 font-mono text-xs font-semibold uppercase tracking-widest text-amber-400/70">
+            Fragrance Trend Intelligence · FragranceIndex.ai
+          </p>
 
           <h1 className="mb-5 max-w-3xl text-4xl font-bold tracking-tight text-zinc-100 sm:text-5xl lg:text-6xl">
             The Market Terminal{" "}
@@ -181,8 +186,9 @@ export default function LandingPage() {
           </h1>
 
           <p className="mb-4 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-            FragranceIndex monitors YouTube creators and Reddit communities to
-            surface which perfumes and brands are breaking out — and why.
+            FragranceIndex.ai powers FTI Market Terminal — fragrance trend
+            intelligence that monitors YouTube creators and Reddit communities
+            to surface which perfumes and brands are breaking out, and why.
           </p>
           <p className="mb-10 max-w-xl text-sm leading-relaxed text-zinc-600">
             Composite market scores. Signal detection. Creator attribution. Entity
