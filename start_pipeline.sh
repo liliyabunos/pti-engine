@@ -32,6 +32,11 @@ timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.run_ingestion \
   --max-results "${INGEST_YT_MAX_RESULTS:-50}" \
   --lookback-days "${INGEST_YT_LOOKBACK_DAYS:-2}"
 
+# Step 1a: Channel polling — poll due YouTube channels (adaptive gating via next_poll_after)
+echo "[pipeline] Step 1a — YouTube channel polling"
+timeout 600 python3 scripts/ingest_youtube_channels.py --limit 50 || \
+  echo "[pipeline] WARNING: ingest_youtube_channels failed or timed out — continuing"
+
 # Step 1b: Aggregate and classify discovery candidates (Phase 3A → 3B)
 echo "[pipeline] Step 1b — Aggregate candidates"
 timeout 600 python3 -m perfume_trend_sdk.jobs.aggregate_candidates || \
