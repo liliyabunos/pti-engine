@@ -145,6 +145,7 @@ def _load_channels(
     offset: int,
     quality_tier: Optional[str],
     priority: Optional[str],
+    channel_ids: Optional[List[str]] = None,
     status: str = "active",
     skip_not_due: bool = True,
 ) -> List[Dict[str, Any]]:
@@ -169,6 +170,9 @@ def _load_channels(
     if priority:
         clauses.append("priority = %s")
         params.append(priority)
+    if channel_ids:
+        clauses.append("channel_id = ANY(%s)")
+        params.append(channel_ids)
 
     where = " AND ".join(clauses)
     params.extend([limit, offset])
@@ -646,6 +650,10 @@ def main() -> None:
         help="Channel status filter (default: active)"
     )
     parser.add_argument(
+        "--channel-ids", nargs="+", metavar="CHANNEL_ID",
+        help="Only poll these specific channel IDs (space-separated UC... values)"
+    )
+    parser.add_argument(
         "--force-all", action="store_true",
         help="Poll all active channels regardless of next_poll_after (bypass due-channel filter)"
     )
@@ -681,6 +689,8 @@ def main() -> None:
         print(f"[ingest_youtube_channels] quality_tier={args.quality_tier}")
     if args.priority:
         print(f"[ingest_youtube_channels] priority={args.priority}")
+    if args.channel_ids:
+        print(f"[ingest_youtube_channels] channel_ids={args.channel_ids}")
 
     conn = _pg_connect()
     channels = _load_channels(
@@ -689,6 +699,7 @@ def main() -> None:
         offset=args.offset,
         quality_tier=args.quality_tier,
         priority=args.priority,
+        channel_ids=args.channel_ids or None,
         status=args.status,
         skip_not_due=not args.force_all,
     )
