@@ -113,7 +113,7 @@ export default function LoginForm({ supabaseUrl, supabaseAnonKey }: LoginFormPro
         {inAppBrowser && (
           <div className="mb-6 rounded border border-amber-700/50 bg-amber-950/40 px-4 py-3">
             <p className="text-xs leading-relaxed text-amber-300">
-              You&apos;re opening PTI inside {inAppBrowser}. For sign-in to work
+              You&apos;re opening FTI Market Terminal inside {inAppBrowser}. For sign-in to work
               correctly, please open this page in{" "}
               <strong>Safari</strong> or your default browser first.
             </p>
@@ -142,7 +142,7 @@ export default function LoginForm({ supabaseUrl, supabaseAnonKey }: LoginFormPro
             </span>
           </div>
           <h1 className="mb-1 text-xl font-bold tracking-tight text-zinc-100">
-            PTI Market Terminal
+            FTI Market Terminal
           </h1>
           <p className="text-sm text-zinc-500">
             Enter your email to receive a secure sign-in link.

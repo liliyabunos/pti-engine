@@ -7,7 +7,7 @@ export function PublicHeader() {
         {/* Wordmark */}
         <Link href="/" className="flex items-center gap-2.5 text-zinc-100 hover:text-amber-400 transition-colors">
           <span className="font-mono text-xs font-bold tracking-widest text-amber-400 uppercase">
-            PTI
+            FTI
           </span>
           <span className="text-sm font-semibold tracking-tight">
             Market Terminal

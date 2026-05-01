@@ -10162,6 +10162,16 @@ Replaced minimal 130-line placeholder with a comprehensive 10-section public mar
 
 ---
 
+## Public Branding — FTI Market Terminal (Updated 2026-05-01)
+
+- **Internal project name:** PTI (Perfume Trend Intelligence SDK) — used in backend code, DB tables, Railway services, env vars, console.log lines, and authenticated shell UI. Do NOT rename.
+- **Public product name:** FTI Market Terminal (Fragrance Trend Intelligence)
+- **Public domain:** FragranceIndex.ai
+- **Rule:** All user-visible copy on public pages (`/`, `/login`, `/glossary`, `/privacy`, `/terms`) uses "FTI Market Terminal" and "FragranceIndex.ai". The authenticated terminal shell (`StatusBar`, `Sidebar`) retains "PTI MARKET TERMINAL" / "PTI Terminal" — internal-only.
+- **Do NOT change:** backend package names, DB table names, Railway service names, environment variables, or `console.log` debug lines (all tagged `[PTI ...]`).
+
+---
+
 ## YouTube Channel-First Ingestion — Phase 1A/1B/1B.2
 
 ### STATUS: PRODUCTION VERIFIED — MANUAL/STANDALONE ONLY

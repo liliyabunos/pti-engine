@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · PTI Market Terminal",
+  title: "Privacy Policy · FTI Market Terminal",
 };
 
 const LAST_UPDATED = "April 2026";
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
             What this product is
           </h2>
           <p>
-            PTI Market Terminal is a market intelligence tool that aggregates and
+            FTI Market Terminal is a market intelligence tool that aggregates and
             analyzes publicly available content from social platforms (YouTube,
             Reddit) to produce trend signals for the fragrance industry. It does
             not collect, store, or process personal data about end users beyond
@@ -61,8 +61,8 @@ export default function PrivacyPage() {
             Access and authentication
           </h2>
           <p>
-            PTI is currently in invite-only soft launch. Access requires a code
-            provided directly by the PTI team. The access code is stored in your
+            FTI Market Terminal is currently in invite-only soft launch. Access requires a code
+            provided directly by the FragranceIndex.ai team. The access code is stored in your
             browser (localStorage and a browser cookie) to maintain your session.
             No email address, password, or personal profile is collected at this
             stage.
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
             No analytics or tracking
           </h2>
           <p>
-            PTI does not use third-party analytics, advertising trackers, or
+            FragranceIndex.ai does not use third-party analytics, advertising trackers, or
             session recording tools. No data about your browsing behavior within
             the terminal is sent to external parties.
           </p>
@@ -87,7 +87,7 @@ export default function PrivacyPage() {
           <p>
             Trend signals and market scores displayed in this terminal are derived
             from automated analysis of public social content. They do not
-            constitute commercial, financial, or investment advice. PTI makes no
+            constitute commercial, financial, or investment advice. FragranceIndex.ai makes no
             guarantees about the accuracy, completeness, or commercial relevance
             of any data displayed.
           </p>

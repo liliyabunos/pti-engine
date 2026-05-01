@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Signal Glossary · PTI Market Terminal",
-  description: "Definitions for all signals, metrics, and terms used in the PTI Market Terminal.",
+  title: "Signal Glossary · FTI Market Terminal",
+  description: "Definitions for all signals, metrics, and terms used in the FTI Market Terminal.",
 };
 
 const METRICS = [
@@ -95,7 +95,7 @@ export default function GlossaryPage() {
           Signal Glossary
         </h1>
         <p className="text-sm leading-relaxed text-zinc-500">
-          Definitions for all metrics, signals, and terms used in the PTI Market Terminal.
+          Definitions for all metrics, signals, and terms used in the FTI Market Terminal.
           The terminal is designed around market intelligence logic — treat these like
           financial instrument concepts applied to fragrance trend data.
         </p>

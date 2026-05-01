@@ -3,8 +3,8 @@ import "./globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
 
 export const metadata: Metadata = {
-  title: "PTI Market Terminal",
-  description: "Perfume Trend Intelligence Engine — market terminal for fragrance trends",
+  title: "FTI Market Terminal",
+  description: "Fragrance Trend Intelligence — market terminal for fragrance trends",
 };
 
 export default function RootLayout({
