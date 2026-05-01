@@ -10098,11 +10098,127 @@ KPI cards             → screener (filtered views)
 
 ---
 
-## YouTube Channel-First Ingestion — Phase 1A/1B
+## YouTube Channel-First Ingestion — Phase 1A/1B/1B.2
 
-### STATUS: IN PROGRESS — MANUAL/STANDALONE ONLY
+### STATUS: PRODUCTION VERIFIED — MANUAL/STANDALONE ONLY
 
-Phase 1A and 1B are implemented. Phase 1C (pipeline integration) is NOT yet approved and has NOT been started.
+Phase 1A and 1B are implemented and production-verified. Phase 1B.2 documents the resolver
+quality hardening and controlled aggregation that followed the first real ingest run.
+Phase 1C (pipeline integration) is NOT yet approved and has NOT been started.
+
+---
+
+### Phase 1B.2 — Resolver Quality Hardening + Controlled Aggregation (COMPLETED — 2026-05-01)
+
+#### What was verified in production
+
+**Registry state (2026-05-01):**
+- 9 channels registered in `youtube_channels`
+- 3 high-priority channels ingested (first manual poll):
+  - AROMATIX — 50 videos collected
+  - FBFragrances — 43 videos collected
+  - K&A Fragrances — 22 videos collected
+- 115 videos total, ~12 YouTube API quota units consumed
+- `uploads_playlist_id` cached for all 3 channels after first poll
+- `ingestion_method = 'channel_poll'` confirmed on all 115 items
+
+**Transcript queue:**
+- `transcript_status = 'needed'`, `transcript_priority = 'high'` set for all channel_poll items
+- `scripts/fetch_transcripts.py` verified against Jeremy Fragrance channel (local run required — YouTube blocks caption requests from Railway IPs)
+
+**False-positive root cause (identified and fixed):**
+
+Channel descriptions contain boilerplate footer text with affiliate links, discount codes, and
+social handles — e.g. `"...check out Don Sauvage... cologne is..."`. The resolver's sliding-window
+match on the full `text_content` field (title + description) was matching single-word aliases
+(`don`, `cologne`, `11`, `21`, `pink`, `divine`) to unrelated perfume entities.
+
+**Fix 1 — Title-only resolver for channel_poll:**
+- `scripts/reresolve_channel_poll_items.py` — re-resolves all channel_poll items using
+  `title` only (not description) as input to the resolver
+- Upserts `resolved_signals` with `resolver_version + "-channel-title-only"` tag
+- Result: 54 entity links across 3 channels → **2 valid links** (Dior Sauvage + YSL Libre)
+
+**Fix 2 — Single-word alias safety guards in `perfume_resolver.py`:**
+
+Two guards added to `resolve_text()` for `size == 1` window matches:
+
+```python
+_CONTRACTION_TAILS: frozenset[str] = frozenset({
+    "t", "nt", "s", "ll", "re", "ve", "d", "m",
+})
+_BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
+    "don", "pink", "dot", "smart", "standard",
+    "heritage", "moth", "jack", "man", "11", "21",
+})
+```
+
+- Contraction-tail guard: if next token is a contraction tail (e.g. `"don't"` → `["don", "t"]`),
+  skip the match — prevents `"don"` from matching "don't" in video titles.
+- Blocked alias set: single-word aliases that are too common or generic to match safely
+  in social media text are suppressed entirely. Multi-word aliases (≥ 2 tokens) are unaffected.
+
+**Fix 3 — Hard alias deletion from `resolver_aliases`:**
+
+Five dangerous single-word alias rows permanently deleted from production PostgreSQL:
+
+| id | alias | was pointing to |
+|----|-------|----------------|
+| 12453 | `don` | Xerjoff - Join the Club Don |
+| 12383 | `11` | Boris Bidjan Saberi 11 |
+| 12701 | `21` | Costume National 21 |
+| 12745 | `pink` | Nanadebary Pink |
+| 11875 | `divine` | Divine Divine |
+
+Two additional aliases deleted earlier (ELdO Cologne false positives):
+- id=12545: `cologne` → Etat Libre d'Orange Cologne
+- id=12546: `cologne perfume` → Etat Libre d'Orange Cologne
+
+**Controlled aggregation (2026-05-01):**
+- `aggregate_daily_market_metrics` run manually for all 30 dates: 2026-04-01 through 2026-04-30
+- `detect_breakout_signals` run manually for all 30 dates
+- Total signals across 30 dates: 1,119
+- `start_pipeline.sh` and `start_pipeline_evening.sh` were NOT modified
+
+**Signal validation — 2026-04-13:**
+
+| Entity | Mentions | Score | Trend state |
+|--------|---------|-------|-------------|
+| Yves Saint Laurent Libre | 2.2 | 43.95 | breakout |
+| Dior Sauvage | 2.2 | 42.45 | breakout |
+
+Both entities appear correctly on Apr 13 — driven by real channel_poll titles:
+- AROMATIX: "RATING EVERY DIOR SAUVAGE IN 2026"
+- FBFragrances: "The new YSL Libre Berry Crush"
+
+**Final channel_poll entity link state (3 target channels):**
+
+| Channel | Videos | Entity links | Resolved entities |
+|---------|--------|-------------|-------------------|
+| AROMATIX | 50 | 1 | Dior Sauvage ✓ |
+| FBFragrances | 43 | 1 | Yves Saint Laurent Libre ✓ |
+| K&A Fragrances | 22 | 0 | (none — no title matched) |
+
+#### Tests added
+
+`tests/unit/test_channel_poll_resolution.py` — 16 new tests in `TestResolverSingleWordGuards`:
+- contraction-tail guard (`don't`, `can't`, `they're`, `it's`)
+- blocked alias set (`don`, `11`, `21`, `pink`)
+- multi-word aliases unaffected (`join the club don`, `armaf club de nuit`)
+- `angel's share` → `angel` (not `angels`) after `normalize_text()` strips possessive
+
+#### Next decision required before Phase 1C
+
+Before integrating channel polling into `start_pipeline.sh`, implement adaptive polling logic:
+
+- **Due-channel detection**: only poll channels where `last_polled_at < NOW() - poll_interval`
+  (e.g. 12h for tier_1, 24h for tier_2, 72h for tier_3)
+- **Quota-aware batching**: cap channel poll units per pipeline cycle
+- **Backoff on consecutive_empty_polls**: reduce frequency for quiet channels
+
+Phase 1C must not run channel polling unconditionally on every pipeline cycle.
+
+---
 
 ---
 
