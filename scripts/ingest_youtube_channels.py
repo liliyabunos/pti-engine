@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-YouTube Channel-First Ingestion — Phase 1B.
+YouTube Channel-First Ingestion — Phase 1B / Phase 1C (adaptive polling).
 
 Polls registered channels (youtube_channels table) using playlistItems.list
 instead of search.list, consuming ~23× fewer quota units.
@@ -74,6 +74,46 @@ def _iso_days_ago(days: int) -> str:
     return dt.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def _compute_next_poll_after(
+    last_video_count: int,
+    consecutive_empty_polls: int,
+    quality_tier: str,
+) -> datetime:
+    """Return the UTC datetime after which this channel should next be polled.
+
+    Interval table (evaluated top-to-bottom, first match wins):
+      consecutive_empty_polls >= 14  →  168 h  (7 days)
+      consecutive_empty_polls >= 7   →   72 h  (3 days)
+      consecutive_empty_polls >= 3   →   48 h  (2 days)
+      last_video_count >= 3 AND consecutive_empty_polls == 0  →  12 h
+      otherwise                      →   24 h
+
+    Tier floors (cap the interval — prevent high-value channels from going dark):
+      tier_1  →  max 24 h
+      tier_2  →  max 72 h
+      tier_3 / tier_4 / unrated  →  no floor (trust the backoff)
+    """
+    if consecutive_empty_polls >= 14:
+        hours = 168
+    elif consecutive_empty_polls >= 7:
+        hours = 72
+    elif consecutive_empty_polls >= 3:
+        hours = 48
+    elif last_video_count >= 3 and consecutive_empty_polls == 0:
+        hours = 12
+    else:
+        hours = 24
+
+    # Tier floor — prevent backoff beyond the tier ceiling
+    if quality_tier == "tier_1":
+        hours = min(hours, 24)
+    elif quality_tier == "tier_2":
+        hours = min(hours, 72)
+    # tier_3 / tier_4 / unrated: no cap
+
+    return datetime.now(timezone.utc) + timedelta(hours=hours)
+
+
 def _run_id(channel_id: str) -> str:
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return f"yt_channel_{channel_id}_{ts}"
@@ -106,10 +146,22 @@ def _load_channels(
     quality_tier: Optional[str],
     priority: Optional[str],
     status: str = "active",
+    skip_not_due: bool = True,
 ) -> List[Dict[str, Any]]:
-    """Load channels ordered by last_polled_at NULLS FIRST (unpolled first)."""
+    """Load channels that are due for polling, ordered by last_polled_at NULLS FIRST.
+
+    Due-channel filter (when skip_not_due=True, the default):
+      next_poll_after IS NULL        — never polled, always eligible
+      OR next_poll_after <= NOW()    — computed due time has passed
+
+    Channels with next_poll_after in the future are skipped — they already
+    received a fresh poll and should not be re-polled until the interval elapses.
+    """
     clauses = ["status = %s"]
     params: list = [status]
+
+    if skip_not_due:
+        clauses.append("(next_poll_after IS NULL OR next_poll_after <= NOW())")
 
     if quality_tier:
         clauses.append("quality_tier = %s")
@@ -125,7 +177,8 @@ def _load_channels(
         cur.execute(
             f"""
             SELECT id, channel_id, title, quality_tier, category, priority,
-                   uploads_playlist_id, last_polled_at, consecutive_empty_polls
+                   uploads_playlist_id, last_polled_at, consecutive_empty_polls,
+                   next_poll_after
             FROM youtube_channels
             WHERE {where}
             ORDER BY last_polled_at NULLS FIRST, priority DESC, added_at
@@ -145,6 +198,7 @@ def _update_channel_after_poll(
     consecutive_empty_polls: int = 0,
     status: str = "ok",
     error: Optional[str] = None,
+    next_poll_after: Optional[datetime] = None,
 ) -> None:
     fields = [
         "last_polled_at = NOW()",
@@ -158,6 +212,10 @@ def _update_channel_after_poll(
     if uploads_playlist_id is not None:
         fields.append("uploads_playlist_id = %s")
         params.append(uploads_playlist_id)
+
+    if next_poll_after is not None:
+        fields.append("next_poll_after = %s")
+        params.append(next_poll_after)
 
     params.append(channel_id)
 
@@ -413,11 +471,15 @@ def poll_channel(
             playlist_id = client.get_uploads_playlist_id(channel_id)
             if not playlist_id:
                 print(f"    [warn] Could not get uploads_playlist_id — channel may be private or deleted.")
+                new_empty_count = channel.get("consecutive_empty_polls", 0) + 1
                 _update_channel_after_poll(
                     conn, channel_id,
                     status="error",
                     error="uploads_playlist_id unavailable",
-                    consecutive_empty_polls=channel.get("consecutive_empty_polls", 0) + 1,
+                    consecutive_empty_polls=new_empty_count,
+                    next_poll_after=_compute_next_poll_after(
+                        0, new_empty_count, channel.get("quality_tier", "unrated")
+                    ),
                 )
                 return {"channel_id": channel_id, "status": "error", "video_count": 0}
 
@@ -431,13 +493,18 @@ def poll_channel(
 
         if not playlist_items:
             new_empty_count = channel.get("consecutive_empty_polls", 0) + 1
-            print(f"    [info] no new videos in window (empty_polls={new_empty_count})")
+            npa = _compute_next_poll_after(0, new_empty_count, channel.get("quality_tier", "unrated"))
+            print(
+                f"    [info] no new videos in window (empty_polls={new_empty_count},"
+                f" next_poll_after={npa.isoformat()})"
+            )
             _update_channel_after_poll(
                 conn, channel_id,
                 uploads_playlist_id=playlist_id,
                 last_video_count=0,
                 consecutive_empty_polls=new_empty_count,
                 status="ok",
+                next_poll_after=npa,
             )
             return {"channel_id": channel_id, "status": "empty", "video_count": 0}
 
@@ -494,9 +561,13 @@ def poll_channel(
         entities_found = sum(len(r.get("resolved_entities", [])) for r in resolved_items)
         transcript_needed = sum(1 for n in normalized_items if n.get("transcript_status") == "needed")
 
+        # consecutive_empty_polls resets to 0 when videos were found
+        npa = _compute_next_poll_after(len(video_ids), 0, channel.get("quality_tier", "unrated"))
+
         print(
             f"    [ok] {len(video_ids)} videos → {entities_found} entity links"
             f"  transcript_needed={transcript_needed}"
+            f"  next_poll_after={npa.isoformat()}"
         )
 
         _update_channel_after_poll(
@@ -505,6 +576,7 @@ def poll_channel(
             last_video_count=len(video_ids),
             consecutive_empty_polls=0,
             status="ok",
+            next_poll_after=npa,
         )
 
         return {
@@ -517,11 +589,15 @@ def poll_channel(
     except Exception as exc:
         error_msg = str(exc)[:500]
         print(f"    [error] {error_msg}")
+        new_empty_count = channel.get("consecutive_empty_polls", 0) + 1
         _update_channel_after_poll(
             conn, channel_id,
-            consecutive_empty_polls=channel.get("consecutive_empty_polls", 0) + 1,
+            consecutive_empty_polls=new_empty_count,
             status="error",
             error=error_msg,
+            next_poll_after=_compute_next_poll_after(
+                0, new_empty_count, channel.get("quality_tier", "unrated")
+            ),
         )
         return {"channel_id": channel_id, "status": "error", "video_count": 0}
 
@@ -570,6 +646,10 @@ def main() -> None:
         help="Channel status filter (default: active)"
     )
     parser.add_argument(
+        "--force-all", action="store_true",
+        help="Poll all active channels regardless of next_poll_after (bypass due-channel filter)"
+    )
+    parser.add_argument(
         "--dry-run", action="store_true",
         help="Print what would be done without making API or DB writes"
     )
@@ -596,6 +676,7 @@ def main() -> None:
     print(f"[ingest_youtube_channels] limit={args.limit}  offset={args.offset}")
     print(f"[ingest_youtube_channels] max_results={args.max_results}")
     print(f"[ingest_youtube_channels] lookback={args.lookback_days}d  first_poll={args.first_poll_lookback_days}d")
+    print(f"[ingest_youtube_channels] adaptive_polling={'disabled (--force-all)' if args.force_all else 'enabled'}")
     if args.quality_tier:
         print(f"[ingest_youtube_channels] quality_tier={args.quality_tier}")
     if args.priority:
@@ -609,6 +690,7 @@ def main() -> None:
         quality_tier=args.quality_tier,
         priority=args.priority,
         status=args.status,
+        skip_not_due=not args.force_all,
     )
 
     if not channels:
