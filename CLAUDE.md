@@ -10170,6 +10170,23 @@ Replaced minimal 130-line placeholder with a comprehensive 10-section public mar
 - **Rule:** All user-visible copy on public pages (`/`, `/login`, `/glossary`, `/privacy`, `/terms`) uses "FTI Market Terminal" and "FragranceIndex.ai". The authenticated terminal shell (`StatusBar`, `Sidebar`) retains "PTI MARKET TERMINAL" / "PTI Terminal" — internal-only.
 - **Do NOT change:** backend package names, DB table names, Railway service names, environment variables, or `console.log` debug lines (all tagged `[PTI ...]`).
 
+### Final branding polish — STATUS: COMPLETE — PRODUCTION READY
+
+**Commit:** `fe8d3ec`
+
+- Public hero explicitly defines FTI as "Fragrance Trend Intelligence"
+- Hero byline added: `"Fragrance Trend Intelligence · FragranceIndex.ai"`
+- Hero paragraph connects platform + product:
+  > "FragranceIndex.ai powers FTI Market Terminal — fragrance trend intelligence that monitors YouTube creators and Reddit communities to surface which perfumes and brands are breaking out, and why."
+- Public naming architecture confirmed:
+
+| Key | Value |
+|-----|-------|
+| Platform | FragranceIndex.ai |
+| Product | FTI Market Terminal |
+| Meaning | Fragrance Trend Intelligence |
+| Legacy internal name | PTI / Perfume Trend Intelligence |
+
 ---
 
 ## YouTube Channel-First Ingestion — Phase 1A/1B/1B.2
