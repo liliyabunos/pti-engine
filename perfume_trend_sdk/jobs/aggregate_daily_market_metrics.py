@@ -750,9 +750,15 @@ def _write_mentions(
                 )
                 continue
 
+            # Resolve the full source URL once — used consistently for both
+            # the dedup check and the INSERT. Previously the check used the
+            # bare content_item_id (cid) while the INSERT used the full URL,
+            # so the check never matched and every re-run inserted duplicates.
+            source_url_resolved = _resolve_source_url(item, cid)
+
             exists = (
                 db.query(EntityMention)
-                .filter_by(entity_id=entity_uuid, source_url=cid)
+                .filter_by(entity_id=entity_uuid, source_url=source_url_resolved)
                 .first()
             )
             if exists:
@@ -769,7 +775,7 @@ def _write_mentions(
                 entity_id=entity_uuid,
                 entity_type=entity_type,
                 source_platform=item.get("source_platform"),
-                source_url=_resolve_source_url(item, cid),
+                source_url=source_url_resolved,
                 author_id=item.get("source_account_handle"),
                 author_name=meta.get("channel_title") or item.get("source_account_handle"),
                 mention_count=1.0,
