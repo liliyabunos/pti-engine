@@ -11030,3 +11030,103 @@ STATUS: PRODUCTION VERIFIED — 2026-05-02
 
 EmergingPanel now surfaces only candidates with multi-source signal by default.
 Single-source candidates remain accessible for analyst/debug but are not shown as default market signals.
+
+---
+
+## Phase E3-A — Channel-Aware Emerging Signals Extraction (COMPLETED — 2026-05-02)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `emerging_signals` table (migration 027)
+- `perfume_trend_sdk/jobs/extract_emerging_signals.py`
+- `perfume_trend_sdk/api/routes/emerging.py` (v2 endpoint)
+
+### Requires Commit / Push / Deploy
+YES — commits `a2ca697`, `f0d36fe`
+
+### Expected UI Change
+NONE in E3-A — v2 endpoint verified but frontend still uses v1 (E3-B scope)
+
+### Status
+STATUS: PRODUCTION VERIFIED — 2026-05-02
+
+---
+
+### What was implemented
+
+**Alembic migration 027** — `emerging_signals` table:
+- UNIQUE on `normalized_text`
+- Columns: `display_name`, `candidate_type`, `total_mentions`, `distinct_channels_count`,
+  `weighted_channel_score`, `top_channel_id/title/tier`, `first_seen`, `last_seen`,
+  `days_active`, `is_in_resolver`, `is_in_entity_market`, `review_status`, `emerging_score`
+- Indexes: `emerging_score DESC`, `last_seen`, `candidate_type`
+
+**`perfume_trend_sdk/jobs/extract_emerging_signals.py`** — new extraction job:
+- Reads from `channel_poll` `canonical_content_items` only (title-only, not description)
+- Sliding-window n-gram extraction (1–6 tokens) over video titles
+- `_is_valid_phrase()`: guards against single-word stop tokens, `_PHRASE_BLOCKLIST`, `_SIGNAL_NOISE_BLOCKLIST`
+- Prefix-check: `_NOISE_PREFIXES` frozenset catches longer variants of blocked phrases
+  (e.g. `"safe blind buy"` blocked when `"safe blind"` is in blocklist)
+- Channel tier weights: tier_1=3.0, tier_2=2.0, tier_3=1.0, tier_4=0.5, unrated=0.5, blocked=0.0
+- `emerging_score = weighted_channel_score × EXP(-0.1 × days_since_last_seen)`
+- `is_in_resolver`: checked against `resolver_aliases` at write time
+- `is_in_entity_market`: checked against `entity_market` at write time
+- UPSERT via `ON CONFLICT (normalized_text) DO UPDATE` — idempotent
+
+**`GET /api/v1/emerging/v2`** — new channel-aware endpoint:
+- Reads from `emerging_signals` table
+- Filter params: `limit`, `days`, `min_channels` (default 2), `min_channel_score`, `candidate_type`
+- Excludes: `is_in_resolver=TRUE`, `is_in_entity_market=TRUE`, `review_status='rejected'`
+- Graceful SQLite fallback (returns empty list if table absent)
+
+**Noise blocklist expansion (2 rounds):**
+- Round 2 additions: Chanel sliding-window fragments, purchase/CTA phrases, structural filler, intent variants
+- Round 3 additions: 2-gram filler phrases, prefix-check guard for multi-token blocked variants
+
+---
+
+### Production Verification (2026-05-02)
+
+**Extraction run results:**
+- Rows upserted to `emerging_signals`: **3,945**
+- Idempotency confirmed: second run → `upserted=3945, skipped_known=16` (identical)
+- No description boilerplate in multi-channel candidates (all boilerplate rows have `distinct_channels_count=1`)
+
+**`emerging_signals` table contents:**
+- Total rows: 3,945
+- candidate_type: perfume=3,864, flanker=41, clone_reference=40
+- review_status: all `pending` (no human review yet)
+
+**v2 API (`?min_channels=2&days=7`):**
+- Candidates returned: 15 high-quality multi-channel signals
+
+**Top 10 multi-channel candidates:**
+
+| Candidate | Score | Channels | Notes |
+|-----------|-------|---------|-------|
+| Jean Paul Gaultier | 6.143 | 3 | Real brand — missing alias in resolver |
+| Givenchy Gentleman Society | 5.697 | 2 | Real flanker (Le Gentleman Society) |
+| Khadlaj Icon | 5.027 | 2 | Real niche perfume |
+| Armani Stronger With You | 4.480 | 2 | Real Armani entity |
+| Louis Vuitton | 4.169 | 2 | Real brand — missing alias |
+| Marc Jacobs Daisy Wild | 4.062 | 2 | Real newer perfume |
+
+**Boilerplate contamination check:** ALL contaminated rows (`use code`, `tiktok`, `smells like`) have `distinct_channels_count=1` → filtered by default `min_channels=2`. Zero multi-channel boilerplate. ✅
+
+**Safety constraints:**
+- No writes to `fragrance_candidates`, `resolver_aliases`, `resolver_perfumes`, or `entity_market`
+- No pipeline integration in E3-A (`start_pipeline.sh` unchanged)
+- No frontend switch from v1 to v2 EmergingPanel (deferred to E3-B)
+- Migration 027 applied; alembic_version remains 027
+
+---
+
+### E3-B Scope (NOT YET APPROVED)
+
+- Add extraction job to `start_pipeline.sh` (Step 4c after topic extraction)
+- Switch frontend `EmergingPanel` from `/api/v1/emerging` (v1) to `/api/v1/emerging/v2`
+- Add `min_channels`, `days`, `candidate_type` filter controls to EmergingPanel
+- Update `EmergingCandidateRow` → `EmergingSignalRow` type mapping in frontend
