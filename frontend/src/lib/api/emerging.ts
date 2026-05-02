@@ -6,6 +6,7 @@ export type { EmergingCandidateRow, EmergingResponse };
 export interface EmergingParams {
   limit?: number;
   min_mentions?: number;
+  min_sources?: number;
   days?: number;
   entity_type?: "perfume" | "brand" | "note";
 }

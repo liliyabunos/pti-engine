@@ -33,6 +33,19 @@ _log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Partial-name fragments that are substrings of tracked entity names and appear in
+# the candidates queue due to resolver sliding-window n-gram extraction.
+# These are NOT real emerging candidates — they are resolution artefacts.
+# Do NOT add full multi-word phrases here (e.g. "creed silver mountain water" is legitimate).
+_FRAGMENT_BLOCKLIST: frozenset[str] = frozenset({
+    "de chanel",
+    "bleu de",
+    "de nuit",
+    "de marly",
+    "acqua di",
+    "mountain water",
+})
+
 
 # ---------------------------------------------------------------------------
 # Schemas
@@ -111,6 +124,7 @@ WHERE fc.validation_status = 'accepted_rule_based'
   )
   -- Exclude pure generic fragrance vocabulary (noise from content descriptions)
   AND fc.normalized_text !~* '\m(fragrance|cologne|perfume|parfum|scent)\M'
+  AND COALESCE(fc.distinct_sources_count, 1) >= :min_sources
   {entity_type_clause}
 ORDER BY emerging_score DESC
 LIMIT :limit
@@ -146,6 +160,7 @@ def _safe_date_str(val) -> str:
 def get_emerging(
     limit: int = Query(default=25, ge=1, le=100),
     min_mentions: int = Query(default=3, ge=1, alias="min_mentions"),
+    min_sources: int = Query(default=2, ge=1, description="Minimum distinct sources (use 1 for analyst/debug mode)"),
     days: int = Query(default=14, ge=1, le=365),
     entity_type: Optional[str] = Query(default=None, description="perfume | brand | note"),
     db: Session = Depends(get_db_session),
@@ -170,6 +185,7 @@ def get_emerging(
                 filters_applied={
                     "limit": limit,
                     "min_mentions": min_mentions,
+                    "min_sources": min_sources,
                     "days": days,
                     "entity_type": entity_type,
                 },
@@ -179,6 +195,7 @@ def get_emerging(
         entity_type_clause = ""
         params: dict = {
             "min_mentions": min_mentions,
+            "min_sources": min_sources,
             "days": days,
             "limit": limit,
         }
@@ -200,6 +217,10 @@ def get_emerging(
                 validation_status, candidate_type, approved_entity_type,
                 emerging_score, span_days,
             ) = row
+
+            # Python-side fragment blocklist — suppress resolution artefacts
+            if (norm_text or "") in _FRAGMENT_BLOCKLIST:
+                continue
 
             conf_raw = float(confidence_score) if confidence_score is not None else None
             conf_norm = min(conf_raw / 6.0, 1.0) if conf_raw is not None else 0.5
@@ -233,6 +254,7 @@ def get_emerging(
             filters_applied={
                 "limit": limit,
                 "min_mentions": min_mentions,
+                "min_sources": min_sources,
                 "days": days,
                 "entity_type": entity_type,
             },
@@ -247,6 +269,7 @@ def get_emerging(
             filters_applied={
                 "limit": limit,
                 "min_mentions": min_mentions,
+                "min_sources": min_sources,
                 "days": days,
                 "entity_type": entity_type,
             },
