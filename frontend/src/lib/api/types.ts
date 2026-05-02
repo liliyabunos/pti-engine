@@ -504,3 +504,29 @@ export interface EmergingResponse {
   as_of: string;
   filters_applied: Record<string, unknown>;
 }
+
+// v2 — channel-aware, title-first (emerging_signals table)
+export interface EmergingSignalRow {
+  id: number;
+  normalized_text: string;
+  display_name: string;
+  candidate_type: string;
+  total_mentions: number;
+  distinct_channels_count: number;
+  weighted_channel_score: number;
+  top_channel_title: string | null;
+  top_channel_tier: string | null;
+  first_seen: string;
+  last_seen: string;
+  days_active: number;
+  is_in_resolver: boolean;
+  is_in_entity_market: boolean;
+  emerging_score: number;
+}
+
+export interface EmergingV2Response {
+  candidates: EmergingSignalRow[];
+  total_in_table: number;
+  as_of: string;
+  filters_applied: Record<string, unknown>;
+}

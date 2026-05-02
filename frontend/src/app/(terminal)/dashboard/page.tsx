@@ -123,7 +123,7 @@ export default function DashboardPage() {
 
   const { data: emergingData, isLoading: emergingLoading } = useQuery({
     queryKey: ["emerging-candidates"],
-    queryFn: () => fetchEmerging({ limit: 15, min_mentions: 3, days: 14 }),
+    queryFn: () => fetchEmerging({ limit: 15, days: 14, min_channels: 2 }),
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
   });
@@ -352,15 +352,15 @@ export default function DashboardPage() {
               title="Emerging Candidates"
               subtitle={
                 emergingData
-                  ? `${emergingData.candidates.length} candidates · ${emergingData.total_in_queue.toLocaleString()} in queue`
-                  : "last 14 days · min 3 mentions"
+                  ? `${emergingData.candidates.length} signals · ${emergingData.total_in_table.toLocaleString()} in table`
+                  : "last 14 days · min 2 channels"
               }
             />
           </div>
           <div className="px-2 pb-3">
             <EmergingPanel
               candidates={emergingData?.candidates ?? []}
-              totalInQueue={emergingData?.total_in_queue ?? 0}
+              totalInQueue={emergingData?.total_in_table ?? 0}
               isLoading={emergingLoading}
             />
           </div>

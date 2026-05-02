@@ -1,40 +1,44 @@
 "use client";
 
 import { EmptyState } from "@/components/primitives/EmptyState";
-import type { EmergingCandidateRow } from "@/lib/api/types";
+import type { EmergingSignalRow } from "@/lib/api/types";
 
 interface EmergingPanelProps {
-  candidates: EmergingCandidateRow[];
+  candidates: EmergingSignalRow[];
   totalInQueue: number;
   isLoading?: boolean;
 }
 
-function ConfidenceBadge({ value }: { value: number }) {
-  const pct = Math.round(value * 100);
-  const color =
-    value >= 0.7
-      ? "text-emerald-400 bg-emerald-400/10"
-      : value >= 0.4
-      ? "text-amber-400 bg-amber-400/10"
-      : "text-zinc-500 bg-zinc-500/10";
+function CandidateTypeBadge({ type }: { type: string }) {
+  const map: Record<string, string> = {
+    perfume: "text-violet-400 bg-violet-400/10",
+    brand: "text-sky-400 bg-sky-400/10",
+    clone_reference: "text-amber-400 bg-amber-400/10",
+    flanker: "text-emerald-400 bg-emerald-400/10",
+    unknown: "text-zinc-500 bg-zinc-500/10",
+  };
+  const cls = map[type] ?? "text-zinc-500 bg-zinc-500/10";
+  const label = type === "clone_reference" ? "clone" : type;
   return (
-    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${color}`}>
-      {pct}%
+    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${cls}`}>
+      {label}
     </span>
   );
 }
 
-function EntityTypeBadge({ type }: { type: string | null }) {
-  if (!type) return null;
+function TierBadge({ tier }: { tier: string | null }) {
+  if (!tier) return null;
   const map: Record<string, string> = {
-    perfume: "text-violet-400 bg-violet-400/10",
-    brand: "text-sky-400 bg-sky-400/10",
-    note: "text-emerald-400 bg-emerald-400/10",
+    tier_1: "text-emerald-400",
+    tier_2: "text-sky-400",
+    tier_3: "text-zinc-400",
+    tier_4: "text-zinc-600",
+    unrated: "text-zinc-600",
   };
-  const cls = map[type] ?? "text-zinc-400 bg-zinc-400/10";
+  const cls = map[tier] ?? "text-zinc-600";
   return (
-    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${cls}`}>
-      {type}
+    <span className={`text-[10px] font-mono ${cls} shrink-0 hidden xl:inline`} title={tier}>
+      {tier.replace("tier_", "T")}
     </span>
   );
 }
@@ -51,7 +55,7 @@ export function EmergingPanel({ candidates, totalInQueue, isLoading }: EmergingP
   }
 
   if (!candidates.length) {
-    return <EmptyState compact message="No emerging candidates in window" />;
+    return <EmptyState compact message="No emerging signals in window" />;
   }
 
   return (
@@ -67,9 +71,12 @@ export function EmergingPanel({ candidates, totalInQueue, isLoading }: EmergingP
               {c.display_name}
             </span>
 
-            {/* Mentions */}
-            <span className="text-xs text-zinc-500 tabular-nums shrink-0">
-              {c.mention_count}×
+            {/* Channel count */}
+            <span
+              className="text-xs text-zinc-500 tabular-nums shrink-0"
+              title={`${c.distinct_channels_count} channel${c.distinct_channels_count !== 1 ? "s" : ""}`}
+            >
+              {c.distinct_channels_count}ch
             </span>
 
             {/* Days active */}
@@ -77,14 +84,32 @@ export function EmergingPanel({ candidates, totalInQueue, isLoading }: EmergingP
               {c.days_active}d
             </span>
 
-            {/* Entity type badge */}
-            <EntityTypeBadge type={c.approved_entity_type} />
+            {/* Top channel tier */}
+            <TierBadge tier={c.top_channel_tier} />
 
-            {/* Confidence badge */}
-            <ConfidenceBadge value={c.confidence_normalized} />
+            {/* Top channel title — abbreviated */}
+            {c.top_channel_title && (
+              <span
+                className="text-[10px] text-zinc-600 shrink-0 max-w-[100px] truncate hidden lg:inline"
+                title={c.top_channel_title}
+              >
+                {c.top_channel_title}
+              </span>
+            )}
+
+            {/* Candidate type badge */}
+            <CandidateTypeBadge type={c.candidate_type} />
+
+            {/* Emerging score */}
+            <span
+              className="text-[10px] font-mono text-zinc-500 tabular-nums shrink-0"
+              title={`emerging score: ${c.emerging_score}`}
+            >
+              {c.emerging_score.toFixed(2)}
+            </span>
 
             {/* Not tracked indicator */}
-            <span className="text-[10px] text-zinc-600 shrink-0 hidden lg:inline">
+            <span className="text-[10px] text-zinc-600 shrink-0 hidden xl:inline">
               untracked
             </span>
           </li>
@@ -93,7 +118,7 @@ export function EmergingPanel({ candidates, totalInQueue, isLoading }: EmergingP
 
       {totalInQueue > candidates.length && (
         <p className="mt-2 text-[11px] text-zinc-600 text-right">
-          {totalInQueue.toLocaleString()} total in queue
+          {totalInQueue.toLocaleString()} signals in table
         </p>
       )}
     </div>
