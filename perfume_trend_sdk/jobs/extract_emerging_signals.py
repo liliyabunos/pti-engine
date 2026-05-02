@@ -155,7 +155,19 @@ _SIGNAL_NOISE_BLOCKLIST: frozenset[str] = frozenset({
     "winter 2026", "summer 2026", "spring 2026", "fall 2026",
     "april 2025", "may 2025", "summer 2025", "winter 2025",
     "french avenue",  # recurring clickbait phrase (not a perfume)
+    # Short intent/filler 2-grams not caught by single-word guard
+    "you buy", "you get", "you see", "you like", "you love", "you want to",
+    "good better", "turn heads", "you a",
+    "blind buy unboxing", "buy unboxing",
+    "stronger with you", "stronger with",  # sliding-window fragments of Armani Stronger With You
+    "summer fragrances that",  # truncated category phrase
 })
+
+# Precomputed prefix set: multi-token blocklist entries used for prefix matching.
+# Catches longer variants of blocked phrases (e.g. "safe blind buy" when "safe blind" is blocked).
+_NOISE_PREFIXES: frozenset[str] = frozenset(
+    entry for entry in _SIGNAL_NOISE_BLOCKLIST if " " in entry
+)
 
 
 # ---------------------------------------------------------------------------
@@ -216,6 +228,10 @@ def _is_valid_phrase(phrase: str, tokens: List[str]) -> bool:
     if phrase in _PHRASE_BLOCKLIST:
         return False
     if phrase in _SIGNAL_NOISE_BLOCKLIST:
+        return False
+    # Prefix check: catch longer variants of blocked phrases
+    # e.g. "safe blind buy" when "safe blind" is in blocklist
+    if any(phrase.startswith(p + " ") for p in _NOISE_PREFIXES):
         return False
     # First token must not be a generic stop word
     if tokens[0] in _TITLE_STOP_WORDS:
