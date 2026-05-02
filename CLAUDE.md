@@ -10850,3 +10850,187 @@ All 33 dates re-aggregated and signal-detected:
 
 `start_pipeline.sh` and `start_pipeline_evening.sh` — **unchanged**.
 
+
+---
+
+## Phase E0/E1 — Emerging Trend Candidates
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `fragrance_candidates` table (read-only — no writes)
+- `perfume_trend_sdk/api/routes/emerging.py`
+- `frontend/src/components/dashboard/EmergingPanel.tsx`
+
+### Requires Commit / Push / Deploy
+YES — committed `26baac0`, pushed to main, deployed via Railway auto-deploy
+
+### Expected UI Change
+YES — new "Emerging" section on dashboard below Market signals
+
+### Status
+STATUS: PRODUCTION VERIFIED — 2026-05-02
+
+---
+
+### What was implemented
+
+**E0 — Backend: `GET /api/v1/emerging`**
+
+New read-only endpoint. No migrations. No schema changes. No pipeline changes.
+
+Registered in `main.py`: `app.include_router(emerging.router, prefix="/api/v1", tags=["emerging"])`
+
+**Query parameters:**
+- `limit` (1–100, default 25)
+- `min_mentions` (default 3)
+- `days` (1–365, default 14) — `last_seen` window
+- `entity_type` (`perfume` | `brand` | `note`, optional)
+
+**Filtering logic:**
+- `validation_status = 'accepted_rule_based'` only (`'review'` excluded — contains natural-language fragments)
+- `review_status != 'rejected_final'`
+- `occurrences >= min_mentions`
+- `last_seen::date >= CURRENT_DATE - N days`
+- `NOT EXISTS (resolver_aliases.normalized_alias_text = fc.normalized_text)` — excludes KB aliases
+- `NOT EXISTS (entity_market LOWER(canonical_name) = fc.normalized_text)` — excludes tracked entities
+- `NOT ~* '\m(fragrance|cologne|perfume|parfum|scent)\M'` — excludes generic vocab (POSIX word-boundary)
+
+**Ranking formula:**
+```
+emerging_score = occurrences
+  × EXP(-0.1 × recency_days)
+  × LEAST(confidence_score / 6.0, 1.0)
+```
+`confidence_score = ln(occurrences+1)` (pipeline-computed). Normalized to 0–1 by dividing by 6.0 (`ln(~400)` ≈ 6.0 upper bound). Both raw `confidence_score` and `confidence_normalized` exposed in response.
+
+**Response schema:**
+```json
+{
+  "candidates": [{
+    "id": int,
+    "display_name": str,
+    "raw_name": str,
+    "mention_count": int,
+    "distinct_sources_count": int,
+    "first_seen": "YYYY-MM-DD",
+    "last_seen": "YYYY-MM-DD",
+    "days_active": int,
+    "confidence_score": float | null,
+    "confidence_normalized": float,
+    "emerging_score": float,
+    "validation_status": str,
+    "approved_entity_type": str | null
+  }],
+  "total_in_queue": int,
+  "as_of": "YYYY-MM-DD",
+  "filters_applied": {}
+}
+```
+
+**SQLite dev fallback:** if `fragrance_candidates` table does not exist (SQLite dev env), returns empty candidates list gracefully.
+
+---
+
+**E1 — Frontend: `EmergingPanel` on dashboard**
+
+- `frontend/src/lib/api/types.ts` — added `EmergingCandidateRow` + `EmergingResponse` interfaces
+- `frontend/src/lib/api/emerging.ts` — `fetchEmerging(params?)` function
+- `frontend/src/components/dashboard/EmergingPanel.tsx` — display component:
+  - Row layout: display_name | N× mentions | Nd days active | entity type badge | confidence badge | "untracked"
+  - Type badge colors: violet=perfume, sky=brand, emerald=note
+  - Confidence badge colors: emerald≥70%, amber≥40%, gray<40%
+  - Loading skeleton, empty state
+- `frontend/src/app/(terminal)/dashboard/page.tsx` — TanStack Query with `staleTime=5min`, `refetchInterval=5min`; "Emerging" section placed between Market and Composition
+
+---
+
+### Production Verification (2026-05-02)
+
+**Endpoint verified:**
+- `GET /api/v1/emerging?limit=15&min_mentions=3&days=14` → 200 ✅
+- `total_in_queue: 13,252` candidates in queue
+- 15 candidates returned, ordered by `emerging_score DESC`
+- `as_of: 2026-05-02`
+
+**Filter verification:**
+- `min_mentions=30` → reduces result count correctly ✅
+- `days=3` → all candidates have `last_seen=2026-05-02` ✅
+- `entity_type=perfume` → only perfume type returned ✅
+- `entity_type=brand` → only brand type returned ✅
+
+**No migrations applied** — alembic_version remains `026` (unchanged from FIX-1C) ✅
+**No pipeline scripts changed** — `start_pipeline.sh`, `start_pipeline_evening.sh` unchanged ✅
+**No ingestion/aggregation/transcript jobs run** ✅
+**Build:** TypeScript pass, no errors, clean production build ✅
+
+---
+
+### Known Noise / E2 Candidates
+
+Top-ranked candidates in production are **partial n-gram fragments** extracted by the resolver
+sliding-window from tracked entity names:
+
+| Candidate | Root cause | Action |
+|-----------|-----------|--------|
+| `"De Chanel"` (71×) | `"Chanel Bleu de Chanel"` n-gram | fragment blocklist |
+| `"Bleu De"` (67×) | same | fragment blocklist |
+| `"De Nuit"` (61×) | `"Armaf Club de Nuit"` n-gram | fragment blocklist |
+| `"Nuit Intense Man"` (43×) | `"Club de Nuit Intense Man"` partial | alias promotion candidate |
+| `"De Nuit Intense"` (40×) | same | fragment blocklist |
+| `"Club De Nuit Intense"` (40×) | near-full entity name | alias promotion candidate |
+| `"Mountain Water"` (30×) | `"Creed Silver Mountain Water"` partial | fragment blocklist |
+| `"De Marly"` (28×) | `"Parfums de Marly"` brand partial | fragment blocklist |
+| `"Acqua Di"` (27×) | `"Acqua di Gio"` etc. partial | fragment blocklist |
+| `"Louis Vuitton"` (25×) | brand in resolver but wrong type tag | alias audit |
+| `"Baccarat Rouge 540 Dupe"` (36×) | valid market signal | keep (dupe market signal) |
+| `"Creed Silver Mountain Water"` (28×) | full entity name — alias missing | alias seed candidate |
+
+`"Louis Vuitton"` is interesting: it appears in the emerging queue despite being resolvable
+as a brand. Indicates a missing or non-matching alias normalization — warrants alias audit.
+`"Baccarat Rouge 540 Dupe"` is a real market signal (dupe-seeking intent) — useful as-is.
+`"Creed Silver Mountain Water"` is a full entity name — a G2 alias may exist but type
+mismatch or normalization difference is leaving it unresolved. Worth a targeted alias check.
+
+---
+
+### Next Phase — E2: Fragment Filtering + Source-Weighted Emerging Detection
+
+**E2 scope (proposed):**
+
+1. **Fragment blocklist** — deterministic post-filter applied in `_CANDIDATES_SQL` or Python:
+   - Block candidates whose `normalized_text` is a strict suffix/prefix of any `resolver_aliases.normalized_alias_text`
+   - Or: maintain an explicit `emerging_blocklist` table (`normalized_text`, `reason`) populated from reviewed noise
+   - Target: suppress "de chanel", "bleu de", "de nuit", "de marly", "acqua di", "mountain water"
+
+2. **Source diversity gate** — require `distinct_sources_count >= 2` before surfacing
+   - Currently all top candidates have `distinct_sources_count = 1` — they come from channel video titles only
+   - A real emerging entity should appear across multiple source URLs/videos
+   - This single filter would eliminate almost all current noise
+
+3. **Alias promotion candidates** — surface candidates with high `emerging_score` and full-name structure for fast G2/G4-style alias seeding:
+   - `"Creed Silver Mountain Water"` — may need `silver mountain water` alias
+   - `"Club De Nuit Intense"` — `club de nuit intense` alias should already exist; check normalization
+
+4. **Source-weighted score** — weight `emerging_score` by `distinct_sources_count` as a multiplier:
+   - `emerging_score_v2 = emerging_score × log2(distinct_sources_count + 1)`
+   - Single-source fragments score ~0×; multi-source genuine entities score higher
+   - No DB change required — computed in SQL
+
+**E2 target type:** PRODUCTION_TARGETED
+**E2 requires migrations:** NO
+**E2 requires pipeline changes:** NO
+**E2 expected UI change:** YES — EmergingPanel shows fewer but higher-quality candidates
+
+---
+
+### Constraints (permanent for this layer)
+
+- Endpoint is **read-only** — no writes, no state changes
+- No schema migration exists or is needed
+- Pipeline (`start_pipeline.sh`, `start_pipeline_evening.sh`) unchanged
+- No ingestion, aggregation, or transcript jobs run as part of this phase
+- `fragrance_candidates` is written by the pipeline; this layer only reads it
+
