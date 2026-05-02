@@ -219,8 +219,8 @@ def _load_channel_items(db, days: int, limit: int) -> List[Dict]:
           AND cci.ingestion_method = 'channel_poll'
           AND cci.title IS NOT NULL
           AND cci.title != ''
-          AND cci.published_at >= NOW() - CAST(:days || ' days' AS INTERVAL)
-        ORDER BY cci.published_at DESC
+          AND cci.published_at::timestamptz >= NOW() - CAST(:days || ' days' AS INTERVAL)
+        ORDER BY cci.published_at::timestamptz DESC
     """
     if limit:
         sql += " LIMIT :limit"
