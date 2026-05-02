@@ -11130,3 +11130,153 @@ STATUS: PRODUCTION VERIFIED — 2026-05-02
 - Switch frontend `EmergingPanel` from `/api/v1/emerging` (v1) to `/api/v1/emerging/v2`
 - Add `min_channels`, `days`, `candidate_type` filter controls to EmergingPanel
 - Update `EmergingCandidateRow` → `EmergingSignalRow` type mapping in frontend
+
+---
+
+## Phase E3 — Emerging Trend Detection (PRODUCTION VERIFIED THROUGH E3-D — 2026-05-02)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `emerging_signals` table (migration 027)
+- `perfume_trend_sdk/api/routes/emerging.py`
+- `frontend/src/components/dashboard/EmergingPanel.tsx`
+- `frontend/src/lib/api/emerging.ts`
+- `frontend/src/lib/api/types.ts`
+
+### Requires Commit / Push / Deploy
+YES — all subphases committed and deployed
+
+### Expected UI Change
+YES — Dashboard shows channel-aware emerging candidates in dedicated "Emerging" section
+
+---
+
+### E3-A — Channel-Aware Extraction + v2 Endpoint (COMPLETED — 2026-05-02)
+
+**What was built:**
+- Alembic migration 027: `emerging_signals` table (UNIQUE on `normalized_text`; indexes on `emerging_score DESC`, `last_seen`, `candidate_type`)
+- `perfume_trend_sdk/jobs/extract_emerging_signals.py`: extraction job — sliding-window n-gram over channel_poll video titles, channel tier weighting, upsert on conflict
+- `GET /api/v1/emerging/v2`: channel-aware endpoint reading `emerging_signals`, with oversample×6 + subphrase suppression + noise filter pipeline
+- Filters: `is_in_resolver=FALSE`, `is_in_entity_market=FALSE`, `review_status != 'rejected'`, `min_channels` (default 2), `days`, `candidate_type`
+- Ranking: `emerging_score = weighted_channel_score × EXP(-0.1 × days_since_last_seen)`
+- Channel tier weights: tier_1=3.0, tier_2=2.0, tier_3=1.0, tier_4=0.5, unrated=0.5, blocked=0.0
+
+**Production state:**
+- `emerging_signals` table: 3,945 rows
+- `total_in_table`: 3,945
+- Commits: `a2ca697`, `f0d36fe`
+
+---
+
+### E3-B — Subphrase Suppression (COMPLETED — 2026-05-02)
+
+**What was built:**
+- `_is_subphrase(shorter, longer)`: contiguous token-window containment check
+- `_suppress_subphrases(candidates)`: removes candidates whose normalized_text is a token window of a higher-ranked accepted candidate
+- Oversample: `fetch_limit = min(limit * 6, 300)` to ensure enough candidates survive filtering
+- Result: "Jean Paul" and "Paul Gaultier" suppressed when "Jean Paul Gaultier" is accepted
+
+---
+
+### E3-C — Noise Guard (COMPLETED — 2026-05-02)
+
+**What was built (`perfume_trend_sdk/api/routes/emerging.py`):**
+
+```python
+_V2_WEAK_ENDINGS: frozenset[str] = frozenset({
+    "eau", "with", "so", "and", "of", "the", "for", "review",
+})
+
+_V2_WEAK_STARTS: frozenset[str] = frozenset({
+    "eau", "with", "so", "and", "of", "the", "for",
+})
+
+_V2_NOISE_PHRASES: frozenset[str] = frozenset({
+    "game of", "minute review", "full review", "honest review",
+    "first impressions", "fragrance review", "perfume review",
+    "top fragrances", "best fragrances",
+    "wild eau so extra", "daisy wild eau so", "jacobs daisy wild eau",
+})
+```
+
+`_is_noise_phrase(text)`: three-check function — explicit blocklist → weak ending → weak start.
+Applied in endpoint response pipeline before subphrase suppression.
+
+**Valid names protected (all return False from `_is_noise_phrase`):**
+- Marc Jacobs Daisy Wild (ends with "wild", starts with "marc")
+- Armani Stronger With You (ends with "you", starts with "armani")
+- Givenchy Gentleman Society, Jean Paul Gaultier, Khadlaj Icon
+- Club De Nuit Intense, Baccarat Rouge 540 Dupe, Creed Silver Mountain Water
+
+**Tests:** `tests/unit/test_emerging_noise_filter.py` — 35 tests (22 noise cases, 13 valid names). All pass.
+
+---
+
+### E3-D — Dashboard Switched to v2 (COMPLETED — 2026-05-02)
+
+**Commit:** `48b0a3b`
+
+**Files changed (frontend only — no backend/pipeline changes):**
+
+| File | Change |
+|------|--------|
+| `frontend/src/lib/api/types.ts` | Added `EmergingSignalRow` + `EmergingV2Response` interfaces |
+| `frontend/src/lib/api/emerging.ts` | `fetchEmerging()` → `/api/v1/emerging/v2`, `EmergingV2Params` (min_channels replaces min_mentions) |
+| `frontend/src/components/dashboard/EmergingPanel.tsx` | Rewrote for v2: `TierBadge`, `CandidateTypeBadge`, `Nch` count, `top_channel_title`, `emerging_score` |
+| `frontend/src/app/(terminal)/dashboard/page.tsx` | Query params: `min_channels: 2`; `total_in_table` throughout |
+
+**EmergingPanel row layout (v2):**
+`name | Nch | days | TierBadge | top_channel_title | CandidateTypeBadge | score | untracked`
+
+**No migrations, no pipeline changes, no ingestion, no promotions.**
+
+---
+
+### Production Verification (2026-05-02)
+
+**`GET /api/v1/emerging/v2?limit=20` (from Railway):**
+
+| # | Candidate | Score | Channels | Tier | Channel |
+|---|-----------|-------|---------|------|---------|
+| 1 | Jean Paul Gaultier | 6.143 | 3ch | tier_1 | Redolessence |
+| 2 | Givenchy Gentleman Society | 5.697 | 2ch | tier_1 | Redolessence |
+| 3 | Khadlaj Icon | 5.027 | 2ch | tier_1 | TLTG Reviews |
+| 4 | Armani Stronger With You | 4.480 | 2ch | tier_1 | MC Colognes |
+| 5 | Louis Vuitton | 4.169 | 2ch | tier_1 | CubaKnow |
+| 6 | Marc Jacobs Daisy Wild | 4.062 | 2ch | tier_1 | Redolessence |
+
+**Dashboard endpoint:** 442 entities, 20 top movers, 20 recent signals, 8 breakouts ✅
+
+**Composition (notes/accords):** 50 notes, 22 accords returned ✅
+
+**Market / Top Movers / Signal Feed / Breakouts:** unaffected ✅
+
+**TypeScript build:** clean ✅
+
+**No noise fragments in top candidates** (all real perfume/brand names) ✅
+
+---
+
+### What This Layer Does NOT Do
+
+- No auto-promotion: candidates are never written to `resolver_aliases`, `resolver_perfumes`, or `entity_market`
+- No transcript pipeline integration
+- No scheduled extraction (Phase 1C/E3-E pipeline integration pending)
+- No manual review or approval workflow (read-only from `emerging_signals`)
+- No TikTok source (Research API not approved)
+- No AI classification — extraction is deterministic sliding-window only
+
+---
+
+### E3-E — Scheduled Extraction Pipeline Integration (PENDING APPROVAL)
+
+Scope: Add `extract_emerging_signals` to `start_pipeline.sh` as Step 4c (after topic extraction).
+Status: NOT YET APPROVED — requires dedicated phase approval before implementation.
+
+Rules when approved:
+- Non-fatal: pipeline continues if extraction fails
+- Timeout: 300s
+- No pipeline restructuring beyond adding one step
