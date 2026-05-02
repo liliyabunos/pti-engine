@@ -10718,3 +10718,135 @@ Channel_poll has grown to 45% of search volume after the first fully scheduled 2
 
 Phase 1A/1B adds minimal quota overhead from standalone manual runs only.
 
+---
+
+## FIX-1 — entity_mentions Deduplication + Aggregator Integrity
+
+### STATUS: PRODUCTION VERIFIED — 2026-05-02
+
+---
+
+### Root Cause
+
+`_write_mentions()` in `aggregate_daily_market_metrics.py` contained a dedup check mismatch:
+
+- **Check used:** `source_url=cid` (bare content_item_id, e.g. `"abc123xyz"`)
+- **INSERT used:** `source_url=_resolve_source_url(item, cid)` (full URL, e.g. `"https://www.youtube.com/watch?v=abc123xyz"`)
+
+These values never matched for YouTube items, so the dedup check always passed. Every re-aggregation of the same date inserted fresh duplicate `entity_mentions` rows. Over time this inflated `mention_count`, `composite_market_score`, and trend states across the entire timeseries.
+
+---
+
+### FIX-1B — Duplicate Cleanup
+
+- **Before:** ~5,891 `entity_mentions` rows
+- **After cleanup:** 1,122 rows
+- **Deleted:** 4,769 duplicate rows (one survivor kept per `(entity_id, source_url)` group)
+- **Backup tables created:**
+  - `entity_mentions_duplicates_backup_20260502` — all deleted rows
+  - `mention_sources_reassigned_backup_20260502` — affected mention_sources rows
+
+**Note on mention_sources handling:**
+`mention_sources` has a UNIQUE constraint `uq_mention_sources_mention_id` (1:1 with entity_mentions).
+Duplicate `entity_mentions` rows that were deleted already had `mention_sources` entries on the survivor rows.
+The orphaned `mention_sources` rows were deleted rather than reassigned. This was accepted after sanity checks confirmed the survivors retained full source attribution.
+
+---
+
+### FIX-1C — Unique Index
+
+Added Alembic migration 026:
+
+```sql
+CREATE UNIQUE INDEX uq_entity_mentions_entity_source
+  ON entity_mentions(entity_id, source_url);
+```
+
+Full (non-partial) index — `source_url` has 0 NULL values in production.
+Acts as a DB-level safety net in addition to the Python dedup check.
+Also enables `ON CONFLICT DO NOTHING` as a future hardening option.
+
+---
+
+### FIX-1D — Aggregator Dedup Fix
+
+`_write_mentions()` now resolves the full source URL once and uses it consistently:
+
+```python
+# Resolve once — used for both check and INSERT
+source_url_resolved = _resolve_source_url(item, cid)
+
+exists = db.query(EntityMention).filter_by(
+    entity_id=entity_uuid, source_url=source_url_resolved
+).first()
+if exists:
+    continue
+
+mention = EntityMention(
+    ...
+    source_url=source_url_resolved,
+)
+```
+
+Regression tests: `tests/unit/test_write_mentions_dedup.py` — 10 tests covering URL resolution,
+dedup consistency (check URL == insert URL for YouTube/Reddit), and multi-entity video dedup logic.
+
+---
+
+### FIX-1E/1F — Historical Re-aggregation + Signal Re-detection
+
+All 33 dates re-aggregated and signal-detected:
+- **Date range:** 2026-03-30 through 2026-05-01
+- `aggregate_daily_market_metrics` run for all 33 dates (idempotent upserts)
+- `detect_breakout_signals` run for all 33 dates (idempotent — clears stale signals before re-detecting)
+- Re-aggregation confirmed `mentions_written=0` on all dates (dedup fix working, no new duplicates)
+
+---
+
+### Verification Results
+
+| Metric | Value |
+|--------|-------|
+| `entity_mentions` after re-aggregation | **1,135** |
+| `mention_sources` after re-aggregation | **1,277** |
+| Duplicate `(entity_id, source_url)` groups | **0** |
+| Unique index `uq_entity_mentions_entity_source` | **active, `indisunique=True`** |
+| `alembic_version` | **026** |
+| `entity_timeseries_daily` rows (Mar 30–May 1) | **5,000** |
+| Signals across corrected 33-date window | **1,051** |
+| Signal types | new_entry=436, breakout=297, acceleration_spike=261, reversal=57 |
+| Repeated aggregation creates duplicates | **NO** |
+
+**Key entity scores after correction (de-duplicated):**
+
+| Entity | Latest date | Score | Trend state |
+|--------|------------|-------|-------------|
+| Creed Aventus | 2026-05-02 | 17.28 | declining |
+| MFK Baccarat Rouge 540 | 2026-04-30 | 43.27 | rising |
+| Dior Sauvage | 2026-05-02 | 14.85 | declining |
+| Chanel Bleu de Chanel | 2026-05-02 | 27.73 | rising |
+| Rasasi Hawas | 2026-05-02 | 20.87 | rising |
+| Tom Ford Black Orchid | 2026-04-30 | 38.41 | breakout |
+
+---
+
+### UI Impact
+
+- Scores and trend states are now computed from de-duplicated mention counts — no more compounding inflation
+- Trend states for previously over-inflated entities corrected (e.g. declining entities now correctly show declining)
+- Signal feed reflects real market activity — no phantom breakouts from duplicate-inflated scores
+- Top movers ranking is based on actual ingested content volume
+
+---
+
+### Remaining Known Issue
+
+**142 pre-existing orphan `mention_sources` rows** from the April 26 identity map cleanup
+(`fix_stale_identity_map_mentions.py`) remain in the table. These were not introduced by FIX-1 and should be handled in a separate cleanup pass. They do not affect current scoring or signal detection.
+
+---
+
+### Pipeline Scripts
+
+`start_pipeline.sh` and `start_pipeline_evening.sh` — **unchanged**.
+
