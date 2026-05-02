@@ -76,6 +76,35 @@ class EmergingResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# v2 Schemas (emerging_signals table — channel-aware, title-first)
+# ---------------------------------------------------------------------------
+
+class EmergingSignalRow(BaseModel):
+    id: int
+    normalized_text: str
+    display_name: str
+    candidate_type: str
+    total_mentions: int
+    distinct_channels_count: int
+    weighted_channel_score: float
+    top_channel_title: Optional[str]
+    top_channel_tier: Optional[str]
+    first_seen: str
+    last_seen: str
+    days_active: int
+    is_in_resolver: bool
+    is_in_entity_market: bool
+    emerging_score: float
+
+
+class EmergingV2Response(BaseModel):
+    candidates: List[EmergingSignalRow]
+    total_in_table: int
+    as_of: str
+    filters_applied: dict
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -273,4 +302,154 @@ def get_emerging(
                 "days": days,
                 "entity_type": entity_type,
             },
+        )
+
+
+# ---------------------------------------------------------------------------
+# v2 — channel-aware, title-first emerging signals
+# ---------------------------------------------------------------------------
+
+_V2_TABLE_CHECK = """
+SELECT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'emerging_signals'
+)
+"""
+
+_V2_CANDIDATES_SQL = """
+SELECT
+    es.id,
+    es.normalized_text,
+    es.display_name,
+    es.candidate_type,
+    es.total_mentions,
+    es.distinct_channels_count,
+    es.weighted_channel_score,
+    es.top_channel_title,
+    es.top_channel_tier,
+    es.first_seen,
+    es.last_seen,
+    es.days_active,
+    es.is_in_resolver,
+    es.is_in_entity_market,
+    es.emerging_score
+FROM emerging_signals es
+WHERE es.review_status != 'rejected'
+  AND es.is_in_resolver = FALSE
+  AND es.is_in_entity_market = FALSE
+  AND es.distinct_channels_count >= :min_channels
+  AND es.weighted_channel_score >= :min_channel_score
+  AND es.last_seen >= NOW() - CAST(:days || ' days' AS INTERVAL)
+  {type_clause}
+ORDER BY es.emerging_score DESC
+LIMIT :limit
+"""
+
+_V2_TOTAL_SQL = """
+SELECT COUNT(*) FROM emerging_signals
+"""
+
+
+@router.get("/emerging/v2", response_model=EmergingV2Response, summary="Emerging signals v2 (channel-aware)")
+def get_emerging_v2(
+    limit: int = Query(default=25, ge=1, le=100),
+    days: int = Query(default=14, ge=1, le=365),
+    min_channels: int = Query(default=2, ge=1, description="Minimum distinct channels (use 1 for debug)"),
+    min_channel_score: float = Query(default=0.0, ge=0.0, description="Minimum weighted channel score"),
+    candidate_type: Optional[str] = Query(default=None, description="perfume | brand | clone_reference | flanker | unknown"),
+    db: Session = Depends(get_db_session),
+) -> EmergingV2Response:
+    """
+    Return channel-weighted emerging trend signals from emerging_signals table.
+
+    Signals are sourced from channel_poll video titles (not descriptions) and
+    ranked by weighted_channel_score × recency_factor.
+
+    Populate the table by running:
+      python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7
+
+    Hidden from results:
+      - Phrases already in resolver_aliases (is_in_resolver=TRUE)
+      - Phrases already in entity_market (is_in_entity_market=TRUE)
+      - Manually rejected entries (review_status='rejected')
+    """
+    filters: dict = {
+        "limit": limit,
+        "days": days,
+        "min_channels": min_channels,
+        "min_channel_score": min_channel_score,
+        "candidate_type": candidate_type,
+    }
+
+    try:
+        # Graceful fallback for SQLite dev or pre-migration environments
+        result = db.execute(text(_V2_TABLE_CHECK))
+        table_exists = result.scalar()
+        if not table_exists:
+            _log.debug("emerging_signals table not found — returning empty v2 list")
+            return EmergingV2Response(
+                candidates=[],
+                total_in_table=0,
+                as_of=date.today().isoformat(),
+                filters_applied=filters,
+            )
+
+        type_clause = ""
+        params: dict = {
+            "days": days,
+            "min_channels": min_channels,
+            "min_channel_score": min_channel_score,
+            "limit": limit,
+        }
+        if candidate_type:
+            type_clause = "AND es.candidate_type = :candidate_type"
+            params["candidate_type"] = candidate_type
+
+        sql = _V2_CANDIDATES_SQL.format(type_clause=type_clause)
+        rows = db.execute(text(sql), params).fetchall()
+
+        total_in_table = db.execute(text(_V2_TOTAL_SQL)).scalar() or 0
+
+        candidates: List[EmergingSignalRow] = []
+        for row in rows:
+            (
+                row_id, norm_text, display_name, cand_type,
+                total_mentions, distinct_channels, weighted_score,
+                top_ch_title, top_ch_tier,
+                first_seen_raw, last_seen_raw, days_active,
+                is_resolver, is_market, emerging_score,
+            ) = row
+
+            candidates.append(EmergingSignalRow(
+                id=row_id,
+                normalized_text=norm_text or "",
+                display_name=display_name or "",
+                candidate_type=cand_type or "unknown",
+                total_mentions=total_mentions or 0,
+                distinct_channels_count=distinct_channels or 0,
+                weighted_channel_score=round(float(weighted_score or 0), 4),
+                top_channel_title=top_ch_title,
+                top_channel_tier=top_ch_tier,
+                first_seen=_safe_date_str(first_seen_raw),
+                last_seen=_safe_date_str(last_seen_raw),
+                days_active=max(int(days_active or 1), 1),
+                is_in_resolver=bool(is_resolver),
+                is_in_entity_market=bool(is_market),
+                emerging_score=round(float(emerging_score or 0), 4),
+            ))
+
+        return EmergingV2Response(
+            candidates=candidates,
+            total_in_table=total_in_table,
+            as_of=date.today().isoformat(),
+            filters_applied=filters,
+        )
+
+    except Exception as exc:
+        _log.warning("emerging/v2 endpoint error — %s", exc, exc_info=True)
+        return EmergingV2Response(
+            candidates=[],
+            total_in_table=0,
+            as_of=date.today().isoformat(),
+            filters_applied=filters,
         )
