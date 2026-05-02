@@ -99,6 +99,50 @@ _PHRASE_BLOCKLIST: frozenset[str] = frozenset({
     "top notes", "base notes", "middle notes", "heart notes",
 })
 
+# Extended noise blocklist — generic phrases that appear across many channels
+# but are clearly NOT perfume/brand names.  Applied in _is_valid_phrase().
+# Includes: intent phrases, category terms, contraction artifacts from
+# normalize_text() apostrophe-stripping, seasonal/temporal phrases, structural n-grams.
+_SIGNAL_NOISE_BLOCKLIST: frozenset[str] = frozenset({
+    # Contraction artifacts (apostrophe stripped: don't → "don t")
+    "don t", "can t", "won t", "isn t", "aren t", "didn t", "haven t",
+    "hasn t", "wasn t", "weren t", "couldn t", "wouldn t", "shouldn t",
+    "it s", "he s", "she s", "that s", "what s", "who s", "there s",
+    "they re", "we re", "you re", "i m", "i ve", "i ll", "i d",
+    "men s", "women s", "man s", "year s",
+    # Generic category / meta phrases
+    "summer fragrances", "summer fragrance", "summer scent", "summer scents",
+    "winter fragrances", "winter fragrance", "fall fragrances", "spring fragrances",
+    "designer fragrances", "designer fragrance", "niche fragrances",
+    "masculine fragrances", "masculine fragrance", "masculine scents",
+    "feminine fragrances", "feminine fragrance",
+    "male fragrances", "female fragrances",
+    "men fragrances", "women fragrances", "men cologne", "men perfume",
+    "popular fragrances", "popular fragrance", "popular colognes",
+    "blue fragrance", "fresh fragrance", "fresh fragrances",
+    "clone fragrances", "clone fragrance", "clone colognes",
+    "woody fragrances", "floral fragrances", "sweet fragrances",
+    "cheap fragrances", "expensive fragrances", "affordable fragrances",
+    "luxury fragrances", "office fragrances", "office cologne",
+    "date night fragrance", "date fragrance",
+    # Intent / click-bait phrases
+    "you need", "you need to", "need to", "you have", "you have to",
+    "you should", "you must", "you want",
+    "get compliments", "get compliments wearing", "compliment getters",
+    "blind buy", "blind buys",
+    "one of", "one of these", "one of my", "one of the",
+    "right now", "right now wearing",
+    "look at", "check out", "check this", "try this",
+    # Structural n-grams
+    "pour homme", "pour femme", "for men", "for women", "for him", "for her",
+    "and more", "and other", "and all", "and everything",
+    # Temporal / contextual
+    "april 2026", "may 2026", "june 2026", "july 2026", "march 2026",
+    "winter 2026", "summer 2026", "spring 2026", "fall 2026",
+    "april 2025", "may 2025", "summer 2025", "winter 2025",
+    "french avenue",  # recurring clickbait phrase (not a perfume)
+})
+
 
 # ---------------------------------------------------------------------------
 # DB helpers
@@ -157,6 +201,8 @@ def _is_valid_phrase(phrase: str, tokens: List[str]) -> bool:
         return False
     if phrase in _PHRASE_BLOCKLIST:
         return False
+    if phrase in _SIGNAL_NOISE_BLOCKLIST:
+        return False
     # First token must not be a generic stop word
     if tokens[0] in _TITLE_STOP_WORDS:
         return False
@@ -165,6 +211,10 @@ def _is_valid_phrase(phrase: str, tokens: List[str]) -> bool:
         return False
     # Very short tokens (e.g. "a b") with no substance
     if all(len(t) <= 1 for t in tokens):
+        return False
+    # Contraction artifact: any token is a single letter or apostrophe residue
+    # (catches "men s", "it s", "don t" variants not in blocklist)
+    if any(t in {"s", "t", "d", "m", "re", "ve", "ll"} for t in tokens):
         return False
     return True
 
