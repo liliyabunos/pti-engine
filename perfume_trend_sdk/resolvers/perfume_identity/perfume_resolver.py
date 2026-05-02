@@ -25,6 +25,47 @@ _GENERIC_TOKENS: frozenset[str] = frozenset({
     "parfum", "extrait",
 })
 
+# ---------------------------------------------------------------------------
+# Single-word alias safety guards
+# ---------------------------------------------------------------------------
+
+# Tokens that look like they follow a contraction apostrophe after normalize_text()
+# strips the apostrophe to a space.
+#   "don't"  → ["don", "t"]
+#   "can't"  → ["can", "t"]
+#   "they're" → ["they", "re"]
+#   "it's"   → ["it", "s"]    (note: "'s" is removed by normalize_text first,
+#                               but "it's" → "it" only via the 's regex)
+# A single-word alias match followed immediately by one of these tail tokens is
+# almost certainly a contraction artifact, not a real entity mention.
+_CONTRACTION_TAILS: frozenset[str] = frozenset({
+    "t", "nt", "s", "ll", "re", "ve", "d", "m",
+})
+
+# Single-word alias strings that are too short or too generic to be matched
+# safely in free-form social text (titles, hashtags, captions).
+# These words appear as standalone alias entries in resolver_aliases but are
+# common English words — matching them produces too many false positives.
+#
+# Rule: when the sliding window size == 1, the matched phrase must NOT be in
+# this set.  Multi-token aliases (size ≥ 2) are unaffected — "join the club don"
+# or "armaf club de nuit" are specific enough to match safely.
+_BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
+    # Perfume names that are common English words / contractions
+    "don",      # Xerjoff Join the Club Don — "don't" → ["don", "t"]
+    "pink",     # Nanadebary Pink — "Pink eye" / "#cologne #pink" unrelated titles
+    "dot",      # Marc Jacobs Dot — too generic
+    "smart",    # various — too generic
+    "standard", # various — too generic
+    "heritage", # various — too generic
+    "moth",     # various — too generic
+    "jack",     # various — too generic
+    "man",      # various — too generic
+    # Numeric short aliases (conflict with URLs, prices, ratings in titles)
+    "11",       # Boris Bidjan Saberi 11
+    "21",       # Costume National 21
+})
+
 
 def make_resolver(db_path: str | None = None) -> "PerfumeResolver":
     """
@@ -91,6 +132,22 @@ class PerfumeResolver:
         for size in range(_MAX_WINDOW, 0, -1):
             for i in range(len(tokens) - size + 1):
                 phrase = " ".join(tokens[i : i + size])
+
+                # --- Single-word alias safety guards (size == 1 only) ---
+                if size == 1:
+                    # Contraction-tail guard: "don't" normalises to ["don", "t"].
+                    # If the next token is a known contraction tail, the current
+                    # token was part of a contraction and must not match as an alias.
+                    if (
+                        i + 1 < len(tokens)
+                        and tokens[i + 1] in _CONTRACTION_TAILS
+                    ):
+                        continue
+                    # Generic single-word blocklist: words that are too short or
+                    # too common to be matched safely in free-form social text.
+                    if phrase in _BLOCKED_SINGLE_WORD_ALIASES:
+                        continue
+
                 result = self.store.get_perfume_by_alias(phrase)
                 if result:
                     key = (result["perfume_id"], result["canonical_name"])

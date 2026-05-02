@@ -1,8 +1,16 @@
-"""Regression tests for channel_poll title-only resolver gating.
+"""Regression tests for channel_poll title-only resolver gating and single-word
+alias safety guards.
 
 Covers:
   _resolver_input() — gating function that limits resolver input to title for
                       channel_poll items and leaves other methods unchanged.
+
+  Resolver single-word alias guards (PerfumeResolver.resolve_text):
+    _CONTRACTION_TAILS — tokens immediately following a single-word alias hit
+                         that indicate the token came from a split contraction
+                         (e.g. "don't" → ["don", "t"]) and must not match.
+    _BLOCKED_SINGLE_WORD_ALIASES — explicit set of single-word alias strings
+                         too generic/ambiguous to match in social text.
 
 Key regressions:
   1. Boilerplate description containing "cologne", "Don", "Divine", digit strings
@@ -12,6 +20,9 @@ Key regressions:
   3. search ingestion_method is completely unaffected — full text_content used.
   4. Items with no ingestion_method (legacy / default) are treated as search —
      full text_content used.
+  5. "Don't Blind Buy These Fragrances" must NOT resolve Xerjoff Join the Club Don.
+  6. "Pink eye again #cologne #fragrances" must NOT resolve Nanadebary Pink.
+  7. Multi-token title matches (Dior Sauvage, YSL Libre) must still work.
 """
 
 import sys
@@ -22,6 +33,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from scripts.ingest_youtube_channels import _resolver_input
+from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import (
+    _BLOCKED_SINGLE_WORD_ALIASES,
+    _CONTRACTION_TAILS,
+)
+from perfume_trend_sdk.utils.alias_generator import normalize_text
 
 
 # ---------------------------------------------------------------------------
@@ -310,3 +326,164 @@ class TestBoilerplateFalsePositiveRegression:
         assert "Dior Sauvage" in result["text_content"]
         assert "Creed Aventus" in result["text_content"]
         assert "longevity" in result["text_content"]
+
+
+# ---------------------------------------------------------------------------
+# Single-word alias safety guards — unit tests
+# ---------------------------------------------------------------------------
+
+def _simulate_resolve_text_single_word(text: str) -> list[str]:
+    """
+    Simulate the part of resolve_text() that applies single-word alias guards.
+
+    Returns the list of single-token phrases that WOULD be looked up in the
+    alias store (i.e. phrases that pass both guards).  We don't need a real DB
+    to test the guard logic — we just check which phrases survive.
+    """
+    normalized = normalize_text(text)
+    tokens = normalized.split()
+    surviving = []
+    for i, tok in enumerate(tokens):
+        # Contraction-tail guard
+        if i + 1 < len(tokens) and tokens[i + 1] in _CONTRACTION_TAILS:
+            continue
+        # Blocked single-word aliases guard
+        if tok in _BLOCKED_SINGLE_WORD_ALIASES:
+            continue
+        surviving.append(tok)
+    return surviving
+
+
+class TestResolverSingleWordGuards:
+    """Tests for the contraction-tail and blocked-alias guards in resolve_text()."""
+
+    # ------------------------------------------------------------------
+    # Contraction-tail guard
+    # ------------------------------------------------------------------
+
+    def test_dont_contraction_strips_don_token(self):
+        """'don't' normalises to ['don', 't'] — 'don' must be blocked by contraction guard."""
+        survivors = _simulate_resolve_text_single_word("don't")
+        assert "don" not in survivors, (
+            "'don' from \"don't\" must be blocked by the contraction-tail guard"
+        )
+
+    def test_dont_blind_buy_contraction_guard(self):
+        """Full channel_poll regression: title with 'don't' must not pass 'don' to alias lookup."""
+        survivors = _simulate_resolve_text_single_word(
+            "Don't Blind Buy These Fragrances"
+        )
+        assert "don" not in survivors
+
+    def test_dont_regression_aromatix(self):
+        """Aromatix regression: 'Don't Blind Buy… Unless It's THESE 9 Fragrances'."""
+        survivors = _simulate_resolve_text_single_word(
+            "Don't Blind Buy… Unless It's THESE 9 Fragrances🔥 (Under $100)"
+        )
+        assert "don" not in survivors
+
+    def test_dont_regression_fb_fragrances_men(self):
+        """FB Fragrances regression: 'And they say men don't make hard decisions'."""
+        survivors = _simulate_resolve_text_single_word(
+            "And they say men don't make hard decisions #cologne #fragrance"
+        )
+        assert "don" not in survivors
+
+    def test_dont_regression_fb_fragrances_blind_buy(self):
+        """FB Fragrances regression: blind buy title with 'don't'."""
+        survivors = _simulate_resolve_text_single_word(
+            "I Blind Bought 7 Viral Clone Fragrances (Vol. 3) So You Don't Have To"
+        )
+        assert "don" not in survivors
+
+    def test_contraction_tails_coverage(self):
+        """Verify the contraction-tail set covers the most common English contractions."""
+        required_tails = {"t", "nt", "s", "ll", "re", "ve", "d", "m"}
+        missing = required_tails - _CONTRACTION_TAILS
+        assert not missing, f"Missing contraction tails: {missing}"
+
+    # ------------------------------------------------------------------
+    # Blocked single-word aliases guard
+    # ------------------------------------------------------------------
+
+    def test_pink_blocked_in_unrelated_title(self):
+        """'Pink eye again' must NOT pass 'pink' to the alias lookup."""
+        survivors = _simulate_resolve_text_single_word(
+            "Pink eye again #cologne #fragrances"
+        )
+        assert "pink" not in survivors
+
+    def test_don_blocked_standalone(self):
+        """Standalone 'don' (not followed by contraction tail) must still be blocked."""
+        survivors = _simulate_resolve_text_single_word("Don is a great fragrance")
+        assert "don" not in survivors
+
+    def test_numeric_11_blocked(self):
+        """'11' in titles (prices, ratings, counts) must be blocked."""
+        survivors = _simulate_resolve_text_single_word("Top 11 Fragrances Under $100")
+        assert "11" not in survivors
+
+    def test_numeric_21_blocked(self):
+        """'21' in affiliate URL fragments must be blocked."""
+        survivors = _simulate_resolve_text_single_word(
+            "shop/21/cologne-guide fragrance haul"
+        )
+        assert "21" not in survivors
+
+    def test_blocked_aliases_set_contains_required_words(self):
+        """The blocklist must contain all user-specified problematic single-word aliases."""
+        required = {"don", "pink", "11", "21", "dot", "smart", "standard",
+                    "heritage", "moth", "jack", "man"}
+        missing = required - _BLOCKED_SINGLE_WORD_ALIASES
+        assert not missing, f"Missing from blocked alias set: {missing}"
+
+    # ------------------------------------------------------------------
+    # Multi-token aliases must still pass through (guards do NOT affect size ≥ 2)
+    # ------------------------------------------------------------------
+
+    def test_dior_sauvage_tokens_not_blocked(self):
+        """'Dior Sauvage' is multi-token — individual tokens must survive for window matching."""
+        survivors = _simulate_resolve_text_single_word(
+            "RATING EVERY DIOR SAUVAGE IN 2026"
+        )
+        # "dior" and "sauvage" are not in the blocked set and not contraction artifacts
+        assert "dior" in survivors
+        assert "sauvage" in survivors
+
+    def test_ysl_libre_tokens_not_blocked(self):
+        """'YSL Libre' tokens must survive the single-word guards."""
+        survivors = _simulate_resolve_text_single_word(
+            "The new YSL Libre Berry Crush fragrance review"
+        )
+        assert "ysl" in survivors
+        assert "libre" in survivors
+
+    def test_creed_aventus_tokens_not_blocked(self):
+        """'Creed Aventus' tokens must survive."""
+        survivors = _simulate_resolve_text_single_word("Top Creed Aventus alternatives 2026")
+        assert "creed" in survivors
+        assert "aventus" in survivors
+
+    def test_angels_share_tokens_not_blocked(self):
+        """'Angels Share' tokens must survive.
+
+        normalize_text("Angel's") strips the possessive 's → "angel" (not "angels").
+        The alias in the resolver is "angels share" (generated from the canonical name).
+        Both individual tokens must survive single-word guards so the 2-token window
+        "angel share" can be attempted.
+        """
+        survivors = _simulate_resolve_text_single_word(
+            "Angel's Share Clone War — Best Alternatives 2026"
+        )
+        # "Angel's" → normalize_text strips 's → "angel" (not "angels")
+        assert "angel" in survivors
+        assert "share" in survivors
+
+    def test_armaf_club_de_nuit_tokens_not_blocked(self):
+        """'Armaf Club de Nuit' tokens must survive."""
+        survivors = _simulate_resolve_text_single_word(
+            "Armaf Club de Nuit Intense Man — Beginner Guide"
+        )
+        assert "armaf" in survivors
+        assert "club" in survivors
+        assert "nuit" in survivors
