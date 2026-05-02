@@ -341,13 +341,55 @@ WHERE es.review_status != 'rejected'
   AND es.weighted_channel_score >= :min_channel_score
   AND es.last_seen >= NOW() - CAST(:days || ' days' AS INTERVAL)
   {type_clause}
-ORDER BY es.emerging_score DESC
-LIMIT :limit
+ORDER BY es.emerging_score DESC, LENGTH(es.normalized_text) DESC
+LIMIT :fetch_limit
 """
 
 _V2_TOTAL_SQL = """
 SELECT COUNT(*) FROM emerging_signals
 """
+
+# ---------------------------------------------------------------------------
+# Subphrase suppression helpers
+# ---------------------------------------------------------------------------
+
+def _is_subphrase(shorter: str, longer: str) -> bool:
+    """Return True if *shorter* is a contiguous token-window of *longer*.
+
+    "jean paul" is a subphrase of "jean paul gaultier" → True
+    "paul gaultier" is a subphrase of "jean paul gaultier" → True
+    "armani stronger" is a subphrase of "armani stronger with you" → True
+    "khadlaj icon" is NOT a subphrase of "givenchy gentleman society" → False
+    """
+    s_tokens = shorter.split()
+    l_tokens = longer.split()
+    n = len(s_tokens)
+    if n == 0 or n >= len(l_tokens):
+        return False
+    for i in range(len(l_tokens) - n + 1):
+        if l_tokens[i : i + n] == s_tokens:
+            return True
+    return False
+
+
+def _suppress_subphrases(candidates: List["EmergingSignalRow"]) -> List["EmergingSignalRow"]:
+    """Remove candidates whose normalized_text is a contiguous token-window of any
+    already-accepted candidate with equal or better emerging_score.
+
+    Candidates are expected to be pre-sorted by (emerging_score DESC, len DESC) so
+    longer phrases always appear before their shorter sub-phrases when scores tie.
+    """
+    accepted: List["EmergingSignalRow"] = []
+    accepted_texts: List[str] = []
+
+    for c in candidates:
+        norm = c.normalized_text
+        suppressed = any(_is_subphrase(norm, longer) for longer in accepted_texts)
+        if not suppressed:
+            accepted.append(c)
+            accepted_texts.append(norm)
+
+    return accepted
 
 
 @router.get("/emerging/v2", response_model=EmergingV2Response, summary="Emerging signals v2 (channel-aware)")
@@ -395,11 +437,14 @@ def get_emerging_v2(
             )
 
         type_clause = ""
+        # Oversample to ensure subphrase suppression has enough candidates to fill
+        # the requested limit after filtering.  Cap at 300 to bound query size.
+        fetch_limit = min(limit * 6, 300)
         params: dict = {
             "days": days,
             "min_channels": min_channels,
             "min_channel_score": min_channel_score,
-            "limit": limit,
+            "fetch_limit": fetch_limit,
         }
         if candidate_type:
             type_clause = "AND es.candidate_type = :candidate_type"
@@ -437,6 +482,10 @@ def get_emerging_v2(
                 is_in_entity_market=bool(is_market),
                 emerging_score=round(float(emerging_score or 0), 4),
             ))
+
+        # Suppress sub-phrases: hide shorter phrases that are contiguous
+        # token-windows of a higher-ranked (or equal-score, longer) phrase.
+        candidates = _suppress_subphrases(candidates)[:limit]
 
         return EmergingV2Response(
             candidates=candidates,
