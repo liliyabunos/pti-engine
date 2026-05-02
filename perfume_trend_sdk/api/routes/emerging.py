@@ -350,6 +350,62 @@ SELECT COUNT(*) FROM emerging_signals
 """
 
 # ---------------------------------------------------------------------------
+# v2 response-layer noise filters (applied in Python, no DB writes)
+# ---------------------------------------------------------------------------
+
+# Tokens that, when they appear at the END of a candidate phrase, indicate the
+# phrase is an incomplete sliding-window fragment cut off mid-title.
+# e.g. "Marc Jacobs Daisy Wild Eau" → ends with "eau" → noise
+_V2_WEAK_ENDINGS: frozenset[str] = frozenset({
+    "eau", "with", "so", "and", "of", "the", "for", "review",
+})
+
+# Tokens that, when they appear at the START of a candidate phrase, indicate the
+# phrase began mid-title (continuation of a longer phrase).
+# e.g. "With You Intense" → starts with "with" → noise (subphrase of something longer)
+_V2_WEAK_STARTS: frozenset[str] = frozenset({
+    "eau", "with", "so", "and", "of", "the", "for",
+})
+
+# Explicit full-phrase blocklist for patterns not caught by weak-ending/starting
+# guards (e.g. parallel overlapping windows that don't start/end on weak tokens).
+_V2_NOISE_PHRASES: frozenset[str] = frozenset({
+    "game of",
+    "minute review",
+    "full review",
+    "honest review",
+    "first impressions",
+    "fragrance review",
+    "perfume review",
+    "top fragrances",
+    "best fragrances",
+    "wild eau so extra",        # parallel overlap: "marc jacobs daisy wild" vs "wild eau so extra"
+    "daisy wild eau so",        # parallel overlap
+    "jacobs daisy wild eau",    # parallel overlap
+})
+
+
+def _is_noise_phrase(text: str) -> bool:
+    """Return True if *text* is a noise fragment that should be suppressed.
+
+    Three checks (in order):
+    1. Exact match in _V2_NOISE_PHRASES blocklist.
+    2. Last token is in _V2_WEAK_ENDINGS → phrase is cut off at its right edge.
+    3. First token is in _V2_WEAK_STARTS → phrase is cut off at its left edge.
+    """
+    if text in _V2_NOISE_PHRASES:
+        return True
+    tokens = text.split()
+    if not tokens:
+        return False
+    if tokens[-1] in _V2_WEAK_ENDINGS:
+        return True
+    if tokens[0] in _V2_WEAK_STARTS:
+        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Subphrase suppression helpers
 # ---------------------------------------------------------------------------
 
@@ -483,7 +539,10 @@ def get_emerging_v2(
                 emerging_score=round(float(emerging_score or 0), 4),
             ))
 
-        # Suppress sub-phrases: hide shorter phrases that are contiguous
+        # E3-C: Remove noise fragments (weak-ending/starting, explicit blocklist)
+        candidates = [c for c in candidates if not _is_noise_phrase(c.normalized_text)]
+
+        # E3-B: Suppress sub-phrases — hide shorter phrases that are contiguous
         # token-windows of a higher-ranked (or equal-score, longer) phrase.
         candidates = _suppress_subphrases(candidates)[:limit]
 
