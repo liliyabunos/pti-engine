@@ -104,6 +104,20 @@ _PHRASE_BLOCKLIST: frozenset[str] = frozenset({
 # Includes: intent phrases, category terms, contraction artifacts from
 # normalize_text() apostrophe-stripping, seasonal/temporal phrases, structural n-grams.
 _SIGNAL_NOISE_BLOCKLIST: frozenset[str] = frozenset({
+    # Chanel-specific sliding-window fragments (resolver already knows Bleu de Chanel)
+    "bleu de chanel l", "de chanel l exclusif", "de chanel l",
+    "chanel l exclusif", "chanel l", "l exclusif", "de chanel",
+    "bleu de",
+    # Purchase / CTA phrases
+    "buy this", "buy my", "buy now", "buy it", "buy these",
+    "get this", "get it", "get these", "grab this", "grab it",
+    # Structural filler
+    "these instead", "instead of", "according to", "all time", "all of",
+    "get you", "make you", "this one", "this is", "that is",
+    "me fragrance", "my fragrance",
+    # Intent phrase variants (not caught by single-word guard)
+    "safe blind", "safe buy", "worth it", "worth buying", "worth the",
+    "house of",  # too short — partial of "house of dastan", "house of oud", etc.
     # Contraction artifacts (apostrophe stripped: don't → "don t")
     "don t", "can t", "won t", "isn t", "aren t", "didn t", "haven t",
     "hasn t", "wasn t", "weren t", "couldn t", "wouldn t", "shouldn t",
