@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { fetchDashboard } from "@/lib/api/dashboard";
 import { fetchCatalogCounts } from "@/lib/api/catalog";
 import { fetchTopNotes, fetchTopAccords } from "@/lib/api/notes";
+import { fetchEmerging } from "@/lib/api/emerging";
 import { useUIStore } from "@/lib/stores/ui";
 import { Header } from "@/components/shell/Header";
 import {
@@ -28,6 +29,7 @@ import { KpiStrip } from "@/components/dashboard/KpiStrip";
 import { TopMoversTable } from "@/components/dashboard/TopMoversTable";
 import { SignalFeed } from "@/components/dashboard/SignalFeed";
 import { EntityChartPanel } from "@/components/dashboard/EntityChartPanel";
+import { EmergingPanel } from "@/components/dashboard/EmergingPanel";
 import type { TopMoverRow, NoteRow, AccordRow } from "@/lib/api/types";
 
 // ---------------------------------------------------------------------------
@@ -117,6 +119,13 @@ export default function DashboardPage() {
     queryKey: ["top-accords-dashboard"],
     queryFn: () => fetchTopAccords(20),
     staleTime: 10 * 60_000,
+  });
+
+  const { data: emergingData, isLoading: emergingLoading } = useQuery({
+    queryKey: ["emerging-candidates"],
+    queryFn: () => fetchEmerging({ limit: 15, min_mentions: 3, days: 14 }),
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
   });
 
   // ---------------------------------------------------------------------------
@@ -325,6 +334,37 @@ export default function DashboardPage() {
             )}
           </>
         )}
+
+        {/* ── EMERGING ───────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+            Emerging
+          </span>
+          <div className="h-px flex-1 bg-zinc-800" />
+          <span className="text-[10px] text-zinc-700">
+            Not yet in knowledge base · ranked by recency × frequency
+          </span>
+        </div>
+
+        <TerminalPanel noPad>
+          <div className="p-4 pb-3">
+            <SectionHeader
+              title="Emerging Candidates"
+              subtitle={
+                emergingData
+                  ? `${emergingData.candidates.length} candidates · ${emergingData.total_in_queue.toLocaleString()} in queue`
+                  : "last 14 days · min 3 mentions"
+              }
+            />
+          </div>
+          <div className="px-2 pb-3">
+            <EmergingPanel
+              candidates={emergingData?.candidates ?? []}
+              totalInQueue={emergingData?.total_in_queue ?? 0}
+              isLoading={emergingLoading}
+            />
+          </div>
+        </TerminalPanel>
 
         {/* ── COMPOSITION ────────────────────────────────────────────────── */}
         <div className="flex items-center gap-2 pt-1">

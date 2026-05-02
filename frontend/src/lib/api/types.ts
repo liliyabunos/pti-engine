@@ -481,3 +481,26 @@ export interface AccordDetail {
   top_perfumes: NoteDetailPerfumeRow[];
   related_notes: { note_name: string; co_count: number }[];
 }
+
+export interface EmergingCandidateRow {
+  id: number;
+  display_name: string;
+  raw_name: string;
+  mention_count: number;
+  distinct_sources_count: number;
+  first_seen: string;
+  last_seen: string;
+  days_active: number;
+  confidence_score: number | null;
+  confidence_normalized: number;
+  emerging_score: number;
+  validation_status: string;
+  approved_entity_type: string | null;
+}
+
+export interface EmergingResponse {
+  candidates: EmergingCandidateRow[];
+  total_in_queue: number;
+  as_of: string;
+  filters_applied: Record<string, unknown>;
+}
