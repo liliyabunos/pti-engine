@@ -10976,3 +10976,81 @@ Legitimate signals to preserve:
 - Pipeline (`start_pipeline.sh`, `start_pipeline_evening.sh`) unchanged
 - No ingestion, aggregation, or transcript jobs run as part of this phase
 - `fragrance_candidates` is written by the pipeline; this layer only reads it
+
+---
+
+## Phase E2 — Fragment Filtering + Source Diversity Gate
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `perfume_trend_sdk/api/routes/emerging.py` (backend only)
+- `frontend/src/lib/api/emerging.ts` (type extension only)
+
+### Requires Commit / Push / Deploy
+YES — committed `d095b49`, pushed and deployed
+
+### Expected UI Change
+YES — EmergingPanel shows fewer but higher-quality candidates; empty state when no multi-source candidates exist
+
+### Status
+STATUS: PRODUCTION VERIFIED — 2026-05-02
+
+---
+
+### What was implemented
+
+**Backend — `emerging.py`**
+
+- `_FRAGMENT_BLOCKLIST: frozenset[str]` — 6 entries applied Python-side before `candidates.append()`:
+  `"de chanel"`, `"bleu de"`, `"de nuit"`, `"de marly"`, `"acqua di"`, `"mountain water"`
+- SQL filter added: `AND COALESCE(fc.distinct_sources_count, 1) >= :min_sources`
+- New query param: `min_sources: int = Query(default=2, ge=1)` — analyst override via `?min_sources=1`
+- `min_sources` added to `filters_applied` on all return paths (normal, SQLite fallback, error)
+- `params["min_sources"]` wired into SQL param dict
+
+**Frontend — `emerging.ts`**
+
+- `min_sources?: number` added to `EmergingParams` interface
+
+---
+
+### Production Verification (2026-05-02)
+
+**Default mode (`min_sources=2`, `min_mentions=3`, `days=14`):**
+- `total_in_queue`: 13,252 ✅ (independent of candidate filters — correctly unchanged)
+- `filters_applied`: `{"min_sources": 2, ...}` ✅
+- Candidates: 0 — all current candidates in window have `distinct_sources_count=1` ✅
+- EmergingPanel shows empty state (expected — no multi-source candidates yet) ✅
+
+**Fragment blocklist (`min_sources=1`):**
+- `"De Chanel"` — suppressed ✅ (was rank 1)
+- `"Bleu De"` — suppressed ✅ (was rank 2)
+- `"De Nuit"` — suppressed ✅ (was rank 3)
+- `"De Marly"` — suppressed ✅
+- `"Acqua Di"` — suppressed ✅
+- `"Mountain Water"` — suppressed ✅
+
+**Legitimate signals preserved (at `min_sources=1`):**
+- `"Club De Nuit Intense"` — present ✅ (full phrase, not in blocklist)
+- `"Baccarat Rouge 540 Dupe"` — present ✅
+- `"Creed Silver Mountain Water"` — present ✅ (full phrase, not `"mountain water"` substring)
+- `"Louis Vuitton"` — present ✅
+
+**Override mode:** `?min_sources=1` returns analyst/debug view of all single-source candidates ✅
+
+**No migrations ran** — alembic_version remains `026` ✅
+**No pipeline scripts changed** ✅
+**Build:** TypeScript pass, clean build ✅
+
+---
+
+### Constraints
+
+- Endpoint is **read-only** — no writes, no state changes, no promotion
+- No schema migration
+- Pipeline unchanged
+- Fragment blocklist is Python-side (no SQL tuple binding for safety)
+- `total_in_queue` is always the unfiltered queue count — not affected by `min_sources` or blocklist
