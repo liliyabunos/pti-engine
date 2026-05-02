@@ -60,4 +60,9 @@ echo "[pipeline-evening] Step 3b — Topic extraction + entity link rebuild (Pha
 timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links || \
   echo "[pipeline-evening] WARNING: extract_entity_topics failed — continuing"
 
+# Step 3c: Emerging signals extraction (Phase E3-E) — refresh channel-aware emerging candidates
+echo "[pipeline-evening] Step 3c — Emerging signals extraction (Phase E3-E)"
+timeout 300 python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7 || \
+  echo "[pipeline-evening] WARNING: extract_emerging_signals failed or timed out — continuing"
+
 echo "[pipeline-evening] Complete for date=$TODAY"
