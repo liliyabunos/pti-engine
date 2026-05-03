@@ -125,8 +125,8 @@ WITH channel_stats AS (
         cci.source_account_id                                   AS channel_id,
         MAX(cci.source_account_handle)                          AS handle,
         COUNT(*)                                                AS videos_found,
-        AVG(NULLIF((cci.engagement_json->>'views')::int, 0))    AS avg_views,
-        SUM((cci.engagement_json->>'views')::int)               AS total_views,
+        AVG(NULLIF((cci.engagement_json::jsonb->>'views')::int, 0))    AS avg_views,
+        SUM((cci.engagement_json::jsonb->>'views')::int)               AS total_views,
         MAX(cci.title)                                          AS sample_title,
         MIN(cci.collected_at)                                   AS first_seen,
         MAX(cci.collected_at)                                   AS last_seen,
@@ -149,7 +149,7 @@ WITH channel_stats AS (
       AND yc.channel_id IS NULL            -- anti-join: not already registered
     GROUP BY cci.source_account_id
     HAVING COUNT(*) >= %(min_videos)s
-       AND AVG(NULLIF((cci.engagement_json->>'views')::int, 0)) >= %(min_avg_views)s
+       AND AVG(NULLIF((cci.engagement_json::jsonb->>'views')::int, 0)) >= %(min_avg_views)s
 )
 SELECT *
 FROM channel_stats
