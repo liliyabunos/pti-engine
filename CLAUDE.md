@@ -11345,4 +11345,168 @@ Extended `_V2_NOISE_PHRASES` in `perfume_trend_sdk/api/routes/emerging.py` with 
 - No pipeline script changes
 - No `emerging_signals` table changes
 - No frontend changes
+
+---
+
+## Phase G3-A — Batch Safe Alias Seed (COMPLETED — 2026-05-03)
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`resolver_aliases` table)
+- `data/resolver/pti.db` (local SQLite resolver, synced to production)
+- `scripts/generate_safe_aliases.py` (standalone, idempotent, auto-detects backend)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+INDIRECT — resolver recall improves; more perfume mentions in content resolve instead of going to `fragrance_candidates`
+
+### Status
+STATUS: COMPLETE — PRODUCTION APPLIED
+
+---
+
+### Motivation
+
+Resolver hit rate was ~7.7%. Root cause: 96% of 56,068 perfumes had 0 alias rows in `resolver_aliases`. The sliding-window resolver (max 6 tokens) matches only against `resolver_aliases.normalized_alias_text`. Any entity with no alias row is unreachable regardless of how many times it appears in ingested content — all mentions fall through to `fragrance_candidates` unresolved.
+
+**Before G3-A:**
+- `resolver_aliases` total: 12,904 rows
+- Perfumes with ≥1 alias: ~2,245 (4%)
+- Resolver coverage: ~4% of 56k catalog
+
+**After G3-A:**
+- `resolver_aliases` total: 98,539 rows (production)
+- G3-A rows: 85,635 (match_type=`g3_safe_alias_seed`)
+- Perfumes covered: 50,256 (89.6% of 56k catalog)
+- Cross-entity collisions introduced: 0
+
+---
+
+### Safety Architecture
+
+Three safety guards enforce that no alias causes a false-positive match:
+
+**1. Uniqueness Guard (Tier B only)**
+A perfume-name-only alias (e.g. `"aventus"`) is generated only when `strip_concentration(perfume_name)` maps to exactly one entity_id across the entire KB. If two or more perfumes share the same normalized stripped name, no Tier B alias is generated.
+
+**2. Form Guard (all aliases)**
+An alias must:
+- Have ≥2 tokens (no single-word aliases — prevents `"don"`, `"pink"` class errors)
+- Have ≤8 tokens (no overly long phrases)
+- Not start with a weak preposition/article (`de`, `la`, `le`, `the`, `a`, `an`, `by`, `from`, `for`, `of`, `with`, `and`, `or`)
+- Not end with a weak preposition/article/conjunction
+- Contain ≥1 non-generic token (not all stopwords like `cologne`, `perfume`, `fragrance`)
+- Contain ≥1 token with ≥2 alphabetic characters (no purely numeric aliases)
+
+**3. Collision Guard (all aliases)**
+An alias is rejected if `normalized_alias_text` already exists in `resolver_aliases` for ANY entity_id. Prevents overwriting existing carefully-seeded aliases. In-run dedup (`seen_in_run` set) prevents duplicate emission within a single generation pass.
+
+---
+
+### Two Alias Tiers
+
+**Tier A — Brand + Perfume name (always generated when Form Guard passes):**
+`normalize(brand_name) + " " + normalize(strip_concentration(perfume_name))`
+
+Example:
+- `resolver_fragrance_master`: brand=`"Dior"`, perfume=`"Sauvage Eau de Toilette"`
+- strip_concentration → `"Sauvage"`
+- normalize both → `"dior"`, `"sauvage"`
+- Tier A: `"dior sauvage"` ✅
+
+Tier A aliases are always specific (brand-prefixed) — false positives are near-impossible.
+
+**Tier B — Perfume name only (generated only when Uniqueness Guard passes):**
+`normalize(strip_concentration(perfume_name))`
+
+Example:
+- `"Aventus"` (from Creed Aventus) — Uniqueness Guard: is `"aventus"` the stripped name of exactly 1 perfume? If yes → Tier B generated. If no (e.g. `"Aventus for Her"` also strips to `"aventus"` for a different entity) → skipped.
+
+---
+
+### Script — `scripts/generate_safe_aliases.py`
+
+Standalone, self-contained (no SDK imports). Auto-detects backend:
+- `DATABASE_URL` env set → psycopg2 PostgreSQL
+- Otherwise → sqlite3 to `data/resolver/pti.db`
+
+Flags:
+- `--dry-run` (default) — no DB writes; prints stats + sample
+- `--apply` — writes aliases to DB (idempotent via ON CONFLICT DO NOTHING)
+- `--limit N` — process first N perfumes only
+- `--sample N` — show N sample aliases in dry-run (default 100)
+- `--output-csv FILE` — save all aliases to CSV before writing
+
+Normalization: `_normalize()` and `_strip_concentration()` inlined to exactly match `perfume_trend_sdk/utils/alias_generator.py` — no import dependency.
+
+Idempotent: safe to re-run at any time. ON CONFLICT DO NOTHING means re-run produces 0 new inserts when all aliases already exist.
+
+**Rollback:**
+```sql
+DELETE FROM resolver_aliases WHERE match_type = 'g3_safe_alias_seed';
+```
+
+---
+
+### Dry-Run Results (local)
+
+```
+Total perfumes in KB:        56,068
+Total Tier A candidates:     55,890
+Total Tier B candidates:     38,977
+Form Guard rejections:       8,985
+Uniqueness Guard rejections: 49,208 (Tier B only)
+Collision Guard rejections:  3,029
+In-run duplicates:           0
+---
+Aliases to insert:           85,635
+  Tier A:                    52,658
+  Tier B:                    32,977
+Perfumes covered:            50,256 (89.6%)
+```
+
+---
+
+### Known Limitation — Arabic Brand Names
+
+Brands in `resolver_fragrance_master` with non-ASCII characters (e.g. `"Lattafa / لطافة"`) normalize with Arabic characters preserved: `"lattafa لطافة"`. Generated Tier A aliases include the Arabic: `"lattafa لطافة absherk"` (not `"lattafa absherk"`).
+
+The generated alias is technically correct — it will match if the exact text appears in ingested content. However, most social media mentions use the Latin-only short form `"lattafa absherk"`, which does not match.
+
+Short-form Latin aliases for Arabic-script brands require separate manual seeds (as done in Phase G2 for the `"lattafa"` brand alias). This is a known limitation of G3-A and does not affect brands with Latin-only names.
+
+---
+
+### Verification Results (production)
+
+| Metric | Value |
+|--------|-------|
+| `resolver_aliases` before G3-A | 12,904 |
+| `resolver_aliases` after G3-A | 98,539 |
+| G3-A aliases inserted | 85,635 |
+| `match_type = 'g3_safe_alias_seed'` | 85,635 |
+| Cross-entity collisions (G3-A) | 0 |
+| Pre-existing duplicate normalized keys | 167 (NOT from G3-A — pre-existing from original seed) |
+| Perfumes with ≥1 alias (before) | ~2,245 (4%) |
+| Perfumes with ≥1 alias (after) | ~50,256 (89.6%) |
+
+The 167 pre-existing duplicate `normalized_alias_text` values are from the original exact-match seeding (match_type=`exact`). G3-A Collision Guard correctly skipped all of them. G3-A introduced zero cross-entity collisions.
+
+---
+
+### Safety Constraints (all observed)
+
+- No new `resolver_perfumes` rows created
+- No new `resolver_fragrance_master` rows created
+- No new `resolver_brands` rows created
+- No migrations run
+- No pipeline files modified
+- No scoring changes
+- No signal threshold changes
+- No entity_market changes
+- Script is idempotent (ON CONFLICT DO NOTHING)
 - Filter applied at API response time only
