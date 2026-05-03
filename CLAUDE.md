@@ -11264,19 +11264,83 @@ Applied in endpoint response pipeline before subphrase suppression.
 
 - No auto-promotion: candidates are never written to `resolver_aliases`, `resolver_perfumes`, or `entity_market`
 - No transcript pipeline integration
-- No scheduled extraction (Phase 1C/E3-E pipeline integration pending)
+- No scheduled extraction beyond what is already integrated (E3-E deployed — Step 4c/3c in pipeline scripts)
 - No manual review or approval workflow (read-only from `emerging_signals`)
 - No TikTok source (Research API not approved)
 - No AI classification — extraction is deterministic sliding-window only
 
 ---
 
-### E3-E — Scheduled Extraction Pipeline Integration (PENDING APPROVAL)
+### E3-E — Scheduled Extraction Pipeline Integration
 
-Scope: Add `extract_emerging_signals` to `start_pipeline.sh` as Step 4c (after topic extraction).
-Status: NOT YET APPROVED — requires dedicated phase approval before implementation.
+STATUS: DEPLOYED — CONDITIONAL PRODUCTION PASS (2026-05-02)
 
-Rules when approved:
-- Non-fatal: pipeline continues if extraction fails
+Commit: `aec58e8` — modified `start_pipeline.sh` (Step 4c) and `start_pipeline_evening.sh` (Step 3c) only.
+
+**What was implemented:**
+
+Step 4c added to `start_pipeline.sh` (morning cycle, after Step 4b topic extraction):
+```sh
+# Step 4c: Emerging signals extraction (Phase E3-E) — refresh channel-aware emerging candidates
+echo "[pipeline] Step 4c — Emerging signals extraction (Phase E3-E)"
+timeout 300 python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7 || \
+  echo "[pipeline] WARNING: extract_emerging_signals failed or timed out — continuing"
+```
+
+Step 3c added to `start_pipeline_evening.sh` (evening cycle, after Step 3b topic extraction):
+```sh
+# Step 3c: Emerging signals extraction (Phase E3-E) — refresh channel-aware emerging candidates
+echo "[pipeline-evening] Step 3c — Emerging signals extraction (Phase E3-E)"
+timeout 300 python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7 || \
+  echo "[pipeline-evening] WARNING: extract_emerging_signals failed or timed out — continuing"
+```
+
+**Conditional pass — confirmed:**
+- `sh -n` syntax check: PASS on both scripts
+- Step 4c / Step 3c exist in correct position, non-fatal `||` pattern confirmed
+- `/api/v1/emerging/v2` returns 200, serves real traffic (confirmed in API logs)
+- Dashboard, EmergingPanel v2, notes, accords unaffected
+- No migrations, no resolver changes, no frontend changes
+- `total_in_table: 3945` stable (expected — same 7-day window of channel_poll content)
+
+**Pending — visual Railway UI confirmation:**
+- Railway CLI returns empty output for completed cron job logs — cannot confirm log lines via CLI
+- Required: open Railway dashboard → `pipeline-daily` or `pipeline-evening` service → inspect a completed scheduled run log for the lines:
+  - `[pipeline] Step 4c — Emerging signals extraction (Phase E3-E)`
+  - `[pipeline-evening] Step 3c — Emerging signals extraction (Phase E3-E)`
+- Once either line is visually confirmed, E3-E may be marked fully PRODUCTION VERIFIED
+
+**Rules (active):**
+- Non-fatal: pipeline continues if extraction fails or times out
 - Timeout: 300s
-- No pipeline restructuring beyond adding one step
+- No pipeline restructuring — one step added to each script
+
+---
+
+### E3-F — Emerging Quality Cleanup (PLANNED)
+
+**Status:** PLANNED — not yet approved
+
+**Problem:**
+The following phrases pass the current `min_channels=2` default and E3-C noise guards but are
+not legitimate perfume or brand names. They appear in positions 15–20 of the ranked candidate list:
+
+- `Buy Fragrances`
+- `Smell Like`
+- `Need In`
+- `Under 100`
+- `Every Man Should`
+
+These are multi-channel recommendation/intent fragments from different creator channels.
+They do not end/start with the current `_V2_WEAK_ENDINGS` / `_V2_WEAK_STARTS` tokens,
+and are not in the explicit `_V2_NOISE_PHRASES` blocklist.
+
+**Scope (when approved):**
+- Extend `_V2_NOISE_PHRASES` blocklist in `perfume_trend_sdk/api/routes/emerging.py`
+  with the above phrases (and any additional patterns identified at review time)
+- Update `tests/unit/test_emerging_noise_filter.py` with new test cases
+- No migrations, no DB changes, no pipeline changes, no `emerging_signals` table changes
+- Backend-only: filter applied at API response time, not at extraction time
+
+**Rule:** Do NOT implement E3-F without explicit approval. Do NOT change scoring, thresholds,
+or pipeline scripts as part of E3-F.
