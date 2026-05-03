@@ -11317,30 +11317,32 @@ timeout 300 python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7 
 
 ---
 
-### E3-F — Emerging Quality Cleanup (PLANNED)
+### E3-F — Emerging Quality Cleanup (COMPLETED — 2026-05-03)
 
-**Status:** PLANNED — not yet approved
+**Commit:** `8b31ac8`
 
-**Problem:**
-The following phrases pass the current `min_channels=2` default and E3-C noise guards but are
-not legitimate perfume or brand names. They appear in positions 15–20 of the ranked candidate list:
+**Status:** PRODUCTION DEPLOYED — backend-only, no migrations
 
-- `Buy Fragrances`
-- `Smell Like`
-- `Need In`
-- `Under 100`
-- `Every Man Should`
+**Problem addressed:**
+The following phrases passed the `min_channels=2` default and E3-C noise guards but were
+not legitimate perfume or brand names — multi-channel recommendation/intent fragments:
 
-These are multi-channel recommendation/intent fragments from different creator channels.
-They do not end/start with the current `_V2_WEAK_ENDINGS` / `_V2_WEAK_STARTS` tokens,
-and are not in the explicit `_V2_NOISE_PHRASES` blocklist.
+- `Buy Fragrances`, `Smell Like`, `Need In`, `Under 100`, `Every Man Should`
+- `Fresh Summer Fragrances`, `Hyped Fragrances`, `Niche Fragrance`, `Mother Day Fragrance`
 
-**Scope (when approved):**
-- Extend `_V2_NOISE_PHRASES` blocklist in `perfume_trend_sdk/api/routes/emerging.py`
-  with the above phrases (and any additional patterns identified at review time)
-- Update `tests/unit/test_emerging_noise_filter.py` with new test cases
-- No migrations, no DB changes, no pipeline changes, no `emerging_signals` table changes
-- Backend-only: filter applied at API response time, not at extraction time
+**What was changed:**
 
-**Rule:** Do NOT implement E3-F without explicit approval. Do NOT change scoring, thresholds,
-or pipeline scripts as part of E3-F.
+Extended `_V2_NOISE_PHRASES` in `perfume_trend_sdk/api/routes/emerging.py` with 9 new entries
+(marked `# E3-F:`). Added 9 corresponding test cases to `tests/unit/test_emerging_noise_filter.py`.
+
+**Total noise filter test coverage:** 50 tests (all passing). Valid entity names confirmed unaffected:
+- Jean Paul Gaultier, Givenchy Gentleman Society, Khadlaj Icon
+- Armani Stronger With You, Louis Vuitton, Marc Jacobs Daisy Wild
+
+**Constraints (all observed):**
+- No migrations
+- No DB writes
+- No pipeline script changes
+- No `emerging_signals` table changes
+- No frontend changes
+- Filter applied at API response time only
