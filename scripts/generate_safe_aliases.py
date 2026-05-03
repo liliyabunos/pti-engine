@@ -261,7 +261,7 @@ def _insert_postgres(database_url: str, records: list[AliasRecord]) -> int:
             rec.entity_id,
             rec.match_type,
             rec.confidence,
-            now, now,
+            now,
         )
         for rec in records
     ]
@@ -274,9 +274,9 @@ def _insert_postgres(database_url: str, records: list[AliasRecord]) -> int:
             """
             INSERT INTO resolver_aliases
               (alias_text, normalized_alias_text, entity_type, entity_id,
-               match_type, confidence, created_at, updated_at)
+               match_type, confidence, created_at)
             VALUES %s
-            ON CONFLICT (normalized_alias_text) DO NOTHING
+            ON CONFLICT (normalized_alias_text, entity_type, entity_id) DO NOTHING
             """,
             batch,
             page_size=batch_size,

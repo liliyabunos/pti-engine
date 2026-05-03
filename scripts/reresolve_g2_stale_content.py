@@ -106,6 +106,17 @@ G4_KEYWORDS: list[str] = [
 G4_SEED_CUTOFF_UTC = "2026-04-27 07:00:35"
 G4_RESOLVER_VERSION = "1.3-g4-reresolve"
 
+# ---------------------------------------------------------------------------
+# G3-A: Batch safe alias seed (85,635 aliases, 89.6% perfume coverage)
+# Applied to production 2026-05-03 07:40 UTC (commit 83be948).
+# Since G3-A covers 89.6% of all perfumes, we use keywords=None to
+# re-resolve ALL content items resolved before the cutoff, not just those
+# matching specific keywords.
+# ---------------------------------------------------------------------------
+
+G3A_SEED_CUTOFF_UTC = "2026-05-03 07:40:00"
+G3A_RESOLVER_VERSION = "1.4-g3a-reresolve"
+
 
 BATCH_CONFIGS: dict[str, dict] = {
     "1": {
@@ -125,6 +136,12 @@ BATCH_CONFIGS: dict[str, dict] = {
         "cutoff":           G4_SEED_CUTOFF_UTC,
         "resolver_version": G4_RESOLVER_VERSION,
         "label":            "G4 Batch 1 (baccarat rouge 540 edp / rouge 540 edp / ds durga / by lattafa)",
+    },
+    "g3a": {
+        "keywords":         None,   # None = no keyword filter — re-resolve ALL stale content
+        "cutoff":           G3A_SEED_CUTOFF_UTC,
+        "resolver_version": G3A_RESOLVER_VERSION,
+        "label":            "G3-A batch safe alias seed (85,635 aliases, 89.6% perfume coverage)",
     },
 }
 
@@ -242,29 +259,50 @@ def _build_keyword_clauses(keywords: list[str]) -> tuple[str, list[str]]:
     return clauses, params
 
 
-def load_stale_content(conn, keywords: list[str], cutoff: str) -> list[dict]:
+def load_stale_content(conn, keywords: list[str] | None, cutoff: str) -> list[dict]:
     """
-    Return canonical_content_items rows resolved BEFORE `cutoff`
-    that contain keyword-relevant text.
-    """
-    kw_clauses, kw_params = _build_keyword_clauses(keywords)
+    Return canonical_content_items rows resolved BEFORE `cutoff`.
 
-    sql = f"""
-        SELECT
-            cci.id,
-            cci.source_platform,
-            cci.title,
-            COALESCE(cci.text_content, '') AS text_content,
-            rs.resolved_entities_json,
-            rs.created_at AS resolved_at
-        FROM canonical_content_items cci
-        JOIN resolved_signals rs ON rs.content_item_id = cci.id
-        WHERE
-            rs.created_at < %s
-            AND ({kw_clauses})
-        ORDER BY cci.id
+    If keywords is None (G3-A mode): return ALL content items resolved before
+    the cutoff, regardless of text content — G3-A covers 89.6% of the catalog.
+
+    If keywords is a list: filter to items whose title or text_content matches
+    at least one keyword (ILIKE pattern).
     """
-    params = [cutoff] + kw_params
+    if keywords is None:
+        # No keyword filter — return all stale content
+        sql = """
+            SELECT
+                cci.id,
+                cci.source_platform,
+                cci.title,
+                COALESCE(cci.text_content, '') AS text_content,
+                rs.resolved_entities_json,
+                rs.created_at AS resolved_at
+            FROM canonical_content_items cci
+            JOIN resolved_signals rs ON rs.content_item_id = cci.id
+            WHERE rs.created_at < %s
+            ORDER BY cci.id
+        """
+        params: list = [cutoff]
+    else:
+        kw_clauses, kw_params = _build_keyword_clauses(keywords)
+        sql = f"""
+            SELECT
+                cci.id,
+                cci.source_platform,
+                cci.title,
+                COALESCE(cci.text_content, '') AS text_content,
+                rs.resolved_entities_json,
+                rs.created_at AS resolved_at
+            FROM canonical_content_items cci
+            JOIN resolved_signals rs ON rs.content_item_id = cci.id
+            WHERE
+                rs.created_at < %s
+                AND ({kw_clauses})
+            ORDER BY cci.id
+        """
+        params = [cutoff] + kw_params
 
     cur = conn.cursor()
     cur.execute(sql, params)
@@ -346,8 +384,9 @@ def run(apply: bool, batch: str = "1", cutoff_override: str | None = None) -> No
     label           = cfg["label"]
 
     log.info("Batch %s — %s", batch, label)
-    log.info("Cutoff: %s  |  Keywords: %d  |  resolver_version: %s",
-             cutoff, len(keywords), resolver_ver)
+    kw_desc = "ALL (no keyword filter)" if keywords is None else str(len(keywords))
+    log.info("Cutoff: %s  |  Keywords: %s  |  resolver_version: %s",
+             cutoff, kw_desc, resolver_ver)
 
     conn = _get_conn()
 
@@ -479,7 +518,8 @@ if __name__ == "__main__":
             "Which alias batch to re-resolve against (default: '1'). "
             "'1': original G2 seed (cutoff 2026-04-25 16:59:00). "
             "'3': Al Haramain / Paco Rabanne / YSL Black Opium (cutoff 2026-04-26 02:55:16). "
-            "'g4': G4 Batch 1 EDP shorthands + DS Durga + by Lattafa (cutoff 2026-04-27 07:00:35)."
+            "'g4': G4 Batch 1 EDP shorthands + DS Durga + by Lattafa (cutoff 2026-04-27 07:00:35). "
+            "'g3a': G3-A batch safe alias seed — re-resolves ALL content (no keyword filter, cutoff 2026-05-03 07:40:00)."
         ),
     )
     parser.add_argument(
