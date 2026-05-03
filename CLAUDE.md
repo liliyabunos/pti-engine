@@ -11775,7 +11775,52 @@ YES — script committed; runs manually via `railway run` or local DATABASE_URL
 INDIRECT — new channels enter the polling registry → new content ingested → broader entity coverage
 
 ### Status
-STATUS: COMPLETE — SCRIPT DEPLOYED
+STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-03)
+
+---
+
+### Production Verification Results (2026-05-03)
+
+**Before run:**
+- `youtube_channels` total: 52
+- `g3_auto_discovery` rows: 0
+
+**Dry-run:** 81 qualifying channels found — all real UC... IDs, real handles, real video titles
+
+**Apply + verify:**
+
+| Metric | Value |
+|--------|-------|
+| Candidates found | 81 |
+| Inserted | 81 |
+| Skipped (already existed) | 0 |
+| `youtube_channels` after | **133** |
+| `g3_auto_discovery` rows | **81** |
+| Net new channels | **+81** |
+| Duplicate `channel_id` count | **0** (must be 0) |
+
+**Tier breakdown (g3_auto_discovery):**
+- tier_3: 20 (avg_views ≥5,000 — medium reach)
+- tier_4: 61 (avg_views <5,000 — low reach / new channel)
+- tier_2: 0 (no channel met ≥50,000 avg views threshold)
+
+**Top 5 discovered channels by avg views:**
+
+| Handle | Avg Views | Videos | Entities | Tier |
+|--------|-----------|--------|---------|------|
+| matheus ueta | 45,309 | 2 | 1 | tier_3 |
+| ScentSelectors | 43,668 | 4 | 2 | tier_3 |
+| Theblindnose | 26,914 | 3 | 0 | tier_3 |
+| Frags Talk | 23,186 | 2 | 0 | tier_3 |
+| Nose Blind Fragrance | 21,864 | 3 | 0 | tier_3 |
+
+**Bug fixed during production run:**
+`engagement_json` is stored as `TEXT` in `canonical_content_items` (not JSONB). Added `::jsonb` cast to `->>'views'` expressions (commit `457c229`).
+
+**Rollback:**
+```sql
+DELETE FROM youtube_channels WHERE added_by = 'g3_auto_discovery';
+```
 
 ---
 
