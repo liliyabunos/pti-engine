@@ -77,4 +77,10 @@ timeout 300 python3 -m perfume_trend_sdk.jobs.detect_metadata_gaps || \
 timeout 300 python3 -m perfume_trend_sdk.jobs.run_maintenance --limit 20 || \
   echo "[pipeline] WARNING: run_maintenance failed — continuing"
 
+# Step 5b: YouTube channel auto-discovery (Phase G3-C) — promote new channels from content history
+echo "[pipeline] Step 5b — YouTube channel auto-discovery (Phase G3-C)"
+timeout 180 python3 scripts/discover_youtube_channels.py --apply --limit 100 \
+  --min-avg-views 1000 --min-videos 2 || \
+  echo "[pipeline] WARNING: discover_youtube_channels failed — continuing"
+
 echo "[pipeline] Pipeline complete for date=$TODAY"

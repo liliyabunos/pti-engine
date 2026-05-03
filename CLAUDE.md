@@ -11994,22 +11994,24 @@ LIMIT 25;
 
 ---
 
-### Pipeline Integration (Phase G3-C.1 — NOT YET IMPLEMENTED)
+### Pipeline Integration (Phase G3-C.1 — COMPLETE — 2026-05-03)
 
-Auto-discovery can be added to `start_pipeline.sh` as a non-fatal step to run automatically
-each morning cycle. This requires a separate approval — it is NOT part of G3-C.
-
-When approved, the step would be:
+Auto-discovery integrated into `start_pipeline.sh` as Step 5b (morning cycle only, non-fatal).
 
 ```sh
-# Step 5b: YouTube channel auto-discovery (G3-C)
+# Step 5b: YouTube channel auto-discovery (Phase G3-C)
 timeout 180 python3 scripts/discover_youtube_channels.py --apply --limit 100 \
   --min-avg-views 1000 --min-videos 2 || \
   echo "[pipeline] WARNING: discover_youtube_channels failed — continuing"
 ```
 
-**Rule:** Do NOT add this step to pipeline scripts until at least one manual `--apply` run
-has been verified in production and the channel count / quality distribution is reviewed.
+**Rules:**
+- Morning pipeline only (`start_pipeline.sh`) — evening pipeline unchanged
+- Non-fatal: pipeline continues if step fails or times out
+- Timeout: 180s (fast SQL query + minimal inserts per cycle)
+- Idempotent: `ON CONFLICT (channel_id) DO NOTHING` — safe to run every morning cycle
+- Channels already in registry are always skipped (anti-join + UNIQUE constraint)
+- New channels auto-tiered by avg_views (reach proxy only — confirm quality after first poll)
 
 ---
 
