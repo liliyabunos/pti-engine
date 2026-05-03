@@ -11,10 +11,15 @@ A channel qualifies as a discovery candidate when:
   - avg views >= min_avg_views (default 1000)
   - at least 1 video has at least 1 resolved entity OR resolved_entities_json length >= 1
 
-Quality tier is auto-assigned from avg_views:
-  >= 50,000  → tier_2
-  >=  5,000  → tier_3
-  <   5,000  → tier_4
+Quality tier is auto-assigned from avg_views as a REACH PROXY, not a quality judgement:
+  >= 50,000  → tier_2  (high reach — large audience)
+  >=  5,000  → tier_3  (medium reach)
+  <   5,000  → tier_4  (low reach / new channel)
+
+This reflects estimated audience size at discovery time.
+Actual channel quality (signal accuracy, entity resolution rate) must be confirmed
+separately after polling — upgrade tier manually via manage_channels.py --update-tier
+once resolved mentions and signal quality are observed.
 
 All discovered channels start with:
   status   = 'active'
@@ -90,7 +95,14 @@ def _connect() -> psycopg2.extensions.connection:
 # ---------------------------------------------------------------------------
 
 def _auto_tier(avg_views: float | None) -> str:
-    """Assign quality_tier based on average video views."""
+    """
+    Assign quality_tier based on average video views.
+
+    This is a REACH PROXY, not a quality judgement.
+    tier_2/tier_3/tier_4 here reflects estimated audience size at discovery time.
+    Actual channel quality (resolved entities, signal accuracy) must be confirmed
+    after polling — upgrade manually via manage_channels.py --update-tier.
+    """
     if avg_views is None:
         return _TIER_FALLBACK
     for threshold, tier in _TIER_THRESHOLDS:
@@ -189,9 +201,10 @@ def _insert_channel(
 
     avg_str = f"{float(avg_views):,.0f}" if avg_views else "n/a"
     notes = (
-        f"auto-discovered: {row['videos_found']} vids, avg_views={avg_str}, "
+        f"auto-discovered: {row['videos_found']} vids, avg_views={avg_str} (reach proxy), "
         f"entities_in={row['videos_with_entities']}, "
-        f"first_seen={str(row.get('first_seen', ''))[:10]}"
+        f"first_seen={str(row.get('first_seen', ''))[:10]}. "
+        f"Tier reflects reach only — confirm quality after first poll."
     )
 
     with conn.cursor() as cur:

@@ -11831,13 +11831,19 @@ LIMIT :limit;
 - valid UC... channel_id format
 - NOT already in `youtube_channels`
 
-**Auto-quality tier from avg_views:**
+**Auto-tier from avg_views — REACH PROXY, not quality judgement:**
 
-| avg_views | quality_tier |
-|-----------|-------------|
-| ≥ 50,000 | `tier_2` |
-| ≥ 5,000 | `tier_3` |
-| < 5,000 | `tier_4` |
+| avg_views | quality_tier | Meaning |
+|-----------|-------------|---------|
+| ≥ 50,000 | `tier_2` | High reach — large audience |
+| ≥ 5,000 | `tier_3` | Medium reach |
+| < 5,000 | `tier_4` | Low reach / new channel |
+
+**Important:** auto-assigned tier reflects estimated audience size at discovery time only.
+It does NOT indicate signal quality, entity resolution rate, or content accuracy.
+Actual channel quality must be confirmed after the first poll cycle by reviewing
+resolved entity mentions and signal output. Upgrade tier manually via
+`manage_channels.py --update-tier` when quality is validated.
 
 **Inserted row defaults:**
 - `status = 'active'`
