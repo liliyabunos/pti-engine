@@ -1,4 +1,5 @@
 subreddits:
+  # Core fragrance communities (original)
   - name: fragrance
     priority: high
     region: US
@@ -11,7 +12,39 @@ subreddits:
     priority: medium
     region: US
     active: true
+
+  # Phase G3-R — activated (was inactive)
   - name: Perfumes
+    priority: medium
+    region: US
+    active: true
+
+  # Phase G3-R — new subreddits
+  - name: fragrance_reviews
+    priority: medium
+    region: US
+    active: true
+  - name: malefashionadvice
+    priority: medium
+    region: US
+    active: true
+  - name: fragrance_samples
+    priority: medium
+    region: US
+    active: true
+  - name: indiemakeupandmore
     priority: low
     region: US
-    active: false
+    active: true
+  - name: BeautyAddiction
+    priority: low
+    region: US
+    active: true
+  - name: DIYfragrance
+    priority: low
+    region: US
+    active: true
+  - name: weddingplanning
+    priority: low
+    region: US
+    active: true

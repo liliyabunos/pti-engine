@@ -11613,3 +11613,145 @@ intentionally not in `entity_market` (the aggregator strips suffixes and maps to
 
 **Commits:**
 - `fb1d110` — fix: prevent UniqueViolation on brand name constraint in aggregator
+
+---
+
+## Phase G3-R — Reddit Subreddit Expansion (+7 → 11 total)
+
+### Target Type
+CONFIG_ONLY — single YAML file change only. No schema changes, no migrations, no pipeline script changes, no scoring changes.
+
+### Authoritative Targets
+- `configs/watchlists/reddit_watchlist.yaml` — only file changed
+
+### Requires Commit / Push / Deploy
+YES — YAML is read by `scripts/ingest_reddit.py` at runtime; deploy picks up on next Railway pipeline cycle automatically
+
+### Expected UI Change
+INDIRECT — more Reddit posts → more entity_mentions → broader timeseries + emerging candidates coverage
+
+### Status
+STATUS: COMPLETE — PRODUCTION DEPLOYED
+
+---
+
+### Problem
+
+Reddit ingestion used only 3 active subreddits (r/fragrance, r/FemFragLab, r/Colognes).
+r/Perfumes was already in the file but disabled (`active: false`).
+
+Reddit has no API quota, no API key, no rate limit beyond 1 req/sec. Expanding subreddits
+costs nothing except ~seconds of additional HTTP fetch time per pipeline cycle.
+
+The main growth bottleneck was community coverage — fragrance discourse spreads across many
+communities, not just the 3 core subs. With g3_safe_alias_seed (98k+ aliases) now active,
+a wider Reddit sweep immediately benefits from higher resolver coverage.
+
+---
+
+### Subreddit Expansion
+
+| Subreddit | Priority | Status | Rationale |
+|-----------|----------|--------|-----------|
+| `fragrance` | high | existing | Core community, men's + unisex focus |
+| `FemFragLab` | medium | existing | Female fragrance focus |
+| `Colognes` | medium | existing | Men's cologne focus |
+| `Perfumes` | medium | **activated** (was `active: false`) | Women's complement to FemFragLab |
+| `fragrance_reviews` | medium | **new** | Review-centric posts, high-quality signal from verified users |
+| `malefashionadvice` | medium | **new** | Men's cologne recommendations, mainstream male fragrance discourse |
+| `fragrance_samples` | medium | **new** | Decant/sample market — early demand detection before mainstream |
+| `indiemakeupandmore` | low | **new** | Indie/niche fragrance discovery, early-trend for niche brands |
+| `BeautyAddiction` | low | **new** | Female beauty + fragrance community |
+| `DIYfragrance` | low | **new** | Note-level signal — accords and ingredient mentions |
+| `weddingplanning` | low | **new** | High-intent gifting signal — "fragrance for wedding", "signature scent" |
+
+**Total: 11 active subreddits** (was 3)
+
+---
+
+### Quota / Rate Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Active subreddits | 3 | 11 |
+| Posts per cycle (max at limit=25) | 75 | 275 |
+| HTTP requests per cycle | ~3 | ~11 |
+| Execution time per cycle | ~5s | ~15s |
+| API key required | No | No |
+| Quota units consumed | 0 | 0 |
+
+No quota risk. Reddit public JSON has no daily limits (only polite rate limiting: 1 req/sec).
+
+---
+
+### Expected Signal Coverage Expansion
+
+| New subreddit | Expected topic signals |
+|---------------|----------------------|
+| `fragrance_reviews` | review, longevity/projection, comparison |
+| `malefashionadvice` | men's fragrance, office scent, compliment getter |
+| `fragrance_samples` | sample/decant, blind buy, dupe/alternative |
+| `indiemakeupandmore` | niche fragrance, indie brands, discovery |
+| `BeautyAddiction` | women's fragrance, floral, gift idea |
+| `DIYfragrance` | note mentions (vanilla, oud, musk, etc.), accords |
+| `weddingplanning` | gift idea, signature scent, occasion-based |
+
+All 7 new subreddits feed into:
+- `entity_mentions` (via resolver with g3_safe_alias_seed)
+- `fragrance_candidates` (unresolved → discovery loop)
+- `entity_topic_links` (via extract_entity_topics pipeline step)
+- `emerging_signals` (via extract_emerging_signals Step 3c/4c)
+
+---
+
+### File Changed
+
+`configs/watchlists/reddit_watchlist.yaml`:
+- Activated: r/Perfumes (`active: false` → `active: true`, priority: medium)
+- Added 7 new entries with `active: true`
+- Section comments added for readability
+
+---
+
+### Verification Plan
+
+After first scheduled pipeline cycle following deploy:
+
+```sql
+-- Reddit items per subreddit per day
+SELECT
+  cci.media_metadata->>'subreddit' AS subreddit,
+  DATE(cci.collected_at) AS day,
+  COUNT(*) AS posts
+FROM canonical_content_items cci
+WHERE cci.source_platform = 'reddit'
+  AND DATE(cci.collected_at) >= CURRENT_DATE - INTERVAL '2 days'
+GROUP BY 1, 2
+ORDER BY 2 DESC, 3 DESC;
+
+-- New subreddits must appear in results
+-- Expected: 11 distinct subreddit values
+SELECT DISTINCT cci.media_metadata->>'subreddit' AS subreddit
+FROM canonical_content_items cci
+WHERE cci.source_platform = 'reddit'
+ORDER BY 1;
+```
+
+Pipeline log checks:
+- `[ingest_reddit] subreddits = ['fragrance', 'FemFragLab', 'Colognes', 'Perfumes', ...]` — 11 subs listed
+- `fetch errors: 0` — all 11 subreddits returned valid JSON
+- `posts fetched: N` where N approaches 275 (11 × 25)
+- No CRITICAL log lines
+
+---
+
+### Non-Goals (strictly observed)
+
+- No Alembic migrations
+- No schema changes
+- No scoring weight changes
+- No signal threshold changes
+- No pipeline script changes (`start_pipeline.sh`, `start_pipeline_evening.sh` unchanged)
+- No `entity_market` changes
+- No resolver_aliases changes
+- No promotion of new entities
