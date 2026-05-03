@@ -195,6 +195,9 @@ def _upsert_brand(db: Session, canonical_name: str) -> Optional[Brand]:
     slug = _slugify(canonical_name)
     brand = db.query(Brand).filter_by(slug=slug).first()
     if brand is None:
+        # Also check by name — the unique constraint is on name, not slug
+        brand = db.query(Brand).filter(Brand.name == canonical_name).first()
+    if brand is None:
         ticker = generate_ticker(canonical_name)[:5]
         if db.query(Brand).filter_by(ticker=ticker).first() is not None:
             ticker = ticker[:4] + "X"
