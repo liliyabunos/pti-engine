@@ -11510,3 +11510,106 @@ The 167 pre-existing duplicate `normalized_alias_text` values are from the origi
 - No entity_market changes
 - Script is idempotent (ON CONFLICT DO NOTHING)
 - Filter applied at API response time only
+
+---
+
+### G3-A Historical Re-aggregation + Signal Detection (COMPLETED — 2026-05-03)
+
+After G3-A aliases were applied, historical re-aggregation and signal detection were run
+for all 34 dates from 2026-03-30 through 2026-05-02 to surface newly-resolvable entities
+in the market timeseries.
+
+**`_upsert_brand` fix (commit `fb1d110`):**
+
+During re-aggregation, a `UniqueViolation` on the `uq_brand_name` constraint (Calvin Klein)
+was discovered and fixed. `_upsert_brand` only looked up by slug — but the UNIQUE constraint
+is on `name`, not `slug`. When two dates ran concurrently, the second date's INSERT hit the
+constraint. Fix: added secondary name-based lookup before INSERT:
+
+```python
+def _upsert_brand(db, canonical_name):
+    slug = _slugify(canonical_name)
+    brand = db.query(Brand).filter_by(slug=slug).first()
+    if brand is None:
+        # Also check by name — the unique constraint is on name, not slug
+        brand = db.query(Brand).filter(Brand.name == canonical_name).first()
+    if brand is None:
+        ...INSERT...
+```
+
+**Rule:** Always run historical re-aggregation dates sequentially, not concurrently, to
+avoid DeadlockDetected and IntegrityError from concurrent entity_market INSERTs.
+
+---
+
+### Production Verification — Final State (2026-05-03)
+
+| Metric | Before G3-A | After G3-A + backfill |
+|--------|------------|----------------------|
+| `resolver_aliases` | 12,904 | **98,531** |
+| `g3_safe_alias_seed` rows | 0 | **85,629** |
+| `entity_mentions` | 1,135 | **3,942** |
+| `entity_market` rows | ~330 | **1,704** |
+| `entity_timeseries_daily` rows | ~5,000 | **11,013** |
+| Active entities (latest date) | ~148 | **148** (May 2) |
+| Total signals | ~1,051 | **3,286** |
+
+**Signal type breakdown (all 34 dates):**
+
+| Type | Count |
+|------|-------|
+| new_entry | 1,713 |
+| acceleration_spike | 926 |
+| breakout | 558 |
+| reversal | 89 |
+| **Total** | **3,286** |
+
+**Per-date summary (Mar 30 – May 2):**
+
+| Date | Active Entities | Total Mentions | Signals |
+|------|----------------|----------------|---------|
+| 2026-05-02 | 38 | 97.2 | 20 |
+| 2026-05-01 | 270 | 498.8 | 135 |
+| 2026-04-30 | 301 | 657.6 | 157 |
+| 2026-04-29 | 343 | 766.8 | 206 |
+| 2026-04-28 | 295 | 637.8 | 128 |
+| 2026-04-27 | 230 | 491.8 | 108 |
+| 2026-04-26 | 323 | 721.6 | 160 |
+| 2026-04-25 | 291 | 641.2 | 204 |
+| 2026-04-24 | 186 | 477.6 | 95 |
+| 2026-04-23 | 228 | 439.6 | 110 |
+| 2026-04-22 | 198 | 415.4 | 116 |
+| 2026-04-21 | 141 | 280.4 | 58 |
+| 2026-04-20 | 202 | 421.8 | 78 |
+| 2026-04-19 | 289 | 604.8 | 170 |
+| 2026-04-18 | 147 | 356.8 | 98 |
+| 2026-04-17 | 374 | 712.2 | 250 |
+| 2026-04-16 | 98 | 258.2 | 51 |
+| 2026-04-15 | 117 | 279.6 | 90 |
+| 2026-04-14 | 128 | 256.8 | 61 |
+| 2026-04-13 | 253 | 417.6 | 181 |
+| 2026-04-12 | 110 | 158.2 | 51 |
+| 2026-04-11 | 99 | 168.0 | 55 |
+| 2026-04-10 | 115 | 244.8 | 84 |
+| 2026-04-09 | 92 | 188.4 | 55 |
+| 2026-04-08 | 106 | 174.0 | 69 |
+| 2026-04-07 | 112 | 177.6 | 77 |
+| 2026-04-06 | 80 | 122.4 | 42 |
+| 2026-04-05 | 74 | 115.2 | 54 |
+| 2026-04-04 | 96 | 139.2 | 59 |
+| 2026-04-03 | 101 | 148.8 | 82 |
+| 2026-04-02 | 47 | 63.6 | 42 |
+| 2026-04-01 | 67 | 80.4 | 63 |
+| 2026-03-31 | 4 | 4.8 | 4 |
+| 2026-03-30 | 2 | 2.4 | 2 |
+
+All 34 dates: exit code 0, no errors, no duplicate signals. Signal detection is idempotent —
+stale signals cleared before re-detecting on each run.
+
+**Unmapped concentration-variant warnings** (EDP/EDT suffix entities logged as `unmapped_entity`
+— e.g. "Dior Sauvage Eau de Parfum", "Creed Aventus Eau de Parfum") are expected and safe.
+These are resolver lookups returning concentration-suffixed canonical names that are
+intentionally not in `entity_market` (the aggregator strips suffixes and maps to base entities).
+
+**Commits:**
+- `fb1d110` — fix: prevent UniqueViolation on brand name constraint in aggregator
