@@ -370,6 +370,7 @@ _V2_WEAK_STARTS: frozenset[str] = frozenset({
 # Explicit full-phrase blocklist for patterns not caught by weak-ending/starting
 # guards (e.g. parallel overlapping windows that don't start/end on weak tokens).
 _V2_NOISE_PHRASES: frozenset[str] = frozenset({
+    # Review / content-type fragments
     "game of",
     "minute review",
     "full review",
@@ -379,9 +380,20 @@ _V2_NOISE_PHRASES: frozenset[str] = frozenset({
     "perfume review",
     "top fragrances",
     "best fragrances",
-    "wild eau so extra",        # parallel overlap: "marc jacobs daisy wild" vs "wild eau so extra"
-    "daisy wild eau so",        # parallel overlap
-    "jacobs daisy wild eau",    # parallel overlap
+    # Parallel sliding-window overlaps from "Marc Jacobs Daisy Wild Eau So Extra"
+    "wild eau so extra",
+    "daisy wild eau so",
+    "jacobs daisy wild eau",
+    # E3-F: generic intent / recommendation phrases (multi-channel but not entity names)
+    "buy fragrances",
+    "smell like",
+    "need in",
+    "under 100",
+    "every man should",
+    "fresh summer fragrances",
+    "hyped fragrances",
+    "niche fragrance",
+    "mother day fragrance",
 })
 
 

@@ -57,6 +57,34 @@ class TestIsNoisePhraseNoiseCases:
     def test_jacobs_daisy_wild_eau(self):
         assert _is_noise_phrase("jacobs daisy wild eau") is True
 
+    # E3-F: generic intent / recommendation phrases
+    def test_buy_fragrances(self):
+        assert _is_noise_phrase("buy fragrances") is True
+
+    def test_smell_like(self):
+        assert _is_noise_phrase("smell like") is True
+
+    def test_need_in(self):
+        assert _is_noise_phrase("need in") is True
+
+    def test_under_100(self):
+        assert _is_noise_phrase("under 100") is True
+
+    def test_every_man_should(self):
+        assert _is_noise_phrase("every man should") is True
+
+    def test_fresh_summer_fragrances(self):
+        assert _is_noise_phrase("fresh summer fragrances") is True
+
+    def test_hyped_fragrances(self):
+        assert _is_noise_phrase("hyped fragrances") is True
+
+    def test_niche_fragrance(self):
+        assert _is_noise_phrase("niche fragrance") is True
+
+    def test_mother_day_fragrance(self):
+        assert _is_noise_phrase("mother day fragrance") is True
+
     # Weak-ending guard — last token in _V2_WEAK_ENDINGS
     def test_ends_with_eau(self):
         assert _is_noise_phrase("marc jacobs daisy wild eau") is True
