@@ -11755,3 +11755,219 @@ Pipeline log checks:
 - No `entity_market` changes
 - No resolver_aliases changes
 - No promotion of new entities
+
+---
+
+## Phase G3-C — YouTube Channel Auto-Discovery
+
+### Target Type
+PRODUCTION_TARGETED — inserts rows into existing `youtube_channels` table (migration 023). No schema changes, no migrations.
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `youtube_channels` table
+- `scripts/discover_youtube_channels.py`
+
+### Requires Commit / Push / Deploy
+YES — script committed; runs manually via `railway run` or local DATABASE_URL
+
+### Expected UI Change
+INDIRECT — new channels enter the polling registry → new content ingested → broader entity coverage
+
+### Status
+STATUS: COMPLETE — SCRIPT DEPLOYED
+
+---
+
+### Motivation
+
+Channel-first polling costs ~1 YouTube API unit per page vs 100 units per search query (100× cheaper).
+Current registry: 51 channels. Target: 200+.
+
+Every ingest cycle accumulates YouTube videos with real `source_account_id` (UC... channel IDs)
+in `canonical_content_items`. Many of these channels are not yet in `youtube_channels` — they were
+discovered via search queries but never explicitly registered for polling. Auto-discovery
+systematically promotes these channels into the polling registry based on quality signals.
+
+---
+
+### Algorithm
+
+**Discovery query (production-ready SQL):**
+
+```sql
+WITH channel_stats AS (
+    SELECT
+        cci.source_account_id                                   AS channel_id,
+        MAX(cci.source_account_handle)                          AS handle,
+        COUNT(*)                                                AS videos_found,
+        AVG(NULLIF((cci.engagement_json->>'views')::int, 0))    AS avg_views,
+        SUM((cci.engagement_json->>'views')::int)               AS total_views,
+        MAX(cci.title)                                          AS sample_title,
+        MIN(cci.collected_at)                                   AS first_seen,
+        MAX(cci.collected_at)                                   AS last_seen,
+        SUM(CASE WHEN rs.resolved_entities_json IS NOT NULL
+                  AND rs.resolved_entities_json <> '[]'
+                 THEN 1 ELSE 0 END)                             AS videos_with_entities
+    FROM canonical_content_items cci
+    LEFT JOIN youtube_channels yc ON yc.channel_id = cci.source_account_id
+    LEFT JOIN resolved_signals rs ON rs.content_item_id = cci.id
+    WHERE cci.source_platform = 'youtube'
+      AND cci.source_account_id IS NOT NULL
+      AND cci.source_account_id ~ '^UC[a-zA-Z0-9_\-]{22}$'
+      AND yc.channel_id IS NULL            -- anti-join: not already registered
+    GROUP BY cci.source_account_id
+    HAVING COUNT(*) >= 2                   -- at least 2 videos
+       AND AVG(NULLIF((cci.engagement_json->>'views')::int, 0)) >= 1000
+)
+SELECT * FROM channel_stats
+ORDER BY avg_views DESC NULLS LAST, videos_found DESC
+LIMIT :limit;
+```
+
+**Qualification criteria (defaults):**
+- `videos_found >= 2` — prevents single-video noise
+- `avg_views >= 1,000` — filters out dead/bot channels
+- valid UC... channel_id format
+- NOT already in `youtube_channels`
+
+**Auto-quality tier from avg_views:**
+
+| avg_views | quality_tier |
+|-----------|-------------|
+| ≥ 50,000 | `tier_2` |
+| ≥ 5,000 | `tier_3` |
+| < 5,000 | `tier_4` |
+
+**Inserted row defaults:**
+- `status = 'active'`
+- `category = 'unknown'`
+- `priority = 'medium'`
+- `added_by = 'g3_auto_discovery'` — rollback tag
+
+---
+
+### Safety Guards
+
+1. **Anti-join** — `LEFT JOIN youtube_channels WHERE yc.channel_id IS NULL` — zero duplicates possible at query level.
+2. **`ON CONFLICT (channel_id) DO NOTHING`** — database-level idempotency.
+3. **Valid channel ID regex** — `^UC[a-zA-Z0-9_\-]{22}$` — rejects placeholder/synthetic IDs.
+4. **View threshold** — min 1,000 avg views — rejects private/dead channels.
+5. **Video count threshold** — min 2 videos — rejects single-video noise.
+6. **Dry-run default** — `--apply` flag required for writes; dry-run prints full candidate table.
+7. **Rollback one-liner** — `DELETE FROM youtube_channels WHERE added_by = 'g3_auto_discovery';`
+
+---
+
+### Script — `scripts/discover_youtube_channels.py`
+
+Standalone, psycopg2 only, no SDK imports.
+
+**CLI flags:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--apply` | off | Write to DB (default: dry-run) |
+| `--limit` | 500 | Max candidates per run |
+| `--min-videos` | 2 | Min video count per channel |
+| `--min-avg-views` | 1,000 | Min average views per video |
+| `--verify` | off | Print verification stats after apply |
+
+**Usage:**
+
+```bash
+# Dry-run — preview candidates (no writes)
+DATABASE_URL=<prod-url> python3 scripts/discover_youtube_channels.py
+
+# Apply — insert qualifying channels
+DATABASE_URL=<prod-url> python3 scripts/discover_youtube_channels.py --apply --verify
+
+# Bounded run — top 50 by avg_views
+DATABASE_URL=<prod-url> python3 scripts/discover_youtube_channels.py --apply --limit 50
+
+# Tighter quality gate
+DATABASE_URL=<prod-url> python3 scripts/discover_youtube_channels.py --min-avg-views 5000 --apply
+
+# On Railway
+railway run --service pipeline-daily \
+  python3 scripts/discover_youtube_channels.py --dry-run
+railway run --service pipeline-daily \
+  python3 scripts/discover_youtube_channels.py --apply --verify
+```
+
+**Rollback:**
+```sql
+DELETE FROM youtube_channels WHERE added_by = 'g3_auto_discovery';
+```
+
+---
+
+### Verification Plan
+
+After `--apply --verify`:
+
+1. `youtube_channels total rows` — must increase vs before
+2. `g3_auto_discovery rows` — equals inserted count
+3. `Duplicate channel_ids` — must be 0
+4. Tier breakdown table — tier_2/tier_3/tier_4 distribution
+5. Sample 25 most recent discovered channels
+
+**SQL verification (manual):**
+
+```sql
+-- Total and g3 counts
+SELECT
+    COUNT(*) AS total,
+    SUM(CASE WHEN added_by = 'g3_auto_discovery' THEN 1 ELSE 0 END) AS g3_auto
+FROM youtube_channels;
+
+-- Tier breakdown for discovered
+SELECT quality_tier, COUNT(*) FROM youtube_channels
+WHERE added_by = 'g3_auto_discovery'
+GROUP BY quality_tier ORDER BY quality_tier;
+
+-- Duplicate check — must return 0
+SELECT COUNT(*) FROM (
+    SELECT channel_id FROM youtube_channels
+    GROUP BY channel_id HAVING COUNT(*) > 1
+) x;
+
+-- After next pipeline cycle: verify new channels being polled
+SELECT yc.channel_id, yc.title, yc.quality_tier, yc.last_polled_at, yc.last_video_count
+FROM youtube_channels yc
+WHERE yc.added_by = 'g3_auto_discovery'
+  AND yc.last_polled_at IS NOT NULL
+ORDER BY yc.last_polled_at DESC
+LIMIT 25;
+```
+
+---
+
+### Pipeline Integration (Phase G3-C.1 — NOT YET IMPLEMENTED)
+
+Auto-discovery can be added to `start_pipeline.sh` as a non-fatal step to run automatically
+each morning cycle. This requires a separate approval — it is NOT part of G3-C.
+
+When approved, the step would be:
+
+```sh
+# Step 5b: YouTube channel auto-discovery (G3-C)
+timeout 180 python3 scripts/discover_youtube_channels.py --apply --limit 100 \
+  --min-avg-views 1000 --min-videos 2 || \
+  echo "[pipeline] WARNING: discover_youtube_channels failed — continuing"
+```
+
+**Rule:** Do NOT add this step to pipeline scripts until at least one manual `--apply` run
+has been verified in production and the channel count / quality distribution is reviewed.
+
+---
+
+### Non-Goals (G3-C)
+
+- No migrations
+- No schema changes
+- No pipeline integration (G3-C is standalone only)
+- No manual channel list insertion — all channels come from real `canonical_content_items` data
+- No editorial tier assignment — auto-tier only (manual upgrade via `manage_channels.py --update-tier`)
+- No handle validation via YouTube API — handle stored as-is from `source_account_handle`
+- No subscriber count fetching — only what's available in local DB
