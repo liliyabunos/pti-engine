@@ -12013,6 +12013,41 @@ timeout 180 python3 scripts/discover_youtube_channels.py --apply --limit 100 \
 - Channels already in registry are always skipped (anti-join + UNIQUE constraint)
 - New channels auto-tiered by avg_views (reach proxy only — confirm quality after first poll)
 
+### Continuous Channel Discovery Loop
+
+G3-C and G3-C.1 together form a self-reinforcing growth loop. Every pipeline cycle
+expands its own channel coverage automatically:
+
+```
+YouTube search ingestion (Step 1)
+  ↓ writes canonical_content_items with source_account_id = UC... channel ID
+discover_youtube_channels.py (Step 5b)
+  ↓ anti-joins canonical_content_items against youtube_channels
+  ↓ promotes qualifying channels (avg_views ≥ 1,000, videos ≥ 2) into youtube_channels
+  ↓ ON CONFLICT DO NOTHING — idempotent, safe every morning
+youtube_channels registry (persistent)
+  ↓ grows with every morning run as new channels appear in search-ingested content
+ingest_youtube_channels.py (Step 1a)
+  ↓ polls registered channels via playlistItems.list (1 unit/page vs 100 units/search)
+  ↓ adaptive gating: due channels only (next_poll_after <= NOW())
+more canonical_content_items (channel_poll ingestion_method)
+  ↓ broader entity coverage, more resolved signals
+aggregate + detect signals (Steps 2–3)
+  ↓ more entities, more timeseries rows, more market intelligence
+```
+
+**Key properties of this loop:**
+- **Self-seeding**: search-ingested content (Step 1) automatically feeds the discovery input
+- **Zero extra quota for discovery**: anti-join runs against local DB, no API calls
+- **Channel polling is cheaper than search**: 1 unit/page vs 100 units/search call
+- **No cap on registry size**: the loop naturally converges as channels are promoted and polled
+- **Automatic quality gating**: only channels seen in real content with real views enter
+- **Daily cap**: `--limit 100` per morning cycle prevents unbounded growth spikes
+
+**Invariant**: a channel that appears in `canonical_content_items` via search will,
+within one morning pipeline cycle, be promoted to `youtube_channels` and begin
+receiving dedicated channel polls in subsequent cycles.
+
 ---
 
 ### Non-Goals (G3-C)
