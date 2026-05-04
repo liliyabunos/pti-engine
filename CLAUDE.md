@@ -12059,3 +12059,155 @@ receiving dedicated channel polls in subsequent cycles.
 - No editorial tier assignment — auto-tier only (manual upgrade via `manage_channels.py --update-tier`)
 - No handle validation via YouTube API — handle stored as-is from `source_account_handle`
 - No subscriber count fetching — only what's available in local DB
+
+---
+
+## Phase G4 Batch 2 — Arabic/ME Brand Alias Seed + New Entity Creation
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`resolver_perfumes`, `resolver_fragrance_master`, `resolver_brands`, `resolver_aliases`)
+- `entity_market`, `entity_timeseries_daily`, `signals` (via historical re-aggregation)
+
+### Requires Commit / Push / Deploy
+YES — commits `2deaa18` (seed script + entities) + `51e234c` (savepoint fix)
+
+### Expected UI Change
+INDIRECT — 11 new perfume entities appear in timeseries, signals, and dashboard
+
+### Status
+STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-04)
+
+---
+
+### What was implemented
+
+**New brand: Maison Alhambra** (resolver_brands.id=6411)
+- Added to `resolver_brands` via `seed_g4_batch2_aliases.py`
+
+**11 new perfume entities (resolver_perfumes ids 113600–113610):**
+
+| id | canonical_name | brand_id | brand |
+|----|---------------|----------|-------|
+| 113600 | Afnan Supremacy | 628 | Afnan Perfumes |
+| 113601 | Afnan 9pm | 628 | Afnan Perfumes |
+| 113602 | Afnan Supremacy in Heaven | 628 | Afnan Perfumes |
+| 113603 | Khadlaj Icon | (new) | Khadlaj |
+| 113604 | Khadlaj Island | (new) | Khadlaj |
+| 113605 | Lattafa Dynasty | 9 | Lattafa |
+| 113606 | Lattafa Asad | 9 | Lattafa |
+| 113607 | Rasasi Fattan | 296 | Rasasi |
+| 113608 | Rasasi Daarej | 296 | Rasasi |
+| 113609 | Armaf Odyssey | 1467 | Armaf |
+| 113610 | Maison Alhambra Jean Lowe | 6411 | Maison Alhambra |
+
+**23 aliases added** (match_type=`g4_batch2_seed`, confidence=0.90):
+
+Coverage includes: `afnan supremacy`, `supremacy noir`, `afnan 9pm`, `9pm perfume`,
+`khadlaj icon`, `khadlaj island`, `lattafa dynasty`, `lattafa asad`, `asad perfume`,
+`rasasi fattan`, `rasasi daarej`, `fattan`, `daarej`, `armaf odyssey`, `odyssey armaf`,
+`maison alhambra`, `maison alhambra jean lowe`, `jean lowe`, `alhambra jean lowe`, etc.
+
+**Script:** `scripts/seed_g4_batch2_aliases.py` — standalone psycopg2, idempotent, `--apply` flag required.
+
+---
+
+### G4 Batch 2 Re-resolution
+
+**Script:** `scripts/reresolve_g2_stale_content.py` extended with `--batch g4b2` support.
+
+- Stale cutoff: timestamp of G4B2 alias apply
+- Keywords: 30+ G4B2-specific terms (afnan, 9pm, khadlaj, lattafa dynasty, rasasi fattan, maison alhambra, etc.)
+- Items checked: 301
+- Items gaining new entities: ~240
+- Total new entity links written: 1,141
+- Tags: `resolver_version='1.4-g4b2-reresolve'`
+
+---
+
+### Historical Aggregation + Signal Detection Backfill
+
+Re-aggregated and signal-detected for all affected `published_at` dates (2026-04-04 through 2026-05-04)
+sequentially to avoid concurrent INSERT conflicts.
+
+**Key constraint:** Dates must be run **sequentially** — concurrent aggregation runs on the
+same date can produce `UniqueViolation` on `entity_market` or `entity_timeseries_daily`.
+
+**Aggregator savepoint fix (commit `51e234c`):**
+
+During re-aggregation, `IntegrityError` on `uq_entity_market_entity_id` UNIQUE constraint
+was discovered (e.g. "Pink Boa", "Blu Mare"). Root cause: two overlapping aggregation calls
+for the same date, or prior run committed a row that the current session's filter missed.
+
+Fix: `_upsert_entity_market` now uses SQLAlchemy nested transaction (savepoint):
+
+```python
+try:
+    sp = db.begin_nested()
+    em = EntityMarket(...)
+    db.add(em)
+    sp.commit()
+except IntegrityError:
+    sp.rollback()
+    em = db.query(EntityMarket).filter_by(entity_id=canonical_name).first()
+```
+
+This allows recovery from the IntegrityError without invalidating the outer session.
+The `elif` → `if` change for `brand_name` backfill ensures the recovered `em` row
+also gets its `brand_name` populated.
+
+---
+
+### Production Verification Results (2026-05-04)
+
+| Entity | entity_market | brand_name | Latest score | Status |
+|--------|--------------|------------|-------------|--------|
+| Afnan Supremacy | ✅ | Afnan Perfumes | 31.71 (rising) | VERIFIED |
+| Afnan 9pm | ✅ | Afnan Perfumes | 32.03 (rising) | VERIFIED |
+| Afnan Supremacy in Heaven | ✅ | Afnan Perfumes | 31.71 (rising) | VERIFIED |
+| Khadlaj Icon | ✅ | Khadlaj | 40.37 (breakout) | VERIFIED |
+| Khadlaj Island | ✅ | Khadlaj | 32.58 (rising) | VERIFIED |
+| Lattafa Dynasty | ✅ | Lattafa | 31.72 (rising) | VERIFIED |
+| Lattafa Asad | ✅ | Lattafa | 31.56 (rising) | VERIFIED |
+| Rasasi Fattan | ✅ | Rasasi | 40.06 (breakout) | VERIFIED |
+| Rasasi Daarej | ✅ | Rasasi | 32.82 (rising) | VERIFIED |
+| Armaf Odyssey | ✅ | Armaf | 39.93 (breakout) | VERIFIED |
+| Maison Alhambra Jean Lowe | ✅ | Maison Alhambra | 31.64 (rising) | VERIFIED |
+
+- `entity_market` rows: **11/11** ✅
+- `g4_batch2_seed` aliases: **23** ✅
+- `g4_batch2_seed` FM rows: **11** ✅
+- Timeseries rows with mention_count > 0: **107 across all 11 entities** ✅
+- Brand names correctly populated (no truncation): ✅
+
+---
+
+### Rollback
+
+```sql
+-- Aliases only
+DELETE FROM resolver_aliases WHERE match_type = 'g4_batch2_seed';
+
+-- Full rollback (FK order)
+DELETE FROM resolver_aliases WHERE match_type = 'g4_batch2_seed';
+DELETE FROM resolver_perfumes
+  WHERE id IN (
+    SELECT perfume_id FROM resolver_fragrance_master
+    WHERE source = 'g4_batch2_seed' AND perfume_id IS NOT NULL
+  );
+DELETE FROM resolver_fragrance_master WHERE source = 'g4_batch2_seed';
+DELETE FROM resolver_brands WHERE id = 6411;  -- Maison Alhambra only if no other content
+```
+
+---
+
+### Safety Constraints (all observed)
+
+- No Alembic migrations
+- No schema changes beyond existing tables
+- No scoring weight changes
+- No signal threshold changes
+- No pipeline script changes (backfill was manual, not scheduled)
+- Script is idempotent (ON CONFLICT DO NOTHING)
