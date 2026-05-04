@@ -117,6 +117,33 @@ G4_RESOLVER_VERSION = "1.3-g4-reresolve"
 G3A_SEED_CUTOFF_UTC = "2026-05-03 07:40:00"
 G3A_RESOLVER_VERSION = "1.4-g3a-reresolve"
 
+# ---------------------------------------------------------------------------
+# G4 Batch 2 — Arabic/ME brand Latin-only alias seed + 11 new entities
+# Applied 2026-05-04 ~10:13 UTC.
+# New entities: Afnan Supremacy, Afnan 9pm, Afnan Supremacy in Heaven,
+#   Khadlaj Icon, Khadlaj Island, Lattafa Dynasty, Lattafa Asad,
+#   Rasasi Fattan, Rasasi Daarej, Armaf Odyssey, Maison Alhambra Jean Lowe.
+# New brand aliases: "afnan" → 628, "khadlaj" → 789.
+# New brand: Maison Alhambra (id=6411).
+# ---------------------------------------------------------------------------
+
+G4B2_KEYWORDS: list[str] = [
+    "afnan",
+    "khadlaj",
+    "maison alhambra",
+    "jean lowe",
+    "supremacy",
+    "9pm",
+    "dynasty",
+    "asad",
+    "fattan",
+    "daarej",
+    "armaf odyssey",
+    "odyssey",
+]
+G4B2_CUTOFF_UTC = "2026-05-04 10:13:00"
+G4B2_RESOLVER_VERSION = "1.5-g4b2-reresolve"
+
 
 BATCH_CONFIGS: dict[str, dict] = {
     "1": {
@@ -142,6 +169,12 @@ BATCH_CONFIGS: dict[str, dict] = {
         "cutoff":           G3A_SEED_CUTOFF_UTC,
         "resolver_version": G3A_RESOLVER_VERSION,
         "label":            "G3-A batch safe alias seed (85,635 aliases, 89.6% perfume coverage)",
+    },
+    "g4b2": {
+        "keywords":         G4B2_KEYWORDS,
+        "cutoff":           G4B2_CUTOFF_UTC,
+        "resolver_version": G4B2_RESOLVER_VERSION,
+        "label":            "G4 Batch 2 (afnan/khadlaj brand aliases + 11 Arabic/ME entities + Maison Alhambra)",
     },
 }
 
@@ -519,7 +552,8 @@ if __name__ == "__main__":
             "'1': original G2 seed (cutoff 2026-04-25 16:59:00). "
             "'3': Al Haramain / Paco Rabanne / YSL Black Opium (cutoff 2026-04-26 02:55:16). "
             "'g4': G4 Batch 1 EDP shorthands + DS Durga + by Lattafa (cutoff 2026-04-27 07:00:35). "
-            "'g3a': G3-A batch safe alias seed — re-resolves ALL content (no keyword filter, cutoff 2026-05-03 07:40:00)."
+            "'g3a': G3-A batch safe alias seed — re-resolves ALL content (no keyword filter, cutoff 2026-05-03 07:40:00). "
+            "'g4b2': G4 Batch 2 — Arabic/ME brand aliases + 11 new entities (cutoff 2026-05-04 10:13:00)."
         ),
     )
     parser.add_argument(
