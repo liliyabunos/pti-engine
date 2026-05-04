@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from perfume_trend_sdk.analysis.market_signals.aggregator import (
@@ -175,17 +176,23 @@ def _upsert_entity_market(db: Session, canonical_name: str, ticker: str) -> Enti
     em = db.query(EntityMarket).filter_by(entity_id=canonical_name).first()
     if em is None:
         brand_name = _resolve_brand_name(db, _slugify(canonical_name))
-        em = EntityMarket(
-            entity_id=canonical_name,
-            entity_type="perfume",
-            ticker=ticker,
-            canonical_name=canonical_name,
-            brand_name=brand_name,
-            created_at=_now(),
-        )
-        db.add(em)
-        db.flush()
-    elif em.brand_name is None:
+        try:
+            sp = db.begin_nested()  # savepoint — allows rollback without losing session state
+            em = EntityMarket(
+                entity_id=canonical_name,
+                entity_type="perfume",
+                ticker=ticker,
+                canonical_name=canonical_name,
+                brand_name=brand_name,
+                created_at=_now(),
+            )
+            db.add(em)
+            sp.commit()
+        except IntegrityError:
+            # Row was inserted by a concurrent run or a prior aggregation pass for this date.
+            sp.rollback()
+            em = db.query(EntityMarket).filter_by(entity_id=canonical_name).first()
+    if em is not None and em.brand_name is None:
         # Back-fill brand_name for existing rows that predate this field.
         em.brand_name = _resolve_brand_name(db, _slugify(canonical_name))
     return em
