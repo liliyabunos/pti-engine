@@ -12211,3 +12211,20 @@ DELETE FROM resolver_brands WHERE id = 6411;  -- Maison Alhambra only if no othe
 - No signal threshold changes
 - No pipeline script changes (backfill was manual, not scheduled)
 - Script is idempotent (ON CONFLICT DO NOTHING)
+
+---
+
+### G4 Batch 2 Business Impact
+
+- **1 new brand added:** Maison Alhambra (`resolver_brands.id=6411`)
+- **11 new perfume entities created** (`resolver_perfumes` ids 113600–113610): Afnan Supremacy, Afnan 9pm, Afnan Supremacy in Heaven, Khadlaj Icon, Khadlaj Island, Lattafa Dynasty, Lattafa Asad, Rasasi Fattan, Rasasi Daarej, Armaf Odyssey, Maison Alhambra Jean Lowe
+- **23 aliases seeded** (`match_type=g4_batch2_seed`, confidence=0.90)
+- **301 stale content items re-resolved** — ~240 received new entity links, **1,141 new entity links inserted** total
+- **Apr 4 – May 4 historical backfill completed** — all affected `published_at` dates re-aggregated and signals re-detected sequentially
+- **107 `entity_timeseries_daily` rows with real mentions** across all 11 new entities
+- **Breakout signals (trend_state=breakout):** Khadlaj Icon (score 40.37), Rasasi Fattan (40.06), Armaf Odyssey (39.93)
+- **Rising signals (trend_state=rising):** Afnan 9pm, Khadlaj Island, Lattafa Asad, Lattafa Dynasty, Rasasi Daarej, Afnan Supremacy, Afnan Supremacy in Heaven, Maison Alhambra Jean Lowe
+- **Aggregator savepoint fix** (commit `51e234c`) — prevents `IntegrityError` on `uq_entity_market_entity_id` UNIQUE constraint from crashing outer session on repeated backfill runs
+- **Commits:** `2deaa18` (seed script + entities), `51e234c` (savepoint fix), `ffdb077` (CLAUDE.md docs)
+
+**Key lesson:** G4 Batch 2 proved that the unresolved candidate queue is a valid discovery source for emerging fragrance signals, especially Arabic / Middle Eastern / dupe-market perfumes. Systematic KB gaps — not signal threshold settings or pipeline logic — were the primary growth bottleneck. Targeted entity creation from validated candidates unlocks market coverage that ingestion alone cannot provide.
