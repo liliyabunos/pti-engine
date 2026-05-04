@@ -37,6 +37,22 @@ echo "[pipeline] Step 1a — YouTube channel polling"
 timeout 600 python3 scripts/ingest_youtube_channels.py --limit 50 || \
   echo "[pipeline] WARNING: ingest_youtube_channels failed or timed out — continuing"
 
+# Step 1.5: Temp YouTube query experiments (Phase G4-E) — morning-only, 1 run/day max
+# Expires stale experiments, fills open slots from emerging_signals, writes temp YAML
+echo "[pipeline] Step 1.5 — Temp query experiment management (Phase G4-E)"
+timeout 300 python3 scripts/apply_temp_youtube_queries.py --apply || \
+  echo "[pipeline] WARNING: apply_temp_youtube_queries failed — continuing"
+# If temp YAML was produced, run a single low-volume ingest pass (5 results per query)
+if [ -f "configs/watchlists/perfume_queries_temp.yaml" ]; then
+  echo "[pipeline] Step 1.5b — Ingesting temp experiment queries (max 5 results each)"
+  timeout 600 python3 scripts/ingest_youtube.py \
+    --queries-file configs/watchlists/perfume_queries_temp.yaml \
+    --max-results 5 || \
+    echo "[pipeline] WARNING: temp query ingestion failed — continuing"
+else
+  echo "[pipeline] Step 1.5b — No temp queries file, skipping"
+fi
+
 # Step 1b: Aggregate and classify discovery candidates (Phase 3A → 3B)
 echo "[pipeline] Step 1b — Aggregate candidates"
 timeout 600 python3 -m perfume_trend_sdk.jobs.aggregate_candidates || \
@@ -67,6 +83,11 @@ timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-li
 echo "[pipeline] Step 4c — Emerging signals extraction (Phase E3-E)"
 timeout 300 python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7 || \
   echo "[pipeline] WARNING: extract_emerging_signals failed or timed out — continuing"
+
+# Step 4d: Evaluate temp YouTube query experiments (Phase G4-E)
+echo "[pipeline] Step 4d — Evaluate temp query experiments (Phase G4-E)"
+timeout 300 python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-count || \
+  echo "[pipeline] WARNING: evaluate_temp_youtube_queries failed — continuing"
 
 # Step 5: Coverage maintenance (Phase 5) — runs morning-only, non-blocking
 echo "[pipeline] Step 5 — Coverage maintenance (stale + metadata detection + runner)"

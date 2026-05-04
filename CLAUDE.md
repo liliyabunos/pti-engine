@@ -12228,3 +12228,273 @@ DELETE FROM resolver_brands WHERE id = 6411;  -- Maison Alhambra only if no othe
 - **Commits:** `2deaa18` (seed script + entities), `51e234c` (savepoint fix), `ffdb077` (CLAUDE.md docs)
 
 **Key lesson:** G4 Batch 2 proved that the unresolved candidate queue is a valid discovery source for emerging fragrance signals, especially Arabic / Middle Eastern / dupe-market perfumes. Systematic KB gaps — not signal threshold settings or pipeline logic — were the primary growth bottleneck. Targeted entity creation from validated candidates unlocks market coverage that ingestion alone cannot provide.
+
+---
+
+## Phase G4-E — Emerging Signals → Targeted YouTube Query Feedback Loop
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `youtube_query_experiments` table (migration 028)
+- `emerging_signals` table (read, migration 027)
+- `fragrance_candidates` table (read)
+- `start_pipeline.sh` (Steps 1.5, 1.5b, 4d)
+- `start_pipeline_evening.sh` (Step 3d)
+
+### Requires Commit / Push / Deploy
+YES
+
+### Expected UI Change
+INDIRECT — emerging candidates that validate as real entities enter the KB and begin resolving in ingested content
+
+### Status
+STATUS: COMPLETE — PIPELINE INTEGRATED — migration 028 applied on next Railway deploy
+
+---
+
+### Goal
+
+Close the feedback loop between `emerging_signals` and the YouTube ingestion pipeline.
+
+Instead of waiting for candidates to accumulate in `fragrance_candidates` until they qualify for
+manual promotion, G4-E converts the most promising emerging candidates into **temporary YouTube
+search query experiments** — directly targeting them with low-volume ingestion to gather signal.
+
+The experiment result determines whether the candidate should be promoted to the KB or suppressed.
+
+---
+
+### Architecture
+
+```
+emerging_signals (channel-aware, E3-A)
+  ↓
+select_emerging_query_candidates.py     [G4-E.2] READ-ONLY candidate ranking
+  ↓
+apply_temp_youtube_queries.py           [G4-E.3] expire stale → fill slots → write temp YAML
+  ↓
+ingest_youtube.py --queries-file temp_yaml --max-results 5   [Step 1.5b, morning only]
+  ↓
+aggregate + signals (Steps 2–3)
+  ↓
+evaluate_temp_youtube_queries.py        [G4-E.4] measure entity mentions → recommend confirm/suppress
+  ↓
+confirmed → manual alias/entity KB seed
+suppressed → candidate marked no-signal
+```
+
+The **core `perfume_queries.yaml` is NEVER modified** by this system.
+
+---
+
+### Quota Budget
+
+```
+47 core queries × 100 units × 2 runs/day = 9,400 units
+5 temp queries × 100 units × 1 run/day (morning only) = 500 units
+Total: 9,900 / 10,000 (within daily limit)
+
+Hard ceiling: max 5 active experiments at one time
+Temp queries run morning-only (Step 1.5b in start_pipeline.sh, NOT in start_pipeline_evening.sh)
+```
+
+---
+
+### Table — `youtube_query_experiments` (migration 028)
+
+Tracks the full lifecycle of each temporary query experiment.
+
+**Key lifecycle states:**
+- `pending` → `active` (via `apply_temp_youtube_queries.py --apply`)
+- `active` → `expired` (auto, when `expires_at <= NOW()`)
+- `active` → `confirmed` (via `evaluate_temp_youtube_queries.py --apply --auto-transition`)
+- `active` → `suppressed` (via `evaluate_temp_youtube_queries.py --apply --auto-transition`)
+- `confirmed` → `promoted` (manual alias/entity seed via seed scripts)
+
+**UNIQUE constraints:** `query_text`, `normalized_candidate` — prevents accidental duplicates.
+
+**Default expiry:** 14 days. Hard cap: 5 active experiments at one time.
+
+---
+
+### Scripts
+
+#### `scripts/select_emerging_query_candidates.py` (G4-E.2 — READ-ONLY)
+
+Reads `emerging_signals` (Track A) and optionally `fragrance_candidates` (Track B).
+Ranks candidates by emerging_score, classifies risk (`low`|`medium`|`high`), recommends action.
+
+Risk classification:
+- Noise patterns (e.g. `"how to"`, `"best top fragrance"`) → `high`
+- Contains weak tokens (`"best"`, `"top"`, `"review"`) → `high`
+- Known niche signals (Lattafa, Armaf, Rasasi, Xerjoff, etc.) → `low`
+- Major brands (Dior, Chanel, Creed) → `medium`
+- Multi-channel + good score (≥3 channels, score ≥4.0) → `low`
+
+Recommended actions:
+- `add_to_experiments` — low risk, or medium + ≥3 distinct channels
+- `review_first` — medium risk + fewer channels
+- `skip` — high risk
+
+Query building: appends `"perfume review"` suffix unless name already contains a fragrance indicator.
+
+```bash
+# Dry-run report (default)
+python3 scripts/select_emerging_query_candidates.py
+python3 scripts/select_emerging_query_candidates.py --limit 20 --min-channels 2 --days 14
+python3 scripts/select_emerging_query_candidates.py --output-csv candidates_g4e.csv
+```
+
+#### `scripts/apply_temp_youtube_queries.py` (G4-E.3)
+
+Manages the active experiment queue and generates the runtime YAML.
+
+Constants:
+- `MAX_ACTIVE_EXPERIMENTS = 5`
+- `DEFAULT_EXPIRY_DAYS = 14`
+- `TEMP_YAML_PATH = "configs/watchlists/perfume_queries_temp.yaml"`
+- `SOURCE_TAG = "g4e_emerging_feedback"`
+- `_BLOCKLIST` — frozenset of generic terms excluded from experiments
+
+Flow (with `--apply`):
+1. Expire stale active experiments (`expires_at <= NOW()`)
+2. Count active slots remaining
+3. Load candidates from `select_emerging_query_candidates.py`
+4. Filter: `recommended_action == "add_to_experiments"` AND not in `_BLOCKLIST`
+5. Insert approved candidates into `youtube_query_experiments`
+6. Write temp YAML from all currently active experiments
+
+```bash
+python3 scripts/apply_temp_youtube_queries.py              # dry-run (default)
+python3 scripts/apply_temp_youtube_queries.py --apply      # real run
+python3 scripts/apply_temp_youtube_queries.py --status     # show current experiments
+python3 scripts/apply_temp_youtube_queries.py --generate-yaml-only --apply  # regenerate YAML only
+python3 scripts/apply_temp_youtube_queries.py --expire-stale --apply        # expire manually
+```
+
+#### `scripts/evaluate_temp_youtube_queries.py` (G4-E.4)
+
+Measures experiment results and recommends confirm/suppress/review.
+
+Evaluation thresholds:
+- `CONFIRM_MIN_MENTIONS = 2` — at least 2 entity mentions to confirm
+- `CONFIRM_MIN_RUNS = 2` — must have run at least twice
+- `SUPPRESS_MIN_RUNS = 3` — must have run 3+ times with no signal
+- `SUPPRESS_MAX_MENTIONS = 0` — zero entity mentions across all runs
+- `SUPPRESS_MAX_CANDIDATES = 2` — ≤2 fragrance_candidates produced
+
+Content attribution (hybrid):
+- Time window: `collected_at >= activated_at`
+- Platform: `source_platform = 'youtube'`
+- Method: `ingestion_method = 'search'`
+- Title keyword matching: ILIKE against extracted keywords from the query
+
+```bash
+python3 scripts/evaluate_temp_youtube_queries.py           # dry-run status
+python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-count   # update metrics
+python3 scripts/evaluate_temp_youtube_queries.py --apply --auto-transition  # auto confirm/suppress
+python3 scripts/evaluate_temp_youtube_queries.py --id 5    # single experiment
+```
+
+---
+
+### Pipeline Integration (G4-E.5)
+
+#### `start_pipeline.sh` — Steps 1.5, 1.5b, 4d
+
+```sh
+# Step 1.5 — morning only
+timeout 300 python3 scripts/apply_temp_youtube_queries.py --apply || ...
+if [ -f "configs/watchlists/perfume_queries_temp.yaml" ]; then
+  timeout 600 python3 scripts/ingest_youtube.py \
+    --queries-file configs/watchlists/perfume_queries_temp.yaml \
+    --max-results 5 || ...
+fi
+
+# Step 4d — after aggregate + signals
+timeout 300 python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-count || ...
+```
+
+#### `start_pipeline_evening.sh` — Step 3d
+
+```sh
+# Step 3d — evaluation only, no temp ingestion
+timeout 300 python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-count || ...
+```
+
+**Design rationale:**
+- Temp query ingestion runs morning-only (Step 1.5b) to stay within daily quota budget
+- Evaluation runs both morning (Step 4d, after data is aggregated) and evening (Step 3d)
+- All steps are non-fatal — pipeline continues even if G4-E steps fail
+
+---
+
+### Safety Constraints
+
+- Core `configs/watchlists/perfume_queries.yaml` is NEVER modified
+- `configs/watchlists/perfume_queries_temp.yaml` is auto-generated at runtime and never committed
+- `youtube_query_experiments.normalized_candidate` UNIQUE constraint prevents duplicates
+- Max 5 active experiments enforced in both DB layer and Python logic
+- Auto-expiry after 14 days — experiments do not persist indefinitely
+- No automatic KB promotion — confirmed experiments still require manual alias/entity seed
+
+---
+
+### Promotion Path (post-confirmation)
+
+When `evaluate_temp_youtube_queries.py` marks an experiment as `confirmed`:
+
+1. Review experiment details: `python3 scripts/apply_temp_youtube_queries.py --status`
+2. Create an alias seed batch (following Phase G4 pattern) or add to `seed_g4_aliases.py`
+3. Apply alias seed to `resolver_aliases` (psycopg2 `--apply` pattern)
+4. Run re-resolution: `scripts/reresolve_g2_stale_content.py --batch <batch_name>`
+5. Re-aggregate affected historical dates
+6. Update `youtube_query_experiments.recommendation = 'promote'` and `promoted_entity_id`
+
+This path is intentionally manual — automated KB promotion requires higher confidence than
+2 entity mentions can provide.
+
+---
+
+### Monitoring
+
+After first scheduled pipeline cycle following deploy, verify in Railway logs:
+
+```
+[pipeline] Step 1.5 — Temp query experiment management (Phase G4-E)
+[apply] Active experiments: 0/5 — slots available: 5
+[pipeline] Step 1.5b — No temp queries file, skipping
+[pipeline] Step 4d — Evaluate temp query experiments (Phase G4-E)
+```
+
+Once active experiments exist, `Step 1.5b` will show:
+```
+[pipeline] Step 1.5b — Ingesting temp experiment queries (max 5 results each)
+```
+
+Verify experiment state anytime:
+```bash
+DATABASE_URL=<prod-url> python3 scripts/apply_temp_youtube_queries.py --status
+DATABASE_URL=<prod-url> python3 scripts/evaluate_temp_youtube_queries.py --status
+```
+
+---
+
+### Rollback
+
+If G4-E pipeline steps cause issues, remove them from `start_pipeline.sh` and
+`start_pipeline_evening.sh` — all steps are non-fatal so the worst case is a warning message.
+
+To clear all experiment data:
+```sql
+DELETE FROM youtube_query_experiments;
+-- Temp YAML auto-deletes on next pipeline run when no active experiments
+```
+
+To drop the table entirely:
+```bash
+railway run --service pipeline-daily alembic downgrade 027
+```
