@@ -18,11 +18,13 @@
 ## Active Roadmap
 - G4-E deployed, awaiting first active experiments
 - UI-T1/T1.1 complete production verified
-- Creator Intelligence roadmap approved
-- Next phase: C1 Foundation Step 1
-  - C1.2 mention_sources backfill
-  - C1.1 subscriber count ingest
-  - creator identity convention
+- **C1 Foundation COMPLETE (2026-05-05)**
+  - C1.1 subscriber counts: 149/149 channels ✓
+  - C1.2 mention_sources: 100% coverage ✓ (aggregator maintains)
+  - C1.3 `creator_entity_relationships`: 2,135 rows, 689 creators, 741 entities ✓
+  - C1.4 `creator_scores`: 689 rows, v1 influence score ✓
+  - Migration 031 applied · commit e6f8054
+- **Next: C1 Product/API** — creator leaderboard, entity page Top Creators, pipeline integration
 
 ## Execution Rules
 - Move fast but keep production safe.
