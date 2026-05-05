@@ -10,6 +10,9 @@ Or:
     python -m uvicorn perfume_trend_sdk.api.main:app --port 8000
 
 Endpoints:
+    GET    /api/v1/creators                          — creator leaderboard (influence_score)
+    GET    /api/v1/creators/{creator_id}             — creator profile + entity portfolio
+    GET    /api/v1/entities/{type}/{id}/creators     — top creators for a perfume/brand entity
     GET    /api/v1/dashboard                        — top movers + recent signals
     GET    /api/v1/screener                         — filterable entity table
     GET    /api/v1/entities                         — list all entities
@@ -37,7 +40,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from perfume_trend_sdk.api.routes import alerts, auth, catalog, dashboard, emerging, entities, notes, signals, watchlists
+from perfume_trend_sdk.api.routes import alerts, auth, catalog, creators, dashboard, emerging, entities, notes, signals, watchlists
 from perfume_trend_sdk.db.market.session import _make_engine, get_database_url
 
 logger = logging.getLogger(__name__)
@@ -111,6 +114,7 @@ app.add_middleware(
 )
 
 # ── Routers ───────────────────────────────────────────────────────────
+app.include_router(creators.router, prefix="/api/v1/creators", tags=["creators"])
 app.include_router(dashboard.router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(catalog.router, prefix="/api/v1/catalog", tags=["catalog"])
 app.include_router(entities.router, prefix="/api/v1/entities", tags=["entities"])

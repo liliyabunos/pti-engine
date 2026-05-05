@@ -1298,6 +1298,126 @@ def get_brand_entity(
     )
 
 
+# ---------------------------------------------------------------------------
+# Phase C1 Product/API — Top creators for a perfume or brand entity page
+# GET /api/v1/entities/perfume/{id}/creators
+# GET /api/v1/entities/brand/{id}/creators
+# Must be defined before the /{entity_id:path} catch-all routes.
+# ---------------------------------------------------------------------------
+
+def _get_entity_creators(
+    db: Session,
+    entity_id_slug: str,
+    entity_type: str,
+    limit: int,
+) -> list:
+    """Query top creators for an entity by its entity_id slug.
+
+    Joins creator_entity_relationships with creator_scores to include influence_score
+    and early_signal_count. Ordered by mention_count DESC, total_views DESC.
+    Returns empty list if entity not found or creator tables unavailable.
+    """
+    from perfume_trend_sdk.api.schemas.creators import EntityCreatorsResponse, TopCreatorRow
+
+    # Resolve slug → UUID in entity_market
+    em_row = _safe(
+        lambda: db.execute(
+            text("SELECT id FROM entity_market WHERE entity_id = :slug AND entity_type = :et LIMIT 1"),
+            {"slug": entity_id_slug, "et": entity_type},
+        ).fetchone(),
+        None,
+        "entity_creators_lookup",
+    )
+
+    if not em_row:
+        return []
+
+    entity_uuid = str(em_row[0])
+
+    try:
+        rows = db.execute(text("""
+            SELECT
+                cer.platform,
+                cer.creator_id,
+                cer.creator_handle,
+                cer.entity_type      AS rel_entity_type,
+                cer.mention_count,
+                cer.unique_content_count,
+                cer.first_mention_date,
+                cer.last_mention_date,
+                cer.total_views,
+                cer.avg_views,
+                cer.total_likes,
+                cer.total_comments,
+                cer.avg_engagement_rate,
+                cer.mentions_before_first_breakout,
+                cer.days_before_first_breakout,
+                cs.influence_score,
+                cs.early_signal_count,
+                cs.quality_tier,
+                cs.category
+            FROM creator_entity_relationships cer
+            LEFT JOIN creator_scores cs
+                ON cs.platform = cer.platform AND cs.creator_id = cer.creator_id
+            WHERE CAST(cer.entity_id AS TEXT) = :eid
+            ORDER BY cer.mention_count DESC, cer.total_views DESC
+            LIMIT :lim
+        """), {"eid": entity_uuid, "lim": limit}).fetchall()
+    except Exception as exc:
+        _log.warning("[C1] entity_creators query failed: %s", exc)
+        return []
+
+    return [
+        TopCreatorRow(
+            platform=r[0],
+            creator_id=r[1],
+            creator_handle=r[2],
+            quality_tier=r[17],
+            category=r[18],
+            mention_count=int(r[4] or 0),
+            unique_content_count=int(r[5] or 0),
+            first_mention_date=_fmt_dt(r[6]) if r[6] else None,
+            last_mention_date=_fmt_dt(r[7]) if r[7] else None,
+            total_views=int(r[8] or 0),
+            avg_views=float(r[9]) if r[9] is not None else None,
+            total_likes=int(r[10] or 0),
+            total_comments=int(r[11] or 0),
+            avg_engagement_rate=float(r[12]) if r[12] is not None else None,
+            mentions_before_first_breakout=int(r[13] or 0),
+            days_before_first_breakout=int(r[14]) if r[14] is not None else None,
+            influence_score=float(r[15]) if r[15] is not None else None,
+            early_signal_count=int(r[16] or 0),
+        )
+        for r in rows
+    ]
+
+
+@router.get("/perfume/{id}/creators")
+def get_perfume_creators(
+    id: str,
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db_session),
+):
+    """Phase C1 — Top creators who mention this perfume entity."""
+    from perfume_trend_sdk.api.schemas.creators import EntityCreatorsResponse
+
+    top_creators = _get_entity_creators(db, id, "perfume", limit)
+    return EntityCreatorsResponse(entity_id=id, entity_type="perfume", top_creators=top_creators)
+
+
+@router.get("/brand/{id}/creators")
+def get_brand_creators(
+    id: str,
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db_session),
+):
+    """Phase C1 — Top creators who mention this brand entity."""
+    from perfume_trend_sdk.api.schemas.creators import EntityCreatorsResponse
+
+    top_creators = _get_entity_creators(db, id, "brand", limit)
+    return EntityCreatorsResponse(entity_id=id, entity_type="brand", top_creators=top_creators)
+
+
 @router.get("/{entity_id:path}/sources")
 def get_entity_sources(
     entity_id: str,

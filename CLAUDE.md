@@ -28,7 +28,14 @@
   - Steps 2b/2c added to morning pipeline (`start_pipeline.sh`) after Step 2 aggregation
   - Evening pipeline unchanged
   - PRODUCTION VERIFIED after next morning run
-- **Next: C1 Product/API** — creator leaderboard, entity page Top Creators
+- **C1 Product/API Step 1 — Creator Intelligence API — DEPLOYED (2026-05-05)**
+  - `GET /api/v1/creators` — leaderboard (sort, filter, paginate)
+  - `GET /api/v1/creators/{creator_id}` — profile + entity portfolio + recent content
+  - `GET /api/v1/entities/perfume/{id}/creators` — top creators for perfume entity
+  - `GET /api/v1/entities/brand/{id}/creators` — top creators for brand entity
+  - Files: `routes/creators.py`, `schemas/creators.py`, `routes/entities.py`, `main.py`
+  - PRODUCTION VERIFIED after Railway redeploy
+- **Next: C1 Product/API Step 2** — frontend Top Creators UI + creator leaderboard page
 
 ## Execution Rules
 - Move fast but keep production safe.
