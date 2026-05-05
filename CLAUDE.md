@@ -39,7 +39,7 @@
   - `/creators` page with influence score, tier/category filters, sort controls
   - Sidebar nav link added (Users icon)
   - Files: `app/(terminal)/creators/page.tsx`, `lib/api/creators.ts`, `Sidebar.tsx`
-  - Build clean · PRODUCTION VERIFIED after Railway redeploy
+  - Build clean · PRODUCTION VERIFIED ✓ (307 auth-redirect confirms route live)
 - **Next: C1 Product/UI Step 2B** — entity page Top Creators block (perfume entity pages)
 
 ## Execution Rules
