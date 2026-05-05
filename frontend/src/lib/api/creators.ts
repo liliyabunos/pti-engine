@@ -37,6 +37,48 @@ export interface CreatorLeaderboardResponse {
   creators: CreatorRow[];
 }
 
+// ---------------------------------------------------------------------------
+// Entity top creators
+// ---------------------------------------------------------------------------
+
+export interface TopCreatorRow {
+  platform: string;
+  creator_id: string;
+  creator_handle: string | null;
+  quality_tier: string | null;
+  category: string | null;
+  mention_count: number;
+  unique_content_count: number;
+  first_mention_date: string | null;
+  last_mention_date: string | null;
+  total_views: number;
+  avg_views: number | null;
+  total_likes: number;
+  total_comments: number;
+  avg_engagement_rate: number | null;
+  mentions_before_first_breakout: number;
+  days_before_first_breakout: number | null;
+  influence_score: number | null;
+  early_signal_count: number;
+}
+
+export interface EntityCreatorsResponse {
+  entity_id: string;
+  entity_type: string;
+  top_creators: TopCreatorRow[];
+}
+
+export async function fetchEntityCreators(
+  entityType: string,
+  entityId: string,
+  limit = 10,
+): Promise<EntityCreatorsResponse> {
+  return apiFetch<EntityCreatorsResponse>(
+    `/api/v1/entities/${entityType}/${encodeURIComponent(entityId)}/creators`,
+    { limit },
+  );
+}
+
 export interface FetchCreatorsParams {
   sort_by?: string;
   order?: "asc" | "desc";

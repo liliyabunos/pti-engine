@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { fetchPerfumeEntity, startTracking } from "@/lib/api/entities";
+import { fetchEntityCreators, type TopCreatorRow } from "@/lib/api/creators";
 import { Header } from "@/components/shell/Header";
 import { TerminalPanel } from "@/components/primitives/TerminalPanel";
 import { PanelDivider } from "@/components/primitives/TerminalPanel";
@@ -21,7 +22,7 @@ import { CreateAlertModal } from "@/components/alerts/CreateAlertModal";
 import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
-import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum } from "@/lib/formatters";
+import { fmtScore, fmtGrowth, fmtCount, fmtConfidence, fmtMomentum, fmtDate } from "@/lib/formatters";
 import type { EntityChartMetric } from "@/components/entity/EntityChart";
 import type { DriverRow, SimilarPerfumeRow } from "@/lib/api/types";
 import { WhyTrending } from "@/components/entity/WhyTrending";
@@ -286,6 +287,115 @@ function TopDrivers({ drivers }: { drivers: DriverRow[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// Top Creators (Phase C1)
+// ---------------------------------------------------------------------------
+
+function tierBadgeColor(tier: string | null): string {
+  if (!tier) return "border-zinc-700 text-zinc-600";
+  const map: Record<string, string> = {
+    tier_1: "border-amber-800 text-amber-400",
+    tier_2: "border-sky-800 text-sky-400",
+    tier_3: "border-emerald-800 text-emerald-500",
+    tier_4: "border-zinc-700 text-zinc-500",
+  };
+  return map[tier] ?? "border-zinc-700 text-zinc-500";
+}
+
+function TopCreatorsRow({ row }: { row: TopCreatorRow }) {
+  const isEarlyMover = row.mentions_before_first_breakout > 0;
+  return (
+    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-800/40 last:border-b-0">
+      {/* Creator identity */}
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[12px] font-medium text-zinc-200 truncate">
+            {row.creator_handle ?? row.creator_id}
+          </span>
+          {row.quality_tier && (
+            <span
+              className={`inline-flex rounded border px-1 py-px text-[8px] font-bold uppercase tracking-wider ${tierBadgeColor(row.quality_tier)}`}
+            >
+              {row.quality_tier.replace("tier_", "T")}
+            </span>
+          )}
+          {isEarlyMover && (
+            <span className="inline-flex items-center rounded border border-amber-800/60 bg-amber-950/30 px-1 py-px text-[8px] font-semibold uppercase tracking-wider text-amber-400">
+              Early Signal
+            </span>
+          )}
+        </div>
+        {row.category && (
+          <span className="text-[10px] capitalize text-zinc-600">{row.category}</span>
+        )}
+      </div>
+
+      {/* Metrics grid */}
+      <div className="hidden shrink-0 items-center gap-4 sm:flex">
+        <div className="w-12 text-right">
+          <p className="text-[11px] tabular-nums text-zinc-300">{row.mention_count}</p>
+          <p className="text-[9px] text-zinc-700">mentions</p>
+        </div>
+        <div className="w-14 text-right">
+          <p className="text-[11px] tabular-nums text-zinc-400">
+            {row.avg_views != null ? fmtCount(Math.round(row.avg_views)) : "—"}
+          </p>
+          <p className="text-[9px] text-zinc-700">avg views</p>
+        </div>
+        <div className="w-14 text-right">
+          <p className="text-[11px] tabular-nums text-zinc-500">
+            {row.first_mention_date ? fmtDate(row.first_mention_date) : "—"}
+          </p>
+          <p className="text-[9px] text-zinc-700">first seen</p>
+        </div>
+        <div className="w-14 text-right">
+          <p className="text-[11px] tabular-nums text-zinc-500">
+            {row.last_mention_date ? fmtDate(row.last_mention_date) : "—"}
+          </p>
+          <p className="text-[9px] text-zinc-700">last seen</p>
+        </div>
+        <div className="w-12 text-right">
+          <p className="text-[11px] tabular-nums text-zinc-400">
+            {row.influence_score != null ? row.influence_score.toFixed(3) : "—"}
+          </p>
+          <p className="text-[9px] text-zinc-700">influence</p>
+        </div>
+        {row.early_signal_count > 0 && (
+          <div className="w-8 text-right">
+            <p className="text-[11px] tabular-nums text-amber-400">{row.early_signal_count}</p>
+            <p className="text-[9px] text-zinc-700">signals</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TopCreators({ rows }: { rows: TopCreatorRow[] }) {
+  return (
+    <TerminalPanel noPad>
+      <div className="p-4">
+        <SectionHeader
+          title="Creators Associated With This Entity"
+          subtitle={rows.length > 0 ? `${rows.length} creators tracked` : undefined}
+        />
+      </div>
+      <PanelDivider />
+      {rows.length === 0 ? (
+        <p className="px-4 py-4 text-[12px] text-zinc-600">
+          No creator attribution available yet.
+        </p>
+      ) : (
+        <div>
+          {rows.map((row) => (
+            <TopCreatorsRow key={row.creator_id} row={row} />
+          ))}
+        </div>
+      )}
+    </TerminalPanel>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Metric row helper
 // ---------------------------------------------------------------------------
 
@@ -329,6 +439,13 @@ export default function PerfumeEntityPage({ params }: PageProps) {
   });
 
   const isTracked = data?.state !== "catalog_only";
+
+  const creatorsQuery = useQuery({
+    queryKey: ["entity-creators", "perfume", decoded],
+    queryFn: () => fetchEntityCreators("perfume", decoded),
+    staleTime: 60_000,
+    enabled: isTracked,
+  });
   const latestSignal = data?.recent_signals?.[0]?.signal_type ?? null;
 
   return (
@@ -591,6 +708,11 @@ export default function PerfumeEntityPage({ params }: PageProps) {
             {/* ── Top Drivers (Phase I4, tracked only) ───────────────────── */}
             {isTracked && data.top_drivers?.length > 0 && (
               <TopDrivers drivers={data.top_drivers} />
+            )}
+
+            {/* ── Top Creators (Phase C1) ─────────────────────────────────── */}
+            {isTracked && (
+              <TopCreators rows={creatorsQuery.data?.top_creators ?? []} />
             )}
 
             {/* ── Why It's Trending (Phase I7) ────────────────────────────── */}
