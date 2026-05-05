@@ -12877,7 +12877,7 @@ User selects "Custom"
 
 # Creator / Influencer Intelligence Roadmap
 
-STATUS: ROADMAP APPROVED — IMPLEMENTATION NOT STARTED
+STATUS: C1.1 COMPLETE (2026-05-05) · C1.2 VERIFIED COMPLETE · C1.3/C1.4 NEXT
 
 ---
 
@@ -12900,25 +12900,26 @@ The Creator Intelligence layer must answer 6 business questions:
 
 | Layer | State |
 |-------|-------|
-| `youtube_channels` table | 133 channels registered, quality_tier, next_poll_after, adaptive polling active |
+| `youtube_channels` table | **149 channels** registered, quality_tier, next_poll_after, adaptive polling active; `subscriber_count` populated for all 149 via C1.1 (min=17, max=4.15M, avg=187,758) |
 | `canonical_content_items` | 3,168+ YouTube items with `source_account_id` (UC... format), `source_account_handle`, `engagement_json` (as TEXT — requires `::jsonb` cast in all queries) |
-| `entity_mentions` | 3,942 rows — creator→entity link via `source_url` join |
-| `mention_sources` | 1,277 rows (~32% coverage of entity_mentions) — `source_score` formula for YouTube/Reddit quality weighting |
-| `source_profiles` | 313 profiles — `subscriber_count` always NULL (requires YouTube API `channels.list` call) |
+| `entity_mentions` | 3,942+ rows — creator→entity link via `source_url` join |
+| `mention_sources` | **100% coverage** of `entity_mentions` — daily aggregator pipeline maintains full coverage; C1.2 verified not needed |
+| `source_profiles` | 313 profiles — `subscriber_count` populated in `youtube_channels`; `source_profiles.subscribers` not yet backfilled (deferred) |
 | G3-C continuous discovery loop | New channels auto-promoted from `canonical_content_items` to `youtube_channels` every morning pipeline cycle |
+| `subscriber_count_fetched_at` | New column on `youtube_channels` (migration 029, 2026-05-05) — tracks when stats were last fetched |
 
 ### Major Gaps
 
 | Gap | Impact |
 |-----|--------|
-| No `creator_entity_relationships` table | Cannot answer "which entities does creator X cover" at scale without expensive JOIN |
-| No `creator_scores` table | No influence score, no signal quality score, no early-signal rate stored |
-| No creator leaderboard or profile API | Creator intelligence invisible to frontend |
-| No Top Creators section on entity pages | Entity pages do not show who is driving movement |
+| No `creator_entity_relationships` table | Cannot answer "which entities does creator X cover" at scale without expensive JOIN — **C1.3 NEXT** |
+| No `creator_scores` table | No influence score, no signal quality score, no early-signal rate stored — **C1.4 NEXT** |
+| No creator leaderboard or profile API | Creator intelligence invisible to frontend — C1 Product/API phase |
+| No Top Creators section on entity pages | Entity pages do not show who is driving movement — C1 Product/API phase |
 | No campaign suitability scoring | C3 not started |
-| `subscriber_count` always NULL | Reach dimension missing — `channels.list` call never invoked |
-| `mention_sources` coverage gap | G3-A expanded `entity_mentions` from 1,135 to 3,942 but `backfill_source_intelligence.py` was not re-run — ~2,665 entity_mentions have no engagement data in `mention_sources` |
-| `engagement_json` stored as TEXT | Every query requires `(cci.engagement_json::jsonb->>'views')::int` cast — silent NULLs if forgotten |
+| ~~`subscriber_count` always NULL~~ | **RESOLVED — C1.1 (2026-05-05)**: all 149 channels have real subscriber/video/view counts |
+| ~~`mention_sources` coverage gap~~  | **RESOLVED — verified 100% coverage** before C1.2 was needed; daily aggregator maintains coverage |
+| `engagement_json` stored as TEXT | Every query requires `(cci.engagement_json::jsonb->>'views')::int` cast — C1.5 migration planned |
 
 ---
 
@@ -12927,41 +12928,66 @@ The Creator Intelligence layer must answer 6 business questions:
 ### C0 — Foundation (COMPLETE)
 
 What already exists and is operational:
-- `youtube_channels` registry (133 channels, adaptive polling)
+- `youtube_channels` registry (**149 channels**, adaptive polling, subscriber_count populated)
 - `canonical_content_items` with `source_account_id` and `engagement_json`
 - `entity_mentions` creator→entity join via `source_url`
-- `mention_sources` source quality scoring (~32% coverage)
-- `source_profiles` table structure (subscriber_count unpopulated)
+- `mention_sources` source quality scoring (**100% coverage**, maintained by daily aggregator)
+- `source_profiles` table structure (subscribers not backfilled — deferred to C1 Product phase)
 - G3-C continuous channel auto-discovery loop (runs every morning pipeline cycle)
 - Phase I1 / I2 — Source Intelligence and Signal Weighting already deployed
 
 ---
 
-### C1 — Creator Intelligence Foundation (APPROVED — NEXT)
+### C1 — Creator Intelligence Foundation
 
 TARGET TYPE: PRODUCTION_TARGETED
 
-**C1.1 — Subscriber Count Backfill**
-- Call `YouTube Data API channels.list?part=statistics&id=...` in batches of 50
-- Write `subscriber_count` into `youtube_channels` and `source_profiles` where `channel_id` matches
-- Cost: 1 unit per 50 channels = 3 API calls for 133 channels
-- Tag: `subscriber_count_source = 'channels_list_v1'`
-- Run once manually via `scripts/fetch_channel_subscriber_counts.py`, then add to weekly maintenance
+**C1.1 — Subscriber Count Backfill — STATUS: COMPLETE (2026-05-05)**
 
-**C1.2 — Backfill `mention_sources` Gap**
-- Re-run `scripts/backfill_source_intelligence.py` against all entity_mentions rows where no `mention_sources` row exists
-- Target: ~2,665 rows with no engagement data
-- Prerequisite: verify `engagement_json::jsonb` cast is safe before running
-- Idempotent: script must skip existing rows (ON CONFLICT DO NOTHING)
+- Alembic migration 029: added `subscriber_count_fetched_at TIMESTAMPTZ` column to `youtube_channels`
+- Script: `scripts/fetch_channel_subscriber_counts.py` — standalone psycopg2, batches 50 channels per `channels.list` call
+- Flags: `--dry-run` (default), `--apply`, `--force` (re-fetch all), `--limit N`, `--verify`
+- `hiddenSubscriberCount=true` → stores NULL (not error)
+- Cost: 3 API calls total (50+50+49 = 149 channels = 3 units)
 
-**C1.3 — `creator_entity_relationships` Table**
+**Production results (2026-05-05):**
+
+| Metric | Value |
+|--------|-------|
+| Channels processed | 149 |
+| Updated in DB | 149 |
+| Not returned by API | 0 |
+| Batch API errors | 0 |
+| min subscriber_count | 17 |
+| max subscriber_count | 4,152,000 (Alex Costa) |
+| avg subscriber_count | 187,758 |
+| alembic_version | 029 ✅ |
+
+**Top channels by subscribers (sample):**
+- Alex Costa: 4.15M (tier_3, auto-discovered)
+- Jeremy Fragrance: 2.53M (tier_1)
+- Fragrantica: 2.0M (tier_3, auto-discovered)
+- Chad Secrets: 1.51M (tier_2)
+
+**C1.2 — Backfill `mention_sources` Gap — STATUS: NOT NEEDED (verified 2026-05-05)**
+
+Pre-flight check showed `mention_sources` was already at 100% coverage of `entity_mentions`.
+G3-A expanded `entity_mentions` from 1,135 to 3,942 rows, but the daily aggregator pipeline
+maintained full `mention_sources` coverage automatically. `backfill_source_intelligence.py`
+was not required.
+
+**Rule:** Daily aggregator maintains `mention_sources` coverage automatically. Only run
+`backfill_source_intelligence.py` if aggregator misses a batch (e.g. pipeline outage covers
+a date range with real YouTube/Reddit engagement data).
+
+**C1.3 — `creator_entity_relationships` Table — STATUS: NEXT**
 - Alembic migration
 - Columns: `channel_id`, `entity_id` (FK to `entity_market`), `mention_count`, `first_mention_at`, `last_mention_at`, `avg_views`, `top_signal_type`, `early_signal_count`, `updated_at`
 - UNIQUE on `(channel_id, entity_id)`
 - Populated by new job `compute_creator_entity_relationships.py` — aggregates from `canonical_content_items JOIN entity_mentions JOIN mention_sources`
 - Add to morning pipeline Step 5c (non-fatal, timeout 300s)
 
-**C1.4 — `creator_scores` Table**
+**C1.4 — `creator_scores` Table — STATUS: PLANNED (after C1.3)**
 - Alembic migration
 - Columns: `channel_id`, `influence_score`, `reach_score`, `signal_quality_score`, `entity_breadth`, `volume_score`, `early_signal_rate`, `computed_at`
 - UNIQUE on `channel_id`
@@ -12972,20 +12998,21 @@ TARGET TYPE: PRODUCTION_TARGETED
   - volume (15%): `log10(total_mentions + 1) / log10(1_000)`
   - early_signal_rate (10%): fraction of mentions that preceded a breakout/acceleration signal
 - Populated by `compute_creator_scores.py`, add to morning pipeline after C1.3 job
+- **Prerequisite:** `subscriber_count` populated ✅ (C1.1 complete)
 
-**C1.5 — `engagement_json` JSONB Migration**
+**C1.5 — `engagement_json` JSONB Migration — STATUS: PLANNED**
 - Alembic migration: `ALTER TABLE canonical_content_items ALTER COLUMN engagement_json TYPE JSONB USING engagement_json::jsonb`
 - Eliminates the silent-NULL risk from TEXT→JSONB cast in all downstream queries
 - One-time migration; idempotent
 - After migration: all existing queries using `::jsonb` cast continue to work unchanged
 
 **C1 Completion Criteria:**
-- `subscriber_count` populated for ≥80% of `youtube_channels`
-- `mention_sources` coverage ≥90% of `entity_mentions` rows
-- `creator_entity_relationships` table populated and refreshed daily
-- `creator_scores` table populated and refreshed daily
-- `engagement_json` column is JSONB (no cast required)
-- All new jobs are non-fatal pipeline steps
+- [x] `subscriber_count` populated for ≥80% of `youtube_channels` — **149/149 (100%) ✅**
+- [x] `mention_sources` coverage ≥90% of `entity_mentions` rows — **100% ✅**
+- [ ] `creator_entity_relationships` table populated and refreshed daily — C1.3
+- [ ] `creator_scores` table populated and refreshed daily — C1.4
+- [ ] `engagement_json` column is JSONB (no cast required) — C1.5
+- [ ] All new jobs are non-fatal pipeline steps
 
 ---
 
@@ -13064,3 +13091,13 @@ Campaign Suitability scoring must not be implemented until Trend Attribution (C2
 
 **6. TikTok-ready from the start**
 Every C1 design decision must pass the question: "Does this work when `platform='tiktok'`?" If the answer is no, redesign before implementation. The YouTube creator model is the template — not the limit.
+
+**7. Creator identity is (platform, creator_id) — never handle**
+The canonical creator key across all tables and APIs is the composite `(platform, creator_id)`.
+
+- **YouTube:** `creator_id` = `youtube_channels.channel_id` = `canonical_content_items.source_account_id` (UC... format, e.g. `UCxxxxxxxxxxxxxxxxxxxxxx`)
+- **TikTok (future):** `creator_id` = stable TikTok unique user identifier returned by the Research API (NOT the `@handle` — handles can change)
+- **Reddit:** `creator_id` = `author` field from Reddit post (stable string identifier)
+- **Do NOT use `creator_handle` as a primary identity key** — handles change, are not unique across platforms, and are not guaranteed stable. Store as a display/search field only.
+- All future creator tables (`creator_entity_relationships`, `creator_scores`) must use `(platform, creator_id)` as their UNIQUE constraint, never `(platform, creator_handle)`.
+- Join path: `canonical_content_items.source_account_id` (YouTube) → `youtube_channels.channel_id` → `creator_entity_relationships.creator_id`
