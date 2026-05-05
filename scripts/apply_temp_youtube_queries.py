@@ -70,10 +70,29 @@ DEFAULT_EXPIRY_DAYS = 14
 TEMP_YAML_PATH = "configs/watchlists/perfume_queries_temp.yaml"
 SOURCE_TAG = "g4e_emerging_feedback"
 
-# Candidates that should not be added regardless of score
+# Candidates that should not be added regardless of score.
+# Combines generic single-word terms, content/intent phrases (E3-C/E3-F noise list),
+# and structural fragments that are not resolvable perfume or brand names.
 _BLOCKLIST: frozenset[str] = frozenset({
+    # Generic single-word / short terms
     "fragrance", "cologne", "perfume", "scent", "parfum",
     "review", "best fragrance", "top fragrance",
+    # E3-C / E3-F noise phrases (intent/topic fragments, not entity names)
+    "go to", "beast mode", "smells like", "smell like", "middle eastern",
+    "everyday fragrances", "long lasting", "alternatives to", "better than",
+    "complimented fragrances", "every man", "wear the most", "wear the",
+    "compliment getter", "signature scent", "need in", "under 100", "under 30",
+    "every man should", "fresh summer fragrances", "hyped fragrances",
+    "niche fragrance", "mother day fragrance", "buy fragrances", "buy fragrance",
+    "stop wearing", "stop wearing this", "game of", "smell expensive",
+    "paris corner",  # too generic / geo-modifier
+    # Content/channel recommendation phrases
+    "game changer", "must wear", "must have", "worth it",
+    "date night", "office wear", "compliment magnet",
+    # Subphrase fragments (subphrase suppressor handles API; block here too)
+    "jean paul", "paul gaultier", "jean paul gaultier",
+    "forever wanted",  # subphrase of "azzaro forever wanted"
+    "azzaro forever",  # subphrase of "azzaro forever wanted"
 })
 
 
