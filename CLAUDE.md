@@ -40,7 +40,9 @@
   - Sidebar nav link added (Users icon)
   - Files: `app/(terminal)/creators/page.tsx`, `lib/api/creators.ts`, `Sidebar.tsx`
   - Build clean · PRODUCTION VERIFIED ✓ (307 auth-redirect confirms route live)
-- **Next: C1 Product/UI Step 2B** — entity page Top Creators block (perfume entity pages)
+- **C1 Product/UI Step 2B COMPLETE — PRODUCTION VERIFIED (2026-05-05)** — Top Creators block on perfume entity pages · commit 51ca2a5
+  - Baccarat Rouge 540 shows 10 creators with tier badges, Early Signal indicators, mentions, avg views, first/last seen, influence, signal count ✓
+- **Next: C1 Product/UI Step 2C** — Creator Profile Page — DO NOT START until explicitly approved
 
 ## Execution Rules
 - Move fast but keep production safe.
@@ -171,6 +173,10 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C1.2 mention_sources backfill | NOT NEEDED (100% coverage) | 2026-05-05 |
 | C1.3 creator_entity_relationships table | COMPLETE | 2026-05-05 |
 | C1.4 creator_scores table | COMPLETE | 2026-05-05 |
+| C1.5 Creator Daily Refresh (pipeline) | COMPLETE | 2026-05-05 |
+| C1 Product/API — Creator endpoints (3) | COMPLETE | 2026-05-05 |
+| C1 Product/UI 2A — Creators Leaderboard | COMPLETE — PRODUCTION VERIFIED | 2026-05-05 |
+| C1 Product/UI 2B — Entity Top Creators | COMPLETE — PRODUCTION VERIFIED | 2026-05-05 |
 
 ---
 
