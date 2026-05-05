@@ -12677,7 +12677,7 @@ YES — commit `b064f58`
 YES — time range selector in Dashboard and Screener control bars; range-aware KPIs and movers
 
 ### Status
-STATUS: COMPLETE — DEPLOY PENDING (push blocked by HTTPS auth — requires manual `git push`)
+STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-05)
 
 ---
 
@@ -12720,11 +12720,12 @@ other ranges without manually modifying API calls.
 **Backend — `perfume_trend_sdk/api/schemas/dashboard.py`**
 - `DashboardResponse` + `ScreenerResponse` extended with range metadata fields
 
-**Frontend — `frontend/src/components/primitives/RangeSelector.tsx`** (NEW)
-- Terminal-style button group: `Today | Yesterday | 7D | 30D | MTD | YTD`
+**Frontend — `frontend/src/components/primitives/RangeSelector.tsx`** (NEW — extended in UI-T1.1)
+- Terminal-style button group: `Today | Yesterday | 7D | 30D | MTD | YTD | Custom`
 - Active state: `bg-emerald-500/20 text-emerald-400 border-emerald-500/40`
 - Inactive hover: `text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60`
 - Font: `font-mono text-xs`
+- Custom date range support added in UI-T1.1 (see Phase UI-T1.1 below)
 
 **Frontend — `frontend/src/app/(terminal)/dashboard/page.tsx`**
 - `const [rangePreset, setRangePreset] = useState<RangePreset>("today")`
@@ -12772,6 +12773,294 @@ other ranges without manually modifying API calls.
 - [x] Screener range selector only active in "active" mode
 - [x] Catalog and composition screener modes unaffected
 - [x] All 9 files committed (`b064f58`)
-- [ ] Pushed to main (requires manual push — HTTPS auth)
-- [ ] Railway deploy confirmed
-- [ ] Production smoke test at fragranceindex.ai
+- [x] Pushed to main (`b064f58`)
+- [x] Railway deploy confirmed
+- [x] Production smoke test at fragranceindex.ai — range selector visible, Yesterday/7D/30D/MTD/YTD all return range-aware data
+
+---
+
+## Phase UI-T1.1 — Custom Date Range Picker
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- `frontend/src/components/primitives/RangeSelector.tsx` (extended with custom date inputs)
+- `frontend/src/app/(terminal)/dashboard/page.tsx` (custom date state + query wiring)
+- `frontend/src/app/(terminal)/screener/page.tsx` (custom date state + query wiring)
+
+### Requires Commit / Push / Deploy
+YES — commit `e708327`
+
+### Expected UI Change
+YES — "Custom" 7th option in RangeSelector; inline start/end date inputs appear; query gated until both dates valid
+
+### Status
+STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-05)
+
+---
+
+### What was implemented
+
+**`frontend/src/components/primitives/RangeSelector.tsx`**
+- `RangePreset` type extended to 7 options: `"today" | "yesterday" | "7d" | "30d" | "mtd" | "ytd" | "custom"`
+- Added `{ key: "custom", label: "Custom" }` to `RANGE_PRESETS` array
+- New optional props: `customStartDate?: string`, `customEndDate?: string`, `onCustomDatesChange?: (s, e) => void`
+- Custom button renders amber (`bg-amber-500/20 text-amber-400 border-amber-500/40`) when selected but dates incomplete
+- Custom button renders emerald (same as other active presets) when `value === "custom"` and both dates valid with `start ≤ end`
+- Inline date inputs appear only when `value === "custom"`: start date input + dash separator + end date input
+- Both inputs use `[color-scheme:dark]` for native dark browser date picker
+- `min={customStartDate}` on end date input prevents selecting invalid end dates
+- Validation error `start > end` shown in rose color below inputs when `customStartDate > customEndDate`
+
+**`frontend/src/app/(terminal)/dashboard/page.tsx`**
+- Added `customStartDate` and `customEndDate` state (`useState("")`)
+- `isCustomReady`: `rangePreset === "custom" && !!customStartDate && !!customEndDate && customStartDate <= customEndDate`
+- `queryKey`: `["dashboard", rangePreset, customStartDate, customEndDate]` — re-fetches when either date changes
+- `enabled: rangePreset !== "custom" || isCustomReady` — blocks query while custom selected but dates incomplete
+- `fetchDashboard()` spreads `{ start_date, end_date }` only when `isCustomReady`
+- `<RangeSelector>` wired with all 4 custom props and `onCustomDatesChange` callback
+
+**`frontend/src/app/(terminal)/screener/page.tsx`**
+- Added `customStartDate` and `customEndDate` state
+- Same `isCustomReady` guard pattern as dashboard
+- `queryKey` for `activeQuery` includes custom dates: `["screener", params, debouncedSearch, rangePreset, customStartDate, customEndDate]`
+- `enabled: mode === "active" && (rangePreset !== "custom" || isCustomReady)`
+- `fetchScreener()` spreads custom dates only when `isCustomReady`
+- `<RangeSelector>` wired with all 4 custom props
+
+**No backend changes required** — `resolve_date_range()` in `queries.py` already supported explicit `start_date`/`end_date` params from UI-T1.
+
+---
+
+### Supported Range Presets (all 7)
+
+| Preset | Type | Behavior |
+|--------|------|---------|
+| `today` | built-in | Anchored to `latest_active` date |
+| `yesterday` | built-in | `latest_active - 1 day` |
+| `7d` | built-in | `latest_active - 6 days` through `latest_active` |
+| `30d` | built-in | `latest_active - 29 days` through `latest_active` |
+| `mtd` | built-in | Calendar month start through `latest_active` |
+| `ytd` | built-in | Jan 1 through `latest_active` |
+| `custom` | custom | Exact `start_date=YYYY-MM-DD` + `end_date=YYYY-MM-DD` sent to API |
+
+---
+
+### Custom Date Query Lifecycle
+
+```
+User selects "Custom"
+→ Amber button shown (incomplete)
+→ Inline date inputs appear
+→ User selects start date
+→ User selects end date
+→ If start ≤ end: isCustomReady=true → emerald button → query fires with start_date + end_date
+→ If start > end: rose "start > end" error shown → query blocked
+→ Either date changes → queryKey changes → TanStack Query re-fetches automatically
+```
+
+---
+
+### Production Verification (2026-05-05)
+
+- [x] "Custom" button visible as 7th option in Dashboard and Screener range selectors
+- [x] Clicking "Custom" shows inline start/end date inputs without page reload
+- [x] Selecting start date only: amber button, query blocked
+- [x] Selecting both valid dates: emerald button, API fires with `range_preset=custom&start_date=...&end_date=...`
+- [x] Screener tab shows "Active in range" for custom selection
+- [x] Results update correctly for selected custom period
+- [x] Catalog/All Perfumes/All Brands/Notes/Accords modes completely unaffected
+- [x] Switching from Custom back to Today/Yesterday/7D: date inputs disappear, preset query resumes immediately
+
+---
+
+# Creator / Influencer Intelligence Roadmap
+
+STATUS: ROADMAP APPROVED — IMPLEMENTATION NOT STARTED
+
+---
+
+## Strategic Goal
+
+The Creator Intelligence layer must answer 6 business questions:
+
+1. **Which creator is pushing a perfume or brand right now?** — real-time attribution of market movement to specific content creators
+2. **Which entities does a creator mention?** — creator portfolio view: what perfumes and brands a creator covers
+3. **Who mentioned an entity before the breakout signal fired?** — early-signal attribution: identifying predictive creators
+4. **Who are the early signal sources?** — leaderboard of creators consistently ahead of trend detection
+5. **What is the engagement quality behind a trend signal?** — signal quality: are mentions from high-reach, high-engagement sources, or noise?
+6. **Is a creator suitable for a campaign, and would they cause noise?** — campaign suitability scoring (C3)
+
+---
+
+## Current Audit Findings
+
+### What Exists (Foundation)
+
+| Layer | State |
+|-------|-------|
+| `youtube_channels` table | 133 channels registered, quality_tier, next_poll_after, adaptive polling active |
+| `canonical_content_items` | 3,168+ YouTube items with `source_account_id` (UC... format), `source_account_handle`, `engagement_json` (as TEXT — requires `::jsonb` cast in all queries) |
+| `entity_mentions` | 3,942 rows — creator→entity link via `source_url` join |
+| `mention_sources` | 1,277 rows (~32% coverage of entity_mentions) — `source_score` formula for YouTube/Reddit quality weighting |
+| `source_profiles` | 313 profiles — `subscriber_count` always NULL (requires YouTube API `channels.list` call) |
+| G3-C continuous discovery loop | New channels auto-promoted from `canonical_content_items` to `youtube_channels` every morning pipeline cycle |
+
+### Major Gaps
+
+| Gap | Impact |
+|-----|--------|
+| No `creator_entity_relationships` table | Cannot answer "which entities does creator X cover" at scale without expensive JOIN |
+| No `creator_scores` table | No influence score, no signal quality score, no early-signal rate stored |
+| No creator leaderboard or profile API | Creator intelligence invisible to frontend |
+| No Top Creators section on entity pages | Entity pages do not show who is driving movement |
+| No campaign suitability scoring | C3 not started |
+| `subscriber_count` always NULL | Reach dimension missing — `channels.list` call never invoked |
+| `mention_sources` coverage gap | G3-A expanded `entity_mentions` from 1,135 to 3,942 but `backfill_source_intelligence.py` was not re-run — ~2,665 entity_mentions have no engagement data in `mention_sources` |
+| `engagement_json` stored as TEXT | Every query requires `(cci.engagement_json::jsonb->>'views')::int` cast — silent NULLs if forgotten |
+
+---
+
+## Approved Roadmap
+
+### C0 — Foundation (COMPLETE)
+
+What already exists and is operational:
+- `youtube_channels` registry (133 channels, adaptive polling)
+- `canonical_content_items` with `source_account_id` and `engagement_json`
+- `entity_mentions` creator→entity join via `source_url`
+- `mention_sources` source quality scoring (~32% coverage)
+- `source_profiles` table structure (subscriber_count unpopulated)
+- G3-C continuous channel auto-discovery loop (runs every morning pipeline cycle)
+- Phase I1 / I2 — Source Intelligence and Signal Weighting already deployed
+
+---
+
+### C1 — Creator Intelligence Foundation (APPROVED — NEXT)
+
+TARGET TYPE: PRODUCTION_TARGETED
+
+**C1.1 — Subscriber Count Backfill**
+- Call `YouTube Data API channels.list?part=statistics&id=...` in batches of 50
+- Write `subscriber_count` into `youtube_channels` and `source_profiles` where `channel_id` matches
+- Cost: 1 unit per 50 channels = 3 API calls for 133 channels
+- Tag: `subscriber_count_source = 'channels_list_v1'`
+- Run once manually via `scripts/fetch_channel_subscriber_counts.py`, then add to weekly maintenance
+
+**C1.2 — Backfill `mention_sources` Gap**
+- Re-run `scripts/backfill_source_intelligence.py` against all entity_mentions rows where no `mention_sources` row exists
+- Target: ~2,665 rows with no engagement data
+- Prerequisite: verify `engagement_json::jsonb` cast is safe before running
+- Idempotent: script must skip existing rows (ON CONFLICT DO NOTHING)
+
+**C1.3 — `creator_entity_relationships` Table**
+- Alembic migration
+- Columns: `channel_id`, `entity_id` (FK to `entity_market`), `mention_count`, `first_mention_at`, `last_mention_at`, `avg_views`, `top_signal_type`, `early_signal_count`, `updated_at`
+- UNIQUE on `(channel_id, entity_id)`
+- Populated by new job `compute_creator_entity_relationships.py` — aggregates from `canonical_content_items JOIN entity_mentions JOIN mention_sources`
+- Add to morning pipeline Step 5c (non-fatal, timeout 300s)
+
+**C1.4 — `creator_scores` Table**
+- Alembic migration
+- Columns: `channel_id`, `influence_score`, `reach_score`, `signal_quality_score`, `entity_breadth`, `volume_score`, `early_signal_rate`, `computed_at`
+- UNIQUE on `channel_id`
+- Influence Score v1 formula (weighted composite):
+  - reach (30%): `log10(subscriber_count + 1) / log10(10_000_000)`
+  - signal_quality / noise rate (25%): `AVG(source_score)` from `mention_sources`
+  - entity_breadth (20%): `COUNT(DISTINCT entity_id) / 50` (capped at 1.0)
+  - volume (15%): `log10(total_mentions + 1) / log10(1_000)`
+  - early_signal_rate (10%): fraction of mentions that preceded a breakout/acceleration signal
+- Populated by `compute_creator_scores.py`, add to morning pipeline after C1.3 job
+
+**C1.5 — `engagement_json` JSONB Migration**
+- Alembic migration: `ALTER TABLE canonical_content_items ALTER COLUMN engagement_json TYPE JSONB USING engagement_json::jsonb`
+- Eliminates the silent-NULL risk from TEXT→JSONB cast in all downstream queries
+- One-time migration; idempotent
+- After migration: all existing queries using `::jsonb` cast continue to work unchanged
+
+**C1 Completion Criteria:**
+- `subscriber_count` populated for ≥80% of `youtube_channels`
+- `mention_sources` coverage ≥90% of `entity_mentions` rows
+- `creator_entity_relationships` table populated and refreshed daily
+- `creator_scores` table populated and refreshed daily
+- `engagement_json` column is JSONB (no cast required)
+- All new jobs are non-fatal pipeline steps
+
+---
+
+### C1 Product / API (PLANNED — after C1 Foundation verified)
+
+- `GET /api/v1/creators` — creator leaderboard: ranked by influence_score, filterable by quality_tier, category
+- `GET /api/v1/creators/{channel_id}` — creator profile: scores, entity portfolio, top mentions, early-signal history
+- `GET /api/v1/entities/{type}/{id}/creators` — entity page: Top Creators driving this entity's trend
+- Frontend: Top Creators panel on perfume and brand entity pages (replaces or extends Top Drivers section)
+- Frontend: Creator leaderboard page (new route `/creators`)
+- Frontend: Creator profile page (new route `/creators/{channel_id}`)
+
+---
+
+### C2 — Trend Attribution (PLANNED — after C1 Product/API)
+
+Answer: **Who caused this trend?**
+
+- Early-signal attribution: cross-reference `signals.detected_at` vs `canonical_content_items.published_at` for each entity
+- For each breakout/acceleration signal: identify which creators published content within 7 days before signal fired
+- `first_mover_score` per creator per entity: weighted by how early the mention preceded the signal
+- Attribution visible on entity signal timeline: "Creed Aventus breakout — first covered by [creator] 5 days before signal"
+- Attribution feed: cross-entity view of which creators are early movers on the most entities
+
+---
+
+### C3 — Campaign Suitability (PLANNED — after C2)
+
+Answer: **Is this creator right for a campaign, and will they cause noise?**
+
+- Noise rate: fraction of creator's mentions that resulted in false-positive or low-quality signal
+- Category alignment: does creator's entity portfolio match the target brand's category?
+- Engagement authenticity: engagement_rate vs subscriber_count ratio (anomaly detection for inflated accounts)
+- `campaign_suitability_score`: composite of influence_score, noise_rate, category_alignment, authenticity
+- Explicit "no blind suitability" rule: score must always be explainable (constituent factors visible in UI)
+- Not implemented until C2 attribution data is available and validated
+
+---
+
+### TikTok Creator Integration (AFTER CREATOR MODEL — do not start before C2)
+
+**Critical rule:** TikTok will be creator-first. Every TikTok item must be attributed to a creator identity.
+The creator model established in C1/C2 on YouTube is the foundation TikTok will plug into.
+
+**Platform-neutral schema requirement:**
+- `creator_entity_relationships.channel_id` → rename to `creator_id` at migration time
+- Add `platform` column: `'youtube'` | `'tiktok'` | `'instagram'` | `'reddit'`
+- UNIQUE on `(platform, creator_id, entity_id)`
+- `creator_scores` same extension: `(platform, creator_id)` composite key
+- `youtube_channels` remains the YouTube-specific table; a future `tiktok_creators` table follows same pattern
+
+**TikTok Research API readiness checklist (before integration):**
+- [ ] Research API production credentials approved by TikTok
+- [ ] `TIKTOK_CLIENT_KEY` and `TIKTOK_CLIENT_SECRET` in Railway `pipeline-daily` env vars
+- [ ] TikTok connector (`connectors/tiktok_watchlist/`) tested and verified
+- [ ] Creator identity confirmed available via Research API response schema
+
+---
+
+## Design Principles
+
+**1. Platform-neutral schema**
+Creator tables must use `(platform, creator_id)` as the composite key — not `channel_id` (YouTube-only). Schema designed from the start to accommodate TikTok, Instagram, and Reddit creator identities without redesign.
+
+**2. Views are not enough**
+Reach (subscriber count, view count) is one dimension. Signal quality (entity mention rate, noise rate), entity breadth, and early-signal rate are equally important. A creator with 10k subscribers who consistently mentions entities 5 days before breakout is more valuable than a 1M creator with low mention accuracy.
+
+**3. Quality over volume**
+Creator scoring must penalize noise. A creator who mentions 50 entities per video but most are false positives reduces signal quality. Noise rate must be a first-class scoring dimension (C1.4, C3).
+
+**4. Explainable scoring**
+Every influence score and campaign suitability score must expose its constituent factors. Never surface a single black-box number. Users must be able to see: reach=0.72, signal_quality=0.65, early_signal_rate=0.41, noise_rate=0.08.
+
+**5. No blind campaign suitability (C3)**
+Campaign Suitability scoring must not be implemented until Trend Attribution (C2) data is available and validated. C3 depends on C2's early-signal and noise-rate data to be meaningful. Implementing C3 without C2 produces arbitrary scores.
+
+**6. TikTok-ready from the start**
+Every C1 design decision must pass the question: "Does this work when `platform='tiktok'`?" If the answer is no, redesign before implementation. The YouTube creator model is the template — not the limit.
