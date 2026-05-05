@@ -15,6 +15,7 @@ import {
   ControlBar,
   ControlBarDivider,
 } from "@/components/primitives/ControlBar";
+import { RangeSelector, type RangePreset } from "@/components/primitives/RangeSelector";
 import { TerminalPanel } from "@/components/primitives/TerminalPanel";
 import { SectionHeader } from "@/components/primitives/SectionHeader";
 import { SearchInput } from "@/components/primitives/SearchInput";
@@ -96,10 +97,11 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [entityTypeFilter, setEntityTypeFilter] =
     useState<EntityTypeFilter>("all");
+  const [rangePreset, setRangePreset] = useState<RangePreset>("today");
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => fetchDashboard({ top_n: 20, signal_days: 7 }),
+    queryKey: ["dashboard", rangePreset],
+    queryFn: () => fetchDashboard({ top_n: 20, signal_days: 7, range_preset: rangePreset }),
     refetchInterval: 60_000,
   });
 
@@ -185,7 +187,9 @@ export default function DashboardPage() {
         title="Dashboard"
         subtitle={
           data
-            ? `as of ${data.kpis?.as_of_date ?? data.generated_at.slice(0, 10)}`
+            ? data.range_label
+              ? `${data.range_label} · as of ${data.kpis?.as_of_date ?? data.generated_at.slice(0, 10)}`
+              : `as of ${data.kpis?.as_of_date ?? data.generated_at.slice(0, 10)}`
             : undefined
         }
         actions={
@@ -223,21 +227,25 @@ export default function DashboardPage() {
           </div>
         }
         right={
-          data?.kpis && (
-            <>
-              <span className="text-[11px] text-zinc-600">
-                {data.total_entities} entities
-              </span>
-              <ControlBarDivider />
-              <span className="text-[11px] text-zinc-600">
-                {data.kpis.total_signals_today} signals today
-              </span>
-              <ControlBarDivider />
-              <span className="text-[11px] text-zinc-600">
-                {data.kpis.active_movers} movers
-              </span>
-            </>
-          )
+          <>
+            <RangeSelector value={rangePreset} onChange={setRangePreset} />
+            {data?.kpis && (
+              <>
+                <ControlBarDivider />
+                <span className="text-[11px] text-zinc-600">
+                  {data.total_entities} entities
+                </span>
+                <ControlBarDivider />
+                <span className="text-[11px] text-zinc-600">
+                  {data.kpis.total_signals_today} signals today
+                </span>
+                <ControlBarDivider />
+                <span className="text-[11px] text-zinc-600">
+                  {data.kpis.active_movers} movers
+                </span>
+              </>
+            )}
+          </>
         }
       />
 

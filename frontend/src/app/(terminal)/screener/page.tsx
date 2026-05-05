@@ -15,6 +15,7 @@ import { clsx } from "clsx";
 import { fetchScreener } from "@/lib/api/screener";
 import { fetchCatalogPerfumes, fetchCatalogBrands, fetchCatalogCounts } from "@/lib/api/catalog";
 import { fetchTopNotes, fetchTopAccords } from "@/lib/api/notes";
+import { RangeSelector, type RangePreset } from "@/components/primitives/RangeSelector";
 import { Header } from "@/components/shell/Header";
 import {
   ControlBar,
@@ -463,6 +464,7 @@ function ScreenerPageInner() {
 
   const [catalogOffset, setCatalogOffset] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [rangePreset, setRangePreset] = useState<RangePreset>("today");
 
   // ---------------------------------------------------------------------------
   // URL / param sync
@@ -590,8 +592,8 @@ function ScreenerPageInner() {
   // ---------------------------------------------------------------------------
 
   const activeQuery = useQuery({
-    queryKey: ["screener", params, debouncedSearch],
-    queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined }),
+    queryKey: ["screener", params, debouncedSearch, rangePreset],
+    queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined, range_preset: rangePreset }),
     staleTime: 30_000,
     enabled: mode === "active",
   });
@@ -806,7 +808,9 @@ function ScreenerPageInner() {
                 : "border-transparent text-zinc-600 hover:text-zinc-400",
             )}
           >
-            {tab.label}
+            {tab.key === "active" && rangePreset !== "today"
+              ? "Active in range"
+              : tab.label}
           </button>
         ))}
       </div>
@@ -850,14 +854,20 @@ function ScreenerPageInner() {
         }
         right={
           <>
+            {mode === "active" && (
+              <RangeSelector value={rangePreset} onChange={setRangePreset} />
+            )}
             {(hasActiveFilters || search) && (
-              <button
-                onClick={resetAll}
-                className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300"
-              >
-                <X size={11} />
-                Clear
-              </button>
+              <>
+                {mode === "active" && <ControlBarDivider />}
+                <button
+                  onClick={resetAll}
+                  className="flex items-center gap-1 text-[11px] text-zinc-500 hover:text-zinc-300"
+                >
+                  <X size={11} />
+                  Clear
+                </button>
+              </>
             )}
             {mode === "active" && activeQuery.data && (
               <>

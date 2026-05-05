@@ -67,6 +67,11 @@ export interface DashboardResponse {
   top_movers: TopMoverRow[];
   recent_signals: SignalRow[];
   breakouts: TopMoverRow[];
+  // Phase UI-T1 — time range metadata
+  range_preset: string | null;
+  range_label: string | null;
+  date_range_start: string | null;
+  date_range_end: string | null;
 }
 
 export interface EntitySummary {
@@ -97,6 +102,11 @@ export interface ScreenerResponse {
   limit: number;
   offset: number;
   rows: EntitySummary[];
+  // Phase UI-T1 — time range metadata
+  range_preset: string | null;
+  range_label: string | null;
+  date_range_start: string | null;
+  date_range_end: string | null;
 }
 
 export interface SnapshotRow {
@@ -358,6 +368,9 @@ export interface ScreenerParams {
   order?: "asc" | "desc";
   limit?: number;
   offset?: number;
+  range_preset?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 // ---------------------------------------------------------------------------

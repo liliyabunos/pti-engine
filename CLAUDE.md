@@ -12498,3 +12498,156 @@ To drop the table entirely:
 ```bash
 railway run --service pipeline-daily alembic downgrade 027
 ```
+
+---
+
+### G4-E Post-Deployment Verification (2026-05-05)
+
+**STATUS: DEPLOYED — AWAITING FIRST ACTIVE EXPERIMENTS**
+
+**Commits:** `15e9760` (G4-E implementation) + `bc97feb` (blocklist quality fix)
+
+---
+
+#### Deploy / Migration Status
+
+| Check | Result |
+|-------|--------|
+| `alembic_version` | **028** ✅ |
+| `youtube_query_experiments` table exists | ✅ — 26 columns confirmed |
+| UNIQUE constraints (`query_text`, `normalized_candidate`) | ✅ |
+| Experiment rows | **0** — correct (Step 1.5 runs morning-only; morning pipeline had not yet run post-deploy) |
+| Active experiments | 0 / 5 slots open |
+| Expired-but-active rows | 0 ✅ |
+| Duplicate `query_text` values | 0 ✅ |
+
+---
+
+#### Evening Pipeline Step 3d Verification
+
+`start_pipeline_evening.sh` Step 3d confirmed present:
+
+```sh
+echo "[pipeline-evening] Step 3d — Evaluate temp query experiments (Phase G4-E)"
+timeout 300 python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-count || \
+  echo "[pipeline-evening] WARNING: evaluate_temp_youtube_queries failed — continuing"
+```
+
+Step 3d ran as **no-op** — table empty, nothing to evaluate. Correct behavior.
+`run_count` bump: 0 experiments bumped. Exit 0.
+
+---
+
+#### Critical Fix — `_BLOCKLIST` Expansion (commit `bc97feb`)
+
+**Root cause of quality gap found and fixed before first active experiments.**
+
+`select_emerging_query_candidates.py` classified 20 of 30 top emerging candidates as
+`low` risk and `add_to_experiments` based on the multi-channel + score ≥ 4.0 rule,
+regardless of whether the phrase was a perfume name. Examples that passed through:
+
+- `"Go To"` (6ch, score 9.52) — intent fragment
+- `"Beast Mode"` (3ch, score 4.85) — intent fragment
+- `"Smells Like"` (3ch, score 4.74) — content fragment
+- `"Middle Eastern"` (5ch, score 5.64) — geographic modifier
+- `"Long Lasting"` (3ch, score 4.52) — performance attribute
+- `"Everyday Fragrances"`, `"Hyped Fragrances"` — topic/category phrases
+
+The script's own `_NOISE_PATTERNS` (regex) and `_WEAK_TOKENS` sets did NOT cover these
+multi-word intent/topic fragments. The `_BLOCKLIST` in `apply_temp_youtube_queries.py`
+had only 8 entries and also missed them.
+
+**Fix:** Expanded `_BLOCKLIST` in `apply_temp_youtube_queries.py` from 8 to ~30 entries,
+incorporating all E3-C/E3-F `_V2_NOISE_PHRASES` vocabulary from `emerging.py`.
+
+Added categories:
+- E3-C/E3-F noise phrases: `"go to"`, `"beast mode"`, `"smells like"`, `"smell like"`, `"middle eastern"`, `"everyday fragrances"`, `"long lasting"`, `"alternatives to"`, `"better than"`, `"complimented fragrances"`, `"every man"`, `"wear the most"`, `"wear the"`, `"compliment getter"`, `"signature scent"`, `"need in"`, `"under 100"`, `"under 30"`, `"every man should"`, `"fresh summer fragrances"`, `"hyped fragrances"`, `"niche fragrance"`, `"mother day fragrance"`, `"buy fragrances"`, `"buy fragrance"`, `"stop wearing"`, `"stop wearing this"`, `"game of"`, `"smell expensive"`, `"paris corner"`
+- Content phrases: `"game changer"`, `"must wear"`, `"must have"`, `"worth it"`, `"date night"`, `"office wear"`, `"compliment magnet"`
+- Subphrase fragments: `"jean paul"`, `"paul gaultier"`, `"jean paul gaultier"`, `"forever wanted"`, `"azzaro forever"`
+
+**Result after fix (dry-run):** 0 of 20 `add_to_experiments` candidates survive the expanded blocklist.
+System is correctly idle — no noise queries will be inserted.
+
+**Architectural note:** `select_emerging_query_candidates.py` (G4-E.2) and the API-layer
+`emerging.py` (`_V2_NOISE_PHRASES`) remain separate modules. The blocklist in
+`apply_temp_youtube_queries.py` is the **authoritative second gate** before any DB insertion.
+Keep these two filter layers aligned when either is updated.
+
+---
+
+#### Emerging Signal Readiness
+
+| Metric | Value |
+|--------|-------|
+| `emerging_signals` total rows | **12,841** |
+| Multi-channel candidates (`distinct_channels_count >= 2`) | **221** |
+| Top candidates passing classifier as `add_to_experiments` | **20** |
+| Passing expanded blocklist | **0** |
+| System state | **Correctly idle** |
+
+**Top 5 emerging candidates (by emerging_score, multi-channel):**
+
+| Candidate | Score | Channels | Classifier result | Blocklist |
+|-----------|-------|---------|------------------|-----------|
+| Go To | 9.52 | 6 | add_to_experiments | BLOCKED |
+| Middle Eastern | 5.64 | 5 | add_to_experiments | BLOCKED |
+| Beast Mode | 4.85 | 3 | add_to_experiments | BLOCKED |
+| Smells Like | 4.74 | 3 | add_to_experiments | BLOCKED |
+| Long Lasting | 4.52 | 3 | add_to_experiments | BLOCKED |
+
+System is waiting for genuine multi-channel perfume/brand entity names to accumulate.
+No noise queries will be inserted as experiments.
+
+---
+
+#### Safety Limits Confirmed
+
+| Constraint | Value | Verified |
+|------------|-------|---------|
+| Max active experiments | 5 | ✅ |
+| Temp queries: max results per query | 5 | ✅ |
+| Temp queries: runs per day | 1 (morning only) | ✅ |
+| Quota cost (5 temp + 47 core) | 9,900 / 10,000 | ✅ |
+| Core `perfume_queries.yaml` unmodified | Never touched | ✅ |
+| `perfume_queries_temp.yaml` in git | Never committed | ✅ |
+| Default expiry | 14 days | ✅ |
+
+---
+
+#### Dashboard KPI Snapshot (2026-05-05)
+
+| KPI | Value |
+|-----|-------|
+| Active today | 300 |
+| Breakout signals | 52 |
+| Acceleration spikes | 46 |
+| Total signals | 166 |
+
+**G4B2 Arabic/ME entities confirmed (all 11 in entity_market):**
+
+| Entity | Score | Trend state |
+|--------|-------|-------------|
+| Khadlaj Icon | ~40 | breakout |
+| Rasasi Fattan | ~40 | breakout |
+| Armaf Odyssey | ~40 | breakout |
+| Afnan 9pm | ~32 | rising |
+| Khadlaj Island | ~33 | rising |
+| Lattafa Dynasty | ~32 | rising |
+| Lattafa Asad | ~32 | rising |
+| Rasasi Daarej | ~33 | rising |
+| Afnan Supremacy | ~32 | rising |
+| Afnan Supremacy in Heaven | ~32 | rising |
+| Maison Alhambra Jean Lowe | ~32 | rising |
+
+---
+
+#### Next Verification
+
+Morning pipeline (11:00 UTC):
+- Step 1.5 will run `apply_temp_youtube_queries.py --apply`
+- With 0 blocklist-surviving candidates, expected log: `[apply] No new candidates to add.`
+- Step 1.5b: no temp YAML file → skipped
+- Step 4d: evaluate → 0 experiments → no-op
+
+Check daily until genuine entity names (multi-channel perfume/brand names) accumulate
+in `emerging_signals` with `distinct_channels_count >= 2` and pass the expanded blocklist.

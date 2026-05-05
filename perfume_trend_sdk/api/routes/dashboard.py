@@ -9,7 +9,7 @@ GET /api/v1/screener   — filterable, sortable, paginated entity screener
 All data is precomputed by the aggregation job. These routes serve it directly.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -21,9 +21,13 @@ from perfume_trend_sdk.api.dependencies import get_db_session
 from perfume_trend_sdk.api.queries import (
     fetch_brand_name_map,
     fetch_dashboard_kpis,
+    fetch_dashboard_kpis_ranged,
     fetch_latest_rows,
     fetch_latest_signal_map,
+    fetch_rows_for_range,
     get_brand_name,
+    get_latest_active_date,
+    resolve_date_range,
 )
 from perfume_trend_sdk.api.schemas.dashboard import (
     DashboardKPIs,
@@ -68,6 +72,18 @@ def _fetch_recent_signals(db: Session, days: int) -> List:
     )
 
 
+def _fetch_signals_for_range(db: Session, start: date, end: date) -> List:
+    """Return (Signal, EntityMarket) rows for a date range, newest first."""
+    return (
+        db.query(Signal, EntityMarket)
+        .join(EntityMarket, Signal.entity_id == EntityMarket.id)
+        .filter(Signal.detected_at >= datetime.combine(start, datetime.min.time()).replace(tzinfo=timezone.utc))
+        .filter(Signal.detected_at <= datetime.combine(end, datetime.max.time()).replace(tzinfo=timezone.utc))
+        .order_by(Signal.detected_at.desc())
+        .all()
+    )
+
+
 def _fmt_detected_at(value) -> str:
     if isinstance(value, datetime):
         return value.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -82,6 +98,9 @@ def _fmt_detected_at(value) -> str:
 def get_dashboard(
     top_n: int = Query(20, ge=1, le=100),
     signal_days: int = Query(7, ge=1, le=30),
+    range_preset: Optional[str] = Query(None, description="today|yesterday|7d|30d|mtd|ytd"),
+    start_date: Optional[date] = Query(None, description="Custom range start (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Custom range end (YYYY-MM-DD)"),
     db: Session = Depends(get_db_session),
 ) -> DashboardResponse:
     import logging
@@ -99,13 +118,27 @@ def get_dashboard(
                 pass
             return fallback
 
-    rows = _safe(lambda: fetch_latest_rows(db), [], "fetch_latest_rows")
-    signal_rows = _safe(lambda: _fetch_recent_signals(db, days=signal_days), [], "fetch_recent_signals")
+    # Resolve date range
+    latest_active = _safe(lambda: get_latest_active_date(db), None, "get_latest_active_date")
+    range_start, range_end, range_label, range_key = resolve_date_range(
+        range_preset, start_date, end_date, latest_active
+    )
+    is_today_preset = (range_key == "today")
+
     brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "fetch_brand_name_map")
     latest_signal_map = _safe(lambda: fetch_latest_signal_map(db), {}, "fetch_latest_signal_map")
 
-    # Headline KPIs (computed from raw rows before collapsing — preserves full entity counts)
-    kpis_dict = fetch_dashboard_kpis(db, rows, signal_rows, brand_name_map=brand_name_map)
+    if is_today_preset:
+        # Default path: preserve existing fetch_latest_rows behavior (latest snapshot per entity)
+        rows = _safe(lambda: fetch_latest_rows(db), [], "fetch_latest_rows")
+        signal_rows = _safe(lambda: _fetch_recent_signals(db, days=signal_days), [], "fetch_recent_signals")
+        kpis_dict = fetch_dashboard_kpis(db, rows, signal_rows, brand_name_map=brand_name_map)
+    else:
+        # Range path: aggregate over the selected date window
+        rows = _safe(lambda: fetch_rows_for_range(db, range_start, range_end, is_single_day=(range_key == "yesterday")), [], "fetch_rows_for_range")
+        signal_rows = _safe(lambda: _fetch_signals_for_range(db, range_start, range_end), [], "fetch_signals_for_range")
+        kpis_dict = fetch_dashboard_kpis_ranged(db, rows, signal_rows, range_start, range_end, brand_name_map=brand_name_map)
+
     kpis = DashboardKPIs(**kpis_dict)
 
     # Collapse concentration variants + apply flood dampening, then sort by effective_rank_score
@@ -175,6 +208,10 @@ def get_dashboard(
         top_movers=top_movers,
         recent_signals=recent_signals,
         breakouts=breakouts,
+        range_preset=range_key,
+        range_label=range_label,
+        date_range_start=range_start.isoformat(),
+        date_range_end=range_end.isoformat(),
     )
 
 
@@ -194,6 +231,10 @@ def get_screener(
     signal_type: Optional[str] = Query(None, description="Filter to entities with this signal type"),
     has_signals: Optional[bool] = Query(None, description="true = only entities with any signal"),
     note: Optional[str] = Query(None, description="Filter perfumes containing this note name"),
+    # Time range
+    range_preset: Optional[str] = Query(None, description="today|yesterday|7d|30d|mtd|ytd"),
+    start_date: Optional[date] = Query(None, description="Custom range start (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="Custom range end (YYYY-MM-DD)"),
     # Sorting
     sort_by: str = Query("composite_market_score", description=f"One of: {', '.join(sorted(_SORT_FIELDS))}"),
     order: str = Query("desc", pattern="^(asc|desc)$"),
@@ -216,7 +257,21 @@ def get_screener(
                 pass
             return fallback
 
-    rows = _safe(lambda: fetch_latest_rows(db), [], "fetch_latest_rows")
+    # Resolve date range
+    latest_active = _safe(lambda: get_latest_active_date(db), None, "get_latest_active_date")
+    range_start, range_end, range_label, range_key = resolve_date_range(
+        range_preset, start_date, end_date, latest_active
+    )
+    is_today_preset = (range_key == "today")
+
+    if is_today_preset:
+        rows = _safe(lambda: fetch_latest_rows(db), [], "fetch_latest_rows")
+    else:
+        rows = _safe(
+            lambda: fetch_rows_for_range(db, range_start, range_end, is_single_day=(range_key == "yesterday")),
+            [],
+            "fetch_rows_for_range",
+        )
     brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "fetch_brand_name_map")
     latest_signal_map = _safe(lambda: fetch_latest_signal_map(db), {}, "fetch_latest_signal_map")
 
@@ -362,4 +417,8 @@ def get_screener(
         limit=limit,
         offset=offset,
         rows=page,
+        range_preset=range_key,
+        range_label=range_label,
+        date_range_start=range_start.isoformat(),
+        date_range_end=range_end.isoformat(),
     )

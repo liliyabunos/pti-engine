@@ -62,6 +62,11 @@ class DashboardResponse(BaseModel):
     top_movers: List[TopMoverRow]
     recent_signals: List[SignalRow]
     breakouts: List[TopMoverRow]
+    # Phase UI-T1 — time range metadata
+    range_preset: Optional[str] = None          # "today"|"yesterday"|"7d"|"30d"|"mtd"|"ytd"|"custom"
+    range_label: Optional[str] = None           # human-readable e.g. "Last 7 days"
+    date_range_start: Optional[str] = None      # ISO date string e.g. "2026-04-28"
+    date_range_end: Optional[str] = None        # ISO date string e.g. "2026-05-04"
 
 
 class ScreenerResponse(BaseModel):
@@ -71,3 +76,8 @@ class ScreenerResponse(BaseModel):
     limit: int
     offset: int
     rows: List[EntitySummary]
+    # Phase UI-T1 — time range metadata
+    range_preset: Optional[str] = None
+    range_label: Optional[str] = None
+    date_range_start: Optional[str] = None
+    date_range_end: Optional[str] = None
