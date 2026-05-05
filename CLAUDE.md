@@ -151,14 +151,14 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | UI-T1.1 Custom Date Range Picker | COMPLETE | 2026-05-05 |
 | C1.1 Subscriber Count Backfill | COMPLETE | 2026-05-05 |
 | C1.2 mention_sources backfill | NOT NEEDED (100% coverage) | 2026-05-05 |
-| C1.3 creator_entity_relationships table | NEXT | — |
-| C1.4 creator_scores table | PLANNED | — |
+| C1.3 creator_entity_relationships table | COMPLETE | 2026-05-05 |
+| C1.4 creator_scores table | COMPLETE | 2026-05-05 |
 
 ---
 
 ## Alembic Migrations
 
-Current production: **migration 029**
+Current production: **migration 031**
 
 | Migration | What |
 |-----------|------|
@@ -168,8 +168,117 @@ Current production: **migration 029**
 | 027 | `emerging_signals` table |
 | 028 | `youtube_query_experiments` table |
 | 029 | `subscriber_count_fetched_at` on `youtube_channels` |
+| 030 | `creator_entity_relationships` table (C1.3) |
+| 031 | `creator_scores` table (C1.4) |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
+
+---
+
+## Creator Intelligence — C1.3 + C1.4 (COMPLETED — 2026-05-05)
+
+### C1.3 — `creator_entity_relationships` (migration 030)
+
+**Script:** `scripts/compute_creator_entity_relationships.py`
+**Flags:** `--dry-run` (default), `--apply`, `--limit N`, `--verify`
+
+**What it computes** (aggregated per `(platform, creator_id, entity_id)`):
+- `mention_count`, `unique_content_count`
+- `first_mention_date`, `last_mention_date`
+- `total_views`, `avg_views`, `total_likes`, `total_comments`
+- `avg_engagement_rate` (from `mention_sources` if available, else derived from views/likes/comments)
+- `mentions_before_first_breakout`, `days_before_first_breakout` (vs first `breakout`/`acceleration_spike` signal per entity)
+
+**Source join:** `entity_mentions JOIN canonical_content_items` via `(cci.source_url = em.source_url OR cci.id = em.source_url)`. YouTube only (`source_platform='youtube'`, valid `UC...` channel IDs).
+
+**Important SQL notes:**
+- `engagement_json` is TEXT in `canonical_content_items` — always cast `::jsonb` before accessing fields
+- `entity_id` in `entity_mentions` is varchar UUID — cast `::uuid` for UUID comparisons
+- SQL regex `{22}` must be escaped as `{{22}}` inside Python `.format()` strings
+
+**Production results (2026-05-05):**
+
+| Metric | Value |
+|--------|-------|
+| `creator_entity_relationships` rows | **2,135** |
+| Unique YouTube creators | **689** |
+| Unique entities covered | **741** |
+| Duplicate `(platform, creator_id, entity_id)` | **0** |
+| Rows with early signal (`mentions_before_first_breakout > 0`) | **221** |
+
+**Top 5 by mention_count (creator → entity):**
+Cherayeslifestyle → (various entities, 47+ mentions), The Perfume Guy → entities with 30+ mentions each.
+
+**Top early-signal creator:** Cherayeslifestyle — 30 days before first breakout signal.
+
+---
+
+### C1.4 — `creator_scores` (migration 031)
+
+**Script:** `scripts/compute_creator_scores.py`
+**Flags:** `--dry-run` (default), `--apply`, `--limit N`, `--verify`
+
+**v1 Influence Score formula** (6 weighted components, all normalized 0.0–1.0):
+
+| Component | Weight | Formula |
+|-----------|--------|---------|
+| reach | 25% | `min(log10(subscriber_count+1) / log10(10_000_000), 1.0)` |
+| signal_quality | 20% | `max(0.0, min(1.0 - noise_rate, 1.0))` where `noise_rate = content_with_entity_mentions / total_content_items` (inverted: lower noise = higher quality) |
+| entity_breadth | 20% | `min(unique_entities_mentioned / 50.0, 1.0)` |
+| volume | 15% | `min(log10(total_entity_mentions+1) / log10(1000), 1.0)` |
+| early_signal | 10% | `min(early_signal_count / 20.0, 1.0)` |
+| engagement | 10% | `min((avg_engagement_rate or 0.0) / 0.1, 1.0)` |
+
+**JSONB handling note:** psycopg2 returns PostgreSQL JSONB columns as native Python dicts — do NOT call `json.loads()` on them. Use `isinstance(r[2], dict)` check before parsing.
+
+**Production results (2026-05-05):**
+
+| Metric | Value |
+|--------|-------|
+| `creator_scores` rows | **689** |
+| Unique YouTube creators scored | **689** |
+| Creators with `influence_score > 0` | **689** |
+| Creators with `early_signal_count > 0` | **106** |
+| Score distribution: top-tier (≥0.7) | **3** |
+| Score distribution: mid (0.4–0.7) | **35** |
+| Score distribution: low (<0.4) | **645** |
+| Score distribution: minimal (<0.1) | **6** |
+
+**Top 10 by influence_score:**
+
+| Creator | Tier | Subscribers | Entities | Early signals | Score |
+|---------|------|------------|---------|--------------|-------|
+| The Perfume Guy | tier_1 | 333,000 | 138 | 10 | **0.7940** |
+| Gents Scents | tier_1 | 634,000 | 49 | 10 | **0.7470** |
+| Cherayeslifestyle | tier_2 | 115,000 | 50 | 11 | **0.7326** |
+| Eau de Jarino | tier_2 | 52,600 | 67 | 8 | **0.6723** |
+| Triple B | tier_2 | 337,000 | 38 | 9 | **0.6686** |
+
+**Top 3 by early_signal_count:**
+1. Cherayeslifestyle — 11 early signals
+2. Gents Scents — 10 early signals
+3. The Perfume Guy — 10 early signals
+
+**Score components (The Perfume Guy):**
+`reach=0.789, signal_quality=0.857, entity_breadth=1.000, volume=0.749, early_signal=0.500, engagement=0.631`
+
+---
+
+### C1 Completion Criteria
+
+- [x] `subscriber_count` populated for 149/149 channels (100%) — C1.1 ✅
+- [x] `mention_sources` coverage 100% of `entity_mentions` — C1.2 verified ✅
+- [x] `creator_entity_relationships` table populated (2,135 rows, 689 creators, 741 entities) — C1.3 ✅
+- [x] `creator_scores` table populated (689 rows, all with influence_score > 0) — C1.4 ✅
+- [ ] `engagement_json` column JSONB migration — C1.5 (planned)
+- [ ] Creator leaderboard API + frontend — C1 Product phase (planned)
+- [ ] Top Creators panel on entity pages — C1 Product phase (planned)
+
+**Recompute commands (run after each pipeline cycle for fresh scores):**
+```bash
+DATABASE_URL=<prod-url> python3 scripts/compute_creator_entity_relationships.py --apply
+DATABASE_URL=<prod-url> python3 scripts/compute_creator_scores.py --apply
+```
 
 ---
 
