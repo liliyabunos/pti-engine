@@ -12651,3 +12651,127 @@ Morning pipeline (11:00 UTC):
 
 Check daily until genuine entity names (multi-channel perfume/brand names) accumulate
 in `emerging_signals` with `distinct_channels_count >= 2` and pass the expanded blocklist.
+
+---
+
+## Phase UI-T1 — Time Range Selector
+
+### Target Type
+PRODUCTION_TARGETED
+
+### Authoritative Targets
+- Production PostgreSQL (`DATABASE_URL`)
+- `perfume_trend_sdk/api/queries.py` (new `resolve_date_range()` function)
+- `perfume_trend_sdk/api/routes/dashboard.py` (dashboard + screener endpoints)
+- `perfume_trend_sdk/api/schemas/dashboard.py` (range metadata fields)
+- `frontend/src/components/primitives/RangeSelector.tsx` (new component)
+- `frontend/src/app/(terminal)/dashboard/page.tsx`
+- `frontend/src/app/(terminal)/screener/page.tsx`
+- `frontend/src/lib/api/dashboard.ts`
+- `frontend/src/lib/api/types.ts`
+
+### Requires Commit / Push / Deploy
+YES — commit `b064f58`
+
+### Expected UI Change
+YES — time range selector in Dashboard and Screener control bars; range-aware KPIs and movers
+
+### Status
+STATUS: COMPLETE — DEPLOY PENDING (push blocked by HTTPS auth — requires manual `git push`)
+
+---
+
+### Problem
+
+Dashboard KPI cards showed `CURRENT_DATE`-only data. YouTube/Reddit ingestion enriches
+prior `published_at` dates — a video published yesterday is ingested today and aggregated
+for yesterday, not today. A partial day could show 0 signals while the latest completed
+market date had strong activity. Users had no way to view Yesterday, last 7 days, or
+other ranges without manually modifying API calls.
+
+---
+
+### What was implemented
+
+**Backend — `perfume_trend_sdk/api/queries.py`** (new file)
+- `resolve_date_range(db, preset)` — maps all 6 presets to `(start_date, end_date, label, key)`
+- **Anchor:** uses `latest_active` date (MAX date with `mention_count > 0` in `entity_timeseries_daily`)
+  instead of wall-clock `CURRENT_DATE` — prevents empty results from partial pipeline days
+- `is_today_preset` flag: routes `"today"` through the original `fetch_latest_rows()` path
+  for zero regression on existing behavior
+
+**Range preset → date mapping (anchored to `latest_active`, e.g. 2026-05-05):**
+
+| Preset | Label | start_date | end_date |
+|--------|-------|-----------|---------|
+| `today` | Today | 2026-05-05 | 2026-05-05 |
+| `yesterday` | Yesterday | 2026-05-04 | 2026-05-04 |
+| `7d` | Last 7 days | 2026-04-29 | 2026-05-05 |
+| `30d` | Last 30 days | 2026-04-06 | 2026-05-05 |
+| `mtd` | Month to date | 2026-05-01 | 2026-05-05 |
+| `ytd` | Year to date | 2026-01-01 | 2026-05-05 |
+
+**Backend — `perfume_trend_sdk/api/routes/dashboard.py`**
+- `GET /api/v1/dashboard`: added `range_preset: Optional[str] = Query(None)` param
+- `GET /api/v1/screener`: added same param
+- Both call `resolve_date_range()` and aggregate metrics across the resolved window
+- Both return `range_preset`, `range_label`, `date_range_start`, `date_range_end` in response
+
+**Backend — `perfume_trend_sdk/api/schemas/dashboard.py`**
+- `DashboardResponse` + `ScreenerResponse` extended with range metadata fields
+
+**Frontend — `frontend/src/components/primitives/RangeSelector.tsx`** (NEW)
+- Terminal-style button group: `Today | Yesterday | 7D | 30D | MTD | YTD`
+- Active state: `bg-emerald-500/20 text-emerald-400 border-emerald-500/40`
+- Inactive hover: `text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/60`
+- Font: `font-mono text-xs`
+
+**Frontend — `frontend/src/app/(terminal)/dashboard/page.tsx`**
+- `const [rangePreset, setRangePreset] = useState<RangePreset>("today")`
+- `queryKey: ["dashboard", rangePreset]` — automatic re-fetch on selection change
+- `queryFn: fetchDashboard({ top_n: 20, signal_days: 7, range_preset: rangePreset })`
+- Header subtitle: `` `${data.range_label} · as of ${data.kpis?.as_of_date ?? ...}` `` when `range_label` present
+- `<RangeSelector value={rangePreset} onChange={setRangePreset} />` in ControlBar right
+
+**Frontend — `frontend/src/lib/api/dashboard.ts`**
+- `fetchDashboard()` extended with `range_preset?: string; start_date?: string; end_date?: string;` params
+
+**Frontend — `frontend/src/app/(terminal)/screener/page.tsx`**
+- `const [rangePreset, setRangePreset] = useState<RangePreset>("today")`
+- `queryKey: ["screener", params, debouncedSearch, rangePreset]`
+- `queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined, range_preset: rangePreset })`
+- `enabled: mode === "active"` — catalog and composition modes are completely unaffected
+- Dynamic tab label: `"Active today"` → `"Active in range"` when `rangePreset !== "today"`
+- `<RangeSelector>` shown in ControlBar right ONLY when `mode === "active"`
+
+**Frontend — `frontend/src/lib/api/types.ts`**
+- `ScreenerParams.range_preset?: string; start_date?: string; end_date?: string;` added
+
+---
+
+### Frontend Behavior
+
+| Action | Behavior |
+|--------|---------|
+| Select "Yesterday" on dashboard | New query fires with `range_preset=yesterday`, movers/signals update, header shows "Yesterday · as of 2026-05-05" |
+| Select "7D" on dashboard | Aggregated 7-day movers appear, header shows "Last 7 days · as of 2026-05-05" |
+| Select "30D" on screener | Screener re-fetches active entities in 30-day window; tab shows "Active in range" |
+| Switch to "All Perfumes" on screener | Range selector disappears (catalog mode); catalog search unaffected |
+| Switch back to "Active Today" | Range selector reappears, reset to last selected preset |
+
+---
+
+### Completion Criteria
+
+- [x] Backend `resolve_date_range()` maps all 6 presets correctly (verified via curl)
+- [x] Both endpoints accept `range_preset` and return range metadata
+- [x] `today` preset routes through original fast path (zero regression)
+- [x] `RangeSelector` component built with terminal styling
+- [x] Dashboard queryKey includes rangePreset (re-fetch on change)
+- [x] Dashboard header shows range_label
+- [x] Screener range selector only active in "active" mode
+- [x] Catalog and composition screener modes unaffected
+- [x] All 9 files committed (`b064f58`)
+- [ ] Pushed to main (requires manual push — HTTPS auth)
+- [ ] Railway deploy confirmed
+- [ ] Production smoke test at fragranceindex.ai
