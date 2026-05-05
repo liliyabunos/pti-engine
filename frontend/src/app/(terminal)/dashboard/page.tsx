@@ -98,10 +98,27 @@ export default function DashboardPage() {
   const [entityTypeFilter, setEntityTypeFilter] =
     useState<EntityTypeFilter>("all");
   const [rangePreset, setRangePreset] = useState<RangePreset>("today");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+
+  const isCustomReady =
+    rangePreset === "custom" &&
+    !!customStartDate &&
+    !!customEndDate &&
+    customStartDate <= customEndDate;
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["dashboard", rangePreset],
-    queryFn: () => fetchDashboard({ top_n: 20, signal_days: 7, range_preset: rangePreset }),
+    queryKey: ["dashboard", rangePreset, customStartDate, customEndDate],
+    queryFn: () =>
+      fetchDashboard({
+        top_n: 20,
+        signal_days: 7,
+        range_preset: rangePreset,
+        ...(isCustomReady
+          ? { start_date: customStartDate, end_date: customEndDate }
+          : {}),
+      }),
+    enabled: rangePreset !== "custom" || isCustomReady,
     refetchInterval: 60_000,
   });
 
@@ -228,7 +245,16 @@ export default function DashboardPage() {
         }
         right={
           <>
-            <RangeSelector value={rangePreset} onChange={setRangePreset} />
+            <RangeSelector
+              value={rangePreset}
+              onChange={setRangePreset}
+              customStartDate={customStartDate}
+              customEndDate={customEndDate}
+              onCustomDatesChange={(s, e) => {
+                setCustomStartDate(s);
+                setCustomEndDate(e);
+              }}
+            />
             {data?.kpis && (
               <>
                 <ControlBarDivider />

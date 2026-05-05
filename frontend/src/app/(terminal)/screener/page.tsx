@@ -465,6 +465,14 @@ function ScreenerPageInner() {
   const [catalogOffset, setCatalogOffset] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [rangePreset, setRangePreset] = useState<RangePreset>("today");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+
+  const isCustomReady =
+    rangePreset === "custom" &&
+    !!customStartDate &&
+    !!customEndDate &&
+    customStartDate <= customEndDate;
 
   // ---------------------------------------------------------------------------
   // URL / param sync
@@ -592,10 +600,18 @@ function ScreenerPageInner() {
   // ---------------------------------------------------------------------------
 
   const activeQuery = useQuery({
-    queryKey: ["screener", params, debouncedSearch, rangePreset],
-    queryFn: () => fetchScreener({ ...params, q: debouncedSearch || undefined, range_preset: rangePreset }),
+    queryKey: ["screener", params, debouncedSearch, rangePreset, customStartDate, customEndDate],
+    queryFn: () =>
+      fetchScreener({
+        ...params,
+        q: debouncedSearch || undefined,
+        range_preset: rangePreset,
+        ...(isCustomReady
+          ? { start_date: customStartDate, end_date: customEndDate }
+          : {}),
+      }),
     staleTime: 30_000,
-    enabled: mode === "active",
+    enabled: mode === "active" && (rangePreset !== "custom" || isCustomReady),
   });
 
   const catalogPerfumesQuery = useQuery({
@@ -855,7 +871,16 @@ function ScreenerPageInner() {
         right={
           <>
             {mode === "active" && (
-              <RangeSelector value={rangePreset} onChange={setRangePreset} />
+              <RangeSelector
+                value={rangePreset}
+                onChange={setRangePreset}
+                customStartDate={customStartDate}
+                customEndDate={customEndDate}
+                onCustomDatesChange={(s, e) => {
+                  setCustomStartDate(s);
+                  setCustomEndDate(e);
+                }}
+              />
             )}
             {(hasActiveFilters || search) && (
               <>
