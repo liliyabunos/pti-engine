@@ -24,7 +24,11 @@
   - C1.3 `creator_entity_relationships`: 2,135 rows, 689 creators, 741 entities ✓
   - C1.4 `creator_scores`: 689 rows, v1 influence score ✓
   - Migration 031 applied · commit e6f8054
-- **Next: C1 Product/API** — creator leaderboard, entity page Top Creators, pipeline integration
+- **C1.5 Creator Daily Refresh — DEPLOYED (2026-05-05)**
+  - Steps 2b/2c added to morning pipeline (`start_pipeline.sh`) after Step 2 aggregation
+  - Evening pipeline unchanged
+  - PRODUCTION VERIFIED after next morning run
+- **Next: C1 Product/API** — creator leaderboard, entity page Top Creators
 
 ## Execution Rules
 - Move fast but keep production safe.

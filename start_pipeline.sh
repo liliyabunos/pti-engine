@@ -65,6 +65,16 @@ timeout 600 python3 -m perfume_trend_sdk.jobs.validate_candidates || \
 echo "[pipeline] Step 2 — Aggregation for date=$TODAY"
 timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date "$TODAY"
 
+# Step 2b: Creator entity relationship refresh (Phase C1.5)
+echo "[pipeline] Step 2b — Creator entity relationship refresh (Phase C1.5)"
+timeout 300 python3 scripts/compute_creator_entity_relationships.py --apply || \
+  echo "[pipeline] WARNING: compute_creator_entity_relationships failed — continuing"
+
+# Step 2c: Creator score refresh (Phase C1.5)
+echo "[pipeline] Step 2c — Creator score refresh (Phase C1.5)"
+timeout 300 python3 scripts/compute_creator_scores.py --apply || \
+  echo "[pipeline] WARNING: compute_creator_scores failed — continuing"
+
 # Step 3: Detect signals
 echo "[pipeline] Step 3 — Signal detection for date=$TODAY"
 timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date "$TODAY"
