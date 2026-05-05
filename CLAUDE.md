@@ -35,7 +35,12 @@
   - `GET /api/v1/entities/brand/{id}/creators` — top creators for brand entity ✓
   - Files: `routes/creators.py`, `schemas/creators.py`, `routes/entities.py`, `main.py`
   - commit 959d48e · deployed
-- **Next: C1 Product/API Step 2** — frontend Top Creators UI + creator leaderboard page
+- **C1 Product/UI Step 2A — Creators Leaderboard Page — DEPLOYED (2026-05-05)**
+  - `/creators` page with influence score, tier/category filters, sort controls
+  - Sidebar nav link added (Users icon)
+  - Files: `app/(terminal)/creators/page.tsx`, `lib/api/creators.ts`, `Sidebar.tsx`
+  - Build clean · PRODUCTION VERIFIED after Railway redeploy
+- **Next: C1 Product/UI Step 2B** — entity page Top Creators block (perfume entity pages)
 
 ## Execution Rules
 - Move fast but keep production safe.

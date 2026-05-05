@@ -6,6 +6,7 @@ import { clsx } from "clsx";
 import {
   LayoutDashboard,
   SlidersHorizontal,
+  Users,
   BookMarked,
   BellRing,
   type LucideIcon,
@@ -25,6 +26,7 @@ interface NavItem {
 const PRIMARY_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/screener", label: "Screener", icon: SlidersHorizontal },
+  { href: "/creators", label: "Creators", icon: Users },
 ];
 
 const SECONDARY_NAV: NavItem[] = [
