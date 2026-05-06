@@ -157,6 +157,7 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - "Open Channel" button rendered in hero top-right (new tab); hidden when `external_url` is null
   - Subtitle: category="unknown" (any case) is treated as absent; fallback = "YouTube fragrance channel" (YouTube) or "Creator profile"
   - Creator detail pages now expose external platform links and avoid raw Unknown fallback.
+  - Creator external platform CTA moved into the creator hero card for clearer UX.
 - **FIX: Responsive control bar layout (2026-05-06)** — commit 5563bae
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below

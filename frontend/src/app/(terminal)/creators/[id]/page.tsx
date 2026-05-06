@@ -408,26 +408,13 @@ export default function CreatorProfilePage({ params }: PageProps) {
         title={displayName}
         subtitle={subtitle}
         actions={
-          <div className="flex items-center gap-3">
-            {data?.external_url && (
-              <a
-                href={data.external_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
-              >
-                <ExternalLink size={11} />
-                Open Channel
-              </a>
-            )}
-            <button
-              onClick={() => router.back()}
-              className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-zinc-300"
-            >
-              <ArrowLeft size={12} />
-              Back
-            </button>
-          </div>
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-zinc-300"
+          >
+            <ArrowLeft size={12} />
+            Back
+          </button>
         }
       />
 
@@ -479,6 +466,17 @@ export default function CreatorProfilePage({ params }: PageProps) {
                         ? "YouTube fragrance channel"
                         : "Creator profile")}
                   </p>
+                  {data.external_url && (
+                    <a
+                      href={data.external_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded border border-zinc-700/60 bg-zinc-800/40 px-2 py-1 text-[11px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 transition-colors"
+                    >
+                      <ExternalLink size={10} className="shrink-0" />
+                      Open YouTube Channel
+                    </a>
+                  )}
                 </div>
 
                 {/* Key stats */}
