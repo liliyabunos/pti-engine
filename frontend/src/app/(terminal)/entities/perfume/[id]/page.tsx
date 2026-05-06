@@ -29,6 +29,32 @@ import { WhyTrending } from "@/components/entity/WhyTrending";
 import { MarketInsight } from "@/components/entity/MarketInsight";
 
 // ---------------------------------------------------------------------------
+// Entity role badge (Phase I7.5)
+// ---------------------------------------------------------------------------
+
+const ROLE_META: Record<string, { label: string; className: string }> = {
+  designer_original:   { label: "Designer Original",   className: "border-sky-800 bg-sky-950/40 text-sky-400" },
+  niche_original:      { label: "Niche Original",      className: "border-violet-800 bg-violet-950/40 text-violet-400" },
+  original:            { label: "Original",             className: "border-zinc-600 bg-zinc-800/40 text-zinc-300" },
+  clone_positioned:    { label: "Clone-Positioned",    className: "border-amber-800 bg-amber-950/40 text-amber-400" },
+  inspired_alternative:{ label: "Inspired Alternative", className: "border-lime-800 bg-lime-950/40 text-lime-400" },
+  flanker:             { label: "Flanker",              className: "border-zinc-600 bg-zinc-800/40 text-zinc-400" },
+};
+
+function EntityRoleBadge({ role }: { role: string | undefined }) {
+  if (!role || role === "unknown" || !ROLE_META[role]) return null;
+  const { label, className } = ROLE_META[role];
+  return (
+    <span
+      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${className}`}
+      title="Entity role classification (Phase I7.5)"
+    >
+      {label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // State badge
 // ---------------------------------------------------------------------------
 
@@ -553,6 +579,7 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                     <StateBadge state={data.state} />
                     {latestSignal && <SignalBadge type={latestSignal} />}
                     {data.trend_state && <TrendStateBadge state={data.trend_state} />}
+                    <EntityRoleBadge role={data.entity_role} />
                     {data.aliases_count > 0 && (
                       <span className="text-[10px] text-zinc-600">
                         {data.aliases_count} aliases

@@ -42,6 +42,7 @@ from perfume_trend_sdk.db.market.entity_mention import EntityMention
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily
 from perfume_trend_sdk.db.market.models import EntityMarket
 from perfume_trend_sdk.db.market.signal import Signal
+from perfume_trend_sdk.analysis.topic_intelligence.entity_role import classify_entity_role
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
@@ -469,6 +470,8 @@ class PerfumeEntityDetail(BaseModel):
     brand_name: Optional[str] = None
     ticker: Optional[str] = None
     state: str  # "active" | "tracked" | "catalog_only"
+    # Phase I7.5 — Entity role classification
+    entity_role: str = "unknown"  # "designer_original" | "niche_original" | "unknown" | …
     has_activity_today: bool = False
     aliases_count: int = 0
     # Market metrics — None for catalog_only
@@ -1103,6 +1106,7 @@ def get_perfume_entity(
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         brand_entity_id = _brand_entity_id_for(db, em.brand_name)
+        p_role = classify_entity_role(em.brand_name, em.canonical_name)  # Phase I7.5
         return PerfumeEntityDetail(
             id=em.entity_id,
             resolver_id=resolver_id,
@@ -1110,6 +1114,7 @@ def get_perfume_entity(
             brand_name=em.brand_name,
             ticker=em.ticker,
             state=state,
+            entity_role=p_role,      # Phase I7.5
             has_activity_today=has_activity,
             aliases_count=aliases,
             latest_score=latest.composite_market_score if latest else None,
@@ -1165,12 +1170,14 @@ def get_perfume_entity(
     cat_source = "parfumo" if (cat_top or cat_mid or cat_base or cat_acc) else None
     similar = _similar_by_notes(db, resolver_id)
     brand_entity_id = _brand_entity_id_for(db, rp_row[2])
+    cat_role = classify_entity_role(rp_row[2], rp_row[1])  # Phase I7.5
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
         canonical_name=rp_row[1],
         brand_name=rp_row[2],
         state="catalog_only",
+        entity_role=cat_role,  # Phase I7.5
         aliases_count=aliases,
         notes_top=cat_top,
         notes_middle=cat_mid,

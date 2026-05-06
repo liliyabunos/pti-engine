@@ -201,6 +201,8 @@ export interface PerfumeEntityDetail {
   ticker: string | null;
   /** "active" | "tracked" | "catalog_only" */
   state: string;
+  /** Phase I7.5 — "designer_original" | "niche_original" | "original" | "clone_positioned" | "inspired_alternative" | "flanker" | "unknown" */
+  entity_role: string;
   has_activity_today: boolean;
   aliases_count: number;
   latest_score: number | null;

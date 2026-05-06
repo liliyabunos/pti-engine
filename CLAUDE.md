@@ -172,6 +172,33 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
     - `public_safe_content_items`: 8,043 rows · 8 cols · 0 denied fields ✓
   - C1 Product/UI Step 2C: The Perfume Guy profile smoke tested · API ✓ · routing ✓ · frontend 307 ✓
 
+## Semantic Phase 2 — Entity Role Classification (I7.5)
+**STATUS: COMPLETE (2026-05-06)**
+
+Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure frozenset lookup.
+
+**New file:** `perfume_trend_sdk/analysis/topic_intelligence/entity_role.py`
+- `classify_entity_role(brand_name, perfume_name=None) → str`
+- NFD normalization: strips accents, apostrophes, ampersands, collapses whitespace
+- Returns: `"designer_original"` | `"niche_original"` | `"unknown"` (Phase 2 scope)
+- `ROLE_LABELS` + `RENDERABLE_ROLES` exports for UI
+
+**API:** `entity_role: str` field added to `PerfumeEntityDetail` Pydantic model + TypeScript interface. Default `"unknown"` — backward compatible.
+
+**Frontend:** `EntityRoleBadge` component in `entities/perfume/[id]/page.tsx`. Sky for designer, violet for niche; suppressed when `"unknown"`.
+
+**Tests:** `tests/unit/test_entity_role.py` — 92/92 pass. Covers designer originals, niche originals, normalization edge cases, unknown, None/empty, ROLE_LABELS exports.
+
+**Example outputs:**
+- Creed Aventus → `"niche_original"` → "Niche Original" badge (violet)
+- Dior Sauvage → `"designer_original"` → "Designer Original" badge (sky)
+- Baccarat Rouge 540 → `"niche_original"` → "Niche Original" badge (violet)
+- Unknown clone → `"unknown"` → no badge
+
+**Phase 3 reserved:** `clone_positioned`, `inspired_alternative`, `flanker` — name-level signals from perfume title + topic context.
+
+---
+
 ## Execution Rules
 - Move fast but keep production safe.
 - Commit + push after verified changes.
@@ -308,6 +335,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C1 Product/UI 2C — Creator Profile Page | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 | Compliance Boundary v1 (policy + views + tests) | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 | Legal Content Audit + Compliance Pages | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
+| I7.5 Semantic Phase 2 — Entity Role Classification | COMPLETE | 2026-05-06 |
 
 ---
 
