@@ -303,8 +303,12 @@ function tierBadgeColor(tier: string | null): string {
 
 function TopCreatorsRow({ row }: { row: TopCreatorRow }) {
   const isEarlyMover = row.mentions_before_first_breakout > 0;
+  const router = useRouter();
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 border-b border-zinc-800/40 last:border-b-0">
+    <div
+      onClick={() => router.push(`/creators/${encodeURIComponent(row.creator_id)}`)}
+      className="flex cursor-pointer items-center gap-3 px-4 py-2.5 border-b border-zinc-800/40 last:border-b-0 hover:bg-zinc-900/40 transition-colors"
+    >
       {/* Creator identity */}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">

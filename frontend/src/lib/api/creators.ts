@@ -68,6 +68,74 @@ export interface EntityCreatorsResponse {
   top_creators: TopCreatorRow[];
 }
 
+// ---------------------------------------------------------------------------
+// Creator profile
+// ---------------------------------------------------------------------------
+
+export interface EntityRelationshipRow {
+  entity_id: string;
+  entity_type: string | null;
+  canonical_name: string | null;
+  brand_name: string | null;
+  mention_count: number;
+  unique_content_count: number;
+  first_mention_date: string | null;
+  last_mention_date: string | null;
+  total_views: number;
+  avg_views: number | null;
+  total_likes: number;
+  total_comments: number;
+  avg_engagement_rate: number | null;
+  mentions_before_first_breakout: number;
+  days_before_first_breakout: number | null;
+}
+
+export interface RecentContentRow {
+  title: string | null;
+  source_url: string | null;
+  published_at: string | null;
+  views: number | null;
+  likes: number | null;
+  comments: number | null;
+  ingestion_method: string | null;
+}
+
+export interface CreatorProfileResponse {
+  platform: string;
+  creator_id: string;
+  creator_handle: string | null;
+  title: string | null;
+  quality_tier: string | null;
+  category: string | null;
+  status: string | null;
+  subscriber_count: number | null;
+  channel_view_count: number | null;
+  channel_video_count: number | null;
+  influence_score: number | null;
+  score_components: Record<string, number> | null;
+  early_signal_count: number;
+  early_signal_rate: number | null;
+  unique_entities_mentioned: number;
+  total_entity_mentions: number;
+  avg_engagement_rate: number | null;
+  total_views: number;
+  breakout_contributions: number;
+  noise_rate: number | null;
+  computed_at: string | null;
+  top_entities: EntityRelationshipRow[];
+  recent_content: RecentContentRow[];
+}
+
+export async function fetchCreatorProfile(
+  creatorId: string,
+  platform = "youtube",
+): Promise<CreatorProfileResponse> {
+  return apiFetch<CreatorProfileResponse>(
+    `/api/v1/creators/${encodeURIComponent(creatorId)}`,
+    { platform },
+  );
+}
+
 export async function fetchEntityCreators(
   entityType: string,
   entityId: string,

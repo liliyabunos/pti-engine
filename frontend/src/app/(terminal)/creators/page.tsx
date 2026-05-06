@@ -128,12 +128,14 @@ function CreatorTable({
   sortBy,
   order,
   onSort,
+  onRowClick,
 }: {
   rows: CreatorRow[];
   isLoading: boolean;
   sortBy: string;
   order: "asc" | "desc";
   onSort: (key: string) => void;
+  onRowClick: (creatorId: string) => void;
 }) {
   if (isLoading) return <TableSkeleton rows={15} cols={COLS.length} />;
   if (!rows.length) {
@@ -170,7 +172,8 @@ function CreatorTable({
           {rows.map((row) => (
             <tr
               key={row.creator_id}
-              className="border-b border-zinc-900 transition-colors hover:bg-zinc-900/50"
+              onClick={() => onRowClick(row.creator_id)}
+              className="cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/50"
             >
               {/* Creator */}
               <td className="px-4 py-2 text-zinc-200">
@@ -470,6 +473,7 @@ function CreatorsPageInner() {
                 sortBy={params.sort_by ?? "influence_score"}
                 order={params.order ?? "desc"}
                 onSort={handleSort}
+                onRowClick={(id) => router.push(`/creators/${encodeURIComponent(id)}`)}
               />
             </div>
 
