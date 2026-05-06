@@ -156,8 +156,8 @@ function ScoreComponents({
 function EntityPortfolioRow({ row }: { row: EntityRelationshipRow }) {
   const isEarlySignal = row.mentions_before_first_breakout > 0;
   const href =
-    row.entity_type === "perfume" && row.entity_id
-      ? `/entities/perfume/${encodeURIComponent(row.entity_id)}`
+    row.entity_type === "perfume" && row.canonical_name
+      ? `/entities/perfume/${encodeURIComponent(row.canonical_name)}`
       : null;
 
   return (
