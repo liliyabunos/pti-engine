@@ -1,0 +1,170 @@
+# FragranceIndex.ai — Public Export Policy v1
+# Compliance Boundary: Aggregated Market Intelligence, Not Personal Data Brokerage
+#
+# This file defines which fields may appear in public-facing API responses,
+# database views, and customer-accessible exports. It is the authoritative
+# source for compliance checks in tests and runtime guards.
+#
+# Principle: FragranceIndex.ai indexes public fragrance market conversations
+# and surfaces AGGREGATED perfume/brand/topic/momentum signals. It does not
+# sell personal profiles, creator directories, or raw platform datasets.
+#
+# Review this file whenever adding new fields to public API schemas or views.
+
+version: "1"
+effective_date: "2026-05-06"
+product: "FragranceIndex.ai / FTI Market Terminal"
+
+# ---------------------------------------------------------------------------
+# Allowed public fields
+# These may appear in public API responses, dashboard/screener/entity pages,
+# and public_safe_ database views.
+# ---------------------------------------------------------------------------
+
+public_export:
+  allowed_fields:
+    # Entity identity
+    - entity_type
+    - entity_id
+    - canonical_name
+    - brand_name
+    - perfume_name
+    - ticker
+    - entity_state
+    - trend_state
+    # Market metrics (aggregated)
+    - trend_score
+    - composite_market_score
+    - momentum_score
+    - momentum
+    - acceleration
+    - volatility
+    - growth_rate
+    - confidence_avg
+    - weighted_signal_score
+    # Mention counts (aggregated — not individual attribution)
+    - mention_count_aggregated
+    - mention_count
+    - unique_authors          # count only, not list
+    - engagement_sum
+    # Platform distribution (aggregated)
+    - platform_mix
+    - source_platform         # "youtube" | "reddit" — platform label only
+    # Content discovery (public URLs, titles — not raw bodies)
+    - source_url              # link to public content only
+    - title                   # public video/post title only
+    - content_type
+    # Signal data
+    - signal_type
+    - signal_date
+    - detected_at
+    - signal_strength
+    - signal_confidence
+    # Fragrance taxonomy
+    - topic_clusters
+    - notes
+    - accords
+    - top_notes
+    - note_name
+    - accord_name
+    # Creator attribution (limited — public handle as provenance, not directory)
+    - creator_handle          # public channel name, attribution only
+    - quality_tier            # internal tier label, not personal data
+    - category                # content category
+    - influence_score         # computed aggregate score
+    - early_signal_count      # count only
+    # Temporal
+    - date
+    - published_at
+    - occurred_at
+    - as_of_date
+    # Engagement metrics (aggregated)
+    - views
+    - likes
+    - comments_count
+    - avg_views
+    - avg_engagement_rate
+    - total_views
+    - total_likes
+    - total_comments
+
+  # -------------------------------------------------------------------------
+  # Denied fields
+  # These must NEVER appear in public API responses or public_safe_ views.
+  # Any attempt to export these fields is a compliance violation.
+  # -------------------------------------------------------------------------
+  denied_fields:
+    # Raw content body text — for extraction/NLP only, not public
+    - raw_comment_text
+    - full_post_body
+    - text_content
+    - caption
+    - body_text
+    - raw_text
+    - post_body
+    - comment_body
+    - transcript_text
+    # Internal platform IDs used for processing (not attribution product)
+    - source_account_id       # internal platform UID, not for export
+    - source_account_handle   # raw ingestion handle, use creator_handle via creator_scores
+    - external_content_id     # platform-internal content ID
+    # Personal/contact data (never collected intentionally)
+    - email
+    - phone
+    - private_message
+    - direct_message
+    - precise_location
+    - ip_address
+    # Prohibited product types
+    - username_as_product     # we do not sell username directories
+    - follower_list           # we do not sell follower lists
+    - subscriber_list         # we do not sell subscriber lists
+    - people_scoring          # we do not score individuals as a product
+    - contact_enrichment      # we do not enrich contact databases
+    - sensitive_inference     # no health/politics/religion inference
+    # Raw platform dataset exports (ToS violation risk)
+    - raw_platform_dataset_export
+    - raw_payload_ref         # internal ingestion artifact reference
+    - mentions_raw_json       # raw platform mention payload
+    - hashtags_json           # raw hashtag payload (processed into topic_clusters)
+    - media_metadata_json     # internal media processing metadata
+    # Attribution IDs (internal processing only — not for customer export)
+    - author_id               # platform user ID, internal provenance only
+    - author_name             # raw author string from ingestion, not attribution product
+
+# ---------------------------------------------------------------------------
+# Retention guidance
+# ---------------------------------------------------------------------------
+
+retention:
+  raw_content:
+    purpose: "Entity extraction and resolver training only"
+    fields: [text_content, caption, raw_text, mentions_raw_json, hashtags_json]
+    recommended_retention_days: 90
+    long_term_preference: "Store processed aggregate signals, not raw content"
+  source_attribution:
+    purpose: "Provenance tracing and mention deduplication"
+    fields: [source_url, source_platform, published_at]
+    retention: "As long as entity_market record exists"
+  aggregate_signals:
+    purpose: "Market intelligence product"
+    fields: [entity_timeseries_daily, breakout_signals, creator_scores]
+    retention: "Indefinite — these are the product"
+
+# ---------------------------------------------------------------------------
+# What this product IS and IS NOT
+# ---------------------------------------------------------------------------
+
+product_boundary:
+  is:
+    - "Aggregated perfume and brand market intelligence"
+    - "Trend scoring, momentum, and signal detection from public conversations"
+    - "Creator attribution as provenance (who mentioned what, when)"
+    - "Fragrance taxonomy: notes, accords, topic clusters"
+    - "Early signal detection for fragrance market participants"
+  is_not:
+    - "A personal data broker or creator database"
+    - "A follower or subscriber list seller"
+    - "A contact enrichment or people-scoring service"
+    - "A raw Reddit, YouTube, or TikTok dataset reseller"
+    - "A platform for targeting individuals based on inferred characteristics"
