@@ -47,6 +47,10 @@
   - Leaderboard rows and entity Top Creators rows now clickable → profile
   - Build clean · deployed to Railway · PRODUCTION VERIFICATION PENDING
 - **Next: C1 Product/UI Step 2C — PRODUCTION VERIFICATION** — smoke test The Perfume Guy profile
+- **FIX: Responsive control bar layout (2026-05-06)** — commit 5563bae
+  - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
+  - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below
+  - Dashboard + Screener: search+filters row 1, range selector row 2 on narrow viewports
 
 ## Execution Rules
 - Move fast but keep production safe.
