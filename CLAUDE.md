@@ -42,7 +42,11 @@
   - Build clean · PRODUCTION VERIFIED ✓ (307 auth-redirect confirms route live)
 - **C1 Product/UI Step 2B COMPLETE — PRODUCTION VERIFIED (2026-05-05)** — Top Creators block on perfume entity pages · commit 51ca2a5
   - Baccarat Rouge 540 shows 10 creators with tier badges, Early Signal indicators, mentions, avg views, first/last seen, influence, signal count ✓
-- **Next: C1 Product/UI Step 2C** — Creator Profile Page — DO NOT START until explicitly approved
+- **C1 Product/UI Step 2C COMPLETE (2026-05-06)** — Creator Profile Page · commit 5dabf87
+  - Route: `/creators/{creator_id}` — header, score breakdown, entity portfolio, recent content
+  - Leaderboard rows and entity Top Creators rows now clickable → profile
+  - Build clean · deployed to Railway · PRODUCTION VERIFICATION PENDING
+- **Next: C1 Product/UI Step 2C — PRODUCTION VERIFICATION** — smoke test The Perfume Guy profile
 
 ## Execution Rules
 - Move fast but keep production safe.
@@ -177,6 +181,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C1 Product/API — Creator endpoints (3) | COMPLETE | 2026-05-05 |
 | C1 Product/UI 2A — Creators Leaderboard | COMPLETE — PRODUCTION VERIFIED | 2026-05-05 |
 | C1 Product/UI 2B — Entity Top Creators | COMPLETE — PRODUCTION VERIFIED | 2026-05-05 |
+| C1 Product/UI 2C — Creator Profile Page | DEPLOYED — verification pending | 2026-05-06 |
 
 ---
 
