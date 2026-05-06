@@ -151,6 +151,7 @@ def _get_entity_topics(
     db: Session,
     entity_id_str: str,
     limit_per_type: int = 8,
+    entity_role: str = "unknown",
 ) -> tuple[list[str], list[str], list[str], list[str], list[str], list[str]]:
     """Phase I5/I7 — Return (top_topics, top_queries, top_subreddits, differentiators, positioning, intents).
 
@@ -193,9 +194,9 @@ def _get_entity_topics(
         elif ttype == "subreddit" and len(subreddits) < limit_per_type:
             subreddits.append(ttext)
 
-    # Phase I7 — semantic classification
+    # Phase I7 — semantic classification (entity_role gates dupe/alternative routing)
     raw_for_classify = [(r[0], r[1], int(r[2]), float(r[3])) for r in rows]
-    profile = classify_entity_topics(raw_for_classify)
+    profile = classify_entity_topics(raw_for_classify, entity_role=entity_role)
     return topics, queries, subreddits, profile.differentiators, profile.positioning, profile.intents
 
 
@@ -1080,11 +1081,14 @@ def get_perfume_entity(
         notes_top, notes_mid, notes_base, accords, notes_source = _get_perfume_notes(db, em.entity_id, resolver_id)
         similar = _similar_by_notes(db, resolver_id) if resolver_id else []
         drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "top_drivers")
-        # Phase I5/I7 — topic/query intelligence + semantic profile
+        # Phase I7.5 — Entity role (computed early; drives semantic routing below)
+        p_role = classify_entity_role(em.brand_name, em.canonical_name)
+        # Phase I5/I7 — topic/query intelligence + semantic profile (role-aware)
         p_topics, p_queries, p_subs, p_diff, p_pos, p_intents = _safe(
-            lambda: _get_entity_topics(db, str(em.id)), ([], [], [], [], [], []), "entity_topics"
+            lambda: _get_entity_topics(db, str(em.id), entity_role=p_role),
+            ([], [], [], [], [], []), "entity_topics"
         )
-        # Phase I8 — Market Intelligence
+        # Phase I8 — Market Intelligence (role-aware)
         p_competitors = _safe(
             lambda: _find_competitor_names(db, str(em.id), p_queries, em.canonical_name),
             [], "competitors",
@@ -1100,13 +1104,13 @@ def get_perfume_entity(
                 raw_queries=p_queries,
                 resolved_competitors=p_competitors,
                 trend_state=_ts,
+                entity_role=p_role,
             ),
             None, "market_intelligence",
         )
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         brand_entity_id = _brand_entity_id_for(db, em.brand_name)
-        p_role = classify_entity_role(em.brand_name, em.canonical_name)  # Phase I7.5
         return PerfumeEntityDetail(
             id=em.entity_id,
             resolver_id=resolver_id,

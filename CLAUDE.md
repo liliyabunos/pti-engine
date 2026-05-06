@@ -172,6 +172,29 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
     - `public_safe_content_items`: 8,043 rows · 8 cols · 0 denied fields ✓
   - C1 Product/UI Step 2C: The Perfume Guy profile smoke tested · API ✓ · routing ✓ · frontend 307 ✓
 
+## Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics
+**STATUS: COMPLETE (2026-05-06)**
+
+Role-aware routing for "dupe / alternative" signals. Original/reference fragrances no longer rendered as clone/dupe-positioned.
+
+**Logic:**
+- `semantic.py`: For `designer_original / niche_original / original` — "dupe / alternative" rerouted from Differentiators to Intents as "alternative demand"
+- `market_intelligence.py`: Role-aware opportunity flags replace `dupe_market`:
+  - Originals → `alternative_demand` ("Alternative Demand")
+  - Clone roles → `clone_market` ("Clone-Positioned")
+  - Unknown → `alternative_search_interest` ("Alternative Search Interest")
+- Narrative copy is role-aware: originals get "alternative demand around this reference scent", not "alternative / dupe positioning"
+
+**Before/After (Creed Aventus, Dior Sauvage, Baccarat Rouge 540):**
+- Before: Differentiators included "dupe / alternative" · Opportunity: "Dupe Market" · Narrative: "alternative / dupe positioning"
+- After: Differentiators clean · Why People Search includes "alternative demand" · Opportunity: "Alternative Demand" · Narrative: "alternative demand around this reference scent"
+
+**Tests:** `tests/unit/test_semantic_phase3.py` — 31/31 pass. Combined with Phase 2: 123/123 pass.
+
+**No schema migration performed.** Logic change only — takes effect on next API request, no backfill needed.
+
+---
+
 ## Semantic Phase 2 — Entity Role Classification (I7.5)
 **STATUS: COMPLETE (2026-05-06)**
 
@@ -336,6 +359,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Compliance Boundary v1 (policy + views + tests) | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 | Legal Content Audit + Compliance Pages | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 | I7.5 Semantic Phase 2 — Entity Role Classification | COMPLETE | 2026-05-06 |
+| I7.5 Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics | COMPLETE | 2026-05-06 |
 
 ---
 

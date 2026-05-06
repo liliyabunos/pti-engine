@@ -16,6 +16,23 @@
 // ---------------------------------------------------------------------------
 
 const OPPORTUNITY_LABELS: Record<string, { label: string; color: string; description: string }> = {
+  // Phase 3 — role-aware dupe/alternative flags
+  alternative_demand: {
+    label: "Alternative Demand",
+    color: "bg-amber-950/60 text-amber-300 border border-amber-800/50",
+    description: "Consumers are searching for dupes, clones, or alternatives to this reference scent",
+  },
+  alternative_search_interest: {
+    label: "Alternative Search Interest",
+    color: "bg-zinc-800/60 text-zinc-300 border border-zinc-600/50",
+    description: "Alternative-related search activity detected around this entity",
+  },
+  clone_market: {
+    label: "Clone-Positioned",
+    color: "bg-lime-950/60 text-lime-300 border border-lime-800/50",
+    description: "Positioned as an alternative to a reference scent",
+  },
+  // Legacy — kept for any data in transit; no longer generated for new requests
   dupe_market: {
     label: "Dupe Market",
     color: "bg-amber-950/60 text-amber-300 border border-amber-800/50",

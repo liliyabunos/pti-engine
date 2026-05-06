@@ -60,6 +60,18 @@ _GENDER_LABELS: dict[str, str] = {
 _VS_AFTER = re.compile(r"\bvs\.?\s+(.+)", re.IGNORECASE)
 _VS_BEFORE = re.compile(r"^(.+?)\s+vs\.?\b", re.IGNORECASE)
 
+# Phase I7.5 / Phase 3 — role sets for dupe/alternative routing
+_ORIGINAL_ROLES: frozenset[str] = frozenset({
+    "designer_original",
+    "niche_original",
+    "original",
+})
+
+_CLONE_ROLES: frozenset[str] = frozenset({
+    "clone_positioned",
+    "inspired_alternative",
+})
+
 
 # ---------------------------------------------------------------------------
 # Opportunity flag rules
@@ -70,11 +82,14 @@ def _build_opportunity_flags(
     positioning: list[str],
     intents: list[str],
     trend_state: Optional[str] = None,
+    entity_role: str = "unknown",
 ) -> list[str]:
     """Evaluate rule-based opportunity flags.
 
     Each flag represents an actionable market signal:
-      dupe_market          — alternative/clone positioning with active demand
+      alternative_demand   — original/reference scent with strong dupe-search demand
+      alternative_search_interest — unknown entity with dupe/alternative-related activity
+      clone_market         — clone/inspired entity with active dupe demand
       affordable_alt       — price-value positioning
       high_intent          — multiple discovery/purchase signals active
       competitive_comparison — comparison queries are driving attention
@@ -83,13 +98,28 @@ def _build_opportunity_flags(
       launch_window        — new release / flanker activity
       social_validation    — compliment-getter reputation driving word of mouth
       performance_leader   — longevity/projection differentiator standing out
+
+    Note: dupe_market is retired in Phase 3. Role-aware flags replace it.
     """
     flags: list[str] = []
     diff_set = frozenset(d.lower() for d in differentiators)
     intent_set = frozenset(i.lower() for i in intents)
 
+    # Phase 3 — role-aware dupe/alternative flag
     if "dupe / alternative" in diff_set:
-        flags.append("dupe_market")
+        if entity_role in _CLONE_ROLES:
+            flags.append("clone_market")
+        elif entity_role in _ORIGINAL_ROLES:
+            # Should not appear for originals (semantic.py reroutes to intents),
+            # but guard here for safety.
+            flags.append("alternative_demand")
+        else:
+            flags.append("alternative_search_interest")
+
+    # Originals: "alternative demand" arrives via intents (rerouted by semantic.py)
+    if "alternative demand" in intent_set:
+        if "alternative_demand" not in flags:
+            flags.append("alternative_demand")
 
     if "affordable" in diff_set:
         flags.append("affordable_alt")
@@ -132,6 +162,7 @@ def _build_narrative(
     intents: list[str],
     opportunities: list[str],
     competitors: list[str],
+    entity_role: str = "unknown",
 ) -> str:
     """Build a plain-language narrative explaining why an entity is trending.
 
@@ -150,7 +181,14 @@ def _build_narrative(
             reasons.append("strong comparison activity")
 
     if "dupe / alternative" in diff_set:
-        reasons.append("alternative / dupe positioning")
+        # Phase 3 — role-aware narrative copy
+        if entity_role in _CLONE_ROLES:
+            reasons.append("positioned as an alternative to a reference scent")
+        else:
+            reasons.append("alternative-related search interest")
+
+    if "alternative demand" in intent_set:
+        reasons.append("alternative demand around this reference scent")
 
     if "compliment getter" in diff_set:
         reasons.append("compliment-getting reputation")
@@ -273,6 +311,7 @@ def generate_market_intelligence(
     raw_queries: list[str],
     resolved_competitors: list[str],
     trend_state: Optional[str] = None,
+    entity_role: str = "unknown",
 ) -> MarketIntelligence:
     """Generate full market intelligence for an entity.
 
@@ -284,9 +323,10 @@ def generate_market_intelligence(
         raw_queries:          raw query strings from entity_topic_links (top_queries)
         resolved_competitors: competitor canonical names resolved from DB
         trend_state:          I3 trend state: breakout|rising|peak|declining|stable|emerging|None
+        entity_role:          Phase I7.5 role — controls dupe/alternative copy framing
     """
     opportunities = _build_opportunity_flags(
-        differentiators, positioning, intents, trend_state
+        differentiators, positioning, intents, trend_state, entity_role
     )
     narrative = _build_narrative(
         canonical_name,
@@ -295,6 +335,7 @@ def generate_market_intelligence(
         intents,
         opportunities,
         resolved_competitors,
+        entity_role,
     )
     return MarketIntelligence(
         narrative=narrative,

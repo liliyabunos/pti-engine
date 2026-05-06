@@ -8,10 +8,28 @@ Transforms raw entity_topic_links rows into structured semantic profiles:
 No AI. Pure deterministic classification against defined vocabulary sets.
 The existing topic extraction pipeline (I5/I6) is unchanged — this is a
 read-only transformation layer on top of entity_topic_links.
+
+Phase I7.5 addition: entity_role-aware routing.
+  For designer_original / niche_original / original entities, "dupe / alternative"
+  is NOT a differentiator — it is search demand directed AT the entity. It is
+  rerouted to intents as "alternative demand".
 """
 from __future__ import annotations
 
 from typing import NamedTuple
+
+# ---------------------------------------------------------------------------
+# Role sets — Phase I7.5
+# ---------------------------------------------------------------------------
+
+# Entity roles that represent reference / original scents.
+# For these, "dupe / alternative" signals demand directed AT them, not a
+# characteristic OF them.
+_ORIGINAL_ROLES: frozenset[str] = frozenset({
+    "designer_original",
+    "niche_original",
+    "original",
+})
 
 # ---------------------------------------------------------------------------
 # Vocabulary sets
@@ -105,6 +123,7 @@ class SemanticProfile(NamedTuple):
 def classify_entity_topics(
     rows: list[tuple[str, str, int, float]],
     max_per_category: int = 5,
+    entity_role: str = "unknown",
 ) -> SemanticProfile:
     """Classify entity_topic_links rows into a semantic profile.
 
@@ -144,7 +163,16 @@ def classify_entity_topics(
 
         elif topic_type == "topic":
             if text_key in DIFFERENTIATOR_TOPICS:
-                diff_scored.append((score, topic_text))
+                # Phase I7.5 — For reference/original entities, "dupe / alternative"
+                # is consumer search demand directed AT them, not a characteristic OF
+                # them. Route to intents as "alternative demand" instead.
+                if text_key == "dupe / alternative" and entity_role in _ORIGINAL_ROLES:
+                    demand_label = "alternative demand"
+                    if demand_label not in seen_intent:
+                        intent_scored.append((score, demand_label))
+                        seen_intent.add(demand_label)
+                else:
+                    diff_scored.append((score, topic_text))
             elif text_key in POSITIONING_TOPICS:
                 pos_scored.append((score, topic_text))
             elif text_key in INTENT_TOPIC_LABELS:
