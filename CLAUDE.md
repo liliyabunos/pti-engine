@@ -172,6 +172,30 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
     - `public_safe_content_items`: 8,043 rows · 8 cols · 0 denied fields ✓
   - C1 Product/UI Step 2C: The Perfume Guy profile smoke tested · API ✓ · routing ✓ · frontend 307 ✓
 
+## Semantic Phase 4 — Production Verification + Compared-Against Cleanup
+**STATUS: COMPLETE (2026-05-06)**
+
+Production verification of Phase 2/3 logic + elimination of query-phrase pollution in Compared Against.
+
+**Deploy status:**
+- Backend (`generous-prosperity`): SUCCESS 2026-05-06 11:26:35 — Phase 3 commit (82a1485) confirmed live
+- Frontend (`pti-frontend`): SUCCESS 2026-05-06 11:26:34 — Phase 3 commit confirmed live
+- No recompute needed — semantic routing runs at API request time from entity_topic_links
+
+**Compared-Against cleanup (`routes/entities.py`):**
+- Removed raw-query fallback from `_find_competitor_names`
+- Before: no DB match → raw candidate string included ("baccarat rouge 540 review", "erba pura review")
+- After: only entities resolved from entity_market are included; unresolved candidates silently dropped
+
+**Live API verification (production, commit 82a1485):**
+- Creed Aventus: entity_role=niche_original · no "dupe / alternative" in differentiators · "alternative demand" in intents · opportunities=[alternative_demand, …] · narrative="alternative demand around this reference scent"
+- Dior Sauvage: entity_role=designer_original · opportunities=[alternative_demand, …] · narrative="alternative demand around this reference scent" · competitors=[Creed Aventus, MFK Baccarat Rouge 540]
+- Baccarat Rouge 540: entity_role=niche_original · opportunities=[alternative_demand, …] · narrative="alternative demand around this reference scent" · competitors=[Creed Aventus] (query phrases removed)
+
+**No schema migration. No broad backfill.**
+
+---
+
 ## Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics
 **STATUS: COMPLETE (2026-05-06)**
 
@@ -360,6 +384,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Legal Content Audit + Compliance Pages | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 | I7.5 Semantic Phase 2 — Entity Role Classification | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics | COMPLETE | 2026-05-06 |
+| I7.5 Semantic Phase 4 — Production Verification + Compared-Against Cleanup | COMPLETE | 2026-05-06 |
 
 ---
 

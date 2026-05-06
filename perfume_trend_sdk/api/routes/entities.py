@@ -287,11 +287,9 @@ def _find_competitor_names(
             if row and row[0].lower() not in seen and row[0].lower() != own_lower:
                 seen.add(row[0].lower())
                 competitors.append(row[0])
-            elif not row and candidate not in seen and candidate.lower() != own_lower:
-                # No DB match — include raw candidate string if long enough
-                if len(candidate) >= 5:
-                    seen.add(candidate.lower())
-                    competitors.append(candidate)
+            # Phase 4: raw query strings are NOT included when there is no DB match.
+            # "baccarat rouge 540 review", "erba pura review", etc. are query phrases,
+            # not entities — silently dropped.
 
             if len(competitors) >= 5:
                 break
