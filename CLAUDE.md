@@ -7,6 +7,72 @@
 - For phase history, read only the relevant file/section.
 - Keep reports concise.
 
+---
+
+## D1.1A — Apex Domain + App Route Canonicalization Hotfix
+**STATUS: NEEDS DNS + RAILWAY + SUPABASE CONFIG (Step 1 code deployed 2026-05-06)**
+**Commit: 6299ff8**
+
+### Root cause (mixed)
+| Layer | Issue |
+|-------|-------|
+| DNS (primary) | `fragranceindex.ai` apex has NO A/ALIAS record. Only SOA/NS/TXT present. DNS managed by Google Domains nameservers (`ns-cloud-a{1-4}.googledomains.com`). |
+| Railway (secondary) | `pti-frontend` only has `www.fragranceindex.ai` as custom domain. Apex not registered. |
+| Code (tertiary) | `NEXT_PUBLIC_SITE_URL=https://www.fragranceindex.ai` in Railway env → auth callbacks go to www. Fallbacks in next.config.ts + LoginForm.tsx pointed to Railway URL. Fixed in this commit. |
+| Supabase (quaternary) | Likely missing `https://fragranceindex.ai/**` in allowed redirect URLs. |
+
+### Code changes deployed (6299ff8)
+- `next.config.ts`: `NEXT_PUBLIC_SITE_URL` fallback → `https://fragranceindex.ai`
+- `LoginForm.tsx`: same fallback fix
+- `layout.tsx`: `metadataBase: new URL("https://fragranceindex.ai")` added
+- www → apex redirect: intentionally deferred until apex DNS confirmed live
+
+### Liliya — Required manual actions (in order)
+
+**Step 1: Railway — Add apex custom domain**
+- Railway dashboard → pti-frontend service → Settings → Networking → Custom Domains
+- Add: `fragranceindex.ai`
+- Railway will show the DNS target to add (note it down)
+
+**Step 2: DNS — Add apex record at Google Domains / Squarespace Domains**
+- Go to domains.squarespace.com (formerly domains.google.com) → fragranceindex.ai → DNS
+- Add record: Type `ALIAS` (or `ANAME`), Host `@`, Value = Railway's provided hostname (same as `oaifw38m.up.railway.app` unless Railway assigns a different one for apex)
+- If ALIAS is not available, add Type `A`, Host `@`, Value = Railway IP (currently `66.33.22.52` — but IPs can change, ALIAS is preferred)
+- Wait for propagation (typically 5–30 min with Google Domains TTL)
+
+**Step 3: Supabase — Add apex to redirect URLs**
+- Supabase dashboard → Authentication → URL Configuration
+- Site URL: consider setting to `https://fragranceindex.ai`
+- Redirect URLs: add `https://fragranceindex.ai/**`
+- Keep `https://www.fragranceindex.ai/**` during transition
+
+**Step 4: Railway — Update NEXT_PUBLIC_SITE_URL env var**
+- Railway dashboard → pti-frontend service → Variables
+- Change `NEXT_PUBLIC_SITE_URL` from `https://www.fragranceindex.ai` → `https://fragranceindex.ai`
+- Trigger redeploy after saving
+
+**Step 5 (post-DNS verified): www → apex redirect**
+- After apex resolves and is confirmed working, enable the redirect in middleware.ts
+- One-line change — Claude can implement this when you confirm apex is live
+
+### Verification commands (run after DNS propagates)
+```bash
+dig fragranceindex.ai +short               # Should return Railway IP
+dig www.fragranceindex.ai +short           # Should still resolve
+curl -I https://fragranceindex.ai          # Should return HTTP 200 or 307
+curl -I https://fragranceindex.ai/dashboard # Should return 307 (auth redirect)
+curl -I https://fragranceindex.ai/login    # Should return 200
+curl -I https://www.fragranceindex.ai      # Should return 301 → apex (after Step 5)
+curl -I https://pti-frontend-production.up.railway.app/dashboard  # Fallback still works
+```
+
+### Current domain state (2026-05-06)
+- `www.fragranceindex.ai` → resolves → HTTP 200 ✓ (only working public URL)
+- `fragranceindex.ai` → ERR_NAME_NOT_RESOLVED ✗ (no DNS record)
+- `pti-frontend-production.up.railway.app` → HTTP 307 ✓ (Railway fallback)
+
+---
+
 ## Compliance Boundary v1 — Aggregated Market Intelligence, Not Personal Data Brokerage
 
 FragranceIndex.ai is an aggregated fragrance market intelligence platform — not a personal data broker or creator directory.
