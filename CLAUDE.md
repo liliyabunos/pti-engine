@@ -28,10 +28,14 @@ FragranceIndex.ai is an aggregated fragrance market intelligence platform — no
 - `alembic/versions/032_add_public_safe_views.py` — PostgreSQL public-safe views
 - `tests/unit/test_compliance_boundary.py` — 40 automated compliance tests
 
-**Status (2026-05-06):** commit fef5738
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-06):** commit a75dd62
 - 40/40 tests pass
-- Migration 032 pushed — apply with: `railway run --service generous-prosperity alembic upgrade head` (must run from Railway network)
-- Public-safe views: `public_safe_entity_snapshots`, `public_safe_signals`, `public_safe_content_items`
+- Migration 032 applied to Railway production — alembic current: `032`
+- Views live and verified (all denied fields absent):
+  - `public_safe_entity_snapshots`: 2,163 rows · 17 columns · CLEAN
+  - `public_safe_signals`: 4,559 rows · 8 columns · CLEAN
+  - `public_safe_content_items`: 8,043 rows · 8 columns · CLEAN
+- Schema corrections applied during migration: `entity_market` has no `state` column (removed); `breakout_signals` → `signals` (production table name)
 - No infrastructure split — logical boundary only (per approved scope)
 
 **Verification commands:**
@@ -233,7 +237,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 031**
+Current production: **migration 032**
 
 | Migration | What |
 |-----------|------|
@@ -245,6 +249,7 @@ Current production: **migration 031**
 | 029 | `subscriber_count_fetched_at` on `youtube_channels` |
 | 030 | `creator_entity_relationships` table (C1.3) |
 | 031 | `creator_scores` table (C1.4) |
+| 032 | `public_safe_*` views — Compliance Boundary v1 |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
