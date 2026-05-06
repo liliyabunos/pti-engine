@@ -201,8 +201,12 @@ export interface PerfumeEntityDetail {
   ticker: string | null;
   /** "active" | "tracked" | "catalog_only" */
   state: string;
-  /** Phase I7.5 — "designer_original" | "niche_original" | "original" | "clone_positioned" | "inspired_alternative" | "flanker" | "unknown" */
+  /** Phase I7.5 — "designer_original" | "niche_original" | "dupe_alternative" | "designer_alternative" | "celebrity_alternative" | "original" | "clone_positioned" | "inspired_alternative" | "flanker" | "unknown" */
   entity_role: string;
+  /** Phase I7.5-P5 — for dupe/alternative entities: canonical name of reference original */
+  reference_original: string | null;
+  /** Phase I7.5-P5 — dupe family grouping, e.g. "Aventus alternatives" */
+  dupe_family: string | null;
   has_activity_today: boolean;
   aliases_count: number;
   latest_score: number | null;

@@ -1,30 +1,106 @@
 """Phase I7.5 — Entity Role Classification.
 
 Deterministic classification of a fragrance entity's market role based on its
-brand name. No AI, no database calls — pure lookup against curated brand lists.
+brand name and (Phase 5) canonical perfume name. No AI, no database calls —
+pure lookup against curated brand lists and dupe mapping.
 
 Roles:
-  designer_original  — major designer house (Dior, Chanel, Armani, …)
-  niche_original     — independent/niche house (Creed, MFK, Parfums de Marly, …)
-  original           — known original, house tier not yet categorised
-  clone_positioned   — entity explicitly positioned as a dupe/clone (Phase 3)
-  inspired_alternative — lighter clone signal (Phase 3)
-  flanker            — line extension of an existing entity (Phase 3)
-  unknown            — insufficient signal to classify
+  designer_original      — major designer house (Dior, Chanel, Armani, …)
+  niche_original         — independent/niche house (Creed, MFK, Parfums de Marly, …)
+  original               — known original, house tier not yet categorised
+  dupe_alternative       — known clone/dupe of a specific reference original
+                           (e.g. Armaf CDNIM → Creed Aventus)
+  designer_alternative   — designer house product positioned as similar to a niche ref
+                           (e.g. Montblanc Explorer → Creed Aventus)
+  celebrity_alternative  — celebrity-brand product positioned near a niche ref
+                           (e.g. Ariana Grande Cloud → MFK Baccarat Rouge 540)
+  clone_positioned       — entity explicitly positioned as a dupe/clone (Phase 3 generic)
+  inspired_alternative   — lighter clone signal (Phase 3 generic)
+  flanker                — line extension of an existing entity
+  unknown                — insufficient signal to classify
 
-Phase 2 covers: designer_original, niche_original, unknown.
-clone_positioned, inspired_alternative, flanker classification deferred to Phase 3.
+Phase 2: designer_original, niche_original, unknown from brand lookup.
+Phase 5: dupe_alternative, designer_alternative, celebrity_alternative from dupe map.
+Phase 3 generic roles (clone_positioned, inspired_alternative, flanker) deferred.
 
 Safety note:
-  This module assigns roles based on house affiliation only.
+  This module assigns roles based on house affiliation and curated community knowledge.
   It makes no counterfeit or infringement claims.
-  "clone_positioned" and "inspired_alternative" are market-intelligence
-  descriptions of community/search framing, not legal judgements.
+  "dupe_alternative" and related roles are market-intelligence descriptions of
+  community/search framing, not legal judgements.
 """
 from __future__ import annotations
 
 import re
 import unicodedata
+from typing import NamedTuple, Optional
+
+# ---------------------------------------------------------------------------
+# Dupe profile type (Phase 5)
+# ---------------------------------------------------------------------------
+
+class DupeProfile(NamedTuple):
+    """Market positioning data for a known alternative/dupe entity."""
+    role: str                  # "dupe_alternative" | "designer_alternative" | "celebrity_alternative"
+    reference_original: str    # canonical name of the reference scent, e.g. "Creed Aventus"
+    dupe_family: str           # grouping label, e.g. "Aventus alternatives"
+
+
+# ---------------------------------------------------------------------------
+# Dupe / alternative mapping (Phase 5)
+#
+# Keys: normalized canonical perfume name (full name including brand).
+# Values: DupeProfile
+#
+# Add entries conservatively — only include well-established community consensus.
+# ---------------------------------------------------------------------------
+
+_DUPE_RAW: dict[str, DupeProfile] = {
+    # ── Creed Aventus alternatives ──────────────────────────────────────────
+    "Armaf Club de Nuit Intense Man": DupeProfile(
+        "dupe_alternative", "Creed Aventus", "Aventus alternatives"
+    ),
+    "Armaf Club de Nuit Intense": DupeProfile(
+        "dupe_alternative", "Creed Aventus", "Aventus alternatives"
+    ),
+    "Club de Nuit Intense Man": DupeProfile(
+        "dupe_alternative", "Creed Aventus", "Aventus alternatives"
+    ),
+    # Common abbreviations / short forms as stored in resolver
+    "CDNIM": DupeProfile(
+        "dupe_alternative", "Creed Aventus", "Aventus alternatives"
+    ),
+    "Armaf CDNIM": DupeProfile(
+        "dupe_alternative", "Creed Aventus", "Aventus alternatives"
+    ),
+    # Designer alternative
+    "Montblanc Explorer": DupeProfile(
+        "designer_alternative", "Creed Aventus", "Aventus alternatives"
+    ),
+    # ── Maison Francis Kurkdjian Baccarat Rouge 540 alternatives ────────────
+    "Lattafa Khamrah": DupeProfile(
+        "dupe_alternative",
+        "Maison Francis Kurkdjian Baccarat Rouge 540",
+        "BR540 alternatives",
+    ),
+    "Zara Red Temptation": DupeProfile(
+        "dupe_alternative",
+        "Maison Francis Kurkdjian Baccarat Rouge 540",
+        "BR540 alternatives",
+    ),
+    "Ariana Grande Cloud": DupeProfile(
+        "celebrity_alternative",
+        "Maison Francis Kurkdjian Baccarat Rouge 540",
+        "BR540 alternatives",
+    ),
+    # ── Kilian Angels' Share alternatives ───────────────────────────────────
+    "Lattafa Khamrah Qahwa": DupeProfile(
+        "dupe_alternative",
+        "Kilian Angels' Share",
+        "Angels' Share alternatives",
+    ),
+}
+
 
 # ---------------------------------------------------------------------------
 # Brand lists
@@ -89,7 +165,6 @@ _DESIGNER_ORIGINALS: frozenset[str] = frozenset({
     "coach",
     "michael kors",
     "marc jacobs",
-    "donna konna",
     "donna karan",
     "dkny",
     "nina ricci",
@@ -99,7 +174,6 @@ _DESIGNER_ORIGINALS: frozenset[str] = frozenset({
     "davidoff",
     "dunhill",
     "azzaro",
-    "eau de rochas",
     "lanvin",
     "balmain",
     "lolita lempicka",
@@ -109,6 +183,10 @@ _DESIGNER_ORIGINALS: frozenset[str] = frozenset({
 
 # Independent / niche fragrance houses.
 # These produce reference-tier scents in the premium/ultra-premium segment.
+#
+# Phase 5 note: mass-market affordable brands (Armaf, Lattafa, Zimaya, etc.)
+# have been removed. These are clone/affordable brands, not niche originals.
+# Specific products from those brands are handled via _DUPE_RAW above.
 _NICHE_ORIGINALS: frozenset[str] = frozenset({
     "creed",
     "house of creed",
@@ -168,26 +246,12 @@ _NICHE_ORIGINALS: frozenset[str] = frozenset({
     "beaufort london",
     "d.s. & durga",
     "ds & durga",
-    "four pillars",
-    "gris dior",
-    "parfums christian dior",
-    "jolly roger",
-    "jovoy",
     "fragrance du bois",
     "ensar oud",
     "rasasi",
     "swiss arabian",
     "ajmal",
     "al haramain",
-    "lattafa",
-    "armaf",
-    "afnan",
-    "zimaya",
-    "fragrance world",
-    "oud elite",
-    "orientica",
-    "arabiyat",
-    "ard al zaafaran",
     "parfums de nicolai",
     "liquides imaginaires",
     "house of oud",
@@ -196,25 +260,17 @@ _NICHE_ORIGINALS: frozenset[str] = frozenset({
     "boadicea the victorious",
     "henry rose",
     "imaginary authors",
-    "sweet tea apothecary",
     "commodity",
     "zoologist",
-    "sweet dreams",
-    "nez a nez",
     "profumum roma",
-    "dr vranjes",
     "santa maria novella",
     "etro",
     "acqua di parma",
-    "santa maria novella firenze",
-    "borsari",
     "carthusia",
     "filippo sorcinelli",
     "andrea maack",
     "olfactive studio",
     "theodoros kalotinis",
-    "monocle x comme des garcons",
-    "monocle",
     "gres",
     "grès",
     "meo fusciuni",
@@ -223,52 +279,32 @@ _NICHE_ORIGINALS: frozenset[str] = frozenset({
     "nobile 1942",
     "mendittorosa",
     "masque milano",
-    "berto",
-    "filippo stanzani",
     "parfumerie generale",
-    "smell bent",
     "the merchant of venice",
-    "bloom perfumery",
     "eight & bob",
-    "os fragrances",
-    "liquides imaginaires",
-    "ralf lauren",
+    "jovoy",
     "jovoy paris",
     "papillon",
     "puredistance",
     "floraiku",
     "rance 1795",
-    "sweet chemistry",
     "bogue profumo",
-    "the parfumerie",
-    "in fiore",
     "ineke",
     "james heeley",
     "heeley",
-    "olibere parfums",
-    "bvlgari le gemme",
     "roja",
     "vilhelm",
-    "frederic",
     "parfums de marly paris",
     "maison de la sixtine",
     "house of matriarch",
-    "mcq",
     "shay & blue",
     "cire trudon",
     "goldfield & banks",
     "noble isle",
-    "frama",
     "fueguia 1833",
-    "filippo",
-    "the zoo project",
     "le jardin retrouve",
     "the house of oud",
-    "olfactif",
-    "scentbird exclusive",
     "elie saab",
-    "viktor rolf",
-    "givenchy le de",
     "jo malone",
     "jo malone london",
     "penhaligon",
@@ -276,37 +312,24 @@ _NICHE_ORIGINALS: frozenset[str] = frozenset({
     "lalique",
     "s.t. dupont",
     "dupont",
-    "serge",
     "parfums lutens",
-    "talitha",
     "perris monte carlo",
-    "roos & roos",
     "floris",
     "czech & speake",
-    "james heelay",
     "molinard",
     "officine universelle buly",
     "buly 1803",
-    "grandiflora",
     "ormonde jayne",
-    "house of fraser",
-    "nicolas kristiante",
-    "ds durga",
     "kerosene",
-    "yosh han",
-    "sonoma scent studio",
     "house of sillage",
-    "clive christian",
     "boadicea",
     "xerjoff naxos",
     "roja dove parfums",
-    "the vagabond prince",
-    "fume hood",
     "mona di orio",
     "robert piguet",
     "jm",
-    "jo malone london",
 })
+
 
 # ---------------------------------------------------------------------------
 # Normalization
@@ -333,29 +356,68 @@ def _normalize(name: str) -> str:
 _DESIGNER_NORM: frozenset[str] = frozenset(_normalize(b) for b in _DESIGNER_ORIGINALS)
 _NICHE_NORM: frozenset[str] = frozenset(_normalize(b) for b in _NICHE_ORIGINALS)
 
+# Pre-compute normalized dupe map.
+_DUPE_NORM: dict[str, DupeProfile] = {
+    _normalize(k): v for k, v in _DUPE_RAW.items()
+}
+
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def classify_entity_role(
+def get_dupe_profile(
     brand_name: str | None,
-    perfume_name: str | None = None,  # reserved for Phase 3 name-level signals
-) -> str:
-    """Classify the entity's market role from its brand name.
+    canonical_name: str | None,
+) -> Optional[DupeProfile]:
+    """Return the DupeProfile if this entity is a known dupe/alternative, else None.
+
+    Checks the canonical_name (full entity name including brand) against the
+    curated dupe map. Brand-only lookup is intentionally NOT performed — dupe
+    status is perfume-specific, not brand-wide.
 
     Args:
-        brand_name:   The brand/house name (e.g. "Creed", "Dior").
-        perfume_name: Reserved for future use (Phase 3 name-level classification).
-                      Currently unused.
+        brand_name:     Brand name (not used for lookup; reserved for future use).
+        canonical_name: Full canonical entity name, e.g. "Armaf Club de Nuit Intense Man".
+
+    Returns:
+        DupeProfile if found, else None.
+    """
+    if not canonical_name:
+        return None
+    key = _normalize(canonical_name)
+    return _DUPE_NORM.get(key)
+
+
+def classify_entity_role(
+    brand_name: str | None,
+    perfume_name: str | None = None,
+) -> str:
+    """Classify the entity's market role from its brand name and canonical perfume name.
+
+    Lookup order (Phase 5):
+      1. Dupe map — keyed by normalized canonical perfume name (most specific)
+      2. Designer brand set — keyed by normalized brand name
+      3. Niche brand set    — keyed by normalized brand name
+      4. Fallback           — "unknown"
+
+    Args:
+        brand_name:   The brand/house name (e.g. "Creed", "Armaf").
+        perfume_name: Full canonical entity name (e.g. "Armaf Club de Nuit Intense Man").
+                      Required for dupe map lookup; previously reserved for Phase 3.
 
     Returns:
         One of: "designer_original" | "niche_original" | "original" |
+                "dupe_alternative" | "designer_alternative" | "celebrity_alternative" |
                 "clone_positioned" | "inspired_alternative" | "flanker" | "unknown"
-
-    Phase 2 scope: only "designer_original", "niche_original", "unknown" are assigned.
-    The remaining roles are reserved for Phase 3.
     """
+    # 1. Dupe map check — requires canonical perfume name
+    if perfume_name:
+        profile = get_dupe_profile(brand_name, perfume_name)
+        if profile:
+            return profile.role
+
+    # 2–3. Brand-level lookup
     if not brand_name:
         return "unknown"
 
@@ -369,19 +431,22 @@ def classify_entity_role(
     if key in _NICHE_NORM:
         return "niche_original"
 
-    # Phase 3 will add clone_positioned / inspired_alternative / flanker signals here.
+    # Phase 3/4 will add clone_positioned / inspired_alternative / flanker here.
     return "unknown"
 
 
 # Human-readable labels for the frontend.
 ROLE_LABELS: dict[str, str] = {
-    "designer_original":   "Designer Original",
-    "niche_original":      "Niche Original",
-    "original":            "Original",
-    "clone_positioned":    "Clone-Positioned",
-    "inspired_alternative": "Inspired Alternative",
-    "flanker":             "Flanker",
-    "unknown":             "",  # not rendered in UI
+    "designer_original":     "Designer Original",
+    "niche_original":        "Niche Original",
+    "original":              "Original",
+    "dupe_alternative":      "Dupe / Alternative",
+    "designer_alternative":  "Designer Alternative",
+    "celebrity_alternative": "Celebrity Alternative",
+    "clone_positioned":      "Clone-Positioned",
+    "inspired_alternative":  "Inspired Alternative",
+    "flanker":               "Flanker",
+    "unknown":               "",  # not rendered in UI
 }
 
 # Roles that should be rendered in the UI (unknown suppressed).

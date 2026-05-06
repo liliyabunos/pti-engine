@@ -172,6 +172,41 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
     - `public_safe_content_items`: 8,043 rows · 8 cols · 0 denied fields ✓
   - C1 Product/UI Step 2C: The Perfume Guy profile smoke tested · API ✓ · routing ✓ · frontend 307 ✓
 
+## Semantic Phase 5 — Dupe / Alternative Entity Role Mapping
+**STATUS: COMPLETE (2026-05-06)**
+
+**Problem observed:** Armaf Club de Nuit (brand="Armaf") showed NICHE ORIGINAL badge because "armaf" was in `_NICHE_ORIGINALS`. Armaf is a mass-market clone brand, not a niche house.
+
+**Why Phase 3/4 were not enough:** Phase 3/4 fixed dupe/alternative SEMANTICS (topics, opportunities, narrative) for originals. Phase 5 fixes entity ROLE CLASSIFICATION — specific clone perfumes now carry `dupe_alternative`, `designer_alternative`, or `celebrity_alternative` roles with `reference_original` and `dupe_family` metadata.
+
+**Mapping approach:**
+- `_DUPE_RAW` dict in `entity_role.py` — curated (brand, canonical_name) → DupeProfile mapping
+- Dupe map checked FIRST before brand-set lookup; perfume-specific, not brand-wide
+- `get_dupe_profile(brand_name, canonical_name) → Optional[DupeProfile]` exported for API use
+- New roles: `dupe_alternative`, `designer_alternative`, `celebrity_alternative`
+- `reference_original` + `dupe_family` fields added to `PerfumeEntityDetail` API response
+
+**Brand list cleanup:**
+- Removed from `_NICHE_ORIGINALS`: armaf, lattafa, zimaya, fragrance world, orientica, arabiyat, ard al zaafaran, afnan (mass-market clone/affordable brands — incorrectly classified)
+- Kept: rasasi, swiss arabian, ajmal, al haramain (have genuine premium segments)
+
+**Initial dupe seed:**
+- Armaf CDNIM / Club de Nuit Intense Man → Creed Aventus (dupe_alternative)
+- Montblanc Explorer → Creed Aventus (designer_alternative)
+- Lattafa Khamrah → Kilian Angels' Share (dupe_alternative)
+- Zara Red Temptation → MFK Baccarat Rouge 540 (dupe_alternative)
+- Ariana Grande Cloud → MFK Baccarat Rouge 540 (celebrity_alternative)
+
+**Frontend:**
+- New badges: DUPE / ALTERNATIVE (amber), DESIGNER ALTERNATIVE (blue), CELEBRITY ALTERNATIVE (pink)
+- "Alternative to: {reference_original}" line in entity hero (amber text, shown only when set)
+
+**Tests:** `tests/unit/test_semantic_phase5.py` — 63/63 pass. Combined: 186/186 semantic tests pass.
+
+**No schema migration. No backfill.**
+
+---
+
 ## Semantic Phase 4 — Production Verification + Compared-Against Cleanup
 **STATUS: COMPLETE (2026-05-06)**
 
@@ -385,6 +420,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | I7.5 Semantic Phase 2 — Entity Role Classification | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 4 — Production Verification + Compared-Against Cleanup | COMPLETE | 2026-05-06 |
+| I7.5 Semantic Phase 5 — Dupe / Alternative Entity Role Mapping | COMPLETE | 2026-05-06 |
 
 ---
 

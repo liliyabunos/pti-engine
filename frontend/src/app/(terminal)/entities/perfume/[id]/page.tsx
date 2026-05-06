@@ -33,12 +33,18 @@ import { MarketInsight } from "@/components/entity/MarketInsight";
 // ---------------------------------------------------------------------------
 
 const ROLE_META: Record<string, { label: string; className: string }> = {
-  designer_original:   { label: "Designer Original",   className: "border-sky-800 bg-sky-950/40 text-sky-400" },
-  niche_original:      { label: "Niche Original",      className: "border-violet-800 bg-violet-950/40 text-violet-400" },
-  original:            { label: "Original",             className: "border-zinc-600 bg-zinc-800/40 text-zinc-300" },
-  clone_positioned:    { label: "Clone-Positioned",    className: "border-amber-800 bg-amber-950/40 text-amber-400" },
-  inspired_alternative:{ label: "Inspired Alternative", className: "border-lime-800 bg-lime-950/40 text-lime-400" },
-  flanker:             { label: "Flanker",              className: "border-zinc-600 bg-zinc-800/40 text-zinc-400" },
+  // Reference/original roles
+  designer_original:     { label: "Designer Original",    className: "border-sky-800 bg-sky-950/40 text-sky-400" },
+  niche_original:        { label: "Niche Original",       className: "border-violet-800 bg-violet-950/40 text-violet-400" },
+  original:              { label: "Original",              className: "border-zinc-600 bg-zinc-800/40 text-zinc-300" },
+  // Dupe / alternative roles (Phase 5)
+  dupe_alternative:      { label: "Dupe / Alternative",   className: "border-amber-700 bg-amber-950/40 text-amber-300" },
+  designer_alternative:  { label: "Designer Alternative", className: "border-blue-700 bg-blue-950/40 text-blue-300" },
+  celebrity_alternative: { label: "Celebrity Alternative",className: "border-pink-700 bg-pink-950/40 text-pink-300" },
+  // Generic clone/flanker roles
+  clone_positioned:      { label: "Clone-Positioned",     className: "border-amber-800 bg-amber-950/40 text-amber-400" },
+  inspired_alternative:  { label: "Inspired Alternative", className: "border-lime-800 bg-lime-950/40 text-lime-400" },
+  flanker:               { label: "Flanker",               className: "border-zinc-600 bg-zinc-800/40 text-zinc-400" },
 };
 
 function EntityRoleBadge({ role }: { role: string | undefined }) {
@@ -600,6 +606,11 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                     ) : (
                       <p className="mt-0.5 text-xs text-zinc-500">{data.brand_name}</p>
                     )
+                  )}
+                  {data.reference_original && (
+                    <p className="mt-0.5 text-xs text-amber-500/80">
+                      Alternative to: {data.reference_original}
+                    </p>
                   )}
                 </div>
 

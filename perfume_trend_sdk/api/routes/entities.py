@@ -42,7 +42,10 @@ from perfume_trend_sdk.db.market.entity_mention import EntityMention
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily
 from perfume_trend_sdk.db.market.models import EntityMarket
 from perfume_trend_sdk.db.market.signal import Signal
-from perfume_trend_sdk.analysis.topic_intelligence.entity_role import classify_entity_role
+from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
+    classify_entity_role,
+    get_dupe_profile,
+)
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
@@ -470,7 +473,10 @@ class PerfumeEntityDetail(BaseModel):
     ticker: Optional[str] = None
     state: str  # "active" | "tracked" | "catalog_only"
     # Phase I7.5 — Entity role classification
-    entity_role: str = "unknown"  # "designer_original" | "niche_original" | "unknown" | …
+    entity_role: str = "unknown"  # "designer_original" | "niche_original" | "dupe_alternative" | …
+    # Phase I7.5-P5 — Dupe/alternative metadata (None for non-dupe entities)
+    reference_original: Optional[str] = None  # e.g. "Creed Aventus"
+    dupe_family: Optional[str] = None          # e.g. "Aventus alternatives"
     has_activity_today: bool = False
     aliases_count: int = 0
     # Market metrics — None for catalog_only
@@ -1081,6 +1087,9 @@ def get_perfume_entity(
         drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "top_drivers")
         # Phase I7.5 — Entity role (computed early; drives semantic routing below)
         p_role = classify_entity_role(em.brand_name, em.canonical_name)
+        _p_dupe = get_dupe_profile(em.brand_name, em.canonical_name)
+        p_reference_original = _p_dupe.reference_original if _p_dupe else None
+        p_dupe_family = _p_dupe.dupe_family if _p_dupe else None
         # Phase I5/I7 — topic/query intelligence + semantic profile (role-aware)
         p_topics, p_queries, p_subs, p_diff, p_pos, p_intents = _safe(
             lambda: _get_entity_topics(db, str(em.id), entity_role=p_role),
@@ -1103,6 +1112,7 @@ def get_perfume_entity(
                 resolved_competitors=p_competitors,
                 trend_state=_ts,
                 entity_role=p_role,
+                reference_original=p_reference_original,
             ),
             None, "market_intelligence",
         )
@@ -1116,7 +1126,9 @@ def get_perfume_entity(
             brand_name=em.brand_name,
             ticker=em.ticker,
             state=state,
-            entity_role=p_role,      # Phase I7.5
+            entity_role=p_role,                    # Phase I7.5
+            reference_original=p_reference_original,  # Phase I7.5-P5
+            dupe_family=p_dupe_family,                 # Phase I7.5-P5
             has_activity_today=has_activity,
             aliases_count=aliases,
             latest_score=latest.composite_market_score if latest else None,
@@ -1173,13 +1185,18 @@ def get_perfume_entity(
     similar = _similar_by_notes(db, resolver_id)
     brand_entity_id = _brand_entity_id_for(db, rp_row[2])
     cat_role = classify_entity_role(rp_row[2], rp_row[1])  # Phase I7.5
+    _cat_dupe = get_dupe_profile(rp_row[2], rp_row[1])
+    cat_reference_original = _cat_dupe.reference_original if _cat_dupe else None
+    cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
         canonical_name=rp_row[1],
         brand_name=rp_row[2],
         state="catalog_only",
-        entity_role=cat_role,  # Phase I7.5
+        entity_role=cat_role,                        # Phase I7.5
+        reference_original=cat_reference_original,   # Phase I7.5-P5
+        dupe_family=cat_dupe_family,                  # Phase I7.5-P5
         aliases_count=aliases,
         notes_top=cat_top,
         notes_middle=cat_mid,

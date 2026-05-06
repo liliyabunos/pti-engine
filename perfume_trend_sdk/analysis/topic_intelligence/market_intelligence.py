@@ -70,6 +70,10 @@ _ORIGINAL_ROLES: frozenset[str] = frozenset({
 _CLONE_ROLES: frozenset[str] = frozenset({
     "clone_positioned",
     "inspired_alternative",
+    # Phase 5 — specific dupe/alternative roles
+    "dupe_alternative",
+    "designer_alternative",
+    "celebrity_alternative",
 })
 
 
@@ -155,6 +159,13 @@ def _build_opportunity_flags(
 # Narrative generation
 # ---------------------------------------------------------------------------
 
+_DUPE_ROLES: frozenset[str] = frozenset({
+    "dupe_alternative",
+    "designer_alternative",
+    "celebrity_alternative",
+})
+
+
 def _build_narrative(
     canonical_name: str,
     differentiators: list[str],
@@ -163,13 +174,35 @@ def _build_narrative(
     opportunities: list[str],
     competitors: list[str],
     entity_role: str = "unknown",
+    reference_original: Optional[str] = None,
 ) -> str:
     """Build a plain-language narrative explaining why an entity is trending.
 
     Uses template clauses — no AI. Output is deterministic given the same inputs.
+    For Phase 5 dupe/alternative entities, uses dedicated templates that reference
+    the original scent.
     """
     diff_set = frozenset(d.lower() for d in differentiators)
     intent_set = frozenset(i.lower() for i in intents)
+
+    # Phase 5 — dedicated narrative for known dupe/alternative entities
+    if entity_role in _DUPE_ROLES:
+        ref = reference_original or "a reference scent"
+        if "comparison" in intent_set:
+            return (
+                f"{canonical_name} is gaining attention as an alternative to {ref}, "
+                f"with active comparison activity."
+            )
+        if "compliment getter" in diff_set:
+            return (
+                f"{canonical_name} is gaining traction as a value-positioned alternative "
+                f"to {ref}, noted for compliment-getting performance."
+            )
+        if "affordable" in diff_set:
+            return (
+                f"{canonical_name} is gaining attention as an affordable alternative to {ref}."
+            )
+        return f"{canonical_name} is gaining attention as an alternative to {ref}."
 
     # Collect reason clauses (most impactful first)
     reasons: list[str] = []
@@ -312,6 +345,7 @@ def generate_market_intelligence(
     resolved_competitors: list[str],
     trend_state: Optional[str] = None,
     entity_role: str = "unknown",
+    reference_original: Optional[str] = None,
 ) -> MarketIntelligence:
     """Generate full market intelligence for an entity.
 
@@ -324,6 +358,7 @@ def generate_market_intelligence(
         resolved_competitors: competitor canonical names resolved from DB
         trend_state:          I3 trend state: breakout|rising|peak|declining|stable|emerging|None
         entity_role:          Phase I7.5 role — controls dupe/alternative copy framing
+        reference_original:   Phase I7.5-P5 — for dupe entities: the original scent name
     """
     opportunities = _build_opportunity_flags(
         differentiators, positioning, intents, trend_state, entity_role
@@ -336,6 +371,7 @@ def generate_market_intelligence(
         opportunities,
         resolved_competitors,
         entity_role,
+        reference_original,
     )
     return MarketIntelligence(
         narrative=narrative,
