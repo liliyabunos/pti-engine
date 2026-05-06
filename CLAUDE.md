@@ -120,16 +120,19 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 - TikTok: planned after Creator Intelligence model
 
 ## Active Roadmap
-- **Submit a Source MVP — PRODUCTION VERIFIED (2026-05-06)** — commit 16ec68f
+- **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
   - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
   - Backend: `POST /api/v1/source-submissions` — normalize URL, auto-detect platform, dedup (409), status=pending
   - Migration 033 applied: `source_submissions` table, unique index on `normalized_url` ✓
   - User email + ID from Supabase session; no anonymous submissions accepted
   - Platform auto-detected from URL host (YouTube, TikTok, Instagram, Reddit)
-  - Sidebar: "Submit Source" link (PlusCircle icon)
+  - Sidebar: "Suggest Source" (renamed from "Submit Source")
+  - Landing page: "Know a fragrance creator we should track?" block with "Suggest a Source" CTA → /login?next=/submit-source
+  - Crash fix: replaced `startTransition(async)` with plain `isLoading` state — eliminates React 18/19 boundary crash
+  - Copy: title "Suggest a Source", success "Thank you — this source was submitted for review.", duplicate "already in our review queue"
   - No automatic ingestion. No direct market score manipulation.
-- **FIX: Secret-safe deploy logging (2026-05-06)** — `start.sh` `set -x` removed
+- **FIX: Secret-safe deploy logging (2026-05-06)** — commit f0246cd
   - `set -x` caused Railway deploy logs to print full DATABASE_URL (including password)
   - Replaced with `set -e` (fail-fast on error, no trace expansion)
   - Safe log lines only: "DATABASE_URL is set" · "Running alembic upgrade head" · "ALEMBIC_EXIT=0" · "Starting uvicorn"

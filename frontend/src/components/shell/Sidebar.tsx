@@ -33,7 +33,7 @@ const PRIMARY_NAV: NavItem[] = [
 const SECONDARY_NAV: NavItem[] = [
   { href: "/watchlists", label: "Watchlists", icon: BookMarked, placeholder: true },
   { href: "/alerts", label: "Alerts", icon: BellRing, placeholder: true },
-  { href: "/submit-source", label: "Submit Source", icon: PlusCircle },
+  { href: "/submit-source", label: "Suggest Source", icon: PlusCircle },
 ];
 
 // ---------------------------------------------------------------------------

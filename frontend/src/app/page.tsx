@@ -598,7 +598,35 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 8. Methodology ──────────────────────────────────────────────── */}
+      {/* ── 8. Suggest a Source ─────────────────────────────────────────── */}
+      <section className="border-b border-zinc-800/60 bg-zinc-900/30">
+        <div className="mx-auto max-w-5xl px-6 py-16">
+          <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-xl">
+              <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
+                Community
+              </p>
+              <h2 className="mb-3 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
+                Know a fragrance creator we should track?
+              </h2>
+              <p className="text-sm leading-relaxed text-zinc-500">
+                Paste a public YouTube, TikTok, Instagram, Reddit, or fragrance
+                blog link. We&apos;ll review it for possible inclusion in
+                FragranceIndex.ai.
+              </p>
+            </div>
+            <Link
+              href="/login?next=/submit-source"
+              className="shrink-0 inline-flex items-center gap-2 rounded border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+            >
+              Suggest a Source
+              <span aria-hidden className="text-zinc-600">→</span>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── 9. Methodology ──────────────────────────────────────────────── */}
       <section className="border-b border-zinc-800/60 bg-zinc-900/20">
         <div className="mx-auto max-w-5xl px-6 py-16">
           <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
@@ -632,7 +660,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 9. Early Access Value ───────────────────────────────────────── */}
+      {/* ── 10. Early Access Value ──────────────────────────────────────── */}
       <section className="border-b border-zinc-800/60">
         <div className="mx-auto max-w-5xl px-6 py-16">
           <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
@@ -691,7 +719,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── 10. Final CTA ───────────────────────────────────────────────── */}
+      {/* ── 11. Final CTA ───────────────────────────────────────────────── */}
       <section className="bg-zinc-900/20">
         <div className="mx-auto max-w-5xl px-6 py-20 text-center">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1">

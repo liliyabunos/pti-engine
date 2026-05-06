@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * Submit a Source — MVP
+ * Suggest a Source — MVP
  *
  * Low-friction logged-in flow: URL + terms only.
  * Protected by (terminal) layout — unauthenticated users are redirected to /login.
  * User email and ID are read from the Supabase session; not entered manually.
  */
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import { ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/auth/client";
 import { Header } from "@/components/shell/Header";
@@ -17,10 +17,10 @@ import { TerminalPanel } from "@/components/primitives/TerminalPanel";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
-type SubmitState = "idle" | "submitting" | "success" | "duplicate" | "error";
+type SubmitState = "idle" | "loading" | "success" | "duplicate" | "error";
 
 // ---------------------------------------------------------------------------
-// Platform badge helper
+// Platform badge — auto-detected from URL
 // ---------------------------------------------------------------------------
 
 function detectPlatformLabel(url: string): string | null {
@@ -40,21 +40,20 @@ function detectPlatformLabel(url: string): string | null {
 // Page
 // ---------------------------------------------------------------------------
 
-export default function SubmitSourcePage() {
+export default function SuggestSourcePage() {
   const [url, setUrl] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [state, setState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
 
-  // Read session user on mount
+  // Read session user on mount — Supabase browser client, safe in useEffect
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        setUserId(data.user.id);
+      if (data?.user) {
+        setUserId(data.user.id ?? null);
         setUserEmail(data.user.email ?? null);
       }
     });
@@ -63,52 +62,69 @@ export default function SubmitSourcePage() {
   const platformLabel = detectPlatformLabel(url);
   const isValidUrl =
     url.trim().startsWith("http://") || url.trim().startsWith("https://");
-  const canSubmit = isValidUrl && termsAccepted && !isPending;
+  const canSubmit = isValidUrl && termsAccepted && state !== "loading";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
 
-    startTransition(async () => {
-      setState("submitting");
-      setErrorMessage(null);
+    setState("loading");
+    setErrorMessage(null);
 
-      try {
-        const res = await fetch(`${API_BASE}/api/v1/source-submissions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({
-            url: url.trim(),
-            terms_accepted: true,
-            submitted_by_user_id: userId,
-            submitted_by_email: userEmail,
-          }),
-          cache: "no-store",
-        });
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/source-submissions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          url: url.trim(),
+          terms_accepted: true,
+          submitted_by_user_id: userId,
+          submitted_by_email: userEmail,
+        }),
+        cache: "no-store",
+      });
 
-        if (res.status === 409) {
-          setState("duplicate");
-          return;
-        }
-
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          setErrorMessage(body.detail ?? "Submission failed. Please try again.");
-          setState("error");
-          return;
-        }
-
-        setState("success");
-      } catch {
-        setErrorMessage("Network error. Please check your connection and try again.");
-        setState("error");
+      if (res.status === 409) {
+        setState("duplicate");
+        return;
       }
-    });
+
+      if (!res.ok) {
+        let detail = "Submission failed. Please try again.";
+        try {
+          const body = await res.json();
+          if (body?.detail) detail = body.detail;
+        } catch {
+          // ignore parse error
+        }
+        setErrorMessage(detail);
+        setState("error");
+        return;
+      }
+
+      setState("success");
+    } catch {
+      setErrorMessage("Network error. Please check your connection and try again.");
+      setState("error");
+    }
+  }
+
+  function handleReset() {
+    setUrl("");
+    setTermsAccepted(false);
+    setErrorMessage(null);
+    setState("idle");
   }
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <Header title="Submit a Source" subtitle="Community contribution" />
+      <Header
+        title="Suggest a Source"
+        subtitle="Submit a public fragrance creator, community, or blog for review."
+      />
 
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-xl space-y-4 p-4">
@@ -131,43 +147,38 @@ export default function SubmitSourcePage() {
             </p>
           </TerminalPanel>
 
-          {/* ── Success state ───────────────────────────────────── */}
+          {/* ── Success ─────────────────────────────────────────── */}
           {state === "success" && (
             <TerminalPanel>
               <p className="text-sm font-medium text-zinc-100">
-                Submission received
+                Submitted for review
               </p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                Thank you! Your source is under review. If it meets our
-                criteria, it will be added to FragranceIndex.ai.
+                Thank you — this source was submitted for review.
               </p>
               <button
-                onClick={() => {
-                  setUrl("");
-                  setTermsAccepted(false);
-                  setState("idle");
-                }}
+                onClick={handleReset}
                 className="mt-4 text-xs text-amber-500 hover:text-amber-400 transition-colors"
               >
-                Submit another source →
+                Suggest another source →
               </button>
             </TerminalPanel>
           )}
 
-          {/* ── Duplicate state ─────────────────────────────────── */}
+          {/* ── Duplicate ───────────────────────────────────────── */}
           {state === "duplicate" && (
             <TerminalPanel>
               <p className="text-sm font-medium text-zinc-100">
-                Already submitted
+                Already in queue
               </p>
               <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                This source has already been submitted and is under review.
+                This source has already been submitted and is in our review queue.
               </p>
               <button
-                onClick={() => setState("idle")}
+                onClick={handleReset}
                 className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
               >
-                ← Back
+                ← Try a different source
               </button>
             </TerminalPanel>
           )}
@@ -175,7 +186,7 @@ export default function SubmitSourcePage() {
           {/* ── Form ────────────────────────────────────────────── */}
           {state !== "success" && state !== "duplicate" && (
             <TerminalPanel>
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
 
                 {/* URL field */}
                 <div>
@@ -190,7 +201,6 @@ export default function SubmitSourcePage() {
                       id="source-url"
                       type="url"
                       autoComplete="off"
-                      autoFocus
                       value={url}
                       onChange={(e) => {
                         setUrl(e.target.value);
@@ -203,11 +213,11 @@ export default function SubmitSourcePage() {
                         state === "error"
                           ? "border-red-800 focus:ring-red-700/40"
                           : "border-zinc-700 focus:border-amber-500 focus:ring-amber-500/30",
+                        platformLabel ? "pr-24" : "",
                       ].join(" ")}
                     />
-                    {/* Auto-detected platform badge */}
                     {platformLabel && (
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-px text-[10px] font-semibold text-zinc-400">
+                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-px text-[10px] font-semibold text-zinc-400">
                         {platformLabel}
                       </span>
                     )}
@@ -235,7 +245,7 @@ export default function SubmitSourcePage() {
                   </span>
                 </label>
 
-                {/* Submitting-as note */}
+                {/* Submitting-as */}
                 {userEmail && (
                   <p className="text-[11px] text-zinc-700">
                     Submitting as{" "}
@@ -249,12 +259,11 @@ export default function SubmitSourcePage() {
                   disabled={!canSubmit}
                   className="w-full rounded bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400 disabled:opacity-40 transition-colors"
                 >
-                  {isPending ? "Submitting…" : "Submit source"}
+                  {state === "loading" ? "Submitting…" : "Submit source"}
                 </button>
 
               </form>
 
-              {/* Footer note */}
               <p className="mt-5 border-t border-zinc-800/60 pt-4 text-[11px] leading-relaxed text-zinc-700">
                 Submissions are reviewed manually. We do not guarantee
                 inclusion. See our{" "}
