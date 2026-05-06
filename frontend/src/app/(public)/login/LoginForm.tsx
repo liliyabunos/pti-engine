@@ -24,7 +24,7 @@ function detectInAppBrowser(): string | null {
 // causing emailRedirectTo to fail Supabase's allowlist check.
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "https://pti-frontend-production.up.railway.app";
+  "https://fragranceindex.ai";
 
 interface LoginFormProps {
   supabaseUrl: string;

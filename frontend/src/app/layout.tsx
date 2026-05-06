@@ -3,6 +3,7 @@ import "./globals.css";
 import { QueryProvider } from "@/providers/QueryProvider";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://fragranceindex.ai"),
   title: "FTI Market Terminal",
   description: "Fragrance Trend Intelligence — market terminal for fragrance trends",
 };

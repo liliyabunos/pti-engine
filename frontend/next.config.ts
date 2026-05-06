@@ -22,7 +22,7 @@ const nextConfig: NextConfig = {
     // is always used, never a stale build-time snapshot.
     NEXT_PUBLIC_SITE_URL:
       process.env.NEXT_PUBLIC_SITE_URL ??
-      "https://pti-frontend-production.up.railway.app",
+      "https://fragranceindex.ai",
   },
 };
 
