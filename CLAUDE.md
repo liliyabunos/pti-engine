@@ -151,6 +151,12 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - Leaderboard rows and entity Top Creators rows now clickable → profile
   - The Perfume Guy (UCFarEEFsV90-pvUU0XdUdgQ): 20 portfolio entities all have canonical_name ✓, 10 recent content items with valid YouTube URLs ✓, frontend route 307 confirmed ✓
   - Portfolio routing uses canonical_name slug (not UUID) — entity links resolve correctly ✓
+- **Creator detail UX polish (2026-05-06)** — "Open Channel" link + subtitle fallback fix
+  - `external_url` field added to `CreatorProfileResponse` (backend schema + route + TS type)
+  - YouTube: `external_url = https://www.youtube.com/channel/{creator_id}` constructed server-side
+  - "Open Channel" button rendered in hero top-right (new tab); hidden when `external_url` is null
+  - Subtitle: category="unknown" (any case) is treated as absent; fallback = "YouTube fragrance channel" (YouTube) or "Creator profile"
+  - Creator detail pages now expose external platform links and avoid raw Unknown fallback.
 - **FIX: Responsive control bar layout (2026-05-06)** — commit 5563bae
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below

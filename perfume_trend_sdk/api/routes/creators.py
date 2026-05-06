@@ -296,6 +296,11 @@ def get_creator(
     except Exception as exc:
         _log.warning("[C1] recent_content query failed for %s: %s", creator_id, exc)
 
+    # Construct external platform URL from creator_id
+    external_url: Optional[str] = None
+    if platform == "youtube" and creator_id:
+        external_url = f"https://www.youtube.com/channel/{creator_id}"
+
     return CreatorProfileResponse(
         platform=score_row[0],
         creator_id=score_row[1],
@@ -308,6 +313,7 @@ def get_creator(
         subscriber_count=ch_row[4] if ch_row else score_row[5],
         channel_view_count=int(ch_row[5]) if ch_row and ch_row[5] is not None else None,
         channel_video_count=int(ch_row[6]) if ch_row and ch_row[6] is not None else None,
+        external_url=external_url,
         # Scores
         influence_score=float(score_row[20]) if score_row[20] is not None else None,
         score_components=sc,

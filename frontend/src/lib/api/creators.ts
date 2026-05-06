@@ -111,6 +111,8 @@ export interface CreatorProfileResponse {
   subscriber_count: number | null;
   channel_view_count: number | null;
   channel_video_count: number | null;
+  /** Constructed external platform link (YouTube channel URL). Null if unavailable. */
+  external_url: string | null;
   influence_score: number | null;
   score_components: Record<string, number> | null;
   early_signal_count: number;

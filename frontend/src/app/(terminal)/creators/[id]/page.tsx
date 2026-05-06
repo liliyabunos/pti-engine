@@ -390,25 +390,44 @@ export default function CreatorProfilePage({ params }: PageProps) {
 
   const displayName = data?.creator_handle ?? data?.title ?? decoded;
 
+  // Subtitle: skip "unknown" category; fall back to platform label or generic
+  const subtitleCategory =
+    data?.category && data.category.toLowerCase() !== "unknown"
+      ? data.category
+      : null;
+  const subtitle = data
+    ? [data.quality_tier ? tierLabel(data.quality_tier) : null, subtitleCategory]
+        .filter(Boolean)
+        .join(" · ") ||
+      (data.platform === "youtube" ? "YouTube fragrance channel" : "Creator profile")
+    : undefined;
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <Header
         title={displayName}
-        subtitle={
-          data
-            ? [data.quality_tier ? tierLabel(data.quality_tier) : null, data.category]
-                .filter(Boolean)
-                .join(" · ") || undefined
-            : undefined
-        }
+        subtitle={subtitle}
         actions={
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-zinc-300"
-          >
-            <ArrowLeft size={12} />
-            Back
-          </button>
+          <div className="flex items-center gap-3">
+            {data?.external_url && (
+              <a
+                href={data.external_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded border border-zinc-700 bg-zinc-800/60 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+              >
+                <ExternalLink size={11} />
+                Open Channel
+              </a>
+            )}
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-1.5 text-[11px] text-zinc-500 hover:text-zinc-300"
+            >
+              <ArrowLeft size={12} />
+              Back
+            </button>
+          </div>
         }
       />
 
@@ -454,11 +473,12 @@ export default function CreatorProfilePage({ params }: PageProps) {
                   <h1 className="mt-1 text-xl font-bold leading-tight text-zinc-100">
                     {displayName}
                   </h1>
-                  {data.category && (
-                    <p className="mt-0.5 text-xs capitalize text-zinc-500">
-                      {data.category}
-                    </p>
-                  )}
+                  <p className="mt-0.5 text-xs capitalize text-zinc-500">
+                    {subtitleCategory ??
+                      (data.platform === "youtube"
+                        ? "YouTube fragrance channel"
+                        : "Creator profile")}
+                  </p>
                 </div>
 
                 {/* Key stats */}

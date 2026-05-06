@@ -90,6 +90,8 @@ class CreatorProfileResponse(BaseModel):
     subscriber_count: Optional[int] = None
     channel_view_count: Optional[int] = None
     channel_video_count: Optional[int] = None
+    # External platform link (constructed from creator_id for YouTube)
+    external_url: Optional[str] = None
     # Scores from creator_scores
     influence_score: Optional[float] = None
     score_components: Optional[Dict[str, Any]] = None
