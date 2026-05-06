@@ -7,6 +7,40 @@
 - For phase history, read only the relevant file/section.
 - Keep reports concise.
 
+## Compliance Boundary v1 — Aggregated Market Intelligence, Not Personal Data Brokerage
+
+FragranceIndex.ai is an aggregated fragrance market intelligence platform — not a personal data broker or creator directory.
+
+**What we do:**
+- Surface aggregated perfume/brand/topic/momentum signals from public fragrance conversations
+- Use creator/source data as attribution/provenance (who mentioned what, when) — not as the product
+- Link public content via `source_url` and `title` only — no raw body text exposed
+
+**What we do NOT do:**
+- Sell personal profiles, follower/subscriber lists, or contact data
+- Sell or resell raw Reddit/YouTube/TikTok datasets
+- Score, rank, or target individuals as a product
+- Expose raw comment text, post bodies, or private messages in public APIs
+
+**Compliance files:**
+- `config/public_export_policy.yaml` — authoritative allow/deny field list + retention guidance
+- `perfume_trend_sdk/compliance/policy.py` — runtime enforcement utilities
+- `alembic/versions/032_add_public_safe_views.py` — PostgreSQL public-safe views
+- `tests/unit/test_compliance_boundary.py` — 40 automated compliance tests
+
+**Status (2026-05-06):** commit fef5738
+- 40/40 tests pass
+- Migration 032 pushed — apply with: `railway run --service generous-prosperity alembic upgrade head` (must run from Railway network)
+- Public-safe views: `public_safe_entity_snapshots`, `public_safe_signals`, `public_safe_content_items`
+- No infrastructure split — logical boundary only (per approved scope)
+
+**Verification commands:**
+```bash
+python3 -m pytest tests/unit/test_compliance_boundary.py -v
+```
+
+---
+
 ## Current Production
 - Domain: https://fragranceindex.ai
 - Backend: FastAPI / Railway / PostgreSQL
