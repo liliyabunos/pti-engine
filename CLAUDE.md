@@ -85,6 +85,14 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below
   - Dashboard + Screener: search+filters row 1, range selector row 2 on narrow viewports
+- **Legal Content Audit + Compliance Pages COMPLETE (2026-05-05)** — commit 8b0e055
+  - New pages: /data-sources, /privacy/california, /cookies, /copyright, /privacy/request
+  - Privacy Policy rewritten (15 sections: EEA/UK/CCPA/CPRA/GDPR, data broker statement)
+  - Terms of Use rewritten (16 sections, removed "fair use principles")
+  - Homepage copy: de-risked creator-profiling language, added data-brokerage disclaimer
+  - All pti.market emails migrated to fragranceindex.ai equivalents
+  - Footer: 9 legal links + "not personal data brokerage" disclaimer
+  - Emails: privacy@fragranceindex.ai, legal@fragranceindex.ai, support@fragranceindex.ai
 
 ## Execution Rules
 - Move fast but keep production safe.
