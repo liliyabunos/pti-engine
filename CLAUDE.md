@@ -120,14 +120,20 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 - TikTok: planned after Creator Intelligence model
 
 ## Active Roadmap
-- **Submit a Source MVP (2026-05-06)** — Low-friction logged-in flow: URL + terms only.
-  - Route: `/submit-source` under `(terminal)` — requires auth, redirects to login if not
-  - Backend: `POST /api/v1/source-submissions` — normalize URL, auto-detect platform, dedup, status=pending
-  - Migration 033: `source_submissions` table with unique index on `normalized_url`
-  - User email + ID from Supabase session; no anonymous submissions
+- **Submit a Source MVP — PRODUCTION VERIFIED (2026-05-06)** — commit 16ec68f
+  - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
+  - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
+  - Backend: `POST /api/v1/source-submissions` — normalize URL, auto-detect platform, dedup (409), status=pending
+  - Migration 033 applied: `source_submissions` table, unique index on `normalized_url` ✓
+  - User email + ID from Supabase session; no anonymous submissions accepted
   - Platform auto-detected from URL host (YouTube, TikTok, Instagram, Reddit)
   - Sidebar: "Submit Source" link (PlusCircle icon)
   - No automatic ingestion. No direct market score manipulation.
+- **FIX: Secret-safe deploy logging (2026-05-06)** — `start.sh` `set -x` removed
+  - `set -x` caused Railway deploy logs to print full DATABASE_URL (including password)
+  - Replaced with `set -e` (fail-fast on error, no trace expansion)
+  - Safe log lines only: "DATABASE_URL is set" · "Running alembic upgrade head" · "ALEMBIC_EXIT=0" · "Starting uvicorn"
+  - Full DATABASE_URL will no longer appear in Railway deploy logs
 - G4-E deployed, awaiting first active experiments
 - UI-T1/T1.1 complete production verified
 - **C1 Foundation COMPLETE (2026-05-05)**
