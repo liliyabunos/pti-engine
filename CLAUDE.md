@@ -80,11 +80,11 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - Build clean · PRODUCTION VERIFIED ✓ (307 auth-redirect confirms route live)
 - **C1 Product/UI Step 2B COMPLETE — PRODUCTION VERIFIED (2026-05-05)** — Top Creators block on perfume entity pages · commit 51ca2a5
   - Baccarat Rouge 540 shows 10 creators with tier badges, Early Signal indicators, mentions, avg views, first/last seen, influence, signal count ✓
-- **C1 Product/UI Step 2C COMPLETE (2026-05-06)** — Creator Profile Page · commit 5dabf87
+- **C1 Product/UI Step 2C COMPLETE — PRODUCTION VERIFIED (2026-05-06)** — Creator Profile Page · commit 5dabf87
   - Route: `/creators/{creator_id}` — header, score breakdown, entity portfolio, recent content
   - Leaderboard rows and entity Top Creators rows now clickable → profile
-  - Build clean · deployed to Railway · PRODUCTION VERIFICATION PENDING
-- **Next: C1 Product/UI Step 2C — PRODUCTION VERIFICATION** — smoke test The Perfume Guy profile
+  - The Perfume Guy (UCFarEEFsV90-pvUU0XdUdgQ): 20 portfolio entities all have canonical_name ✓, 10 recent content items with valid YouTube URLs ✓, frontend route 307 confirmed ✓
+  - Portfolio routing uses canonical_name slug (not UUID) — entity links resolve correctly ✓
 - **FIX: Responsive control bar layout (2026-05-06)** — commit 5563bae
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below
@@ -97,6 +97,14 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - All pti.market emails migrated to fragranceindex.ai equivalents
   - Footer: 9 legal links + "not personal data brokerage" disclaimer
   - Emails: privacy@fragranceindex.ai, legal@fragranceindex.ai, support@fragranceindex.ai
+- **Compliance + Legal Content Baseline — COMPLETE — PRODUCTION VERIFIED (2026-05-06)**
+  - Compliance Boundary v1 · commit fef5738 · 40/40 tests · policy YAML + Python utilities
+  - Legal Content Audit · commit 8b0e055 · all pages live on fragranceindex.ai
+  - Migration 032 applied · alembic current: `032` · views verified on Railway production:
+    - `public_safe_entity_snapshots`: 2,163 rows · 17 cols · 0 denied fields ✓
+    - `public_safe_signals`: 4,559 rows · 8 cols · 0 denied fields ✓
+    - `public_safe_content_items`: 8,043 rows · 8 cols · 0 denied fields ✓
+  - C1 Product/UI Step 2C: The Perfume Guy profile smoke tested · API ✓ · routing ✓ · frontend 307 ✓
 
 ## Execution Rules
 - Move fast but keep production safe.
@@ -231,7 +239,9 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C1 Product/API — Creator endpoints (3) | COMPLETE | 2026-05-05 |
 | C1 Product/UI 2A — Creators Leaderboard | COMPLETE — PRODUCTION VERIFIED | 2026-05-05 |
 | C1 Product/UI 2B — Entity Top Creators | COMPLETE — PRODUCTION VERIFIED | 2026-05-05 |
-| C1 Product/UI 2C — Creator Profile Page | DEPLOYED — verification pending | 2026-05-06 |
+| C1 Product/UI 2C — Creator Profile Page | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
+| Compliance Boundary v1 (policy + views + tests) | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
+| Legal Content Audit + Compliance Pages | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 
 ---
 
