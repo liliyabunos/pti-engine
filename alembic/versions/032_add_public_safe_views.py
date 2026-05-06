@@ -18,6 +18,9 @@ Fields deliberately EXCLUDED from all views:
   hashtags_json, media_metadata_json, source_account_id,
   source_account_handle, external_content_id, author_id, author_name
 
+Note: entity_market has no state/trend_state columns — trend_state is
+sourced from the entity_timeseries_daily LATERAL join.
+
 These views are PostgreSQL-only. SQLite (local dev) silently skips creation.
 """
 
@@ -40,10 +43,9 @@ SELECT
     em.canonical_name,
     em.brand_name,
     em.ticker,
-    em.state                         AS entity_state,
-    em.trend_state,
     -- Latest snapshot metrics (aggregated — no individual attribution)
     ts.date,
+    ts.trend_state,
     ts.mention_count,
     ts.unique_authors,               -- count only, no list
     ts.engagement_sum,
@@ -62,7 +64,6 @@ LEFT JOIN LATERAL (
     ORDER BY etd.date DESC
     LIMIT 1
 ) ts ON TRUE
-WHERE em.state IN ('active', 'tracked')
 ;
 """
 
@@ -70,17 +71,17 @@ _PUBLIC_SAFE_SIGNALS = """
 CREATE OR REPLACE VIEW public_safe_signals AS
 SELECT
     -- Entity reference (no raw attribution)
-    CAST(bs.entity_id AS TEXT)       AS entity_id,
+    CAST(s.entity_id AS TEXT)        AS entity_id,
     em.entity_type,
     em.canonical_name,
     em.brand_name,
     -- Signal data
-    bs.signal_type,
-    bs.detected_at                   AS signal_date,
-    bs.strength                      AS signal_strength,
-    bs.confidence                    AS signal_confidence
-FROM breakout_signals bs
-JOIN entity_market em ON em.id = bs.entity_id
+    s.signal_type,
+    s.detected_at                    AS signal_date,
+    s.strength                       AS signal_strength,
+    s.confidence                     AS signal_confidence
+FROM signals s
+JOIN entity_market em ON em.id = s.entity_id
 ;
 """
 
