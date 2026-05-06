@@ -203,6 +203,12 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 
 **Tests:** `tests/unit/test_semantic_phase5.py` — 63/63 pass. Combined: 186/186 semantic tests pass.
 
+**Production verification (2026-05-06, commit 64f3a02, deploy SUCCESS):**
+- Creed Aventus: entity_role=niche_original · reference_original=None · narrative="alternative demand around this reference scent" ✓
+- Armaf Club de Nuit Intense Man: entity_role=dupe_alternative · reference_original="Creed Aventus" · dupe_family="Aventus alternatives" · narrative="gaining attention as an alternative to Creed Aventus, with active comparison activity" ✓
+- Armaf Club de Nuit (broad line): entity_role=unknown · no false badge ✓
+- Baccarat Rouge 540: entity_role=niche_original · reference_original=None ✓
+
 **No schema migration. No backfill.**
 
 ---
@@ -420,7 +426,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | I7.5 Semantic Phase 2 — Entity Role Classification | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 4 — Production Verification + Compared-Against Cleanup | COMPLETE | 2026-05-06 |
-| I7.5 Semantic Phase 5 — Dupe / Alternative Entity Role Mapping | COMPLETE | 2026-05-06 |
+| I7.5 Semantic Phase 5 — Dupe / Alternative Entity Role Mapping | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 
 ---
 
