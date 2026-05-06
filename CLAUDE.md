@@ -120,6 +120,14 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 - TikTok: planned after Creator Intelligence model
 
 ## Active Roadmap
+- **Submit a Source MVP (2026-05-06)** — Low-friction logged-in flow: URL + terms only.
+  - Route: `/submit-source` under `(terminal)` — requires auth, redirects to login if not
+  - Backend: `POST /api/v1/source-submissions` — normalize URL, auto-detect platform, dedup, status=pending
+  - Migration 033: `source_submissions` table with unique index on `normalized_url`
+  - User email + ID from Supabase session; no anonymous submissions
+  - Platform auto-detected from URL host (YouTube, TikTok, Instagram, Reddit)
+  - Sidebar: "Submit Source" link (PlusCircle icon)
+  - No automatic ingestion. No direct market score manipulation.
 - G4-E deployed, awaiting first active experiments
 - UI-T1/T1.1 complete production verified
 - **C1 Foundation COMPLETE (2026-05-05)**
@@ -459,6 +467,7 @@ Current production: **migration 032**
 | 030 | `creator_entity_relationships` table (C1.3) |
 | 031 | `creator_scores` table (C1.4) |
 | 032 | `public_safe_*` views — Compliance Boundary v1 |
+| 033 | `source_submissions` table — Submit a Source MVP |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 

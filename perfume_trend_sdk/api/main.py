@@ -40,7 +40,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from perfume_trend_sdk.api.routes import alerts, auth, catalog, creators, dashboard, emerging, entities, notes, signals, watchlists
+from perfume_trend_sdk.api.routes import alerts, auth, catalog, creators, dashboard, emerging, entities, notes, signals, source_submissions, watchlists
 from perfume_trend_sdk.db.market.session import _make_engine, get_database_url
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,7 @@ app.include_router(watchlists.router, prefix="/api/v1/watchlists", tags=["watchl
 app.include_router(alerts.router, prefix="/api/v1/alerts", tags=["alerts"])
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(emerging.router, prefix="/api/v1", tags=["emerging"])
+app.include_router(source_submissions.router, prefix="/api/v1/source-submissions", tags=["source-submissions"])
 
 
 # ── Health ────────────────────────────────────────────────────────────
