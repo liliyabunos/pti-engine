@@ -51,7 +51,7 @@ const CAPABILITIES = [
     bg: "bg-sky-500/5",
     icon: "≋",
     label: "Source Intelligence",
-    desc: "Every mention traced to its source: YouTube creator, Reddit community, channel quality tier. Weighted scoring separates viral noise from sustained market signal.",
+    desc: "Signals include source-category context such as platform, community/channel category, and source diversity where permitted. Weighted scoring separates viral noise from sustained market signal. FragranceIndex.ai does not sell personal profiles, follower lists, contact data, or raw social platform datasets.",
   },
 ];
 
@@ -62,7 +62,7 @@ const USE_CASES = [
     dot: "bg-emerald-400",
     items: [
       "Detect competitor breakouts 3–7 days before mainstream coverage",
-      "Identify which YouTube creators are driving your brand mentions",
+      "Understand which public content channels and communities are contributing to brand momentum",
       "Monitor reformulation and dupe signals before they spike",
       "Track note and accord trends to inform next-season development",
     ],
@@ -85,7 +85,7 @@ const USE_CASES = [
     items: [
       "Find trending perfumes before they peak to create timely content",
       "Understand which topics drive engagement for each entity",
-      "Map the creator landscape — who is driving which trend",
+      "Map the public conversation landscape — which channels, communities, and topics are contributing to each trend",
       "Use signal data to pitch brand partnerships backed by market evidence",
     ],
   },
@@ -187,11 +187,11 @@ export default function LandingPage() {
 
           <p className="mb-4 max-w-2xl text-base leading-relaxed text-zinc-400 sm:text-lg">
             FragranceIndex.ai powers FTI Market Terminal — fragrance trend
-            intelligence that monitors YouTube creators and Reddit communities
+            intelligence that monitors public YouTube and Reddit content
             to surface which perfumes and brands are breaking out, and why.
           </p>
           <p className="mb-10 max-w-xl text-sm leading-relaxed text-zinc-600">
-            Composite market scores. Signal detection. Creator attribution. Entity
+            Composite market scores. Signal detection. Source-aware attribution. Entity
             intelligence. A complete market intelligence stack, updated twice daily.
           </p>
 
@@ -669,7 +669,7 @@ export default function LandingPage() {
                   "Watchlists — save entities, monitor changes",
                   "Alerts — breakout and threshold notifications",
                   "Intelligence reports — weekly market narrative",
-                  "Transcript intelligence — creator quote extraction",
+                  "Source-context summaries — limited excerpts and links where permitted",
                   "Expanded source coverage",
                   "API access for data integration",
                 ],

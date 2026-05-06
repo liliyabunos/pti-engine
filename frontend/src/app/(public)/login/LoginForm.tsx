@@ -125,8 +125,8 @@ export default function LoginForm({ supabaseUrl, supabaseAnonKey }: LoginFormPro
           <div className="mb-6 rounded border border-red-800/50 bg-red-950/40 px-4 py-3">
             <p className="text-xs leading-relaxed text-red-300">
               Authentication is not configured on this deployment. Please contact{" "}
-              <a href="mailto:access@pti.market" className="underline">
-                access@pti.market
+              <a href="mailto:support@fragranceindex.ai" className="underline">
+                support@fragranceindex.ai
               </a>
               .
             </p>
@@ -217,7 +217,7 @@ export default function LoginForm({ supabaseUrl, supabaseAnonKey }: LoginFormPro
         <p className="mt-8 text-center text-xs text-zinc-700">
           Problems signing in?{" "}
           <a
-            href="mailto:access@pti.market"
+            href="mailto:support@fragranceindex.ai"
             className="text-zinc-500 hover:text-zinc-300 transition-colors"
           >
             Contact support
