@@ -834,7 +834,7 @@ function ScreenerPageInner() {
       {/* ── Control bar ─────────────────────────────────────────────────── */}
       <ControlBar
         left={
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SearchInput
               value={search}
               onChange={handleSearchChange}
@@ -849,7 +849,7 @@ function ScreenerPageInner() {
                   ? "Filter notes…"
                   : "Filter accords…"
               }
-              className="w-48 shrink-0"
+              className="w-36 shrink-0 sm:w-48"
             />
             {mode === "active" && (
               <>
@@ -869,7 +869,7 @@ function ScreenerPageInner() {
           </div>
         }
         right={
-          <>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {mode === "active" && (
               <RangeSelector
                 value={rangePreset}
@@ -902,7 +902,7 @@ function ScreenerPageInner() {
                 </span>
               </>
             )}
-          </>
+          </div>
         }
       />
 

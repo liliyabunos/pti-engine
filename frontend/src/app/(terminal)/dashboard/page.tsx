@@ -224,27 +224,29 @@ export default function DashboardPage() {
       {/* Control bar */}
       <ControlBar
         left={
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <SearchInput
               value={search}
               onChange={setSearch}
               placeholder="Filter movers…"
-              className="w-48"
+              className="w-36 shrink-0 sm:w-48"
             />
             <ControlBarDivider />
-            {ENTITY_TYPES.map(({ key, label, hint }) => (
-              <FilterChip
-                key={key}
-                label={label}
-                active={entityTypeFilter === key}
-                onClick={() => setEntityTypeFilter(key)}
-                title={hint}
-              />
-            ))}
+            <div className="flex items-center gap-1">
+              {ENTITY_TYPES.map(({ key, label, hint }) => (
+                <FilterChip
+                  key={key}
+                  label={label}
+                  active={entityTypeFilter === key}
+                  onClick={() => setEntityTypeFilter(key)}
+                  title={hint}
+                />
+              ))}
+            </div>
           </div>
         }
         right={
-          <>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <RangeSelector
               value={rangePreset}
               onChange={setRangePreset}
@@ -256,7 +258,7 @@ export default function DashboardPage() {
               }}
             />
             {data?.kpis && (
-              <>
+              <div className="flex items-center gap-2">
                 <ControlBarDivider />
                 <span className="text-[11px] text-zinc-600">
                   {data.total_entities} entities
@@ -269,9 +271,9 @@ export default function DashboardPage() {
                 <span className="text-[11px] text-zinc-600">
                   {data.kpis.active_movers} movers
                 </span>
-              </>
+              </div>
             )}
-          </>
+          </div>
         }
       />
 

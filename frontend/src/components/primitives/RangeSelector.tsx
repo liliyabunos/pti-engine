@@ -51,26 +51,30 @@ export function RangeSelector({
     customStartDate <= customEndDate;
 
   return (
-    <div className={`flex items-center gap-0.5 flex-wrap ${className}`}>
-      {RANGE_PRESETS.map(({ key, label }) => (
-        <button
-          key={key}
-          onClick={() => onChange(key)}
-          className={
-            `px-2.5 py-1 text-xs font-mono rounded transition-colors ` +
-            (value === key
-              ? key === "custom" && !isCustomValid
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-              : "text-zinc-500 border border-transparent hover:text-zinc-300 hover:bg-zinc-800/60")
-          }
-        >
-          {label}
-        </button>
-      ))}
+    <div className={`flex flex-wrap items-center gap-1 ${className}`}>
+      {/* Preset buttons — horizontally scrollable on very narrow viewports */}
+      <div className="flex items-center gap-0.5 overflow-x-auto">
+        {RANGE_PRESETS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className={
+              `shrink-0 px-2.5 py-1 text-xs font-mono rounded transition-colors ` +
+              (value === key
+                ? key === "custom" && !isCustomValid
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
+                  : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                : "text-zinc-500 border border-transparent hover:text-zinc-300 hover:bg-zinc-800/60")
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
+      {/* Custom date inputs — wrap below preset row on narrow screens */}
       {value === "custom" && (
-        <div className="flex items-center gap-1 ml-1">
+        <div className="flex flex-wrap items-center gap-1">
           <input
             type="date"
             value={customStartDate}
