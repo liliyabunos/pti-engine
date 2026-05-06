@@ -173,7 +173,8 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - C1 Product/UI Step 2C: The Perfume Guy profile smoke tested · API ✓ · routing ✓ · frontend 307 ✓
 
 ## Semantic Phase 5 — Dupe / Alternative Entity Role Mapping
-**STATUS: COMPLETE (2026-05-06)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-06)**
+**Commits: 64f3a02 (backend + tests), 96772e0 (frontend badges + reference_original hero line)**
 
 **Problem observed:** Armaf Club de Nuit (brand="Armaf") showed NICHE ORIGINAL badge because "armaf" was in `_NICHE_ORIGINALS`. Armaf is a mass-market clone brand, not a niche house.
 
@@ -203,11 +204,17 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 
 **Tests:** `tests/unit/test_semantic_phase5.py` — 63/63 pass. Combined: 186/186 semantic tests pass.
 
-**Production verification (2026-05-06, commit 64f3a02, deploy SUCCESS):**
+**Production sanity sweep — 8 entities (2026-05-06, commits 64f3a02 + 96772e0):**
 - Creed Aventus: entity_role=niche_original · reference_original=None · narrative="alternative demand around this reference scent" ✓
 - Armaf Club de Nuit Intense Man: entity_role=dupe_alternative · reference_original="Creed Aventus" · dupe_family="Aventus alternatives" · narrative="gaining attention as an alternative to Creed Aventus, with active comparison activity" ✓
-- Armaf Club de Nuit (broad line): entity_role=unknown · no false badge ✓
-- Baccarat Rouge 540: entity_role=niche_original · reference_original=None ✓
+- Armaf Club de Nuit (broad line): entity_role=unknown · no false badge · competitors=['Creed Aventus'] (DB-resolved only) ✓
+- MFK Baccarat Rouge 540: entity_role=niche_original · reference_original=None ✓
+- Lattafa Khamrah: entity_role=dupe_alternative · reference_original="Maison Francis Kurkdjian Baccarat Rouge 540" · dupe_family="BR540 alternatives" ✓
+- Zara Red Temptation: NOT IN entity_market (not yet tracked) — dupe map entry ready for when added ✓
+- Ariana Grande Cloud: NOT IN entity_market (not yet tracked) — dupe map entry ready for when added ✓
+- Montblanc Explorer: NOT IN entity_market (not yet tracked) — dupe map entry ready for when added ✓
+
+All 5 tracked entities pass. 3 untracked entities have correct dupe map entries.
 
 **No schema migration. No backfill.**
 
