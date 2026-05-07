@@ -545,7 +545,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Submit Source S1 — Operator Promotion Bridge | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | SC0.1 Unified creator registry (multi-platform) | PLANNED | — |
 | SC0.2 Creator filters v1 | PLANNED | — |
-| SC1.1 TikTok Layer 1 — URL / embed / mention | PLANNED | — |
+| SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | SC1.2 TikTok Layer 3 — seeded creator watchlist | PLANNED | — |
 | SC1.3 Multi-field resolver (hashtags, context) | PLANNED | — |
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
@@ -557,7 +557,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 032**
+Current production: **migration 034**
 
 | Migration | What |
 |-----------|------|
@@ -571,6 +571,7 @@ Current production: **migration 032**
 | 031 | `creator_scores` table (C1.4) |
 | 032 | `public_safe_*` views — Compliance Boundary v1 |
 | 033 | `source_submissions` table — Submit a Source MVP |
+| 034 | SC1.1 — `tiktok_layer`, `referencing_source_id`, `referencing_context`, `mention_weight_override` on `canonical_content_items`; `public_safe_content_items` updated to allow qualified TikTok rows |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
