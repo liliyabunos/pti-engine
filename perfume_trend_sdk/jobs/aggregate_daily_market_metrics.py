@@ -112,7 +112,8 @@ def _load_content_items(db: Session) -> List[Dict[str, Any]]:
             id, source_platform, source_account_handle,
             source_url, external_content_id,
             published_at, engagement_json, media_metadata_json,
-            text_content, title, content_type
+            text_content, title, content_type,
+            mention_weight_override
         FROM canonical_content_items
     """)).fetchall()
     return [dict(r._mapping) for r in rows]

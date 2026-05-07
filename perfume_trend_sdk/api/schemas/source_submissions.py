@@ -21,6 +21,11 @@ class SourceSubmissionRequest(BaseModel):
     terms_accepted: bool
     submitted_by_user_id: Optional[str] = None
     submitted_by_email: Optional[str] = None
+    # SC1.1: optional context snippet for TikTok video submissions.
+    # When provided alongside a TikTok video URL, a derived canonical_content_item
+    # is created with mention_weight_override=0.7 so it enters the resolver pipeline.
+    # Without context, TikTok video URLs are stored in source_submissions only.
+    context: Optional[str] = None
 
     @field_validator("url")
     @classmethod

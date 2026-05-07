@@ -100,6 +100,11 @@ class SocialContentNormalizer:
         self,
         raw_item: Dict[str, Any],
         raw_payload_ref: str,
+        *,
+        tiktok_layer: int = 1,
+        mention_weight_override: Optional[float] = None,
+        referencing_source_id: Optional[str] = None,
+        referencing_context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Normalize a raw TikTok post dict into the canonical content item schema.
@@ -169,6 +174,87 @@ class SocialContentNormalizer:
             "raw_payload_ref": raw_payload_ref,
             "normalizer_version": self.version,
             "query": None,
+            # SC1.1 layer fields
+            "tiktok_layer": tiktok_layer,
+            "mention_weight_override": mention_weight_override,
+            "referencing_source_id": referencing_source_id,
+            "referencing_context": referencing_context,
+        }
+
+    def normalize_tiktok_derived_item(
+        self,
+        *,
+        tiktok_url: str,
+        referencing_source_id: str,
+        referencing_context: str,
+        collected_at: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Build a minimal TikTok content item derived from a URL found in another item.
+
+        Derived items (mention_weight_override=0.0) are stored for resolver enrichment
+        only — they do NOT contribute a mention_count in aggregation.
+
+        The tiktok_url must be a full https://www.tiktok.com/@<handle>/video/<id> URL.
+        The video id is used as the canonical item id; handle is used as account handle.
+
+        Args:
+            tiktok_url:           Full TikTok video URL.
+            referencing_source_id: id of the parent canonical_content_item.
+            referencing_context:   Short snippet (≤ 200 chars) from parent text.
+            collected_at:          ISO 8601 string; defaults to now.
+
+        Returns:
+            Normalized content item dict ready for pg_store.save_content_items().
+            Returns None if the URL cannot be parsed into a valid video id.
+        """
+        import re as _re
+        if collected_at is None:
+            collected_at = datetime.now(timezone.utc).isoformat()
+
+        # Extract handle and video_id from URL
+        # Handles: https://www.tiktok.com/@handle/video/123456789
+        m = _re.search(
+            r"tiktok\.com/@([^/?#]+)/video/(\d+)",
+            tiktok_url,
+            _re.IGNORECASE,
+        )
+        if not m:
+            return None  # type: ignore[return-value]
+
+        handle = m.group(1)
+        video_id = m.group(2)
+        source_url = f"https://www.tiktok.com/@{handle}/video/{video_id}"
+        context_snippet = (referencing_context or "")[:200]
+
+        return {
+            "id": video_id,
+            "schema_version": "1.0",
+            "source_platform": "tiktok",
+            "source_account_id": None,
+            "source_account_handle": handle,
+            "source_account_type": "creator",
+            "source_url": source_url,
+            "external_content_id": video_id,
+            "published_at": "",
+            "collected_at": collected_at,
+            "content_type": "video",
+            "title": None,
+            "caption": None,
+            "text_content": None,
+            "hashtags": [],
+            "mentions_raw": [],
+            "media_metadata": {},
+            "engagement": {},
+            "language": None,
+            "region": "US",
+            "raw_payload_ref": f"derived:{referencing_source_id}",
+            "normalizer_version": self.version,
+            "query": None,
+            # SC1.1 layer fields — derived record
+            "tiktok_layer": 1,
+            "mention_weight_override": 0.0,
+            "referencing_source_id": referencing_source_id,
+            "referencing_context": context_snippet,
         }
 
     def normalize_reddit_item(

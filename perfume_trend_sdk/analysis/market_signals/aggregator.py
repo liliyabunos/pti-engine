@@ -32,7 +32,7 @@ TIKTOK_VIEW_CAP = 500_000.0
 # TikTok weight is reserved for when Research API credentials are approved.
 _PLATFORM_WEIGHTS: Dict[str, float] = {
     "youtube": 1.2,
-    "tiktok": 1.3,   # reserved — deferred until Research API approval
+    "tiktok": 0.9,   # SC1.1 Layer 1 — URL/embed/mention (lower than YouTube; no API verification)
     "reddit": 1.0,   # active — public JSON ingestion
     "other": 0.8,    # catch-all for truly uncategorized / legacy synthetic data
 }
@@ -278,8 +278,18 @@ class DailyAggregator:
                 if cid in d["content_item_ids"]:
                     continue
                 d["content_item_ids"].add(cid)
-                # Apply source platform weight to mention count
-                platform_weight = _PLATFORM_WEIGHTS.get(platform, 1.0)
+                # mention_weight_override: if set, use it instead of platform weight.
+                # 0.0 = derived item (extracted TikTok URL, enrichment only) — skip mention.
+                weight_override = item.get("mention_weight_override")
+                if weight_override is not None:
+                    if weight_override == 0.0:
+                        # Derived record — stored for resolver enrichment, not for mention count.
+                        d["engagement_sum"] += eng_total
+                        d["platforms"].add(platform)
+                        continue
+                    platform_weight = float(weight_override)
+                else:
+                    platform_weight = _PLATFORM_WEIGHTS.get(platform, 1.0)
                 d["mention_count"] += platform_weight
                 d["unique_authors"].add(author)
                 d["engagement_sum"] += eng_total

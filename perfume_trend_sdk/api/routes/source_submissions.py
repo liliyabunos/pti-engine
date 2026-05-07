@@ -12,8 +12,14 @@ Status values assigned at submission time:
   needs_manual_resolve — YouTube handle/@/video/shorts URL, requires channel_id resolution
   platform_pending     — TikTok / Instagram / Reddit / blog (no ingestion pipeline yet)
   already_tracked      — YouTube channel already present in youtube_channels table
+
+SC1.1 TikTok handling (correction 5):
+  TikTok video URL + context → canonical_content_item (mention_weight_override=0.7) + source_submission
+  TikTok video URL without context → source_submission only (status=platform_pending)
+  TikTok channel/profile URL → source_submission only (status=platform_pending)
 """
 
+import json
 import logging
 import re
 from datetime import datetime, timezone
@@ -49,6 +55,12 @@ _YOUTUBE_BARE_HOSTS = frozenset({"youtube.com"})
 
 # UC... channel ID — same regex as manage_channels.py
 _CHANNEL_ID_RE = re.compile(r"UC[a-zA-Z0-9_-]{22}")
+
+# TikTok video URL pattern — SC1.1
+_TIKTOK_VIDEO_RE = re.compile(
+    r"https?://(?:www\.)?tiktok\.com/@([A-Za-z0-9._]+)/video/(\d{10,25})",
+    re.IGNORECASE,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -150,6 +162,80 @@ def _extract_channel_id(url: str) -> Optional[str]:
 
 
 # ---------------------------------------------------------------------------
+# TikTok SC1.1 helpers
+# ---------------------------------------------------------------------------
+
+def _is_tiktok_video_url(url: str) -> bool:
+    """Return True if url is a TikTok video URL (not a channel/profile)."""
+    return bool(_TIKTOK_VIDEO_RE.match(url))
+
+
+def _save_tiktok_content_item(
+    url: str,
+    context: str,
+    db: Session,
+) -> None:
+    """Insert a TikTok video URL + context as a canonical_content_item.
+
+    Sets mention_weight_override=0.7 (direct submission with context — enters
+    the resolver pipeline but with lower weight than a native ingest).
+    Sets tiktok_layer=1.
+
+    Silently skips on duplicate (ON CONFLICT DO NOTHING) — the item may already
+    exist from a prior YouTube/Reddit derivation.
+    """
+    m = _TIKTOK_VIDEO_RE.match(url)
+    if not m:
+        return
+
+    handle = m.group(1)
+    video_id = m.group(2)
+    source_url = f"https://www.tiktok.com/@{handle}/video/{video_id}"
+    context_snippet = (context or "")[:200]
+    now = datetime.now(timezone.utc).isoformat()
+
+    try:
+        db.execute(
+            text("""
+                INSERT INTO canonical_content_items (
+                    id, schema_version, source_platform,
+                    source_account_handle, source_account_type,
+                    source_url, external_content_id,
+                    published_at, collected_at,
+                    content_type, hashtags_json, mentions_raw_json,
+                    media_metadata_json, engagement_json,
+                    region, raw_payload_ref, normalizer_version,
+                    ingestion_method,
+                    tiktok_layer, mention_weight_override,
+                    referencing_context
+                )
+                VALUES (
+                    :vid, '1.0', 'tiktok',
+                    :handle, 'creator',
+                    :source_url, :vid,
+                    '', :now,
+                    'video', '[]', '[]',
+                    '{}', '{}',
+                    'US', 'submit_source', '1.0',
+                    'submit_source',
+                    1, 0.7,
+                    :context
+                )
+                ON CONFLICT (id) DO NOTHING
+            """),
+            {
+                "vid": video_id,
+                "handle": handle,
+                "source_url": source_url,
+                "now": now,
+                "context": context_snippet,
+            },
+        )
+    except Exception as exc:
+        _log.warning("[source_submissions] TikTok content item insert skipped: %s", exc)
+
+
+# ---------------------------------------------------------------------------
 # Status determination (uses DB for already_tracked check)
 # ---------------------------------------------------------------------------
 
@@ -216,6 +302,15 @@ def submit_source(
     initial_status = _determine_initial_status(body.url, platform, db)
     now = datetime.now(timezone.utc)
 
+    # SC1.1: TikTok video + context → create canonical_content_item for resolver pipeline.
+    # This must happen before the source_submission insert so the content item exists first.
+    tiktok_item_created = False
+    if platform == "tiktok" and _is_tiktok_video_url(body.url):
+        context = (body.context or "").strip()
+        if context:
+            _save_tiktok_content_item(body.url, context, db)
+            tiktok_item_created = True
+
     # Duplicate check — UNIQUE constraint on normalized_url prevents duplicates
     existing = db.execute(
         text("SELECT id FROM source_submissions WHERE normalized_url = :u"),
@@ -264,7 +359,12 @@ def submit_source(
     elif initial_status == "needs_manual_resolve":
         message = "Thank you! This URL requires manual review to resolve the channel."
     elif initial_status == "platform_pending":
-        message = "Thank you! This platform is on our roadmap — we'll review your suggestion."
+        if tiktok_item_created:
+            message = "Thank you! This TikTok video has been submitted for analysis."
+        elif platform == "tiktok" and _is_tiktok_video_url(body.url):
+            message = "Thank you! Add a context note to help us analyze this TikTok video."
+        else:
+            message = "Thank you! This platform is on our roadmap — we'll review your suggestion."
     else:
         message = "Thank you! Your submission is under review."
 

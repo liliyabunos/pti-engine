@@ -34,9 +34,10 @@ class PgNormalizedContentStore:
                 content_type, title, caption, text_content, hashtags_json, mentions_raw_json,
                 media_metadata_json, engagement_json, language, region, raw_payload_ref,
                 normalizer_version, query, ingestion_method,
-                transcript_status, transcript_priority
+                transcript_status, transcript_priority,
+                tiktok_layer, referencing_source_id, referencing_context, mention_weight_override
             )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             ON CONFLICT (id) DO UPDATE SET
                 schema_version        = EXCLUDED.schema_version,
                 source_platform       = EXCLUDED.source_platform,
@@ -66,7 +67,11 @@ class PgNormalizedContentStore:
                     THEN canonical_content_items.transcript_status
                     ELSE EXCLUDED.transcript_status
                 END,
-                transcript_priority   = EXCLUDED.transcript_priority
+                transcript_priority   = EXCLUDED.transcript_priority,
+                tiktok_layer          = COALESCE(EXCLUDED.tiktok_layer, canonical_content_items.tiktok_layer),
+                referencing_source_id = COALESCE(EXCLUDED.referencing_source_id, canonical_content_items.referencing_source_id),
+                referencing_context   = COALESCE(EXCLUDED.referencing_context, canonical_content_items.referencing_context),
+                mention_weight_override = COALESCE(EXCLUDED.mention_weight_override, canonical_content_items.mention_weight_override)
         """
         rows = [
             (
@@ -96,6 +101,10 @@ class PgNormalizedContentStore:
                 item.get("ingestion_method", "search"),
                 item.get("transcript_status", "none"),
                 item.get("transcript_priority", "none"),
+                item.get("tiktok_layer"),
+                item.get("referencing_source_id"),
+                item.get("referencing_context"),
+                item.get("mention_weight_override"),
             )
             for item in items
         ]

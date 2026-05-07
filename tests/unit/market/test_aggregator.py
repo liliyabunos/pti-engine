@@ -163,8 +163,8 @@ def test_aggregator_counts_correct_mentions(aggregator: DailyAggregator) -> None
     ]
     snaps = aggregator.aggregate_from_data(items, signals, TARGET_DATE)
     delina = next(s for s in snaps if s["entity_id"] == "Parfums de Marly Delina")
-    # Platform-weighted: youtube=1.2 × 2 + tiktok=1.3 × 1 = 3.7
-    assert delina["mention_count"] == pytest.approx(3.7, abs=0.01)
+    # Platform-weighted: youtube=1.2 × 2 + tiktok=0.9 × 1 = 3.3
+    assert delina["mention_count"] == pytest.approx(3.3, abs=0.01)
 
 
 def test_aggregator_source_diversity(aggregator: DailyAggregator) -> None:
@@ -180,8 +180,8 @@ def test_aggregator_source_diversity(aggregator: DailyAggregator) -> None:
     ]
     snaps = aggregator.aggregate_from_data(items, signals, TARGET_DATE)
     delina = next(s for s in snaps if s["entity_id"] == "Parfums de Marly Delina")
-    # Platform-weighted: youtube=1.2 + tiktok=1.3 + reddit=1.0 = 3.5
-    assert delina["mention_count"] == pytest.approx(3.5, abs=0.01)
+    # Platform-weighted: youtube=1.2 + tiktok=0.9 + reddit=1.0 = 3.1
+    assert delina["mention_count"] == pytest.approx(3.1, abs=0.01)
 
 
 def test_aggregator_filters_by_date(aggregator: DailyAggregator) -> None:
