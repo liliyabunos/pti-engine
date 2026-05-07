@@ -120,6 +120,29 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 - TikTok: planned after Creator Intelligence model
 
 ## Active Roadmap
+- **Submit Source S1 — Operator Promotion Bridge (2026-05-07)** — COMPLETE
+  - `scripts/promote_source_submission.py` — operator CLI bridging `source_submissions` → `youtube_channels`
+  - `source_submissions` is intake only — pending submissions are never auto-ingested
+  - Pipeline reads `youtube_channels` exclusively (unchanged)
+  - Operator promotes direct `/channel/UC...` YouTube URLs only; handles/videos/shorts → `needs_manual_resolve`
+  - TikTok / Instagram / Reddit / blog → `platform_pending` (not yet connected to ingestion)
+  - Status set at submit time: `pending` | `needs_manual_resolve` | `platform_pending` | `already_tracked`
+  - Status after operator action: `promoted` | `rejected` | `already_tracked`
+  - URL safety (Pydantic + route): blocks `javascript:`, `data:`, `file:`, `ftp:`, `blob:`, `mailto:`, `vbscript:`; max 2048 chars; http/https only; no server-side URL fetch
+  - No automatic ingestion. No market score manipulation.
+  - Security: all queries parameterized; no URL execution; no YouTube API calls (S1); only writes to `youtube_channels` and `source_submissions`
+  - Tests: 59/59 pass — `tests/unit/test_source_submission_promotion.py`
+  - Operator commands:
+    ```bash
+    python3 scripts/promote_source_submission.py --list-pending [--limit 50]
+    python3 scripts/promote_source_submission.py --count-pending
+    python3 scripts/promote_source_submission.py --id <N> --quality-tier tier_4 --category reviewer --priority low
+    python3 scripts/promote_source_submission.py --id <N> --quality-tier tier_4 --category reviewer --priority low --apply
+    python3 scripts/promote_source_submission.py --id <N> --reject --reason "not fragrance related" --apply
+    python3 scripts/promote_source_submission.py --id <N> --needs-manual-resolve --reason "YouTube handle" --apply
+    python3 scripts/promote_source_submission.py --id <N> --platform-pending --reason "TikTok — not connected yet" --apply
+    ```
+  - Production verification: run `--list-pending` after any submission, dry-run promote, `--apply`, confirm `youtube_channels` row and `source_submissions.status=promoted`
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
   - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
@@ -458,6 +481,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | I7.5 Semantic Phase 3 — Demand Type Splitting + Role-Aware Dupe Semantics | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 4 — Production Verification + Compared-Against Cleanup | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 5 — Dupe / Alternative Entity Role Mapping | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
+| Submit Source S1 — Operator Promotion Bridge | COMPLETE | 2026-05-07 |
 
 ---
 
