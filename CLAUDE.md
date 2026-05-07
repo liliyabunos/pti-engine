@@ -119,39 +119,20 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 - Main sources: YouTube, Reddit
 - TikTok: planned after Creator Intelligence model
 
+## Submit Source S1 — Operator Promotion Bridge
+**STATUS: COMPLETE — VERIFIED (2026-05-07)**
+**Commits: `6e8049a` (implementation) · `51a3e2b` (verification)**
+
+- 59/59 tests pass · 30/30 verification checks
+- `scripts/promote_source_submission.py` bridges `source_submissions` → `youtube_channels`
+- `source_submissions` is intake-only — pending submissions are never auto-ingested
+- Pipeline reads `youtube_channels` exclusively — unchanged
+- Operator promotes direct `/channel/UC...` YouTube URLs only; handles/videos/shorts → `needs_manual_resolve`; TikTok/Instagram/Reddit → `platform_pending`
+- No automatic ingestion. No market score manipulation.
+
+---
+
 ## Active Roadmap
-- **Submit Source S1 — Operator Promotion Bridge (2026-05-07)** — COMPLETE — PRODUCTION VERIFIED
-  - Commit: `6e8049a` · Tests: 59/59 pass · Verification: 30/30 checks
-  - **Architecture:** `source_submissions` is intake-only. Pending submissions are never auto-ingested. Pipeline reads `youtube_channels` exclusively — unchanged.
-  - **Status routing at submission time:**
-    - YouTube `/channel/UC...` (new) → `pending` (ready for operator)
-    - YouTube `/channel/UC...` (already in `youtube_channels`) → `already_tracked`
-    - YouTube `/@handle`, `/watch`, `/shorts`, `youtu.be` → `needs_manual_resolve`
-    - TikTok / Instagram / Reddit / blog → `platform_pending`
-  - **Status after operator action:** `promoted` | `rejected` | `already_tracked` | `needs_manual_resolve` | `platform_pending`
-  - **URL safety:** blocks `javascript:`, `data:`, `file:`, `ftp:`, `blob:`, `mailto:`, `vbscript:`; max 2048 chars; http/https only; no server-side URL fetch; `fbclid`/`gclid`/UTM stripped; `m.youtube.com` normalized
-  - **Security:** all SQL parameterized; no URL execution; no YouTube API (S1); only writes to `youtube_channels` + `source_submissions`; zero market/score table references in operator script
-  - **No automatic ingestion. No market score manipulation.**
-  - **Verification results (30/30):**
-    - `/channel/UC...` → `platform=youtube`, `status=pending`, `www.` stripped ✓
-    - Handle/video/shorts → `status=needs_manual_resolve` ✓
-    - TikTok/Instagram/Reddit/blog → `status=platform_pending` ✓
-    - `validate_for_promotion` blocks shorts/video/handle/non-YouTube ✓
-    - Promote apply: `youtube_channels` row inserted, `source_submissions.status=promoted` ✓
-    - Re-submit: `status=already_tracked`, UNIQUE constraint blocks duplicate ✓
-    - Pipeline isolation: `source_submissions` referenced only in `promote_source_submission.py` ✓
-    - Dangerous schemes blocked: `javascript:`, `data:`, `file:`, `ftp:`, `blob:`, `mailto:` ✓
-    - URL > 2048 chars rejected ✓
-  - **Operator commands:**
-    ```bash
-    python3 scripts/promote_source_submission.py --list-pending [--limit 50]
-    python3 scripts/promote_source_submission.py --count-pending
-    python3 scripts/promote_source_submission.py --id <N> --quality-tier tier_4 --category reviewer --priority low
-    python3 scripts/promote_source_submission.py --id <N> --quality-tier tier_4 --category reviewer --priority low --apply
-    python3 scripts/promote_source_submission.py --id <N> --reject --reason "not fragrance related" --apply
-    python3 scripts/promote_source_submission.py --id <N> --needs-manual-resolve --reason "YouTube handle" --apply
-    python3 scripts/promote_source_submission.py --id <N> --platform-pending --reason "TikTok — not connected yet" --apply
-    ```
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
   - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
