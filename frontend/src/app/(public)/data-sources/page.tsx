@@ -46,10 +46,10 @@ export default function DataSourcesPage() {
       <div className="space-y-8 text-sm leading-relaxed">
         <Section title="1. What FragranceIndex.ai does">
           <p>
-            FragranceIndex.ai transforms publicly available or source-permitted
-            fragrance-related content signals into aggregated market intelligence. We
-            process these signals to surface which perfumes, brands, notes, accords, and
-            topics are trending — and why — across public fragrance communities.
+            FragranceIndex.ai and FTI Market Terminal are operated by Liliya&apos;s Flowers, LLC.
+            We transform publicly available or source-permitted fragrance-related content signals
+            into aggregated market intelligence, surfacing which perfumes, brands, notes, accords,
+            and topics are trending — and why — across public fragrance communities.
           </p>
           <p>
             Our product is aggregated market intelligence. It is not a raw content feed,

@@ -62,9 +62,11 @@ export default function PrivacyPage() {
         {/* 1. Overview */}
         <Section title="1. Overview">
           <p>
-            FragranceIndex.ai provides FTI Market Terminal — an aggregated fragrance market
-            intelligence platform. We transform publicly available or source-permitted fragrance
-            conversation signals into perfume, brand, note, accord, topic, and momentum analytics.
+            FragranceIndex.ai and FTI Market Terminal are operated by Liliya&apos;s Flowers, LLC
+            (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;). We provide an aggregated
+            fragrance market intelligence platform that transforms publicly available or
+            source-permitted fragrance conversation signals into perfume, brand, note, accord,
+            topic, and momentum analytics.
           </p>
           <p>
             <strong className="text-zinc-300">We do not sell personal profiles, follower lists,

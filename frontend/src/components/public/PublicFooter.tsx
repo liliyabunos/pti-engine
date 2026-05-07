@@ -28,7 +28,7 @@ export function PublicFooter() {
             ))}
           </nav>
           <p className="text-[11px] text-zinc-700 shrink-0">
-            Invite-only soft launch &middot; {new Date().getFullYear()}
+            &copy; {new Date().getFullYear()} Liliya&apos;s Flowers, LLC &middot; FragranceIndex.ai / FTI Market Terminal
           </p>
         </div>
         <p className="mt-4 text-center text-[10px] text-zinc-800">

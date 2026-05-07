@@ -50,7 +50,9 @@ export default function TermsPage() {
         {/* 1. Eligibility */}
         <Section title="1. Eligibility and invite-only access">
           <p>
-            FTI Market Terminal by FragranceIndex.ai is currently in invite-only soft launch.
+            These Terms of Use govern your access to FTI Market Terminal by FragranceIndex.ai,
+            operated by Liliya&apos;s Flowers, LLC (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or
+            &ldquo;our&rdquo;). The terminal is currently in invite-only soft launch.
             Access requires an explicit invitation from the FragranceIndex.ai team. By
             accessing the terminal, you confirm that you are at least 18 years old (or the
             age of majority in your jurisdiction, if higher).
