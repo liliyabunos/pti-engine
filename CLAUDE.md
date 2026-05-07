@@ -145,6 +145,7 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - Crash fix: replaced `startTransition(async)` with plain `isLoading` state — eliminates React 18/19 boundary crash
   - Copy: title "Suggest a Source", success "Thank you — this source was submitted for review.", duplicate "already in our review queue"
   - No automatic ingestion. No direct market score manipulation.
+- **Landing community CTA section: amber-accent card (2026-05-07)** — commit be769cf — stronger amber-accent visual emphasis for Suggest a Source block (card with 2px amber top border, amber eyebrow + CTA outline) for better discoverability.
 - **Legal operator attribution (2026-05-07)** — commit e431e61 — Legal pages now identify Liliya's Flowers, LLC as the operator of FragranceIndex.ai / FTI Market Terminal (Privacy §1, Terms §1, Data Sources §1, footer copyright).
 - **Auth-aware public header (2026-05-07)** — commit d115562 — logged-in users see "Open Terminal" → /dashboard; logged-out see "Sign in" → /login; applies to all (public) layout pages (/, /glossary, /privacy, /terms, etc.); landing "Suggest a Source" CTA links directly to /submit-source when logged in. PRODUCTION VERIFIED.
 - **Magic Link email template: FTI branding — APPLIED (2026-05-07)** — commit 29b2d75 — `docs/email_templates/magic_link_fti.html` applied in Supabase → Authentication → Email Templates → Magic Link; sender name "FTI Market Terminal"; subject "Your Magic Link — FTI Market Terminal"; no visible PTI branding.
