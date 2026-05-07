@@ -108,14 +108,14 @@ export function Sidebar() {
       <div className="flex h-10 shrink-0 items-center border-b border-zinc-800 px-3 lg:px-3.5">
         {/* Monogram */}
         <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-amber-400">
-          <span className="text-[9px] font-black leading-none tracking-tight text-zinc-950">
-            PT
+          <span className="text-[8px] font-black leading-none tracking-tighter text-zinc-950">
+            FTI
           </span>
         </div>
         {/* Wordmark */}
         <div className="ml-2.5 hidden leading-none lg:block">
           <p className="text-[11px] font-bold tracking-tight text-zinc-100">
-            PTI Terminal
+            FTI Terminal
           </p>
           <p className="text-[9px] tracking-widest text-zinc-600">
             MARKET ENGINE

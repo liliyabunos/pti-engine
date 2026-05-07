@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Activity } from "lucide-react";
 import { createClient } from "@/lib/auth/client";
 
@@ -89,12 +90,15 @@ function LogoutButton() {
 export function StatusBar() {
   return (
     <div className="flex h-7 shrink-0 items-center justify-between border-b border-zinc-800/60 bg-zinc-950 px-4 text-[10px] font-mono tracking-wide">
-      {/* Left: brand */}
+      {/* Left: brand — links back to public landing page */}
       <div className="flex items-center gap-2">
         <Activity size={11} className="text-amber-400" />
-        <span className="font-semibold text-zinc-400">
-          PTI MARKET TERMINAL
-        </span>
+        <Link
+          href="/"
+          className="font-semibold text-zinc-400 hover:text-zinc-200 transition-colors"
+        >
+          FTI MARKET TERMINAL
+        </Link>
         <span className="text-zinc-700">·</span>
         <span className="text-zinc-700">v1</span>
       </div>
