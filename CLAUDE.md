@@ -344,6 +344,63 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 
 ---
 
+## Social Creator Intelligence Roadmap (SC series)
+
+**STATUS: PLANNING — nothing implemented**
+**Full spec:** `docs/architecture/SOCIAL_CREATOR_INTELLIGENCE.md`
+
+### Strategic principle
+
+Creator login is NOT the ingestion foundation. It is a future optional module.
+
+```
+CORRECT priority:
+  Layer 1 (URL / mention / embed)
+    → Layer 3 (seeded watchlist + compliant public monitoring)
+      → Layer 2 (optional creator claim / verified module)
+```
+
+YouTube = benchmark (C1 series, complete). TikTok = SC1 (highest priority). Snapchat = SC2. Meta/Instagram = SC3.
+
+### SC phase table
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| SC0.1 | Unified creator registry — multi-platform model (`creators`, `creator_platform_accounts`, `creator_identity_edges`) | PLANNED |
+| SC0.2 | Creator filters v1 — platform, category, role, noise, early signal | PLANNED |
+| SC1.1 | TikTok Layer 1 — URL / embed / derived-vs-direct mention foundation; derived weight=0.0, direct weight=0.7 | PLANNED |
+| SC1.2 | TikTok Layer 3 — seeded creator watchlist, public monitoring, 100–300 creators, audit log, kill switch | PLANNED |
+| SC1.3 | Multi-field resolver — hashtags, context, per-platform field weights; backward compatible | PLANNED |
+| SC1.4 | TikTok creator filters + leaderboard integration | PLANNED |
+| SC2.1 | Snapchat foundation — handle discovery, enrichment only, signal_weight=0.0 | DEFERRED |
+| SC3.1 | Meta/Instagram foundation — URL/handle acceptance, creator_platform_accounts | DEFERRED |
+| SC-V1 | Optional creator claim / verified module (cross-platform, built after SC1 + SC3) | DEFERRED |
+
+### Platform signal weights (initial — reviewed every 60 days)
+
+| Source | Weight |
+|--------|--------|
+| YouTube | 1.0–1.2 |
+| Reddit | 1.0 |
+| TikTok Layer 1 derived | 0.0 |
+| TikTok Layer 1 direct | 0.7 |
+| TikTok Layer 3 public monitoring | 0.8–0.9 |
+| TikTok Layer 2 creator-authorized | 1.0 |
+| Meta/Instagram | 0.5–0.8 |
+| Snapchat | 0.0 |
+
+Weight changes logged in `weight_calibration_log` — human-reviewed, never silent.
+
+### Permanent compliance rules
+
+- No third-party scraper APIs as default architecture
+- No account automation, no login simulation
+- No comments collection without official approved method
+- Kill switch via env/config for every platform monitor
+- Every external fetch logged in `external_api_audit_log`
+
+---
+
 ## Execution Rules
 - Move fast but keep production safe.
 - Commit + push after verified changes.
@@ -358,7 +415,8 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 - Full phase history: docs/history/PHASE_LOG.md
 - Resolver architecture: docs/architecture/RESOLVER_ARCHITECTURE.md
 - Pipeline architecture: docs/architecture/DATA_PIPELINE.md
-- Creator roadmap: docs/architecture/CREATOR_INTELLIGENCE.md
+- Creator roadmap (YouTube C1): docs/architecture/CREATOR_INTELLIGENCE.md
+- Social Creator Intelligence roadmap (SC series): docs/architecture/SOCIAL_CREATOR_INTELLIGENCE.md
 - SDK contracts and sprint plan: docs/architecture/SDK_ARCHITECTURE.md
 - Verification queries: docs/verification/VERIFICATION_QUERIES.md
 - Deployment notes: docs/history/DEPLOYMENT_NOTES.md
@@ -485,6 +543,15 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | I7.5 Semantic Phase 4 — Production Verification + Compared-Against Cleanup | COMPLETE | 2026-05-06 |
 | I7.5 Semantic Phase 5 — Dupe / Alternative Entity Role Mapping | COMPLETE — PRODUCTION VERIFIED | 2026-05-06 |
 | Submit Source S1 — Operator Promotion Bridge | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
+| SC0.1 Unified creator registry (multi-platform) | PLANNED | — |
+| SC0.2 Creator filters v1 | PLANNED | — |
+| SC1.1 TikTok Layer 1 — URL / embed / mention | PLANNED | — |
+| SC1.2 TikTok Layer 3 — seeded creator watchlist | PLANNED | — |
+| SC1.3 Multi-field resolver (hashtags, context) | PLANNED | — |
+| SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
+| SC2.1 Snapchat foundation | DEFERRED | — |
+| SC3.1 Meta / Instagram foundation | DEFERRED | — |
+| SC-V1 Optional creator claim / verified module | DEFERRED | — |
 
 ---
 
