@@ -1,27 +1,31 @@
 "use client";
 
 /**
- * Suggest a Source — MVP
+ * Suggest a Source
  *
- * Low-friction logged-in flow: URL + terms only.
- * Protected by (terminal) layout — unauthenticated users are redirected to /login.
- * User email and ID are read from the Supabase session; not entered manually.
+ * Auth: protected by (terminal) layout — unauthenticated users are redirected
+ * to /login before this component renders.
+ *
+ * Session read: done client-side only via lazy dynamic import of the Supabase
+ * browser client. This prevents any SSR evaluation of browser-only Supabase
+ * code, eliminating the "This page couldn't load" crash on direct nav / refresh.
+ *
+ * The user email/ID is optional — the form submits without it if the session
+ * read fails (auth is already enforced server-side by the layout).
  */
 
 import { useState, useEffect } from "react";
 import { ExternalLink } from "lucide-react";
-import { createClient } from "@/lib/auth/client";
 import { Header } from "@/components/shell/Header";
 import { TerminalPanel } from "@/components/primitives/TerminalPanel";
+
+// NOTE: createClient is NOT imported at the top level.
+// It is lazily imported inside useEffect so it never runs during SSR.
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 type SubmitState = "idle" | "loading" | "success" | "duplicate" | "error";
-
-// ---------------------------------------------------------------------------
-// Platform badge — auto-detected from URL
-// ---------------------------------------------------------------------------
 
 function detectPlatformLabel(url: string): string | null {
   try {
@@ -36,11 +40,9 @@ function detectPlatformLabel(url: string): string | null {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
-
 export default function SuggestSourcePage() {
+  // mounted prevents rendering browser-only UI during SSR / before hydration
+  const [mounted, setMounted] = useState(false);
   const [url, setUrl] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [state, setState] = useState<SubmitState>("idle");
@@ -48,18 +50,29 @@ export default function SuggestSourcePage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Read session user on mount — Supabase browser client, safe in useEffect
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) {
-        setUserId(data.user.id ?? null);
-        setUserEmail(data.user.email ?? null);
-      }
-    });
+    setMounted(true);
+
+    // Lazy import: Supabase browser client is never evaluated during SSR.
+    // catch() ensures unhandled rejection does not crash the component
+    // (React 19 propagates unhandled async errors more aggressively).
+    import("@/lib/auth/client")
+      .then(({ createClient }) => createClient().auth.getUser())
+      .then(({ data }) => {
+        if (data?.user) {
+          setUserId(data.user.id ?? null);
+          setUserEmail(data.user.email ?? null);
+        }
+      })
+      .catch((err: unknown) => {
+        // Session read is best-effort — auth is enforced server-side.
+        // Log the failure but do not crash the page.
+        console.error("[submit-source] session check failed:", err);
+      });
   }, []);
 
-  const platformLabel = detectPlatformLabel(url);
+  // Compute platform label only after mount — avoids SSR/hydration mismatch
+  const platformLabel = mounted ? detectPlatformLabel(url) : null;
   const isValidUrl =
     url.trim().startsWith("http://") || url.trim().startsWith("https://");
   const canSubmit = isValidUrl && termsAccepted && state !== "loading";
@@ -98,17 +111,20 @@ export default function SuggestSourcePage() {
           const body = await res.json();
           if (body?.detail) detail = body.detail;
         } catch {
-          // ignore parse error
+          // ignore JSON parse error
         }
         setErrorMessage(detail);
         setState("error");
+        console.error("[submit-source] submit failed:", res.status, detail);
         return;
       }
 
       setState("success");
-    } catch {
-      setErrorMessage("Network error. Please check your connection and try again.");
+    } catch (err: unknown) {
+      const msg = "Network error. Please check your connection and try again.";
+      setErrorMessage(msg);
       setState("error");
+      console.error("[submit-source] network error:", err);
     }
   }
 
@@ -147,138 +163,155 @@ export default function SuggestSourcePage() {
             </p>
           </TerminalPanel>
 
-          {/* ── Success ─────────────────────────────────────────── */}
-          {state === "success" && (
+          {/* ── Pre-hydration skeleton ───────────────────────────── */}
+          {!mounted && (
             <TerminalPanel>
-              <p className="text-sm font-medium text-zinc-100">
-                Submitted for review
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                Thank you — this source was submitted for review.
-              </p>
-              <button
-                onClick={handleReset}
-                className="mt-4 text-xs text-amber-500 hover:text-amber-400 transition-colors"
-              >
-                Suggest another source →
-              </button>
+              <div className="space-y-3">
+                <div className="h-4 w-24 animate-pulse rounded bg-zinc-800" />
+                <div className="h-10 animate-pulse rounded bg-zinc-800" />
+                <div className="h-4 w-48 animate-pulse rounded bg-zinc-800" />
+                <div className="h-10 w-full animate-pulse rounded bg-zinc-800/60" />
+              </div>
             </TerminalPanel>
           )}
 
-          {/* ── Duplicate ───────────────────────────────────────── */}
-          {state === "duplicate" && (
-            <TerminalPanel>
-              <p className="text-sm font-medium text-zinc-100">
-                Already in queue
-              </p>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                This source has already been submitted and is in our review queue.
-              </p>
-              <button
-                onClick={handleReset}
-                className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-              >
-                ← Try a different source
-              </button>
-            </TerminalPanel>
-          )}
-
-          {/* ── Form ────────────────────────────────────────────── */}
-          {state !== "success" && state !== "duplicate" && (
-            <TerminalPanel>
-              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
-
-                {/* URL field */}
-                <div>
-                  <label
-                    htmlFor="source-url"
-                    className="mb-1.5 block text-xs font-medium text-zinc-400"
+          {/* ── Client-side interactive UI ───────────────────────── */}
+          {mounted && (
+            <>
+              {/* Success */}
+              {state === "success" && (
+                <TerminalPanel>
+                  <p className="text-sm font-medium text-zinc-100">
+                    Submitted for review
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                    Thank you — this source was submitted for review.
+                  </p>
+                  <button
+                    onClick={handleReset}
+                    className="mt-4 text-xs text-amber-500 hover:text-amber-400 transition-colors"
                   >
-                    Source URL
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="source-url"
-                      type="url"
-                      autoComplete="off"
-                      value={url}
-                      onChange={(e) => {
-                        setUrl(e.target.value);
-                        if (state === "error") setState("idle");
-                      }}
-                      placeholder="https://www.youtube.com/@channelname"
-                      className={[
-                        "w-full rounded border bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100",
-                        "placeholder:text-zinc-700 focus:outline-none focus:ring-1",
-                        state === "error"
-                          ? "border-red-800 focus:ring-red-700/40"
-                          : "border-zinc-700 focus:border-amber-500 focus:ring-amber-500/30",
-                        platformLabel ? "pr-24" : "",
-                      ].join(" ")}
-                    />
-                    {platformLabel && (
-                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-px text-[10px] font-semibold text-zinc-400">
-                        {platformLabel}
+                    Suggest another source →
+                  </button>
+                </TerminalPanel>
+              )}
+
+              {/* Duplicate */}
+              {state === "duplicate" && (
+                <TerminalPanel>
+                  <p className="text-sm font-medium text-zinc-100">
+                    Already in queue
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-zinc-500">
+                    This source has already been submitted and is in our review queue.
+                  </p>
+                  <button
+                    onClick={handleReset}
+                    className="mt-4 text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                  >
+                    ← Try a different source
+                  </button>
+                </TerminalPanel>
+              )}
+
+              {/* Form */}
+              {state !== "success" && state !== "duplicate" && (
+                <TerminalPanel>
+                  <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+
+                    {/* URL field */}
+                    <div>
+                      <label
+                        htmlFor="source-url"
+                        className="mb-1.5 block text-xs font-medium text-zinc-400"
+                      >
+                        Source URL
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="source-url"
+                          type="url"
+                          autoComplete="off"
+                          value={url}
+                          onChange={(e) => {
+                            setUrl(e.target.value);
+                            if (state === "error") setState("idle");
+                          }}
+                          placeholder="https://www.youtube.com/@channelname"
+                          className={[
+                            "w-full rounded border bg-zinc-900 px-4 py-2.5 text-sm text-zinc-100",
+                            "placeholder:text-zinc-700 focus:outline-none focus:ring-1",
+                            state === "error"
+                              ? "border-red-800 focus:ring-red-700/40"
+                              : "border-zinc-700 focus:border-amber-500 focus:ring-amber-500/30",
+                            platformLabel ? "pr-24" : "",
+                          ].join(" ")}
+                        />
+                        {platformLabel && (
+                          <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-zinc-700 bg-zinc-800 px-1.5 py-px text-[10px] font-semibold text-zinc-400">
+                            {platformLabel}
+                          </span>
+                        )}
+                      </div>
+                      {state === "error" && errorMessage && (
+                        <p className="mt-1.5 text-xs text-red-400">{errorMessage}</p>
+                      )}
+                      <p className="mt-1.5 text-[11px] text-zinc-600">
+                        YouTube, TikTok, Instagram, Reddit, or a fragrance blog.
+                      </p>
+                    </div>
+
+                    {/* Terms checkbox */}
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-amber-500"
+                      />
+                      <span className="text-xs leading-relaxed text-zinc-500">
+                        I agree that FragranceIndex.ai may review and use publicly
+                        available information from this source for fragrance trend
+                        intelligence.
                       </span>
+                    </label>
+
+                    {/* Submitting-as */}
+                    {userEmail && (
+                      <p className="text-[11px] text-zinc-700">
+                        Submitting as{" "}
+                        <span className="text-zinc-500">{userEmail}</span>
+                      </p>
                     )}
-                  </div>
-                  {state === "error" && errorMessage && (
-                    <p className="mt-1.5 text-xs text-red-400">{errorMessage}</p>
-                  )}
-                  <p className="mt-1.5 text-[11px] text-zinc-600">
-                    YouTube, TikTok, Instagram, Reddit, or a fragrance blog.
+
+                    {/* Submit button */}
+                    <button
+                      type="submit"
+                      disabled={!canSubmit}
+                      className="w-full rounded bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400 disabled:opacity-40 transition-colors"
+                    >
+                      {state === "loading" ? "Submitting…" : "Submit source"}
+                    </button>
+
+                  </form>
+
+                  <p className="mt-5 border-t border-zinc-800/60 pt-4 text-[11px] leading-relaxed text-zinc-700">
+                    Submissions are reviewed manually. We do not guarantee
+                    inclusion. See our{" "}
+                    <a
+                      href="/data-sources"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-0.5 text-zinc-600 hover:text-zinc-400 transition-colors"
+                    >
+                      data sources policy
+                      <ExternalLink size={9} className="mb-px" />
+                    </a>
+                    .
                   </p>
-                </div>
-
-                {/* Terms checkbox */}
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={(e) => setTermsAccepted(e.target.checked)}
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-amber-500"
-                  />
-                  <span className="text-xs leading-relaxed text-zinc-500">
-                    I agree that FragranceIndex.ai may review and use publicly
-                    available information from this source for fragrance trend
-                    intelligence.
-                  </span>
-                </label>
-
-                {/* Submitting-as */}
-                {userEmail && (
-                  <p className="text-[11px] text-zinc-700">
-                    Submitting as{" "}
-                    <span className="text-zinc-500">{userEmail}</span>
-                  </p>
-                )}
-
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={!canSubmit}
-                  className="w-full rounded bg-amber-500 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-400 disabled:opacity-40 transition-colors"
-                >
-                  {state === "loading" ? "Submitting…" : "Submit source"}
-                </button>
-
-              </form>
-
-              <p className="mt-5 border-t border-zinc-800/60 pt-4 text-[11px] leading-relaxed text-zinc-700">
-                Submissions are reviewed manually. We do not guarantee
-                inclusion. See our{" "}
-                <a
-                  href="/data-sources"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-0.5 text-zinc-600 hover:text-zinc-400 transition-colors"
-                >
-                  data sources policy
-                  <ExternalLink size={9} className="mb-px" />
-                </a>
-                .
-              </p>
-            </TerminalPanel>
+                </TerminalPanel>
+              )}
+            </>
           )}
 
         </div>

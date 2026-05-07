@@ -188,6 +188,10 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - Header keeps Back button only — CTA removed from page-level actions
   - Subtitle: category="unknown" (any case) is treated as absent; fallback = "YouTube fragrance channel" (YouTube) or "Creator profile"
   - Verified on SMP Perfume creator page — hero card shows "Open YouTube Channel", header shows Back only ✓
+- **FIX: /submit-source route stabilized for sidebar/direct navigation (2026-05-07)** — pending commit
+  - Root cause: static top-level import of Supabase browser client crashed during SSR when `NEXT_PUBLIC_SUPABASE_*` env vars not embedded; no `.catch()` on `getUser()` triggered React 19 unhandled rejection
+  - Fix: lazy dynamic `import()` of `createClient` inside `useEffect`; `.catch()` added; `mounted` state guard prevents SSR/hydration mismatch; removed top-level `createClient` import
+  - Build: clean · TypeScript: clean · `/submit-source` renders as `ƒ Dynamic`
 - **FIX: Responsive control bar layout (2026-05-06)** — commit 5563bae
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below
