@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { PublicFooter } from "@/components/public/PublicFooter";
+import { SuggestSourceCta } from "@/components/public/SuggestSourceCta";
 
 // ─── Static data ────────────────────────────────────────────────────────────
 
@@ -615,13 +616,7 @@ export default function LandingPage() {
                 FragranceIndex.ai.
               </p>
             </div>
-            <Link
-              href="/login?next=/submit-source"
-              className="shrink-0 inline-flex items-center gap-2 rounded border border-zinc-700 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
-            >
-              Suggest a Source
-              <span aria-hidden className="text-zinc-600">→</span>
-            </Link>
+            <SuggestSourceCta />
           </div>
         </div>
       </section>
