@@ -204,6 +204,7 @@ export default function SuggestSourcePage() {
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-zinc-500">
                     This source has already been submitted and is in our review queue.
+                    If approved, it may take up to 48 hours to appear after processing.
                   </p>
                   <button
                     onClick={handleReset}
@@ -295,20 +296,28 @@ export default function SuggestSourcePage() {
 
                   </form>
 
-                  <p className="mt-5 border-t border-zinc-800/60 pt-4 text-[11px] leading-relaxed text-zinc-700">
-                    Submissions are reviewed manually. We do not guarantee
-                    inclusion. See our{" "}
-                    <a
-                      href="/data-sources"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-0.5 text-zinc-600 hover:text-zinc-400 transition-colors"
-                    >
-                      data sources policy
-                      <ExternalLink size={9} className="mb-px" />
-                    </a>
-                    .
-                  </p>
+                  <div className="mt-5 border-t border-zinc-800/60 pt-4 space-y-2">
+                    <p className="text-[11px] font-medium text-zinc-500">What happens next?</p>
+                    <p className="text-[11px] leading-relaxed text-zinc-700">
+                      We review submitted sources manually. If your source is approved, it may
+                      take up to 48 hours to appear in FragranceIndex.ai after our data pipeline
+                      processes new content. Please don&apos;t resubmit the same link — duplicates
+                      are already tracked in our review queue.
+                    </p>
+                    <p className="text-[11px] leading-relaxed text-zinc-700">
+                      We do not guarantee inclusion. See our{" "}
+                      <a
+                        href="/data-sources"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 text-zinc-600 hover:text-zinc-400 transition-colors"
+                      >
+                        data sources policy
+                        <ExternalLink size={9} className="mb-px" />
+                      </a>
+                      .
+                    </p>
+                  </div>
                 </TerminalPanel>
               )}
             </>
