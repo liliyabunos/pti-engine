@@ -145,7 +145,7 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
   - Crash fix: replaced `startTransition(async)` with plain `isLoading` state — eliminates React 18/19 boundary crash
   - Copy: title "Suggest a Source", success "Thank you — this source was submitted for review.", duplicate "already in our review queue"
   - No automatic ingestion. No direct market score manipulation.
-- **Magic Link email template: FTI branding (2026-05-07)** — commit TBD — `docs/email_templates/magic_link_fti.html`; paste in Supabase → Authentication → Email Templates → Magic Link; sender name → "FTI Market Terminal"; placeholder `{{ .ConfirmationURL }}` preserved; see `docs/email_templates/README.md` for apply instructions.
+- **Magic Link email template: FTI branding (2026-05-07)** — commit 29b2d75 — `docs/email_templates/magic_link_fti.html`; paste in Supabase → Authentication → Email Templates → Magic Link; sender name → "FTI Market Terminal"; placeholder `{{ .ConfirmationURL }}` preserved; see `docs/email_templates/README.md` for apply instructions.
 - **Terminal branding: PTI → FTI (2026-05-07)** — commit 3124784
   - StatusBar: "FTI MARKET TERMINAL" + brand text is a Link → / (back to public landing)
   - Sidebar: monogram "PT" → "FTI", wordmark "PTI Terminal" → "FTI Terminal"
