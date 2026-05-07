@@ -1,0 +1,21 @@
+FTI Market Terminal
+by FragranceIndex.ai
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SECURE SIGN-IN
+
+Your Magic Link
+
+Use this secure link to sign in to FragranceIndex.ai:
+
+{{ .ConfirmationURL }}
+
+This link expires soon and can only be used once.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+If you didn't request this email, you can safely ignore it.
+No account changes will be made.
+
+© FragranceIndex.ai — FTI Market Terminal
