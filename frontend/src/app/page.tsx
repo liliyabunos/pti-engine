@@ -600,23 +600,26 @@ export default function LandingPage() {
       </section>
 
       {/* ── 8. Suggest a Source ─────────────────────────────────────────── */}
-      <section className="border-b border-zinc-800/60 bg-zinc-900/30">
-        <div className="mx-auto max-w-5xl px-6 py-16">
-          <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="max-w-xl">
-              <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
-                Community
-              </p>
-              <h2 className="mb-3 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
-                Know a fragrance creator we should track?
-              </h2>
-              <p className="text-sm leading-relaxed text-zinc-500">
-                Paste a public YouTube, TikTok, Instagram, Reddit, or fragrance
-                blog link. We&apos;ll review it for possible inclusion in
-                FragranceIndex.ai.
-              </p>
+      <section className="border-b border-zinc-800/60 bg-zinc-950">
+        <div className="mx-auto max-w-5xl px-6 py-12">
+          {/* Card with amber top-border accent */}
+          <div className="rounded-lg border-x border-b border-zinc-800 border-t-2 border-t-amber-500/60 bg-zinc-900/70 px-8 py-10">
+            <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-xl">
+                <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-amber-500/70">
+                  Community
+                </p>
+                <h2 className="mb-3 text-2xl font-bold tracking-tight text-zinc-100 sm:text-3xl">
+                  Know a fragrance creator we should track?
+                </h2>
+                <p className="text-sm leading-relaxed text-zinc-500">
+                  Paste a public YouTube, TikTok, Instagram, Reddit, or fragrance
+                  blog link. We&apos;ll review it for possible inclusion in
+                  FragranceIndex.ai.
+                </p>
+              </div>
+              <SuggestSourceCta />
             </div>
-            <SuggestSourceCta />
           </div>
         </div>
       </section>
