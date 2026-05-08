@@ -133,6 +133,7 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 ---
 
 ## Active Roadmap
+- **P3 Pipeline Health Check — COMPLETE (2026-05-08)** — commit 58ff5c6 — `perfume_trend_sdk/jobs/pipeline_health_check.py` runs at end of morning + evening pipelines. 4 checks: entity_mentions (CRITICAL<50/WARNING<100), Reddit entity_mentions (WARNING morning=0/CRITICAL evening=0), content items by platform, signals count. Markers: `PIPELINE_HEALTH_OK/WARNING/CRITICAL`. Exit always 0. Verified retroactively: 05-06 collapse correctly fires `PIPELINE_HEALTH_WARNING` (reddit_items=0, mentions=64). 21/21 tests pass.
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
   - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
@@ -546,6 +547,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC0.1 Unified creator registry (multi-platform) | PLANNED | — |
 | SC0.2 Creator filters v1 | PLANNED | — |
 | SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
+| P3 Pipeline Health Check | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2 TikTok Layer 3 — seeded creator watchlist | PLANNED | — |
 | SC1.3 Multi-field resolver (hashtags, context) | PLANNED | — |
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
