@@ -671,36 +671,116 @@ python3 -m perfume_trend_sdk.jobs.monitor_tiktok_seeded_creators --force
 
 ---
 
-### SC1.3 — Multi-field resolver adaptation
+### SC1.3 — Multi-field resolver adaptation (DEPLOYED DISABLED — 2026-05-08)
 
-Goal: prepare resolver for TikTok/Instagram-style content where title alone is insufficient.
+**Status: code deployed, `MULTI_FIELD_RESOLVER_ENABLED=false`. Enable with explicit approval.**
 
-New resolver input:
+Goal: prepare resolver for platform-aware multi-field resolution where title alone is insufficient.
+
+#### Architecture
+
+New module: `perfume_trend_sdk/resolvers/perfume_identity/multi_field_resolver.py`
+
+`PerfumeResolver.resolve_content_item()` branches on the feature flag:
+- Flag off (default) → `_resolve_content_item_single()` — unchanged v1.1 path
+- Flag on → `_resolve_content_item_multi()` → `resolve_multi_field()` with platform weights
+
+No schema migration. No DB change.
+
+#### text_signal schema
 
 ```python
-text_signal = {
-  "title": ...,
-  "description": ...,
-  "hashtags": [...],
-  "referencing_context": ...,
-  "platform": ...,
-  "source_method": ...
+{
+    "title": str | None,
+    "description": str | None,      # YouTube description; TikTok caption
+    "hashtags": str | None,         # space-joined hashtag list
+    "body": str | None,             # Reddit: title + selftext
+    "referencing_context": str | None,  # TikTok derived: surrounding text
+    "user_context": str | None,     # TikTok direct: operator-supplied context
+    "audio_transcript": None,       # reserved — SC1.4T
+    "ocr_overlays": None,           # reserved — future
+    "platform": str,
+    "source_method": str | None,    # "derived" | "direct" | None
+    "tiktok_layer": int | None,
 }
 ```
 
-Tasks:
-- Add backward-compatible resolver wrapper
-- Keep old title-only flow working (no YouTube/Reddit regression)
-- Add per-field weights by platform
-- Add feature flag
-- Replay historical YouTube/Reddit content before enabling
-- Add tests for hashtag-driven and context-driven matches
+#### Platform field weights
 
-Production verification:
-- YouTube resolved count does not regress
-- Reddit resolved count does not regress
-- TikTok Layer 1 derived uses `referencing_context`
-- TikTok Layer 3 uses title/snippet/available text
+| Platform key | Field | Weight |
+|---|---|---|
+| youtube | title | 1.0 |
+| youtube | description | 0.5 |
+| youtube | hashtags | 0.3 |
+| reddit | body | 1.0 |
+| reddit | title | 0.7 |
+| reddit | hashtags | 0.3 |
+| tiktok_derived | referencing_context | 1.0 |
+| tiktok_derived | hashtags | 0.5 |
+| tiktok_derived | description | 0.3 |
+| tiktok_derived | title | 0.2 |
+| tiktok_direct | user_context | 1.0 |
+| tiktok_direct | hashtags | 0.6 |
+| tiktok_direct | referencing_context | 0.4 |
+| tiktok_direct | description | 0.4 |
+| tiktok_direct | title | 0.5 |
+| tiktok_layer3 | user_context | 0.8 |
+| tiktok_layer3 | title | 0.7 |
+| tiktok_layer3 | hashtags | 0.6 |
+| tiktok_layer3 | description | 0.5 |
+
+`final_confidence = max(field_weight × raw_confidence)` across all matched fields.
+Minimum threshold: 0.3 — matches below are suppressed.
+
+#### Guardrails
+
+**TikTok generic title protection:**
+Titles containing phrases like "omg", "you need this", "run don't walk", "must try", "best perfume", etc. are suppressed before `resolve_text()` is called for TikTok derived/direct items.
+
+**YouTube title noise filter:**
+Resolver aliases that are also common English phrases (e.g. "I will", "You Are", "Beach Vibes", "So Sweet", "Scent of", "Men's Cologne") are suppressed when the match comes from the YouTube `title` field only. If the same entity is also found in `description` or `hashtags`, the match passes (corroborated).
+
+#### Replay report (2026-05-04 → 2026-05-07, 2000 items)
+
+| Metric | Value |
+|---|---|
+| Old resolver resolved | 624 / 2000 |
+| New resolver resolved | 807 / 2000 |
+| Items with gains | 209 |
+| Items with losses | 0 |
+| YouTube regressions | 0 ✓ |
+| Reddit regressions | 0 ✓ |
+
+Selected gains (all legitimate): Dior Sauvage EDP, Armani Acqua di Gio, Rasasi Hawas, BYREDO Mojave Ghost, MFK Baccarat Rouge 540 Extrait, MFK Grand Soir, Chanel Bleu de Chanel, Creed Aventus EDP, Creed Wild Vetiver, Imperial Valley (Gissah), Hawas Ice.
+
+Reddit: 0 changes (Reddit body already concatenated title + selftext → no new fields).
+
+**Conclusion:** Safe to enable. No production enablement without explicit approval.
+
+#### Replay / backtest tool
+
+```bash
+PYTHONPATH=. DATABASE_URL=<prod-url> python3 scripts/replay_multi_field_resolver.py \
+    --start 2026-05-04 --end 2026-05-07 [--platform youtube] [--limit 2000]
+```
+
+Output: console report + `outputs/replay_mf_resolver_<start>_<end>.json`
+
+#### Tests
+
+`tests/unit/test_sc1_3_multi_field_resolver.py` — 67/67 pass.
+
+Covers: feature flag, platform key routing, generic title detection, signal extraction,
+YouTube title/description resolution, Reddit body resolution, TikTok derived/direct,
+confidence threshold, debug metadata, multiple entities, noise filter, backward compat.
+
+#### To enable in production
+
+```bash
+# Railway → generous-prosperity service → Variables
+MULTI_FIELD_RESOLVER_ENABLED=true
+# Trigger redeploy. Monitor entity_mention counts in next pipeline run.
+```
 
 ---
 

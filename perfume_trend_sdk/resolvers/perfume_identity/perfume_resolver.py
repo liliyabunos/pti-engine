@@ -237,6 +237,12 @@ class PerfumeResolver:
         """
         Resolve perfume mentions in a canonical content item.
 
+        When MULTI_FIELD_RESOLVER_ENABLED=true: delegates to the multi-field
+        resolver (SC1.3) which applies platform-specific field weights.
+
+        When MULTI_FIELD_RESOLVER_ENABLED=false (default): uses the original
+        single-field path (text_content only) — backward-compatible, no change.
+
         Args:
             content_item:    Dict with at least 'id' and 'text_content'.
             emit_candidates: When True, populate 'unresolved_mentions' with
@@ -246,6 +252,29 @@ class PerfumeResolver:
         Returns:
             Dict with keys: content_item_id, resolver_version,
             resolved_entities, unresolved_mentions, alias_candidates.
+            In multi-field mode, resolved_entities additionally include
+            matched_field, field_confidence, final_confidence, all_fields.
+        """
+        from perfume_trend_sdk.resolvers.perfume_identity.multi_field_resolver import (
+            is_enabled as _mf_enabled,
+        )
+        if _mf_enabled():
+            return self._resolve_content_item_multi(
+                content_item, emit_candidates=emit_candidates
+            )
+        return self._resolve_content_item_single(
+            content_item, emit_candidates=emit_candidates
+        )
+
+    def _resolve_content_item_single(
+        self,
+        content_item: Dict[str, Any],
+        *,
+        emit_candidates: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Original single-field resolution path (title/text_content only).
+        Unchanged from v1.1 — used when multi-field flag is off.
         """
         text = content_item.get("text_content") or ""
         matches = self.resolve_text(text)
@@ -272,6 +301,62 @@ class PerfumeResolver:
         return {
             "content_item_id": content_item["id"],
             "resolver_version": self.version,
+            "resolved_entities": resolved_entities,
+            "unresolved_mentions": unresolved_mentions,
+            "alias_candidates": [],
+        }
+
+    def _resolve_content_item_multi(
+        self,
+        content_item: Dict[str, Any],
+        *,
+        emit_candidates: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        SC1.3 multi-field resolution path (MULTI_FIELD_RESOLVER_ENABLED=true).
+
+        Builds a text_signal from the content item, resolves each field with
+        platform-specific weights, and aggregates into resolved_entities.
+
+        Returns the same structure as the single-field path, extended with
+        multi-field debug metadata on each resolved entity entry.
+        """
+        from perfume_trend_sdk.resolvers.perfume_identity.multi_field_resolver import (
+            extract_signal_from_content_item,
+            resolve_multi_field,
+        )
+
+        signal = extract_signal_from_content_item(content_item)
+        mf_matches = resolve_multi_field(self, signal)
+
+        resolved_phrases: Set[str] = set()
+        resolved_entities = []
+        for mf in mf_matches:
+            resolved_entities.append({
+                "entity_type": "perfume",
+                "entity_id": mf.entity_id,
+                "canonical_name": mf.canonical_name,
+                "matched_from": mf.matched_field,
+                "confidence": mf.final_confidence,
+                "match_type": "multi_field",
+                # SC1.3 extended debug fields
+                "matched_field": mf.matched_field,
+                "field_confidence": mf.field_confidence,
+                "final_confidence": mf.final_confidence,
+                "all_fields": mf.all_fields,
+                "platform_key": mf.platform_key,
+            })
+            resolved_phrases.add(normalize_text(mf.canonical_name))
+
+        # Unresolved candidates: use primary text for extraction
+        primary_text = content_item.get("text_content") or ""
+        unresolved_mentions: List[str] = []
+        if emit_candidates and primary_text:
+            unresolved_mentions = self._extract_candidates(primary_text, resolved_phrases)
+
+        return {
+            "content_item_id": content_item["id"],
+            "resolver_version": self.version + "-mf",
             "resolved_entities": resolved_entities,
             "unresolved_mentions": unresolved_mentions,
             "alias_candidates": [],
