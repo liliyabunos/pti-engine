@@ -115,3 +115,8 @@ timeout 180 python3 scripts/discover_youtube_channels.py --apply --limit 100 \
   echo "[pipeline] WARNING: discover_youtube_channels failed — continuing"
 
 echo "[pipeline] Pipeline complete for date=$TODAY"
+
+# P3 — Pipeline health check (log-only; never fails the pipeline)
+echo "[pipeline] Health check — run=morning date=$TODAY"
+timeout 60 python3 -m perfume_trend_sdk.jobs.pipeline_health_check --date "$TODAY" --run-label morning || \
+  echo "[pipeline] WARNING: pipeline_health_check failed — continuing"

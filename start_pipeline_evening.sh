@@ -72,3 +72,8 @@ timeout 300 python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-
   echo "[pipeline-evening] WARNING: evaluate_temp_youtube_queries failed — continuing"
 
 echo "[pipeline-evening] Complete for date=$TODAY"
+
+# P3 — Pipeline health check (log-only; never fails the pipeline)
+echo "[pipeline-evening] Health check — run=evening date=$TODAY"
+timeout 60 python3 -m perfume_trend_sdk.jobs.pipeline_health_check --date "$TODAY" --run-label evening || \
+  echo "[pipeline-evening] WARNING: pipeline_health_check failed — continuing"
