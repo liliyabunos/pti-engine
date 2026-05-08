@@ -551,22 +551,123 @@ Production verification:
 
 Goal: allow operator-seeded TikTok creators and detect new public videos.
 
-Tasks:
-- Add TikTok creator watchlist support
-- Seed initial 100–300 fragrance TikTok creators
-- Add daily monitoring worker with strict rate limits
-- Store newly detected video URLs
-- Tag content as `tiktok_layer=3`
-- Add `external_api_audit_log` entries for every fetch
-- Add kill switch (env/config flag)
-- Add admin operator queue for TikTok creator review
+#### SC1.2A — Schema + Registry (COMPLETE — PRODUCTION VERIFIED 2026-05-08)
 
-Production verification:
-- seeded creators can be listed
-- worker runs without blocking existing pipelines
-- new video URL detection is idempotent
-- kill switch stops TikTok monitoring immediately
-- audit log records all fetches
+Migration 035 added two tables:
+
+**`creator_platform_accounts`** — platform-neutral creator registry
+- UNIQUE on `(platform, platform_handle)` — one row per creator per platform
+- 5 valid statuses: `pending_review`, `active`, `paused`, `rejected`, `error`
+- 5 source methods: `manual_seed`, `url_submission`, `mention_derived`, `auto_discovery`, `creator_claim`
+- Columns: `follower_count`, `last_checked_at`, `tier`, `category`, `seed_source`, `notes`, `platform_url`, `display_name`
+- On duplicate seed: COALESCE-based update preserves existing values
+
+**`creator_watchlist_audit_log`** — append-only audit trail
+- Indexed on `(platform, platform_handle)`
+- `action`, `old_status`, `new_status`, `source_method`, `note`, `created_at`
+
+Service layer: `perfume_trend_sdk/services/tiktok_watchlist.py`
+- `normalize_handle(raw)` — strips `@`/URL prefix, rejects video URLs, validates `^[A-Za-z0-9._]{1,24}$`
+- `add_account()`, `change_status()`, `bulk_import()` — write to both tables atomically
+
+API routes: `GET/POST /api/v1/tiktok-watchlist/`, `GET/PATCH /{handle}`, `GET /{handle}/audit`
+
+Tests: `tests/unit/test_sc1_2_watchlist.py` — 44/44 pass
+
+#### SC1.2B — Seed Import Script (COMPLETE — PRODUCTION VERIFIED 2026-05-08)
+
+Script: `perfume_trend_sdk/scripts/seed_tiktok_creators.py`
+
+Usage:
+```bash
+python3 -m perfume_trend_sdk.scripts.seed_tiktok_creators \
+    --file data/tiktok_creators_seed.csv [--dry-run] [--activate]
+```
+
+- CSV columns: `handle` (required), `profile_url`, `display_name`, `category`, `tier`, `notes`, `seed_source`
+- `--dry-run`: connects to DB, prints would_insert / would_update counts without writing
+- `--activate`: imports with `status=active` (default: `status=pending_review`)
+- Pre-validates all rows before any DB writes; rejects video URLs, empty handles
+
+#### SC1.2C — Safe TikTok Seeded Creator Monitoring Worker (COMPLETE — PRODUCTION VERIFIED 2026-05-08)
+
+**Status: profile reachability + metadata harvest only. Video discovery NOT implemented.**
+
+Worker: `perfume_trend_sdk/jobs/monitor_tiktok_seeded_creators.py`
+Parser: `perfume_trend_sdk/ingest/tiktok_page_parser.py`
+Tests: `tests/unit/test_sc1_2c_monitor.py` — 24/24 pass
+
+##### What the worker does
+
+- Reads `creator_platform_accounts` where `platform='tiktok'` and `status='active'`
+- Fetches each profile via plain HTTPS GET (Chrome/124 UA, no cookies, no auth, no automation)
+- Parses `__UNIVERSAL_DATA_FOR_REHYDRATION__` script tag in the SSR HTML
+- Extracts: `follower_count`, `video_count`, `verified`, `sec_uid`, `nickname` from `webapp.user-detail.userInfo`
+- Updates `follower_count` and `last_checked_at` in `creator_platform_accounts`
+- Writes `action=monitor_profile_check` to `creator_watchlist_audit_log`
+- Polite 4-second sleep between requests (`--sleep-seconds` override available)
+- Skips creators checked within 24 hours unless `--force`
+
+##### What the worker does NOT do
+
+- Does NOT create `entity_mentions` rows — TikTok monitoring is not yet a market signal source
+- Does NOT create `canonical_content_items` rows
+- Does NOT use browser automation, Playwright, Puppeteer, or any headless browser
+- Does NOT use third-party scraper APIs
+- Does NOT simulate login or use session cookies
+
+##### TikTok simple HTTP limitation (verified 2026-05-08)
+
+TikTok profile pages served via plain HTTPS always return an **empty `itemList`** in the SSR JSON. The internal `/api/post/item_list/` endpoint returns an empty body without authenticated session cookies. Video discovery is therefore not possible via simple HTTP.
+
+**Confirmed on three live handles:** `@rawscents`, `@scentofself`, `@perfumedude` — all returned `itemList: []` in SSR, with follower/video counts successfully extracted from `userInfo.stats`.
+
+The worker logs this clearly:
+```
+TIKTOK_MONITOR_CREATOR_WARNING handle=@rawscents video_list_unavailable=true
+  reason='itemList empty in SSR JSON — video discovery requires authenticated API
+  or approved browser-based method (not in SC1.2C)'
+```
+
+Video discovery will require a separately approved approach (e.g. TikTok Research API, or a browser-based method reviewed for ToS compliance). This is deferred to a future SC phase.
+
+##### Kill switch
+
+```bash
+TIKTOK_PUBLIC_MONITORING_ENABLED=false  # default — worker exits safely
+TIKTOK_PUBLIC_MONITORING_ENABLED=true   # enables live fetching
+```
+
+Log markers:
+- `TIKTOK_MONITOR_DISABLED` — kill switch active, safe exit
+- `TIKTOK_MONITOR_STARTED` — run beginning
+- `TIKTOK_MONITOR_CREATOR_OK` — profile reachable, metadata updated
+- `TIKTOK_MONITOR_CREATOR_WARNING` — reachable but video list unavailable (always, in SC1.2C)
+- `TIKTOK_MONITOR_CREATOR_ERROR` — fetch failed or profile unreachable
+- `TIKTOK_MONITOR_COMPLETE` — run finished with summary counts
+
+##### Usage
+
+```bash
+python3 -m perfume_trend_sdk.jobs.monitor_tiktok_seeded_creators
+python3 -m perfume_trend_sdk.jobs.monitor_tiktok_seeded_creators --limit 5
+python3 -m perfume_trend_sdk.jobs.monitor_tiktok_seeded_creators --handle rawscents --dry-run
+python3 -m perfume_trend_sdk.jobs.monitor_tiktok_seeded_creators --force
+```
+
+##### Production verification results (2026-05-08)
+
+- Kill switch: `TIKTOK_MONITOR_DISABLED` logged when `TIKTOK_PUBLIC_MONITORING_ENABLED` not set ✓
+- Live run on `@rawscents`: `TIKTOK_MONITOR_CREATOR_OK followers=2 videos=0 verified=False` ✓
+- `follower_count=2`, `last_checked_at` updated in `creator_platform_accounts` ✓
+- Audit log entry: `action=monitor_profile_check source_method=public_creator_monitoring` ✓
+- `entity_mentions` rows with `platform='tiktok'`: 0 ✓ (worker does not create these)
+- `canonical_content_items` rows with `source_method='public_creator_monitoring'`: 0 ✓
+
+##### What SC1.2C does NOT wire
+
+- No production cron entry — must be manually verified with a real seed list before scheduling
+- No market signal weight — profile checks do not produce market signals in this phase
 
 ---
 
