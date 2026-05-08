@@ -133,6 +133,7 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 ---
 
 ## Active Roadmap
+- **SC1.2A+B TikTok Watchlist Registry — COMPLETE (2026-05-08)** — commit pending — migration 035: `creator_platform_accounts` (platform-neutral, unique on `(platform, platform_handle)`) + `creator_watchlist_audit_log`. Service: `perfume_trend_sdk/services/tiktok_watchlist.py` (add_account, list_accounts, get_account, change_status, bulk_import). Handles: bare/`@handle`/profile URL normalized; video URLs rejected. Statuses: pending_review|active|paused|rejected|error. API: `GET/POST /api/v1/tiktok-watchlist`, `GET/PATCH /{handle}`, `GET /{handle}/audit`. Seed script: `python3 -m perfume_trend_sdk.scripts.seed_tiktok_creators --file CSV [--dry-run] [--activate]`. Production: 6 creators seeded, 9 audit entries, duplicate protection verified, YouTube creator_scores (711 rows) untouched. 44/44 tests pass.
 - **P3 Pipeline Health Check — COMPLETE (2026-05-08)** — commit 58ff5c6 — `perfume_trend_sdk/jobs/pipeline_health_check.py` runs at end of morning + evening pipelines. 4 checks: entity_mentions (CRITICAL<50/WARNING<100), Reddit entity_mentions (WARNING morning=0/CRITICAL evening=0), content items by platform, signals count. Markers: `PIPELINE_HEALTH_OK/WARNING/CRITICAL`. Exit always 0. Verified retroactively: 05-06 collapse correctly fires `PIPELINE_HEALTH_WARNING` (reddit_items=0, mentions=64). 21/21 tests pass.
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
@@ -548,7 +549,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC0.2 Creator filters v1 | PLANNED | — |
 | SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | P3 Pipeline Health Check | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
-| SC1.2 TikTok Layer 3 — seeded creator watchlist | PLANNED | — |
+| SC1.2A TikTok — Schema + Registry Integration | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
+| SC1.2B TikTok — Seed Import + Operator Workflow | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.3 Multi-field resolver (hashtags, context) | PLANNED | — |
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
@@ -559,7 +561,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 034**
+Current production: **migration 035**
 
 | Migration | What |
 |-----------|------|
@@ -574,6 +576,7 @@ Current production: **migration 034**
 | 032 | `public_safe_*` views — Compliance Boundary v1 |
 | 033 | `source_submissions` table — Submit a Source MVP |
 | 034 | SC1.1 — `tiktok_layer`, `referencing_source_id`, `referencing_context`, `mention_weight_override` on `canonical_content_items`; `public_safe_content_items` updated to allow qualified TikTok rows |
+| 035 | SC1.2A — `creator_platform_accounts` table (platform-neutral watchlist registry) + `creator_watchlist_audit_log` |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
