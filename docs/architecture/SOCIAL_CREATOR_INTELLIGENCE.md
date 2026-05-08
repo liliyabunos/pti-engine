@@ -671,9 +671,27 @@ python3 -m perfume_trend_sdk.jobs.monitor_tiktok_seeded_creators --force
 
 ---
 
-### SC1.3 — Multi-field resolver adaptation (DEPLOYED DISABLED — 2026-05-08)
+### SC1.3 — Multi-field resolver adaptation (COMPLETE — PRODUCTION VERIFIED 2026-05-08)
 
-**Status: code deployed, `MULTI_FIELD_RESOLVER_ENABLED=false`. Enable with explicit approval.**
+**Status: PRODUCTION ENABLED — `MULTI_FIELD_RESOLVER_ENABLED=true` on Railway generous-prosperity. Commit: ee1d8ba.**
+
+#### Production verification results (2026-05-08 manual pipeline run)
+
+| Metric | Value | Baseline | Status |
+|--------|-------|---------|--------|
+| PIPELINE_HEALTH_OK | ✓ | — | PASS |
+| entity_mentions | 180 | 183–189/day | PASS |
+| signals | 142 | 113–216/day | PASS |
+| resolved_signals 1.1-mf | 558 | new | ACTIVE |
+| resolved_signals 1.1 (old) | 74 | legacy morning | expected |
+| content_items (yt+reddit) | 1203 | — | PASS |
+| public_safe_entity_snapshots | 2318 | 2259 pre | stable |
+| public_safe_signals | 4976 | 4837 pre | stable |
+| public_safe_content_items | 9644 | 9159 pre | stable |
+| dashboard API | HTTP 200 | — | PASS |
+| false positive spike | None new | — | PASS |
+
+False-positive note: noise aliases (Scent of, I will, You Are) match in Reddit body at same rate as pre-SC1.3 — confirmed pre-existing, not introduced by SC1.3. YouTube title-only noise filter working correctly.
 
 Goal: prepare resolver for platform-aware multi-field resolution where title alone is insufficient.
 
@@ -774,13 +792,14 @@ Covers: feature flag, platform key routing, generic title detection, signal extr
 YouTube title/description resolution, Reddit body resolution, TikTok derived/direct,
 confidence threshold, debug metadata, multiple entities, noise filter, backward compat.
 
-#### To enable in production
+#### Enabled in production
 
 ```bash
-# Railway → generous-prosperity service → Variables
+# Railway → generous-prosperity service → Variables — already set
 MULTI_FIELD_RESOLVER_ENABLED=true
-# Trigger redeploy. Monitor entity_mention counts in next pipeline run.
 ```
+
+Production enabled 2026-05-08. Replay (2026-05-04–07, 2000 items): old=624 → new=807, +183 resolved, 0 regressions.
 
 ---
 
