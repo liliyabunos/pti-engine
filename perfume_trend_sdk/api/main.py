@@ -32,6 +32,8 @@ Endpoints:
     GET    /api/v1/tiktok-watchlist/{handle}       — get one account
     PATCH  /api/v1/tiktok-watchlist/{handle}       — change status
     GET    /api/v1/tiktok-watchlist/{handle}/audit — audit log
+    POST   /api/v1/creator-claims                   — submit a creator profile claim (bio_code | screenshot | manual_review)
+    GET    /api/v1/creator-claims/me                — list current user's own claims
     GET    /health                                  — rich health check (db + env)
     GET    /healthz                                 — simple liveness probe
 """
@@ -45,7 +47,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from perfume_trend_sdk.api.routes import alerts, auth, catalog, creators, dashboard, emerging, entities, notes, signals, source_submissions, tiktok_oembed, tiktok_watchlist, watchlists
+from perfume_trend_sdk.api.routes import alerts, auth, catalog, creator_claims, creators, dashboard, emerging, entities, notes, signals, source_submissions, tiktok_oembed, tiktok_watchlist, watchlists
 from perfume_trend_sdk.db.market.session import _make_engine, get_database_url
 
 logger = logging.getLogger(__name__)
@@ -132,6 +134,7 @@ app.include_router(emerging.router, prefix="/api/v1", tags=["emerging"])
 app.include_router(source_submissions.router, prefix="/api/v1/source-submissions", tags=["source-submissions"])
 app.include_router(tiktok_oembed.router, prefix="/api/v1/tiktok", tags=["tiktok"])
 app.include_router(tiktok_watchlist.router, prefix="/api/v1/tiktok-watchlist", tags=["tiktok-watchlist"])
+app.include_router(creator_claims.router, prefix="/api/v1/creator-claims", tags=["creator-claims"])
 
 
 # ── Health ────────────────────────────────────────────────────────────
