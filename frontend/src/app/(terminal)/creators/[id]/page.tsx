@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { use } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, BadgeCheck } from "lucide-react";
 import { clsx } from "clsx";
 
 import {
@@ -340,6 +340,58 @@ function RecentContent({ rows }: { rows: RecentContentRow[] }) {
 }
 
 // ---------------------------------------------------------------------------
+// Claim CTA
+// ---------------------------------------------------------------------------
+
+function ClaimSection({
+  creatorId,
+  verifiedStatus,
+  viewerClaimStatus,
+}: {
+  creatorId: string;
+  verifiedStatus: string | null;
+  viewerClaimStatus: string | null;
+}) {
+  // Already verified by someone — show badge only, no CTA
+  if (verifiedStatus === "verified") {
+    return (
+      <div className="flex items-center gap-1.5 text-[11px] text-emerald-400">
+        <BadgeCheck size={13} className="shrink-0" />
+        Verified Creator
+      </div>
+    );
+  }
+
+  // Current user has a pending claim
+  if (viewerClaimStatus === "pending") {
+    return (
+      <span className="inline-flex items-center rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400">
+        Claim Pending Review
+      </span>
+    );
+  }
+
+  // Current user's claim was rejected
+  if (viewerClaimStatus === "rejected") {
+    return (
+      <span className="inline-flex items-center rounded border border-red-900/60 px-2 py-1 text-[11px] text-red-400">
+        Claim Rejected — contact support
+      </span>
+    );
+  }
+
+  // No claim yet — show CTA
+  return (
+    <Link
+      href={`/creator/claim/${encodeURIComponent(creatorId)}`}
+      className="inline-flex items-center rounded border border-zinc-700/60 bg-zinc-800/40 px-2 py-1 text-[11px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 transition-colors"
+    >
+      Claim this Profile
+    </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Stat pill
 // ---------------------------------------------------------------------------
 
@@ -381,10 +433,25 @@ export default function CreatorProfilePage({ params }: PageProps) {
   const { id } = use(params);
   const decoded = decodeURIComponent(id);
   const router = useRouter();
+  const [userId, setUserId] = useState<string | undefined>(undefined);
+
+  // Lazily load Supabase to get current user — same pattern as submit-source
+  useEffect(() => {
+    let mounted = true;
+    import("@/lib/auth/client")
+      .then(({ createClient }) => {
+        return createClient().auth.getUser();
+      })
+      .then(({ data: { user } }) => {
+        if (mounted && user?.id) setUserId(user.id);
+      })
+      .catch(() => {/* no-op — user stays undefined */});
+    return () => { mounted = false; };
+  }, []);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["creator-profile", decoded],
-    queryFn: () => fetchCreatorProfile(decoded),
+    queryKey: ["creator-profile", decoded, userId],
+    queryFn: () => fetchCreatorProfile(decoded, "youtube", userId),
     staleTime: 60_000,
   });
 
@@ -477,6 +544,13 @@ export default function CreatorProfilePage({ params }: PageProps) {
                       Open YouTube Channel
                     </a>
                   )}
+                  <div className="mt-2">
+                    <ClaimSection
+                      creatorId={decoded}
+                      verifiedStatus={data.verified_status}
+                      viewerClaimStatus={data.viewer_claim_status}
+                    />
+                  </div>
                 </div>
 
                 {/* Key stats */}

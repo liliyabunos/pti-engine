@@ -113,6 +113,10 @@ export interface CreatorProfileResponse {
   channel_video_count: number | null;
   /** Constructed external platform link (YouTube channel URL). Null if unavailable. */
   external_url: string | null;
+  /** "verified" if any user has a verified claim for this creator profile, else null. */
+  verified_status: string | null;
+  /** The requesting user's own claim status: "pending" | "verified" | "rejected" | "revoked", or null. */
+  viewer_claim_status: string | null;
   influence_score: number | null;
   score_components: Record<string, number> | null;
   early_signal_count: number;
@@ -131,10 +135,11 @@ export interface CreatorProfileResponse {
 export async function fetchCreatorProfile(
   creatorId: string,
   platform = "youtube",
+  userId?: string,
 ): Promise<CreatorProfileResponse> {
   return apiFetch<CreatorProfileResponse>(
     `/api/v1/creators/${encodeURIComponent(creatorId)}`,
-    { platform },
+    { platform, ...(userId ? { user_id: userId } : {}) },
   );
 }
 

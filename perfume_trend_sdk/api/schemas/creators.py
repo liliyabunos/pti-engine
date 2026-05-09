@@ -92,6 +92,11 @@ class CreatorProfileResponse(BaseModel):
     channel_video_count: Optional[int] = None
     # External platform link (constructed from creator_id for YouTube)
     external_url: Optional[str] = None
+    # Claim status
+    # verified_status: "verified" if any verified claim exists for this creator, else None
+    verified_status: Optional[str] = None
+    # viewer_claim_status: the requesting user's own claim status (pending|verified|rejected|revoked), or None
+    viewer_claim_status: Optional[str] = None
     # Scores from creator_scores
     influence_score: Optional[float] = None
     score_components: Optional[Dict[str, Any]] = None

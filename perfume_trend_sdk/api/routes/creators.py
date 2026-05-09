@@ -163,6 +163,7 @@ def get_creator(
     platform: str = Query("youtube"),
     top_entities_limit: int = Query(20, ge=1, le=100),
     recent_content_limit: int = Query(10, ge=1, le=50),
+    user_id: Optional[str] = Query(None, description="Supabase user UUID — populates viewer_claim_status"),
     db: Session = Depends(get_db_session),
 ) -> CreatorProfileResponse:
     # Scores row
@@ -301,6 +302,37 @@ def get_creator(
     if platform == "youtube" and creator_id:
         external_url = f"https://www.youtube.com/channel/{creator_id}"
 
+    # ── Claim status ──────────────────────────────────────────────────────────
+    # verified_status: any verified claim exists for this creator
+    # viewer_claim_status: the requesting user's own claim status (if user_id provided)
+    verified_status: Optional[str] = None
+    viewer_claim_status: Optional[str] = None
+    try:
+        verified_row = db.execute(text("""
+            SELECT 1 FROM creator_profile_claims
+            WHERE platform = :platform
+              AND creator_id = :creator_id
+              AND claim_status = 'verified'
+            LIMIT 1
+        """), {"platform": platform, "creator_id": creator_id}).fetchone()
+        if verified_row:
+            verified_status = "verified"
+
+        if user_id:
+            claim_row = db.execute(text("""
+                SELECT claim_status FROM creator_profile_claims
+                WHERE platform = :platform
+                  AND creator_id = :creator_id
+                  AND user_id = :user_id
+                ORDER BY created_at DESC
+                LIMIT 1
+            """), {"platform": platform, "creator_id": creator_id, "user_id": user_id}).fetchone()
+            if claim_row:
+                viewer_claim_status = claim_row[0]
+    except Exception as exc:
+        # Table may not exist yet — non-fatal for existing routes
+        _log.debug("[C1] creator_profile_claims unavailable: %s", exc)
+
     return CreatorProfileResponse(
         platform=score_row[0],
         creator_id=score_row[1],
@@ -314,6 +346,8 @@ def get_creator(
         channel_view_count=int(ch_row[5]) if ch_row and ch_row[5] is not None else None,
         channel_video_count=int(ch_row[6]) if ch_row and ch_row[6] is not None else None,
         external_url=external_url,
+        verified_status=verified_status,
+        viewer_claim_status=viewer_claim_status,
         # Scores
         influence_score=float(score_row[20]) if score_row[20] is not None else None,
         score_components=sc,
