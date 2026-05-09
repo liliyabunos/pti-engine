@@ -348,6 +348,32 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 
 ---
 
+## C1 Creator Registry Claim Foundation
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
+**Commits: 59985d5 (implementation) · d96e032 (CLAUDE.md)**
+
+Migrations 036 + 037 applied — alembic current: `037` (head)
+
+**Production verification (2026-05-09):**
+- `creator_profile_claims`: 0 rows (schema verified: 16 columns, CHECK constraints, partial UNIQUE index) ✓
+- `creator_oauth_grants`: 0 rows (schema verified: 14 columns, encrypted token fields, partial UNIQUE index) ✓
+- `creator_scores`: 743 rows — unchanged ✓
+- `creator_entity_relationships`: 2,266 rows — unchanged ✓
+- `GET /api/v1/creators/{id}` returns `verified_status=None, viewer_claim_status=None` for unclaimed creators ✓
+- `ClaimSection` renders "Claim this Profile" CTA when no claim exists ✓
+- `/creator/claim/[id]` auth-required stub page live ✓
+
+**Key design decisions:**
+- `claim_method` includes `oauth` — future-proof even though OAuth not implemented yet
+- `verification_code_hash` only — plaintext code never stored
+- `creator_oauth_grants` is empty scaffold — no OAuth flow implemented
+- `viewer_claim_status` requires `user_id` query param (frontend passes Supabase user ID)
+- Claim queries are non-fatal — graceful degradation if table unavailable
+
+**Next phase: C2 — Manual Claim Verification** (bio-code, screenshot, manual review — no OAuth, no platform approval needed)
+
+---
+
 ## Legal Data Growth Route — Public Signals, Creator Consent, Platform Approval
 
 **STATUS: ACCEPTED — ARCHITECTURE ROUTE APPROVED**
@@ -721,7 +747,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC1.2C TikTok — Seeded Creator Monitoring Worker | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.3 Multi-field resolver — platform-weighted fields | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
-| C1 Creator Registry Claim Foundation | COMPLETE — PENDING PRODUCTION MIGRATION | 2026-05-08 |
+| C1 Creator Registry Claim Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
@@ -730,7 +756,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 035** (036+037 pending deploy)
+Current production: **migration 037** (head)
 
 | Migration | What |
 |-----------|------|
