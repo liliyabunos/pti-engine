@@ -122,7 +122,7 @@ def admin_list_claims(
                 cpc.reviewed_at,
                 cpc.reviewed_by,
                 cpc.rejection_reason,
-                COALESCE(yc.title, sp.display_name) AS creator_display_name
+                COALESCE(yc.title, sp.source_name) AS creator_display_name
             FROM creator_profile_claims cpc
             LEFT JOIN youtube_channels yc
                 ON cpc.platform = 'youtube'

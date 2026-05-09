@@ -71,7 +71,7 @@ _TABLES = [
     )""",
     """CREATE TABLE IF NOT EXISTS source_profiles (
         source_id    TEXT PRIMARY KEY,
-        display_name TEXT
+        source_name  TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS creator_scores (
         creator_id TEXT PRIMARY KEY,
