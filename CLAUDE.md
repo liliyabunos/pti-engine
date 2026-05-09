@@ -348,6 +348,171 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 
 ---
 
+## Legal Data Growth Route — Public Signals, Creator Consent, Platform Approval
+
+**STATUS: ACCEPTED — ARCHITECTURE ROUTE APPROVED**
+**DATE: 2026-05-09**
+
+TikTok integration is more complex and approval-dependent than anticipated (SC1.2D confirmed: headless browser blocked by login wall; TikTok Research API requires separate approval). This section formalizes all legal, platform-compliant growth routes that do not depend on TikTok as the only path.
+
+### Core Principle: Separate User Auth from Creator Linking
+
+**User Auth:**
+- FragranceIndex.ai user login: magic link (current).
+- Google OAuth may be added as an optional user-login method later.
+- TikTok, Instagram, YouTube, Reddit, Snapchat **must NOT** be used as primary login methods for ordinary users.
+
+**Creator Linking (separate flow):**
+- Creator social account verification happens only after the user is already logged in.
+- OAuth grants stored separately from Supabase/Auth user login — in `creator_oauth_grants` table, not in Supabase Auth.
+- Creator claim logic is separate from OAuth token logic.
+
+---
+
+### Layer A — Public Signal Monitoring
+
+Current and future public-data collection that does not require private user access:
+
+- YouTube Data API v3 — public video metadata, channel info (current, production)
+- Reddit public monitoring — subject to Reddit Data API Terms and commercial approval requirements (see P1 track)
+- Public oEmbed / URL extraction / source submission flows (current)
+- Public creator profile detection (SC1.2A/B/C)
+- SC1.2D finding: TikTok public profile monitoring via plain HTTPS or headless browser is blocked by login wall — not viable without prohibited workarounds
+
+Hard constraints for Layer A:
+- No scraping of private or login-required data
+- No use of private user data
+- No platform impersonation or session simulation
+- No bypassing access controls
+
+---
+
+### Layer B — Creator Consent
+
+Creator-initiated verification and optional account linking. Structured in two ordered sub-routes:
+
+#### B1 — Manual / Bio-Code Verification (Phase C2)
+
+- Creator places a temporary verification code in their public bio/profile/about page, or submits a screenshot/link for manual review.
+- No OAuth required. No private data access. No platform approval required.
+- Can launch independently before any OAuth flows.
+- **This is Phase C2 and can ship before V1.**
+
+Claim methods covered:
+- `bio_code` — code placed in public bio
+- `screenshot` — creator submits evidence link
+- `manual_review` — operator-reviewed claim
+
+#### B2 — OAuth Linking (Phase V1)
+
+- Used only after the creator is already logged in to FragranceIndex.ai.
+- Used only for consent-based account verification and authorized analytics.
+- OAuth tokens stored in `creator_oauth_grants` — never in Supabase Auth.
+- OAuth does not automatically prove ownership of an existing FragranceIndex creator profile without a claim review step.
+- Connect/disconnect must be supported per platform independently.
+
+Platform order:
+1. YouTube OAuth first (lowest approval friction)
+2. Meta/Instagram second
+3. TikTok only after scope/platform approval readiness (P1 track)
+4. Reddit only with commercial/legal guardrails in place (P1 track)
+
+---
+
+### Layer C — Platform Commercial Approval (Phase P1)
+
+Parallel compliance tracks — no single track blocks the others:
+
+- **TikTok:** Developer / Business API review; approved scopes for Research API
+- **Reddit:** Commercial approval / written approval required before monetized commercial use of Reddit-derived data
+- **Meta:** App review for Instagram Graph API permissions
+- Maintain privacy policy, terms of use, data deletion page, and demo flows at all times
+- FragranceIndex.ai already uses Reddit as a public signal source. Before commercial monetization or expanded Reddit Data API usage, the Reddit commercial approval requirement must be satisfied. Reddit-derived outputs should not be represented as fully cleared for commercial API use until reviewed/approved.
+
+---
+
+### Phase Structure
+
+#### C1 — Creator Registry (PLANNED)
+- Public creator profiles visible (current: `creator_platform_accounts`)
+- Detected creator cards surfaced in UI
+- "Claim this Profile" CTA wired to `creator_profile_claims` table
+- `creator_oauth_grants` table created as empty, future-proof structure
+- No OAuth flows required in C1
+
+#### C2 — Manual Claim Verification (PLANNED)
+- Bio-code verification flow
+- Screenshot / link manual review
+- `claim_status` workflow: pending → verified / rejected / revoked
+- No private data, no OAuth, no platform approval required
+- Can ship independently before V1
+
+#### V1 — Consent-Based Creator Linking (PLANNED)
+- YouTube OAuth first
+- Meta/Instagram second
+- TikTok only after P1 approval readiness
+- Reddit only after P1 commercial guardrails
+- Independent connect/disconnect per platform
+
+#### P1 — Platform Commercial Approval Track (PLANNED)
+- TikTok Developer / Business API approval
+- Reddit commercial approval track
+- Meta app review for Instagram permissions
+- Demo flow documentation
+- Privacy / Terms / Data Deletion verification
+
+---
+
+### Future Schema (Planned — not yet migrated)
+
+These tables are planned for C1/C2. Do not create migrations until C1 is actively started.
+
+**`creator_profile_claims`**
+```
+id                  uuid PK
+user_id             uuid FK → auth users
+creator_account_id  uuid FK → creator_platform_accounts
+claim_status        enum: pending | verified | rejected | revoked
+claim_method        enum: bio_code | screenshot | manual_review | domain_email | oauth
+verification_code   text nullable
+evidence_url        text nullable
+reviewer_notes      text nullable
+claimed_at          timestamptz
+verified_at         timestamptz nullable
+reviewed_at         timestamptz nullable
+reviewed_by         text nullable
+rejection_reason    text nullable
+```
+
+**`creator_oauth_grants`**
+```
+id                        uuid PK
+user_id                   uuid FK → auth users
+creator_account_id        uuid FK → creator_platform_accounts
+platform                  text (youtube | instagram | tiktok | reddit | snapchat)
+platform_user_id          text
+access_token_encrypted    text   — encrypted at rest; NEVER plaintext; NEVER exposed to frontend
+refresh_token_encrypted   text   — encrypted at rest; NEVER plaintext; NEVER exposed to frontend
+token_expires_at          timestamptz nullable
+scopes_granted            jsonb  — minimum required scopes only
+grant_status              enum: active | revoked | expired | failed
+connected_at              timestamptz
+last_refreshed_at         timestamptz nullable
+revoked_at                timestamptz nullable
+disconnect_reason         text nullable
+```
+
+**Security requirements (enforced before any OAuth launch):**
+- Never store `access_token` or `refresh_token` in plaintext
+- Encrypt tokens at rest (application-layer encryption before DB write)
+- Never expose tokens to frontend
+- Store only minimum required scopes
+- Support revocation/disconnect per platform
+- Log OAuth events without logging token values
+- Connected-apps / disconnect UX must ship before production OAuth launch
+
+---
+
 ## Social Creator Intelligence Roadmap (SC series)
 
 **STATUS: PLANNING — nothing implemented**
