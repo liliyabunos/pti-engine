@@ -9,6 +9,7 @@ const LEGAL_LINKS = [
   { href: "/cookies", label: "Cookies" },
   { href: "/copyright", label: "Copyright / DMCA" },
   { href: "/privacy/request", label: "Data Rights Request" },
+  { href: "/data-deletion", label: "Data Deletion" },
   { href: "/login", label: "Sign In" },
 ];
 
