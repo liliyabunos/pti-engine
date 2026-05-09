@@ -721,6 +721,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC1.2C TikTok — Seeded Creator Monitoring Worker | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.3 Multi-field resolver — platform-weighted fields | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
+| C1 Creator Registry Claim Foundation | COMPLETE — PENDING PRODUCTION MIGRATION | 2026-05-08 |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
@@ -729,7 +730,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 035**
+Current production: **migration 035** (036+037 pending deploy)
 
 | Migration | What |
 |-----------|------|
@@ -745,6 +746,8 @@ Current production: **migration 035**
 | 033 | `source_submissions` table — Submit a Source MVP |
 | 034 | SC1.1 — `tiktok_layer`, `referencing_source_id`, `referencing_context`, `mention_weight_override` on `canonical_content_items`; `public_safe_content_items` updated to allow qualified TikTok rows |
 | 035 | SC1.2A — `creator_platform_accounts` table (platform-neutral watchlist registry) + `creator_watchlist_audit_log` |
+| 036 | C1 — `creator_profile_claims` table: claim_status, claim_method (bio_code/screenshot/manual_review/domain_email/oauth), verification_code_hash + expiry, partial unique index on active claims |
+| 037 | C1 — `creator_oauth_grants` scaffold: platform_user_id, encrypted token fields, partial unique index on active grants per (user_id, platform, platform_user_id), nullable creator_id |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
