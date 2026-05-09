@@ -348,6 +348,42 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 
 ---
 
+## C2.1 — Operator Review Console
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
+**Commit: (pending push)**
+**Admin gate: ADMIN_EMAILS / ADMIN_USER_IDS environment allowlist (temporary — see note)**
+
+No new migration. Uses `creator_profile_claims` (migration 036).
+
+**What was implemented:**
+- `GET /api/v1/admin/creator-claims?status=pending|verified|rejected|all` — list claims for review
+- `POST /api/v1/admin/creator-claims/{id}/approve` — set claim_status=verified, reviewed_at=NOW()
+- `POST /api/v1/admin/creator-claims/{id}/reject` — set claim_status=rejected + required rejection_reason
+- FastAPI admin endpoints reject any request missing `X-Pti-Admin-User` header (401)
+- Next.js server routes (`/api/admin/creator-claims/*`) read Supabase session server-side, check user email/ID against `ADMIN_EMAILS` / `ADMIN_USER_IDS` env vars, then forward with `X-Pti-Admin-User` header
+- Browser cannot forge `X-Pti-Admin-User` — Next.js server route is the only path that sets it
+- UI: `/admin/creator-claims` — server component enforces auth + admin check (unauthenticated → /login, non-admin → 403, admin → claims console)
+- UI actions: filter by status, open creator profile, open evidence URL, approve, reject with required reason
+
+**Admin environment allowlist (C2.1 temporary gate):**
+- `ADMIN_EMAILS` — comma-separated list of admin email addresses (Railway env var)
+- `ADMIN_USER_IDS` — comma-separated list of admin Supabase user IDs (Railway env var)
+- This is a temporary mechanism. Future hardening option: `app_admins` table or Supabase custom claims.
+- Set at least one of these env vars in Railway `pti-frontend` service before using the console.
+
+**Hard constraints confirmed:**
+- No OAuth implemented — `creator_oauth_grants` remains empty
+- No pipeline tables touched (entity_mentions, canonical_content_items, etc.)
+- `verification_code_hash` never returned in admin API response
+- `reviewed_by` is always set from the `X-Pti-Admin-User` header (never from body)
+- Admin email/ID from request body or query params is ignored
+
+**Tests: 27/27 pass** (`tests/unit/test_admin_creator_claims.py`)
+
+**Next phase: V1 — Consent-Based Creator Linking** (YouTube OAuth first; only after P1 platform approval readiness)
+
+---
+
 ## C2 — Manual Claim Verification
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
 **Commits: b71333f (implementation) · bcb3e41 (CLAUDE.md)**
@@ -803,6 +839,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
 | C1 Creator Registry Claim Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2 Manual Claim Verification | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
+| C2.1 Operator Review Console (admin claims UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |

@@ -74,3 +74,46 @@ class ClaimSummary(BaseModel):
 
 class ClaimListResponse(BaseModel):
     claims: List[ClaimSummary]
+
+
+# ---------------------------------------------------------------------------
+# C2.1 Admin schemas — operator review console
+# ---------------------------------------------------------------------------
+
+class AdminClaimEntry(BaseModel):
+    """Claim row returned by the admin list endpoint.
+
+    Never includes: verification_code_hash, access_token_encrypted,
+    refresh_token_encrypted, or any creator_oauth_grants fields.
+    """
+    claim_id: str
+    user_id: str
+    platform: str
+    creator_id: str
+    creator_display_name: Optional[str] = None
+    creator_profile_url: Optional[str] = None
+    claim_method: str
+    claim_status: str
+    evidence_url: Optional[str] = None
+    reviewer_notes: Optional[str] = None
+    claimed_at: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+
+class AdminClaimListResponse(BaseModel):
+    claims: List[AdminClaimEntry]
+    total: int
+
+
+class AdminRejectRequest(BaseModel):
+    rejection_reason: str
+
+    @field_validator("rejection_reason")
+    @classmethod
+    def _not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("rejection_reason must not be empty")
+        return v
