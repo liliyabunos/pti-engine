@@ -30,7 +30,50 @@ import { PanelDivider } from "@/components/primitives/TerminalPanel";
 import { LoadingSkeleton } from "@/components/primitives/LoadingSkeleton";
 
 // ---------------------------------------------------------------------------
-// Disclaimer block — required by revision 7
+// How to claim — help text above form
+// ---------------------------------------------------------------------------
+
+function HowToClaim({ platform }: { platform: string }) {
+  const bioLocation =
+    platform === "youtube"
+      ? "YouTube channel description (About tab)"
+      : platform === "tiktok"
+      ? "TikTok bio"
+      : platform === "instagram"
+      ? "Instagram bio"
+      : platform === "reddit"
+      ? "Reddit profile About section"
+      : "your public creator profile";
+
+  return (
+    <div className="rounded border border-zinc-800 bg-zinc-900/20 px-4 py-4 space-y-3">
+      <p className="text-[11px] font-semibold text-zinc-300">
+        How profile verification works
+      </p>
+      <div className="space-y-2 text-[11px] text-zinc-500 leading-relaxed">
+        <p>
+          <span className="text-zinc-400 font-medium">Bio-code (recommended):</span>{" "}
+          Submit your profile URL. You'll receive a unique code — add it to your{" "}
+          {bioLocation}. Our team checks the code is publicly visible, then approves
+          your claim. Remove the code after verification if you prefer.
+        </p>
+        <p>
+          <span className="text-zinc-400 font-medium">Manual review:</span>{" "}
+          Submit a public URL that demonstrates your association with this account —
+          for example a pinned post, a link from your personal site, or a public
+          announcement. Our team reviews and responds within a few business days.
+        </p>
+      </div>
+      <div className="border-t border-zinc-800/60 pt-2 space-y-1 text-[10px] text-zinc-600">
+        <p>No password, OAuth, or platform login is required or requested.</p>
+        <p>FragranceIndex.ai is not affiliated with YouTube, TikTok, Instagram, or Reddit.</p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Disclaimer block
 // ---------------------------------------------------------------------------
 
 function ClaimDisclaimer() {
@@ -38,7 +81,7 @@ function ClaimDisclaimer() {
     <div className="rounded border border-zinc-800 bg-zinc-900/40 px-4 py-3 text-[11px] leading-relaxed text-zinc-500 space-y-1">
       <p>
         Verification confirms that you control this public creator account. It
-        does not grant FragranceIndex.ai access to your private account.
+        does not grant FragranceIndex.ai access to your private account data.
       </p>
       <p>No OAuth or password is required or requested.</p>
       <p>
@@ -76,28 +119,26 @@ function CopyButton({ text }: { text: string }) {
 // ---------------------------------------------------------------------------
 
 function PendingPanel({ claim }: { claim: ClaimSummary }) {
+  const methodLabel =
+    claim.claim_method === "bio_code"
+      ? "Bio-code verification"
+      : claim.claim_method === "screenshot"
+      ? "Screenshot / link"
+      : "Manual review";
+
   return (
     <TerminalPanel>
       <div className="space-y-3 px-5 py-5">
         <p className="text-sm font-semibold text-zinc-200">
-          Your claim is under review
+          Claim under review
         </p>
         <p className="text-[12px] text-zinc-500">
-          Method:{" "}
-          <span className="text-zinc-400">
-            {claim.claim_method === "bio_code"
-              ? "Bio-code verification"
-              : claim.claim_method === "screenshot"
-              ? "Screenshot / link"
-              : "Manual review"}
-          </span>
+          Method: <span className="text-zinc-400">{methodLabel}</span>
         </p>
         {claim.claimed_at && (
           <p className="text-[12px] text-zinc-500">
             Submitted:{" "}
-            <span className="text-zinc-400">
-              {claim.claimed_at.slice(0, 10)}
-            </span>
+            <span className="text-zinc-400">{claim.claimed_at.slice(0, 10)}</span>
           </p>
         )}
         {claim.evidence_url && (
@@ -114,10 +155,28 @@ function PendingPanel({ claim }: { claim: ClaimSummary }) {
             </a>
           </p>
         )}
-        <p className="text-[12px] text-zinc-600">
-          We will verify the public evidence you provided. No account access is
-          required.
-        </p>
+        <div className="rounded border border-zinc-800 bg-zinc-900/30 px-3 py-2.5 text-[11px] text-zinc-500 space-y-1">
+          {claim.claim_method === "bio_code" ? (
+            <p>
+              Make sure the verification code is still visible in your public
+              profile. Our team will check it is publicly readable before approving.
+            </p>
+          ) : (
+            <p>
+              Our team will review the evidence you provided. We aim to respond
+              within a few business days.
+            </p>
+          )}
+          <p>
+            Questions?{" "}
+            <a
+              href="mailto:support@fragranceindex.ai"
+              className="text-amber-400 hover:underline"
+            >
+              support@fragranceindex.ai
+            </a>
+          </p>
+        </div>
       </div>
     </TerminalPanel>
   );
@@ -126,15 +185,28 @@ function PendingPanel({ claim }: { claim: ClaimSummary }) {
 function VerifiedPanel() {
   return (
     <TerminalPanel>
-      <div className="flex items-center gap-2 px-5 py-5">
-        <BadgeCheck size={16} className="text-emerald-400 shrink-0" />
-        <p className="text-sm font-semibold text-emerald-400">
-          Profile Verified
+      <div className="space-y-2 px-5 py-5">
+        <div className="flex items-center gap-2">
+          <BadgeCheck size={16} className="text-emerald-400 shrink-0" />
+          <p className="text-sm font-semibold text-emerald-400">
+            Profile Verified
+          </p>
+        </div>
+        <p className="text-[12px] text-zinc-500">
+          Your creator profile is verified on FragranceIndex.ai. The verified
+          badge is now visible on your public profile page.
+        </p>
+        <p className="text-[11px] text-zinc-600">
+          If you need to update your profile details or have questions, contact{" "}
+          <a
+            href="mailto:support@fragranceindex.ai"
+            className="text-amber-400 hover:underline"
+          >
+            support@fragranceindex.ai
+          </a>
+          .
         </p>
       </div>
-      <p className="px-5 pb-5 text-[12px] text-zinc-500">
-        This profile is verified. No further action is needed.
-      </p>
     </TerminalPanel>
   );
 }
@@ -150,28 +222,43 @@ function RejectedPanel({
     <TerminalPanel>
       <div className="space-y-3 px-5 py-5">
         <p className="text-sm font-semibold text-red-400">Claim Not Approved</p>
-        {claim.rejection_reason && (
+
+        {claim.rejection_reason ? (
+          <div className="rounded border border-red-900/30 bg-red-950/10 px-3 py-2.5 text-[12px] text-zinc-400">
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-red-500/70 mb-1">
+              Reason
+            </span>
+            {claim.rejection_reason}
+          </div>
+        ) : (
           <p className="text-[12px] text-zinc-500">
-            Reason:{" "}
-            <span className="text-zinc-400">{claim.rejection_reason}</span>
+            Your claim could not be verified from the evidence provided.
           </p>
         )}
-        <p className="text-[12px] text-zinc-500">
-          Questions? Contact{" "}
+
+        <div className="text-[11px] text-zinc-500 space-y-1">
+          <p>You can submit a new claim with updated or corrected evidence.</p>
+          <p>
+            Common fixes: make sure the evidence URL is publicly accessible, the
+            bio-code is still visible in your profile, or use a different URL
+            that clearly shows your association with this account.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 pt-1">
+          <button
+            onClick={onResubmit}
+            className="inline-flex items-center rounded border border-zinc-700/60 bg-zinc-800/40 px-3 py-1.5 text-[12px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 transition-colors"
+          >
+            Try Again
+          </button>
           <a
             href="mailto:support@fragranceindex.ai"
-            className="text-amber-400 hover:underline"
+            className="text-[11px] text-zinc-600 hover:text-amber-400 transition-colors"
           >
-            support@fragranceindex.ai
+            Contact support
           </a>
-          .
-        </p>
-        <button
-          onClick={onResubmit}
-          className="mt-1 inline-flex items-center rounded border border-zinc-700/60 bg-zinc-800/40 px-3 py-1.5 text-[12px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 transition-colors"
-        >
-          Submit a New Claim
-        </button>
+        </div>
       </div>
     </TerminalPanel>
   );
@@ -327,27 +414,38 @@ function ClaimForm({
         {method === "bio_code" ? (
           <div className="space-y-2 rounded border border-zinc-800 bg-zinc-900/30 px-4 py-3">
             <p className="text-[11px] font-semibold text-zinc-300">
-              How bio-code verification works:
+              Steps:
             </p>
-            <ol className="list-decimal list-inside space-y-1 text-[11px] text-zinc-500">
-              <li>Submit this form with your public profile URL.</li>
+            <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-zinc-500">
+              <li>Enter your public profile URL below and submit.</li>
               <li>
-                A unique verification code will be shown on the next screen.
+                Copy the verification code shown on the next screen.
               </li>
               <li>
-                Add the code to your{" "}
-                <span className="text-zinc-400">{platformLabel}</span>.
+                Paste it anywhere in your{" "}
+                <span className="text-zinc-400">{platformLabel}</span> so it is
+                publicly visible.
               </li>
               <li>
-                Our team will confirm the code appears publicly during review.
+                Our team will confirm the code is visible and approve your claim.
+                You can remove the code after verification.
               </li>
             </ol>
           </div>
         ) : (
-          <div className="rounded border border-zinc-800 bg-zinc-900/30 px-4 py-3 text-[11px] text-zinc-500">
-            Submit a public URL showing your association with this creator
-            account. Our team will review the evidence manually. Do not submit
-            private screenshots, DMs, or login credentials.
+          <div className="space-y-1.5 rounded border border-zinc-800 bg-zinc-900/30 px-4 py-3">
+            <p className="text-[11px] font-semibold text-zinc-300">
+              Acceptable evidence:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-[11px] text-zinc-500">
+              <li>A pinned post, video, or story linking this account to you</li>
+              <li>A public announcement or bio mentioning your identity</li>
+              <li>Your personal or business website that references this account</li>
+            </ul>
+            <p className="text-[11px] text-zinc-600 pt-1">
+              Do not submit login credentials, private screenshots, or DMs.
+              Evidence must be publicly viewable without an account.
+            </p>
           </div>
         )}
 
@@ -367,21 +465,25 @@ function ClaimForm({
             placeholder="https://..."
             className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-[12px] text-zinc-200 placeholder-zinc-700 outline-none focus:border-zinc-500"
           />
-          <p className="text-[10px] text-zinc-700">
-            Must be a public http/https URL. Do not submit pages that require login.
+          <p className="text-[10px] text-zinc-600">
+            Must be publicly accessible without logging in. Example:{" "}
+            {method === "bio_code"
+              ? "https://www.youtube.com/channel/UC..."
+              : "https://yourdomain.com/about or a public post URL"}
           </p>
         </div>
 
         {/* Optional note */}
         <div className="space-y-1.5">
           <label className="block text-[11px] font-medium text-zinc-400">
-            Optional note
+            Note to reviewer{" "}
+            <span className="text-zinc-600 font-normal">(optional)</span>
           </label>
           <textarea
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Additional context for the reviewer..."
+            placeholder="e.g. 'The code is in the About section' or 'I linked this channel from my personal site'"
             className="w-full rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-[12px] text-zinc-200 placeholder-zinc-700 outline-none focus:border-zinc-500 resize-none"
           />
         </div>
@@ -521,7 +623,8 @@ export default function CreatorClaimPage({ params }: PageProps) {
                 )}
               </div>
               <PanelDivider />
-              <div className="px-5 py-3">
+              <div className="px-5 py-4 space-y-3">
+                <HowToClaim platform={profile.platform} />
                 <ClaimDisclaimer />
               </div>
             </TerminalPanel>

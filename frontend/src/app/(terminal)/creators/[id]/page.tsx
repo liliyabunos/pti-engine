@@ -365,18 +365,34 @@ function ClaimSection({
   // Current user has a pending claim
   if (viewerClaimStatus === "pending") {
     return (
-      <span className="inline-flex items-center rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400">
-        Claim Pending Review
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400">
+          Verification Pending
+        </span>
+        <Link
+          href={`/creator/claim/${encodeURIComponent(creatorId)}`}
+          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
+        >
+          View status
+        </Link>
+      </div>
     );
   }
 
-  // Current user's claim was rejected
+  // Current user's claim was rejected — link to claim page to resubmit
   if (viewerClaimStatus === "rejected") {
     return (
-      <span className="inline-flex items-center rounded border border-red-900/60 px-2 py-1 text-[11px] text-red-400">
-        Claim Rejected — contact support
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center rounded border border-red-900/60 px-2 py-1 text-[11px] text-red-400">
+          Claim Not Approved
+        </span>
+        <Link
+          href={`/creator/claim/${encodeURIComponent(creatorId)}`}
+          className="text-[10px] text-amber-500 hover:text-amber-300 transition-colors"
+        >
+          Try again
+        </Link>
+      </div>
     );
   }
 
