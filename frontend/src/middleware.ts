@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
  * No app_users approval check at this stage — access gating via payment layer later.
  */
 
-const PUBLIC_PATHS = new Set(["/", "/login", "/glossary", "/privacy", "/terms"]);
+const PUBLIC_PATHS = new Set(["/", "/login", "/glossary", "/privacy", "/terms", "/data-deletion"]);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
