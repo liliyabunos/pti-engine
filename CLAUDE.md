@@ -348,6 +348,48 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 
 ---
 
+## C2 — Manual Claim Verification
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
+**Commit: b71333f**
+
+No new migration. Uses `creator_profile_claims` (migration 036).
+
+**What was implemented:**
+- `POST /api/v1/creator-claims` — bio_code | screenshot | manual_review; user_id from `X-Pti-Verified-User-Id` header only (never from body); server-side `FTI-XXXXXXXX` code generation; sha256 hash stored; plaintext returned once; evidence_url required + validated
+- `GET /api/v1/creator-claims/me` — user's own claims only; `verification_code_hash` never exposed
+- Next.js server route `/api/creator-claims` — reads Supabase session server-side; injects verified user_id header; browser cannot forge user_id
+- `/creator/claim/[id]` — full form replacing stub: bio-code + manual review tabs; pending/verified/rejected/resubmit states; success screen with copy button; compliance disclaimers
+- `frontend/src/lib/api/creator_claims.ts` — client lib calling Next.js route (not FastAPI directly)
+
+**Hard rules confirmed:**
+- No OAuth implemented
+- No TikTok/Instagram/Reddit/YouTube API access added
+- No private data requested
+- No automatic verification — all claims remain `pending` until operator SQL
+- `creator_oauth_grants` remains 0
+
+**Operator review SQL (C2 manual workflow):**
+```sql
+-- View pending claims
+SELECT * FROM creator_profile_claims WHERE claim_status='pending' ORDER BY claimed_at DESC;
+
+-- Approve
+UPDATE creator_profile_claims SET claim_status='verified', verified_at=NOW(), reviewed_at=NOW(), reviewed_by='operator' WHERE id='<uuid>';
+
+-- Reject
+UPDATE creator_profile_claims SET claim_status='rejected', reviewed_at=NOW(), reviewed_by='operator', rejection_reason='<reason>' WHERE id='<uuid>';
+```
+
+**Production verification (2026-05-09):**
+- Claim insert: OK ✓
+- Duplicate active claim blocked (partial UNIQUE index): OK ✓
+- Rejected → new pending allowed: OK ✓
+- creator_scores: 743 unchanged ✓
+- creator_entity_relationships: 2,266 unchanged ✓
+- creator_oauth_grants: 0 unchanged ✓
+
+---
+
 ## C1 Creator Registry Claim Foundation
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
 **Commits: 59985d5 (implementation) · d96e032 (CLAUDE.md)**
@@ -748,6 +790,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC1.3 Multi-field resolver — platform-weighted fields | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.4 TikTok creator filters + leaderboard | PLANNED | — |
 | C1 Creator Registry Claim Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
+| C2 Manual Claim Verification | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
