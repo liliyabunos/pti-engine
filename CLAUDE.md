@@ -350,28 +350,46 @@ Deterministic brand-tier badge on perfume entity pages. No AI, no DB, pure froze
 
 ## C2 — Manual Claim Verification
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
-**Commit: b71333f**
+**Commits: b71333f (implementation) · bcb3e41 (CLAUDE.md)**
+**Deployed: pushed to main 2026-05-09; Railway auto-deploys on push**
 
 No new migration. Uses `creator_profile_claims` (migration 036).
 
 **What was implemented:**
-- `POST /api/v1/creator-claims` — bio_code | screenshot | manual_review; user_id from `X-Pti-Verified-User-Id` header only (never from body); server-side `FTI-XXXXXXXX` code generation; sha256 hash stored; plaintext returned once; evidence_url required + validated
+- `POST /api/v1/creator-claims` — bio_code | screenshot | manual_review; user_id from `X-Pti-Verified-User-Id` header only (never from body); server-side `FTI-XXXXXXXX` code generation; SHA-256 hash stored; plaintext returned once; `evidence_url` required + validated as http/https
 - `GET /api/v1/creator-claims/me` — user's own claims only; `verification_code_hash` never exposed
-- Next.js server route `/api/creator-claims` — reads Supabase session server-side; injects verified user_id header; browser cannot forge user_id
-- `/creator/claim/[id]` — full form replacing stub: bio-code + manual review tabs; pending/verified/rejected/resubmit states; success screen with copy button; compliance disclaimers
-- `frontend/src/lib/api/creator_claims.ts` — client lib calling Next.js route (not FastAPI directly)
+- Next.js server route `frontend/src/app/api/creator-claims/route.ts` — reads Supabase session server-side via `createClient()` (httpOnly cookie); injects `X-Pti-Verified-User-Id`; browser cannot forge user_id
+- `/creator/claim/[id]` — full form: bio-code + manual review tabs; pending/verified/rejected/resubmit states; success screen with code + copy button; compliance disclaimers
+- `frontend/src/lib/api/creator_claims.ts` — calls `/api/creator-claims` (Next.js route), never FastAPI directly
+
+**Production verification results (2026-05-09):**
+- POST without header → 401 Unauthorized ✓
+- POST with user_id in body only (no header) → 401 (body user_id ignored) ✓
+- POST with invalid evidence_url → 422 ✓
+- Claim creation (POST with header) → 201, code=`FTI-XXXXXXXX`, `verification_code_hash` stored (64-char SHA-256), plaintext NOT in DB ✓
+- Duplicate active claim → 409 `active_claim_exists` ✓
+- GET /me without header → 401 ✓
+- GET /me with header → returns user's claim, no hash exposed ✓
+- Operator reject via SQL → OK; resubmit after rejection → 201 ✓
+- Operator approve via SQL → claim status `verified` ✓
+- Creator profile: no claim → `verified_status=None, viewer_claim_status=None` → "Claim this Profile" CTA ✓
+- creator_scores: 743 unchanged ✓
+- creator_entity_relationships: 2,266 unchanged ✓
+- creator_oauth_grants: 0 unchanged ✓
+- creator_profile_claims: 0 after test cleanup ✓
 
 **Hard rules confirmed:**
-- No OAuth implemented
-- No TikTok/Instagram/Reddit/YouTube API access added
-- No private data requested
-- No automatic verification — all claims remain `pending` until operator SQL
-- `creator_oauth_grants` remains 0
+- No OAuth implemented — `creator_oauth_grants` remains empty
+- No TikTok / Instagram / Reddit / YouTube API access added
+- No private data requested or accessed
+- No automatic verification — all claims remain `pending` until operator SQL review
+- No changes to ingestion, aggregation, resolver, or pipeline
 
 **Operator review SQL (C2 manual workflow):**
 ```sql
 -- View pending claims
-SELECT * FROM creator_profile_claims WHERE claim_status='pending' ORDER BY claimed_at DESC;
+SELECT id, user_id, platform, creator_id, claim_status, claim_method, evidence_url, claimed_at
+FROM creator_profile_claims WHERE claim_status='pending' ORDER BY claimed_at DESC;
 
 -- Approve
 UPDATE creator_profile_claims SET claim_status='verified', verified_at=NOW(), reviewed_at=NOW(), reviewed_by='operator' WHERE id='<uuid>';
@@ -380,13 +398,7 @@ UPDATE creator_profile_claims SET claim_status='verified', verified_at=NOW(), re
 UPDATE creator_profile_claims SET claim_status='rejected', reviewed_at=NOW(), reviewed_by='operator', rejection_reason='<reason>' WHERE id='<uuid>';
 ```
 
-**Production verification (2026-05-09):**
-- Claim insert: OK ✓
-- Duplicate active claim blocked (partial UNIQUE index): OK ✓
-- Rejected → new pending allowed: OK ✓
-- creator_scores: 743 unchanged ✓
-- creator_entity_relationships: 2,266 unchanged ✓
-- creator_oauth_grants: 0 unchanged ✓
+**Next phase: V1 — Consent-Based Creator Linking** (YouTube OAuth first; only after P1 platform approval readiness)
 
 ---
 
