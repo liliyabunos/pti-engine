@@ -132,6 +132,63 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 
 ---
 
+## C2.3 — Creator Claim Launch Readiness
+**STATUS: COMPLETE — PENDING VERIFICATION (2026-05-10)**
+**Commit: 88becb6**
+**Deployed: pushed to main 2026-05-10; Railway auto-deploys**
+
+No new migration. No OAuth. No platform API. No pipeline changes. No identity merge.
+
+**What was implemented:**
+- A: `SuccessPanel`: "View my claims →" (→ /account) + "Back to profile" replace single "Done" button; pending-review reminder shown above actions
+- B: Display name priority: `p.title ?? p.creator_handle ?? creatorId` — channel title preferred over handle
+- C: "Spot incorrect data? support@fragranceindex.ai" footer note at bottom of claim page
+- D: `HowToClaim`: "Not accepted" block added — passwords, DMs, private screenshots, login-required pages, same-display-name-only claims
+- E: `docs/ops/CLAIM_REVIEW_SOP.md`: same-name identity rule added to Edge Cases — same display name across platforms is not evidence of same person
+- F: Live test plan documented below
+
+**C2.3 Live Test Plan (F):**
+
+Primary review path: `/admin/creator-claims` UI. SQL is emergency fallback only.
+
+*Profile A — bio_code test:*
+1. Log in as test user → `/creators` → search a known creator → open profile → "Claim this Profile"
+2. Select Bio-Code tab → submit channel URL → note verification code on SuccessPanel
+3. Verify: code displayed + "View my claims →" link visible + "Back to profile" link visible
+4. Click "View my claims →" → /account opens → claim shows as pending
+5. Operator approves via `/admin/creator-claims`
+6. Revisit `/creators/[id]` → Verified Creator badge appears
+7. Cleanup: operator revokes via `/admin/creator-claims` (or SQL: `UPDATE creator_profile_claims SET claim_status='revoked' WHERE id='<uuid>'`)
+8. Verify badge disappears after revoke — no real creator left falsely verified
+
+*Profile B — manual_review rejection test:*
+1. Log in as test user → find a second creator → "Claim this Profile"
+2. Select Manual Review tab → submit a valid public URL → submit
+3. Verify SuccessPanel → /account shows pending
+4. Operator rejects with reason via `/admin/creator-claims`
+5. Revisit `/creator/claim/[id]` → `RejectedPanel` shows reason + Try Again
+6. /account shows "Not approved" with rejection reason
+7. No cleanup needed — rejected claims are audit-only and not publicly visible
+
+*Post-test verification:*
+- `creator_oauth_grants: 0` unchanged
+- Pipeline tables unchanged
+- No real creator remains falsely verified after cleanup
+
+**Production verification checklist:**
+- [ ] SuccessPanel shows verification code + "View my claims →" link + "Back to profile"
+- [ ] "View my claims" opens /account with pending claim visible
+- [ ] "Back to profile" navigates back correctly
+- [ ] Claim page title shows human-readable channel name (not UC... ID)
+- [ ] "Not accepted" guidance visible in HowToClaim section
+- [ ] "Wrong data?" support note visible at page bottom
+- [ ] SOP includes same-name identity rule (docs/ops/CLAIM_REVIEW_SOP.md)
+- [ ] /admin/creator-claims remains the primary operator review path
+- [ ] creator_oauth_grants: 0 unchanged
+- [ ] No pipeline tables modified
+
+---
+
 ## C2.2A — Creator Directory Search
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-10)**
 **Commit: 78c5eda**
@@ -926,6 +983,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C2.1 Operator Review Console (admin claims UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.2 User Account & My Claims (/account) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | C2.2A Creator Directory Search (platform-aware) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
+| C2.3 Creator Claim Launch Readiness (copy + UX polish) | COMPLETE — PENDING VERIFICATION | 2026-05-10 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
