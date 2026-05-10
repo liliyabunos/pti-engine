@@ -346,13 +346,11 @@ function RecentContent({ rows }: { rows: RecentContentRow[] }) {
 function ClaimSection({
   creatorId,
   verifiedStatus,
-  viewerClaimStatus,
 }: {
   creatorId: string;
   verifiedStatus: string | null;
-  viewerClaimStatus: string | null;
 }) {
-  // Already verified by someone — show badge only, no CTA
+  // Verified — show badge, suppress CTA
   if (verifiedStatus === "verified") {
     return (
       <div className="flex items-center gap-1.5 text-[11px] text-emerald-400">
@@ -362,41 +360,9 @@ function ClaimSection({
     );
   }
 
-  // Current user has a pending claim
-  if (viewerClaimStatus === "pending") {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="inline-flex items-center rounded border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400">
-          Verification Pending
-        </span>
-        <Link
-          href={`/creator/claim/${encodeURIComponent(creatorId)}`}
-          className="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors"
-        >
-          View status
-        </Link>
-      </div>
-    );
-  }
-
-  // Current user's claim was rejected — link to claim page to resubmit
-  if (viewerClaimStatus === "rejected") {
-    return (
-      <div className="flex items-center gap-2">
-        <span className="inline-flex items-center rounded border border-red-900/60 px-2 py-1 text-[11px] text-red-400">
-          Claim Not Approved
-        </span>
-        <Link
-          href={`/creator/claim/${encodeURIComponent(creatorId)}`}
-          className="text-[10px] text-amber-500 hover:text-amber-300 transition-colors"
-        >
-          Try again
-        </Link>
-      </div>
-    );
-  }
-
-  // No claim yet — show CTA
+  // All other states — show claim CTA
+  // Pending/rejected are viewer-specific operational states shown only on
+  // /creator/claim/[id] and future /account page, not on the public profile.
   return (
     <Link
       href={`/creator/claim/${encodeURIComponent(creatorId)}`}
@@ -564,7 +530,6 @@ export default function CreatorProfilePage({ params }: PageProps) {
                     <ClaimSection
                       creatorId={decoded}
                       verifiedStatus={data.verified_status}
-                      viewerClaimStatus={data.viewer_claim_status}
                     />
                   </div>
                 </div>
