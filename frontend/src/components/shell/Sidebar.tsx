@@ -10,6 +10,7 @@ import {
   BookMarked,
   BellRing,
   PlusCircle,
+  UserCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,6 +35,7 @@ const SECONDARY_NAV: NavItem[] = [
   { href: "/watchlists", label: "Watchlists", icon: BookMarked, placeholder: true },
   { href: "/alerts", label: "Alerts", icon: BellRing, placeholder: true },
   { href: "/submit-source", label: "Suggest Source", icon: PlusCircle },
+  { href: "/account", label: "Account", icon: UserCircle },
 ];
 
 // ---------------------------------------------------------------------------
