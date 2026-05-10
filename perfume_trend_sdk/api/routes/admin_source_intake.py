@@ -923,8 +923,6 @@ def apply_batch(
                 "added_by": f"source_intake:{batch_label}",
                 "notes": notes,
             })
-            db.flush()
-
             rows_affected = result.rowcount
             if rows_affected == 1:
                 inserted += 1

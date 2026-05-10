@@ -44,14 +44,19 @@ Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 ro
 - Alembic version: 038 ✓
 - All 6 Railway services deployed at commit aa5b8a5 (SUCCESS) ✓
 
-**To populate first batch from YT-CREATOR-EXPANSION-01 candidates:**
-```bash
-DATABASE_URL=<prod-url> python3 scripts/youtube/verify_candidate_channels.py \
-  --input reports/youtube_candidate_intake_2026-05-10.csv \
-  --api-key $YOUTUBE_API_KEY \
-  --persist
-```
-This will create a batch with the 5 NEEDS_OPERATOR_REVIEW candidates visible in the admin UI.
+**First batch apply verified (2026-05-10) — batch YT-CREATOR-EXPANSION-01-REVIEW:**
+- batch_id: `36544e81-f509-449c-acf7-d6c4aa4c5cf2` — 5 candidates, platform=youtube
+- Fragmental: SKIP_DUPLICATE (UCm10tytOAzlO42r9_4Oc8Eg already in youtube_channels) ✓
+- The Honest Perfume Reviewer: VERIFIED_ADD_READY → OPERATOR_APPROVED → APPLIED ✓
+- G Fragrance: VERIFIED_ADD_READY → OPERATOR_APPROVED → APPLIED ✓
+- Smelling Great Fragrance Reviews: SKIP_DUPLICATE (operator: same family as The Perfume Guy) ✓
+- Fragrance Connoisseurs: SKIP_INACTIVE (operator: no activity since February) ✓
+- youtube_channels: 197 → 199 ✓ (added_by=`source_intake:YT-CREATOR-EXPANSION-01-REVIEW`)
+- Audit log: 9 entries (5 initial_classification + 2 approve + 2 apply) ✓
+- ON CONFLICT DO NOTHING enforced — skipped rows count correctly on idempotent re-run ✓
+- Note: apply response `applied` counter shows 0 due to `rowcount` read order bug (cosmetic — operations complete correctly); fixed in admin_source_intake.py
+
+**Ingestion note:** The 2 new channels (UC-MsytPEXSO-2ZHmB5Y4xSw, UCWRTAJqkmpF_yS7MJOIOYNg) will be picked up by the next `ingest_youtube_channels.py` pipeline run automatically. Do not trigger ingestion manually from the admin UI.
 
 ---
 
