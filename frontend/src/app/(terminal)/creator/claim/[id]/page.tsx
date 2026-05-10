@@ -14,6 +14,7 @@
  */
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BadgeCheck, Copy, ExternalLink } from "lucide-react";
 
@@ -64,9 +65,21 @@ function HowToClaim({ platform }: { platform: string }) {
           announcement. Our team reviews and responds within a few business days.
         </p>
       </div>
-      <div className="border-t border-zinc-800/60 pt-2 space-y-1 text-[10px] text-zinc-600">
-        <p>No password, OAuth, or platform login is required or requested.</p>
-        <p>FragranceIndex.ai is not affiliated with YouTube, TikTok, Instagram, or Reddit.</p>
+      <div className="border-t border-zinc-800/60 pt-2 space-y-2">
+        <p className="text-[10px] font-semibold text-zinc-600 uppercase tracking-wide">
+          Not accepted
+        </p>
+        <ul className="space-y-0.5 text-[10px] text-zinc-700">
+          <li>Passwords or login credentials of any kind</li>
+          <li>Private messages, DMs, or screenshots of private data</li>
+          <li>Pages that require a login or account to view</li>
+          <li>Unverifiable name-only claims ("I am The Perfume Guy")</li>
+          <li>Accounts on a different platform with the same display name</li>
+        </ul>
+        <p className="text-[10px] text-zinc-600 pt-0.5">
+          No password, OAuth, or platform login is required or requested.
+          FragranceIndex.ai is not affiliated with YouTube, TikTok, Instagram, or Reddit.
+        </p>
       </div>
     </div>
   );
@@ -313,12 +326,24 @@ function SuccessPanel({
           </p>
         )}
 
-        <button
-          onClick={onDone}
-          className="inline-flex items-center gap-1.5 rounded border border-zinc-700/60 bg-zinc-800/40 px-3 py-1.5 text-[12px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200 transition-colors"
-        >
-          Done
-        </button>
+        <p className="text-[11px] text-zinc-500">
+          Your claim is now pending review. You can track its status in My Claims.
+        </p>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/account"
+            className="inline-flex items-center rounded border border-amber-800/60 bg-amber-950/30 px-3 py-1.5 text-[12px] font-medium text-amber-300 hover:bg-amber-950/50 transition-colors"
+          >
+            View my claims →
+          </Link>
+          <button
+            onClick={onDone}
+            className="text-[11px] text-zinc-600 hover:text-zinc-400 transition-colors"
+          >
+            Back to profile
+          </button>
+        </div>
       </div>
     </TerminalPanel>
   );
@@ -543,7 +568,7 @@ export default function CreatorClaimPage({ params }: PageProps) {
     fetchCreatorProfile(creatorId)
       .then((p) => {
         setProfile({
-          displayName: p.creator_handle ?? p.title ?? creatorId,
+          displayName: p.title ?? p.creator_handle ?? creatorId,
           platform: p.platform ?? "youtube",
           externalUrl: p.external_url,
         });
@@ -657,6 +682,17 @@ export default function CreatorClaimPage({ params }: PageProps) {
               }}
             />
           ) : null}
+
+          {/* Wrong data footer */}
+          <p className="text-[10px] text-zinc-700 px-1 pb-2">
+            Spot incorrect data on this profile?{" "}
+            <a
+              href="mailto:support@fragranceindex.ai"
+              className="hover:text-zinc-500 transition-colors"
+            >
+              support@fragranceindex.ai
+            </a>
+          </p>
         </div>
       </div>
     </div>

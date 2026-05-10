@@ -175,6 +175,9 @@ Update claim_status to `revoked` via SQL. The badge will disappear from their pr
 **Creator changes their bio URL after verification:**
 No action needed — the claim is already approved. The bio_code can be removed.
 
+**Same display name across platforms:**
+A creator named "The Perfume Guy" on YouTube and "The Perfume Guy" on TikTok are not the same person by default. Do not approve a claim for a YouTube channel because the claimant can demonstrate control of a TikTok account with the same name. Identity linking requires direct evidence specific to the claimed platform account. Same display name is not evidence of same identity.
+
 ---
 
 ## What this system does NOT do
