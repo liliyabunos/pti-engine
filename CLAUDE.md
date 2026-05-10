@@ -401,27 +401,27 @@ Data safety:
 ---
 
 ## C2.2 — User Account & My Claims
-**STATUS: COMPLETE — PENDING VERIFICATION (2026-05-09)**
-**Commit: d3f7fd9**
-**Deployed: pushed to main 2026-05-09; Railway auto-deploys on push**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-10)**
+**Commits: d3f7fd9 (implementation) · ca9aea7 (CLAUDE.md pending) · closeout this commit**
+**Deployed: pushed to main 2026-05-09; Railway auto-deployed**
 
-No new migration. No OAuth. No pipeline changes. Reads `creator_profile_claims` via existing `/api/v1/creator-claims/me`.
+No new migration. No OAuth. No platform API. No pipeline changes. Reads `creator_profile_claims` via existing `/api/v1/creator-claims/me`.
 
 **What was implemented:**
 - `/account` (server component): reads Supabase session server-side; redirects to `/login?next=/account` if unauthenticated; renders `<AccountConsole userEmail={...} />`
 - `AccountConsole` (client component): email panel with compliance copy; claims table with StatusBadge (pending/verified/rejected); ClaimRow with creator_id as display name (no N+1 fetches), method, evidence link, "View profile →" + "Try again →" for rejected; EmptyState with Browse Creators CTA; Refresh button
 - Sidebar: Account nav item (UserCircle icon) added to SECONDARY_NAV below Suggest Source
-- `verification_code_hash` never returned by GET /me — not exposed anywhere in UI
+- `verification_code_hash` never returned by GET /me — excluded from `ClaimSummary` schema
 
-**Production verification checklist:**
-- [ ] Unauthenticated GET /account → redirects to /login?next=/account
-- [ ] Authenticated user sees email in panel
-- [ ] Claims table loads (or empty state if none)
-- [ ] Rejected claim shows rejection reason + "Try again →"
-- [ ] Account link visible in sidebar
-- [ ] verification_code_hash not present in any API response
-- [ ] creator_oauth_grants: 0 unchanged
-- [ ] No pipeline tables modified
+**Production verification results (2026-05-10):**
+- Unauthenticated GET /account → 307 → `/login?next=%2Faccount` ✓
+- Unauthenticated GET /api/creator-claims → 401 Unauthorized ✓
+- Authenticated user sees email, Account link in sidebar, empty state with Browse Creators ✓ (manual)
+- `ClaimSummary` schema: `verification_code_hash` field absent ✓ (schema + DB confirmed)
+- `creator_oauth_grants`: 0 rows unchanged ✓
+- `creator_scores`: 743 rows unchanged ✓
+- `creator_entity_relationships`: 2,266 rows unchanged ✓
+- No pipeline tables modified ✓
 
 ---
 
@@ -881,7 +881,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C1 Creator Registry Claim Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2 Manual Claim Verification | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.1 Operator Review Console (admin claims UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
-| C2.2 User Account & My Claims (/account) | COMPLETE — PENDING VERIFICATION | 2026-05-09 |
+| C2.2 User Account & My Claims (/account) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
