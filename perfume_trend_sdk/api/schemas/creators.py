@@ -17,6 +17,7 @@ class CreatorRow(BaseModel):
     platform: str
     creator_id: str
     creator_handle: Optional[str] = None
+    display_name: Optional[str] = None  # channel title from youtube_channels (or platform equivalent)
     quality_tier: Optional[str] = None
     category: Optional[str] = None
     subscriber_count: Optional[int] = None

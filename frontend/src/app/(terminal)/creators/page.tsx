@@ -1,9 +1,9 @@
 "use client";
 
-import React, { Suspense, useCallback, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { clsx } from "clsx";
 
 import { fetchCreators, type FetchCreatorsParams, type CreatorRow } from "@/lib/api/creators";
@@ -102,6 +102,23 @@ function ScoreBar({ value }: { value: number | null }) {
 // Table
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Platform badge
+// ---------------------------------------------------------------------------
+
+function PlatformBadge({ platform }: { platform: string }) {
+  const label = platform === "youtube" ? "YT" : platform.slice(0, 2).toUpperCase();
+  return (
+    <span className="inline-flex shrink-0 items-center rounded border border-zinc-800 px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-zinc-700">
+      {label}
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Table
+// ---------------------------------------------------------------------------
+
 const COLS: {
   key: string;
   label: string;
@@ -109,7 +126,7 @@ const COLS: {
   align?: "right";
   className?: string;
 }[] = [
-  { key: "creator_handle", label: "Creator", sortable: false, className: "min-w-[160px]" },
+  { key: "creator_handle", label: "Creator", sortable: false, className: "min-w-[180px]" },
   { key: "influence_score", label: "Influence", sortable: true, align: "right" },
   { key: "subscriber_count", label: "Subscribers", sortable: false, align: "right" },
   { key: "avg_views", label: "Avg Views", sortable: true, align: "right" },
@@ -129,6 +146,7 @@ function CreatorTable({
   order,
   onSort,
   onRowClick,
+  isSearching,
 }: {
   rows: CreatorRow[];
   isLoading: boolean;
@@ -136,10 +154,16 @@ function CreatorTable({
   order: "asc" | "desc";
   onSort: (key: string) => void;
   onRowClick: (creatorId: string) => void;
+  isSearching: boolean;
 }) {
   if (isLoading) return <TableSkeleton rows={15} cols={COLS.length} />;
   if (!rows.length) {
-    return <EmptyState message="No creators found" detail="Adjust filters or try a different sort" />;
+    return (
+      <EmptyState
+        message="No creators found"
+        detail={isSearching ? "No creators match your search. Try a different name or channel ID." : "Adjust filters or try a different sort"}
+      />
+    );
   }
 
   return (
@@ -175,11 +199,14 @@ function CreatorTable({
               onClick={() => onRowClick(row.creator_id)}
               className="cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/50"
             >
-              {/* Creator */}
-              <td className="px-4 py-2 text-zinc-200">
-                <span className="font-medium">
-                  {row.creator_handle ?? row.creator_id}
-                </span>
+              {/* Creator — platform badge always visible */}
+              <td className="px-4 py-2">
+                <div className="flex items-center gap-1.5">
+                  <PlatformBadge platform={row.platform} />
+                  <span className="font-medium text-zinc-200">
+                    {row.display_name ?? row.creator_handle ?? row.creator_id}
+                  </span>
+                </div>
               </td>
 
               {/* Influence Score */}
@@ -254,13 +281,14 @@ function CreatorTable({
 // ---------------------------------------------------------------------------
 
 function paramsToSearch(p: FetchCreatorsParams): string {
-  const q = new URLSearchParams();
-  if (p.sort_by && p.sort_by !== "influence_score") q.set("sort_by", p.sort_by);
-  if (p.order && p.order !== "desc") q.set("order", p.order);
-  if (p.quality_tier) q.set("tier", p.quality_tier);
-  if (p.category) q.set("category", p.category);
-  if (p.offset && p.offset > 0) q.set("offset", String(p.offset));
-  return q.toString();
+  const qs = new URLSearchParams();
+  if (p.sort_by && p.sort_by !== "influence_score") qs.set("sort_by", p.sort_by);
+  if (p.order && p.order !== "desc") qs.set("order", p.order);
+  if (p.quality_tier) qs.set("tier", p.quality_tier);
+  if (p.category) qs.set("category", p.category);
+  if (p.q && p.q.trim()) qs.set("q", p.q.trim());
+  if (p.offset && p.offset > 0) qs.set("offset", String(p.offset));
+  return qs.toString();
 }
 
 function searchToParams(sp: URLSearchParams): FetchCreatorsParams {
@@ -269,6 +297,7 @@ function searchToParams(sp: URLSearchParams): FetchCreatorsParams {
     order: (sp.get("order") as "asc" | "desc") ?? "desc",
     quality_tier: sp.get("tier") ?? undefined,
     category: sp.get("category") ?? undefined,
+    q: sp.get("q") ?? undefined,
     offset: Number(sp.get("offset") ?? 0),
     limit: PAGE_SIZE,
   };
@@ -287,6 +316,10 @@ function CreatorsPageInner() {
     searchToParams(searchParams),
   );
 
+  // Controlled search input — debounced 350 ms before updating params
+  const [searchInput, setSearchInput] = useState(params.q ?? "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const pushParams = useCallback(
     (next: FetchCreatorsParams) => {
       const qs = paramsToSearch(next);
@@ -303,6 +336,25 @@ function CreatorsPageInner() {
     },
     [params, pushParams],
   );
+
+  // Debounce search input → params
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchInput(value);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        updateParams({ q: value || undefined });
+      }, 350);
+    },
+    [updateParams],
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const handleSort = useCallback(
     (key: string) => {
@@ -361,6 +413,20 @@ function CreatorsPageInner() {
       <ControlBar
         left={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {/* Search */}
+            <div className="relative flex items-center">
+              <Search size={11} className="pointer-events-none absolute left-2 text-zinc-600" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search creators…"
+                className="h-6 rounded border border-zinc-800 bg-zinc-900/60 pl-6 pr-2 text-[11px] text-zinc-300 placeholder-zinc-700 focus:border-zinc-600 focus:outline-none w-48"
+              />
+            </div>
+
+            <ControlBarDivider />
+
             {/* Sort */}
             <div className="flex items-center gap-1">
               <span className="text-[10px] uppercase tracking-wider text-zinc-600">
@@ -474,6 +540,7 @@ function CreatorsPageInner() {
                 order={params.order ?? "desc"}
                 onSort={handleSort}
                 onRowClick={(id) => router.push(`/creators/${encodeURIComponent(id)}`)}
+                isSearching={!!(params.q && params.q.trim())}
               />
             </div>
 

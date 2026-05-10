@@ -55,6 +55,7 @@ def list_creators(
     quality_tier: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     platform: str = Query("youtube"),
+    q: Optional[str] = Query(None, description="Search by creator name, creator_id, or handle"),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db_session),
@@ -73,13 +74,23 @@ def list_creators(
     if category:
         where_clauses.append("cs.category = :category")
         params["category"] = category
+    if q and q.strip():
+        where_clauses.append(
+            "(LOWER(yc.title) LIKE :q_like"
+            " OR LOWER(cs.creator_id) LIKE :q_like"
+            " OR LOWER(cs.creator_handle) LIKE :q_like)"
+        )
+        params["q_like"] = "%" + q.strip().lower() + "%"
 
     where_sql = " AND ".join(where_clauses)
 
-    # Total count (for pagination)
+    # LEFT JOIN youtube_channels for display name + search (YouTube-specific; NULLs for other platforms)
+    join_sql = "LEFT JOIN youtube_channels yc ON cs.platform = 'youtube' AND cs.creator_id = yc.channel_id"
+
+    # Total count (for pagination) — includes search filter
     try:
         count_row = db.execute(
-            text(f"SELECT COUNT(*) FROM creator_scores cs WHERE {where_sql}"),
+            text(f"SELECT COUNT(*) FROM creator_scores cs {join_sql} WHERE {where_sql}"),
             params,
         ).fetchone()
         total = int(count_row[0]) if count_row else 0
@@ -111,8 +122,10 @@ def list_creators(
             cs.early_signal_rate,
             cs.influence_score,
             cs.score_components,
-            cs.computed_at
+            cs.computed_at,
+            yc.title AS display_name
         FROM creator_scores cs
+        {join_sql}
         WHERE {where_sql}
         ORDER BY cs.{sort_by} {order_sql} NULLS LAST
         LIMIT :limit OFFSET :offset
@@ -148,6 +161,7 @@ def list_creators(
             influence_score=float(r[20]) if r[20] is not None else None,
             score_components=sc,
             computed_at=_fmt_date(r[22]),
+            display_name=r[23] if r[23] else None,
         ))
 
     return CreatorLeaderboardResponse(total=total, limit=limit, offset=offset, creators=creators)

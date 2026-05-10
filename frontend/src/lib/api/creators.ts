@@ -8,6 +8,7 @@ export interface CreatorRow {
   platform: string;
   creator_id: string;
   creator_handle: string | null;
+  display_name: string | null; // channel title (YouTube) or platform display name
   quality_tier: string | null;
   category: string | null;
   subscriber_count: number | null;
@@ -160,6 +161,7 @@ export interface FetchCreatorsParams {
   quality_tier?: string;
   category?: string;
   platform?: string;
+  q?: string;
   limit?: number;
   offset?: number;
 }
@@ -177,6 +179,7 @@ export async function fetchCreators(
     quality_tier: params.quality_tier,
     category: params.category,
     platform: params.platform ?? "youtube",
+    ...(params.q && params.q.trim() ? { q: params.q.trim() } : {}),
     limit: params.limit ?? 50,
     offset: params.offset ?? 0,
   });
