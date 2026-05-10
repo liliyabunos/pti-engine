@@ -132,6 +132,43 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 
 ---
 
+## C2.2A — Creator Directory Search
+**STATUS: PLANNED**
+
+Platform-aware search over the creator directory.
+
+**Architecture requirement (decided 2026-05-10):**
+Creator search must be platform-aware. Do not assume same display name = same person across platforms.
+
+```
+Creator Identity  = person/brand as a single entity          (future C3)
+Creator Platform Account = one account on one platform        (current model)
+```
+
+Current state: creator directory is YouTube-based. `creator_id` is a YouTube channel ID (`UC...`). Future: TikTok, Instagram, Snapchat, Reddit accounts will be separate rows — same display name does not mean same person.
+
+**Search requirements:**
+- Results must show platform next to creator name (e.g., "The Perfume Guy · YouTube")
+- Match by: display name, platform, creator_id / channel_id, handle if available
+- UI row: creator name · platform badge · handle or creator_id fallback · Verified/Claim state
+
+**Linking rule (hard constraint):**
+Same-name accounts across platforms must NEVER be merged automatically. They can only be linked into one master creator identity through:
+- Verified creator claim (bio-code / manual review)
+- OAuth linking
+- Explicit admin review
+- Reliable cross-platform public evidence
+
+**Out of scope for C2.2A:**
+- Multi-platform identity merge (C3)
+- TikTok / Instagram / Snapchat ingestion
+- OAuth implementation
+- Modifications to `creator_platform_accounts` beyond what search requires
+
+**Future phase:** C3 — Multi-Platform Creator Identity Model (master `creator_profiles` → `creator_platform_accounts` → `creator_claims` → `creator_oauth_grants`)
+
+---
+
 ## Active Roadmap
 - **SC1.2A+B TikTok Watchlist Registry — COMPLETE (2026-05-08)** — commit pending — migration 035: `creator_platform_accounts` (platform-neutral, unique on `(platform, platform_handle)`) + `creator_watchlist_audit_log`. Service: `perfume_trend_sdk/services/tiktok_watchlist.py` (add_account, list_accounts, get_account, change_status, bulk_import). Handles: bare/`@handle`/profile URL normalized; video URLs rejected. Statuses: pending_review|active|paused|rejected|error. API: `GET/POST /api/v1/tiktok-watchlist`, `GET/PATCH /{handle}`, `GET /{handle}/audit`. Seed script: `python3 -m perfume_trend_sdk.scripts.seed_tiktok_creators --file CSV [--dry-run] [--activate]`. Production: 6 creators seeded, 9 audit entries, duplicate protection verified, YouTube creator_scores (711 rows) untouched. 44/44 tests pass.
 - **SC1.2C TikTok Seeded Creator Monitoring Worker — COMPLETE (2026-05-08)** — `perfume_trend_sdk/jobs/monitor_tiktok_seeded_creators.py` + `perfume_trend_sdk/ingest/tiktok_page_parser.py`. Kill switch: `TIKTOK_PUBLIC_MONITORING_ENABLED=false` (default). Reads active TikTok creators, fetches profile pages via plain HTTPS (no auth/cookies/automation), extracts follower_count/video_count from `webapp.user-detail.userInfo`. Updates `creator_platform_accounts.follower_count + last_checked_at`. Writes `creator_watchlist_audit_log`. Does NOT create entity_mentions or canonical_content_items. **TikTok SSR limitation (verified 2026-05-08):** `itemList` is ALWAYS empty in server-rendered HTML — video discovery is not possible via simple HTTP. Worker logs `TIKTOK_MONITOR_CREATOR_WARNING video_list_unavailable=true` on every run until a future approved method (TikTok Research API or reviewed browser-based approach) is implemented. Verified on `@rawscents`: followers=2 updated in DB, audit log written, 0 entity_mentions created. 24/24 tests pass.
@@ -882,6 +919,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C2 Manual Claim Verification | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.1 Operator Review Console (admin claims UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.2 User Account & My Claims (/account) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
+| C2.2A Creator Directory Search (platform-aware) | PLANNED | — |
+| C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
