@@ -400,6 +400,31 @@ Data safety:
 
 ---
 
+## C2.2 — User Account & My Claims
+**STATUS: COMPLETE — PENDING VERIFICATION (2026-05-09)**
+**Commit: d3f7fd9**
+**Deployed: pushed to main 2026-05-09; Railway auto-deploys on push**
+
+No new migration. No OAuth. No pipeline changes. Reads `creator_profile_claims` via existing `/api/v1/creator-claims/me`.
+
+**What was implemented:**
+- `/account` (server component): reads Supabase session server-side; redirects to `/login?next=/account` if unauthenticated; renders `<AccountConsole userEmail={...} />`
+- `AccountConsole` (client component): email panel with compliance copy; claims table with StatusBadge (pending/verified/rejected); ClaimRow with creator_id as display name (no N+1 fetches), method, evidence link, "View profile →" + "Try again →" for rejected; EmptyState with Browse Creators CTA; Refresh button
+- Sidebar: Account nav item (UserCircle icon) added to SECONDARY_NAV below Suggest Source
+- `verification_code_hash` never returned by GET /me — not exposed anywhere in UI
+
+**Production verification checklist:**
+- [ ] Unauthenticated GET /account → redirects to /login?next=/account
+- [ ] Authenticated user sees email in panel
+- [ ] Claims table loads (or empty state if none)
+- [ ] Rejected claim shows rejection reason + "Try again →"
+- [ ] Account link visible in sidebar
+- [ ] verification_code_hash not present in any API response
+- [ ] creator_oauth_grants: 0 unchanged
+- [ ] No pipeline tables modified
+
+---
+
 ## C2 — Manual Claim Verification
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-09)**
 **Commits: b71333f (implementation) · bcb3e41 (CLAUDE.md)**
@@ -856,6 +881,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C1 Creator Registry Claim Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2 Manual Claim Verification | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.1 Operator Review Console (admin claims UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
+| C2.2 User Account & My Claims (/account) | COMPLETE — PENDING VERIFICATION | 2026-05-09 |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
