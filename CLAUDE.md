@@ -10,7 +10,7 @@
 ---
 
 ## SOURCE-INTAKE-V1A — YouTube Source Intake DB + Admin Operator Review
-**STATUS: COMPLETE — PENDING VERIFICATION**
+**STATUS: COMPLETE — PRODUCTION VERIFIED**
 **Commit: 842fb2b**
 **Deployed: pushed to main 2026-05-10; Railway auto-deploys**
 
@@ -33,16 +33,16 @@ Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 ro
 
 **Admin URL:** `/admin/source-intake`
 
-**Production verification checklist:**
-- [ ] Unauthenticated `/admin/source-intake` → 307 redirect to /login
-- [ ] Non-admin → 403 Access Denied
-- [ ] Admin → batch list renders (empty state shown)
-- [ ] `GET /api/v1/admin/source-intake/batches` without X-Pti-Admin-User → 401
-- [ ] `POST /api/v1/admin/source-intake/batches` without X-Pti-Admin-User → 401
-- [ ] source_intake_batches: 0 rows ✓ (migration applied)
-- [ ] source_intake_candidates: 0 rows ✓
-- [ ] source_intake_audit_log: 0 rows ✓
-- [ ] Alembic version: 038
+**Production verification (2026-05-10):**
+- Unauthenticated `/admin/source-intake` → 307 redirect to `/login?next=%2Fadmin%2Fsource-intake` ✓
+- `GET /api/v1/admin/source-intake/batches` without X-Pti-Admin-User → 401 ✓
+- `POST /api/v1/admin/source-intake/batches` without X-Pti-Admin-User → 401 ✓
+- `GET /api/v1/admin/source-intake/batches` with X-Pti-Admin-User → 200, total=0 ✓
+- source_intake_batches: 0 rows ✓
+- source_intake_candidates: 0 rows ✓
+- source_intake_audit_log: 0 rows ✓
+- Alembic version: 038 ✓
+- All 6 Railway services deployed at commit aa5b8a5 (SUCCESS) ✓
 
 **To populate first batch from YT-CREATOR-EXPANSION-01 candidates:**
 ```bash
@@ -1032,7 +1032,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C2.2A Creator Directory Search (platform-aware) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | C2.3 Creator Claim Launch Readiness (copy + UX polish) | COMPLETE — PENDING VERIFICATION | 2026-05-10 |
 | YT-CREATOR-EXPANSION-01 — 8 new YouTube creator channels | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
-| SOURCE-INTAKE-V1A — YouTube source intake DB + admin review UI | COMPLETE — PENDING VERIFICATION | 2026-05-10 |
+| SOURCE-INTAKE-V1A — YouTube source intake DB + admin review UI | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
