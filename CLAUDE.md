@@ -9,6 +9,52 @@
 
 ---
 
+## SOURCE-INTAKE-V1A — YouTube Source Intake DB + Admin Operator Review
+**STATUS: COMPLETE — PENDING VERIFICATION**
+**Commit: 842fb2b**
+**Deployed: pushed to main 2026-05-10; Railway auto-deploys**
+
+Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 rows initially.
+
+**What was implemented:**
+- Migration 038: `source_intake_batches` + `source_intake_candidates` + `source_intake_audit_log`
+- 12-status lifecycle: PENDING_VERIFICATION → VERIFIED_ADD_READY / SKIP_DUPLICATE / SKIP_INACTIVE / NEEDS_OPERATOR_REVIEW → OPERATOR_APPROVED / OPERATOR_REJECTED / DEFERRED → APPLIED / APPLY_FAILED → PRODUCTION_VERIFIED
+- Apply-eligible: VERIFIED_ADD_READY + OPERATOR_APPROVED only; NEEDS_OPERATOR_REVIEW blocked
+- `scripts/youtube/verify_candidate_channels.py --persist`: writes batch + candidates to DB after verification
+- FastAPI: 10 admin endpoints at `/api/v1/admin/source-intake/*` — all require `X-Pti-Admin-User` header (401 without)
+- Next.js proxy: `/api/admin/source-intake/[...path]/route.ts` — session verified server-side, X-Pti-Admin-User injected
+- Admin UI: `/admin/source-intake` (batch list) + `/admin/source-intake/[batchId]` (candidate review)
+- `BatchReviewConsole`: status filter tabs, approve/reject/defer/rerun actions, apply batch, production verify
+- `OverrideEditor`: paste corrected YouTube URL/handle → rerun verification inline
+- `RejectModal`: required rejection reason field
+- Sidebar: "Source Intake" nav item (Inbox icon) in SECONDARY_NAV
+- Safety rules: ON CONFLICT (channel_id) DO NOTHING on apply, audit log append-only, terminal statuses lock rows, search URLs rejected
+- Tests: 33/33 pass (`tests/unit/test_admin_source_intake.py`)
+
+**Admin URL:** `/admin/source-intake`
+
+**Production verification checklist:**
+- [ ] Unauthenticated `/admin/source-intake` → 307 redirect to /login
+- [ ] Non-admin → 403 Access Denied
+- [ ] Admin → batch list renders (empty state shown)
+- [ ] `GET /api/v1/admin/source-intake/batches` without X-Pti-Admin-User → 401
+- [ ] `POST /api/v1/admin/source-intake/batches` without X-Pti-Admin-User → 401
+- [ ] source_intake_batches: 0 rows ✓ (migration applied)
+- [ ] source_intake_candidates: 0 rows ✓
+- [ ] source_intake_audit_log: 0 rows ✓
+- [ ] Alembic version: 038
+
+**To populate first batch from YT-CREATOR-EXPANSION-01 candidates:**
+```bash
+DATABASE_URL=<prod-url> python3 scripts/youtube/verify_candidate_channels.py \
+  --input reports/youtube_candidate_intake_2026-05-10.csv \
+  --api-key $YOUTUBE_API_KEY \
+  --persist
+```
+This will create a batch with the 5 NEEDS_OPERATOR_REVIEW candidates visible in the admin UI.
+
+---
+
 ## D1.1A — Apex Domain + App Route Canonicalization Hotfix
 **STATUS: NEEDS DNS + RAILWAY + SUPABASE CONFIG (Step 1 code deployed 2026-05-06)**
 **Commit: 6299ff8**
@@ -986,6 +1032,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C2.2A Creator Directory Search (platform-aware) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | C2.3 Creator Claim Launch Readiness (copy + UX polish) | COMPLETE — PENDING VERIFICATION | 2026-05-10 |
 | YT-CREATOR-EXPANSION-01 — 8 new YouTube creator channels | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
+| SOURCE-INTAKE-V1A — YouTube source intake DB + admin review UI | COMPLETE — PENDING VERIFICATION | 2026-05-10 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
@@ -995,7 +1042,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 037** (head)
+Current production: **migration 038** (head)
 
 | Migration | What |
 |-----------|------|
@@ -1013,6 +1060,7 @@ Current production: **migration 037** (head)
 | 035 | SC1.2A — `creator_platform_accounts` table (platform-neutral watchlist registry) + `creator_watchlist_audit_log` |
 | 036 | C1 — `creator_profile_claims` table: claim_status, claim_method (bio_code/screenshot/manual_review/domain_email/oauth), verification_code_hash + expiry, partial unique index on active claims |
 | 037 | C1 — `creator_oauth_grants` scaffold: platform_user_id, encrypted token fields, partial unique index on active grants per (user_id, platform, platform_user_id), nullable creator_id |
+| 038 | SOURCE-INTAKE-V1A — `source_intake_batches` + `source_intake_candidates` + `source_intake_audit_log`; 12-status lifecycle with CHECK constraints; FK cascade from candidates→batches, audit→candidates |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
