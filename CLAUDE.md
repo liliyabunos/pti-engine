@@ -133,9 +133,11 @@ python3 -m pytest tests/unit/test_compliance_boundary.py -v
 ---
 
 ## C2.2A — Creator Directory Search
-**STATUS: PLANNED**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-10)**
+**Commit: 78c5eda**
+**Deployed: pushed to main 2026-05-10; Railway auto-deployed**
 
-Platform-aware search over the creator directory.
+No new migration. No OAuth. No platform API. No pipeline changes. No identity merge.
 
 **Architecture requirement (decided 2026-05-10):**
 Creator search must be platform-aware. Do not assume same display name = same person across platforms.
@@ -145,27 +147,31 @@ Creator Identity  = person/brand as a single entity          (future C3)
 Creator Platform Account = one account on one platform        (current model)
 ```
 
-Current state: creator directory is YouTube-based. `creator_id` is a YouTube channel ID (`UC...`). Future: TikTok, Instagram, Snapchat, Reddit accounts will be separate rows — same display name does not mean same person.
+**What was implemented:**
+- `GET /api/v1/creators?q=...` — optional search param; case-insensitive LIKE match against `youtube_channels.title` (display name), `creator_id`, and `creator_handle`; applied before pagination; filtered `total` returned
+- LEFT JOIN `youtube_channels` on all leaderboard queries — adds `display_name` field to every `CreatorRow`
+- Frontend: search input in ControlBar with 350 ms debounce; `q` serialised to URL (`/creators?q=...`); offset resets to 1 on query change; search-specific empty state message
+- `PlatformBadge` ("YT") shown in every creator row — always visible regardless of result set
+- Creator cell shows `display_name ?? creator_handle ?? creator_id`
 
-**Search requirements:**
-- Results must show platform next to creator name (e.g., "The Perfume Guy · YouTube")
-- Match by: display name, platform, creator_id / channel_id, handle if available
-- UI row: creator name · platform badge · handle or creator_id fallback · Verified/Claim state
+**Linking rule (hard constraint — unchanged):**
+Same-name accounts across platforms must NEVER be merged automatically.
 
-**Linking rule (hard constraint):**
-Same-name accounts across platforms must NEVER be merged automatically. They can only be linked into one master creator identity through:
-- Verified creator claim (bio-code / manual review)
-- OAuth linking
-- Explicit admin review
-- Reliable cross-platform public evidence
+**Out of scope (unchanged):** multi-platform identity merge (C3), TikTok/Instagram/Snapchat ingestion, OAuth.
 
-**Out of scope for C2.2A:**
-- Multi-platform identity merge (C3)
-- TikTok / Instagram / Snapchat ingestion
-- OAuth implementation
-- Modifications to `creator_platform_accounts` beyond what search requires
+**Production verification results (2026-05-10):**
+- No `q`: total=757, display_name populated (e.g. "The Perfume Guy", "Gents Scents") ✓
+- `q=Perfume+Guy`: total=1, returns The Perfume Guy · youtube ✓
+- `q=UCFarEEFsV90`: total=1, creator_id match returns The Perfume Guy ✓
+- `q=zzznomatch999`: total=0, empty creators array ✓
+- `q=perfume&sort_by=avg_views&quality_tier=tier_1`: total=2, filters combine correctly ✓
+- Identity safety: 20 rows for `q=perfume` → 20 unique (platform, creator_id) pairs, no grouping by display_name ✓
+- URL state: `q` in `paramsToSearch` ✓ · `q` in `searchToParams` ✓ · debounce 350ms ✓ · offset reset ✓
+- Platform badge visible in every row ✓
+- `platform` + `creator_id` returned as distinct identity keys per row ✓
+- No pipeline tables changed · creator_oauth_grants unchanged ✓
 
-**Future phase:** C3 — Multi-Platform Creator Identity Model (master `creator_profiles` → `creator_platform_accounts` → `creator_claims` → `creator_oauth_grants`)
+**Future phase:** C3 — Multi-Platform Creator Identity Model
 
 ---
 
@@ -919,7 +925,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C2 Manual Claim Verification | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.1 Operator Review Console (admin claims UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-09 |
 | C2.2 User Account & My Claims (/account) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
-| C2.2A Creator Directory Search (platform-aware) | PLANNED | — |
+| C2.2A Creator Directory Search (platform-aware) | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
