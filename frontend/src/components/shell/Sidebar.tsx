@@ -11,6 +11,7 @@ import {
   BellRing,
   PlusCircle,
   UserCircle,
+  Inbox,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ const SECONDARY_NAV: NavItem[] = [
   { href: "/alerts", label: "Alerts", icon: BellRing, placeholder: true },
   { href: "/submit-source", label: "Suggest Source", icon: PlusCircle },
   { href: "/account", label: "Account", icon: UserCircle },
+  { href: "/admin/source-intake", label: "Source Intake", icon: Inbox },
 ];
 
 // ---------------------------------------------------------------------------

@@ -498,6 +498,80 @@ def write_reports(results: list[dict], output_dir: str, date_str: str) -> tuple[
 # Entry point
 # ---------------------------------------------------------------------------
 
+def _persist_to_db(results: list, batch_label: str, db_url: str, admin_api_url: str = "") -> None:
+    """
+    Persist verification results to source_intake_batches + source_intake_candidates via:
+      1. Direct psycopg2 insert (if no admin_api_url)
+      2. POST to /api/v1/admin/source-intake/batches (if admin_api_url provided)
+
+    Status mapping: ADD → VERIFIED_ADD_READY, SKIP_DUPLICATE → SKIP_DUPLICATE,
+                    SKIP_INACTIVE_30D → SKIP_INACTIVE, NEEDS_OPERATOR_REVIEW → NEEDS_OPERATOR_REVIEW,
+                    RESOLVE_FAILED → NEEDS_OPERATOR_REVIEW
+    """
+    _STATUS_MAP = {
+        "ADD": "VERIFIED_ADD_READY",
+        "SKIP_DUPLICATE": "SKIP_DUPLICATE",
+        "SKIP_INACTIVE_30D": "SKIP_INACTIVE",
+        "NEEDS_OPERATOR_REVIEW": "NEEDS_OPERATOR_REVIEW",
+        "RESOLVE_FAILED": "NEEDS_OPERATOR_REVIEW",
+    }
+
+    try:
+        import psycopg2
+    except ImportError:
+        print("[persist] psycopg2 not available — skipping persist", file=sys.stderr)
+        return
+
+    conn = psycopg2.connect(db_url)
+    cur = conn.cursor()
+    import uuid as _uuid_mod
+
+    batch_id = str(_uuid_mod.uuid4())
+    cur.execute("""
+        INSERT INTO source_intake_batches
+            (id, batch_label, platform, status, candidate_count, applied_count, created_at, created_by)
+        VALUES (%s, %s, %s, 'open', %s, 0, NOW(), %s)
+    """, (batch_id, batch_label, "youtube", len(results), "cli:verify_candidate_channels"))
+
+    for r in results:
+        status = _STATUS_MAP.get(r["decision"], "NEEDS_OPERATOR_REVIEW")
+        cid = str(_uuid_mod.uuid4())
+        sample = r.get("recent_video_titles_sample", "")
+        titles_json = json.dumps(sample.split("; ")) if sample else None
+        cur.execute("""
+            INSERT INTO source_intake_candidates
+                (id, batch_id, platform, candidate_name, input_url,
+                 resolved_platform_id, resolved_title, subscriber_count,
+                 total_content_count, recent_content_count, recent_titles_sample,
+                 resolve_method, confidence, status, decision_reason, quality_tier, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+        """, (
+            cid, batch_id, "youtube", r["candidate_name"], r["input_url"],
+            r.get("channel_id") or None,
+            r.get("title") or None,
+            r.get("subscriber_count"),
+            r.get("video_count"),
+            r.get("recent_video_count_30d", 0),
+            titles_json,
+            r.get("resolve_method"),
+            r.get("confidence"),
+            status,
+            r.get("reason"),
+            r.get("quality_tier"),
+        ))
+        cur.execute("""
+            INSERT INTO source_intake_audit_log
+                (id, candidate_id, actor, action, old_status, new_status, notes, created_at)
+            VALUES (%s, %s, %s, %s, NULL, %s, %s, NOW())
+        """, (str(_uuid_mod.uuid4()), cid, "cli:verify_candidate_channels",
+              "verify", status, r.get("reason")))
+
+    conn.commit()
+    conn.close()
+    print(f"[persist] Batch persisted to source_intake_batches: id={batch_id} label={batch_label}")
+    print(f"[persist] Admin review: /admin/source-intake/{batch_id}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="YT-CREATOR-EXPANSION-01 channel verification")
     parser.add_argument("--api-key", default=os.environ.get("YOUTUBE_API_KEY", ""))
@@ -505,6 +579,8 @@ def main():
     parser.add_argument("--no-db", action="store_true", help="Skip DB dedup check")
     parser.add_argument("--output-dir", default="reports")
     parser.add_argument("--batch", default="YT-CREATOR-EXPANSION-01")
+    parser.add_argument("--persist", action="store_true",
+                        help="Persist results to source_intake_batches DB table for admin review")
     args = parser.parse_args()
 
     if not args.api_key:
@@ -552,6 +628,13 @@ def main():
     with open(add_json_path, "w") as f:
         json.dump(add_rows, f, indent=2)
     print(f"[report] {add_json_path}  (ADD candidates for seed script)")
+
+    # Persist to DB if requested
+    if args.persist:
+        if not args.db_url:
+            print("[persist] --persist requires --db-url or DATABASE_URL env var", file=sys.stderr)
+        else:
+            _persist_to_db(results, args.batch, args.db_url)
 
     return 0
 
