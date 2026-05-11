@@ -182,7 +182,8 @@ def _load_channels(
             f"""
             SELECT id, channel_id, title, quality_tier, category, priority,
                    uploads_playlist_id, last_polled_at, consecutive_empty_polls,
-                   next_poll_after
+                   next_poll_after,
+                   language, country, source_region
             FROM youtube_channels
             WHERE {where}
             ORDER BY last_polled_at NULLS FIRST, priority DESC, added_at
@@ -562,9 +563,22 @@ def poll_channel(
         run_id = _run_id(channel_id)
         raw_refs = raw_storage.save_raw_batch("youtube", run_id, raw_items)
 
+        # Phase 043 — pass channel metadata so content items get honest language/region.
+        # source_region set by operator (Phase 042), country from YouTube API (first poll),
+        # language from YouTube API (first poll). All may be None for older channels.
+        channel_context = {
+            "language": channel.get("language"),
+            "country": channel.get("country"),
+            "source_region": channel.get("source_region"),
+        }
+
         normalized_items = []
         for raw_item, raw_ref in zip(raw_items, raw_refs):
-            n = normalizer.normalize_youtube_item(raw_item, raw_payload_ref=raw_ref)
+            n = normalizer.normalize_youtube_item(
+                raw_item,
+                raw_payload_ref=raw_ref,
+                channel_context=channel_context,
+            )
             # Tag with channel ingestion method
             n["ingestion_method"] = "channel_poll"
             n["media_metadata"]["source_type"] = classify_source(n)

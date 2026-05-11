@@ -10,6 +10,94 @@ from perfume_trend_sdk.connectors.reddit_watchlist.parser import RedditParser
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Country → normalized region bucket mapping
+# Phase 043 — Content Language & Region Propagation v1
+# Used as fallback when source_region is not set on a youtube_channels row.
+# Countries not in this map resolve to "UNKNOWN".
+# ---------------------------------------------------------------------------
+_COUNTRY_TO_REGION: dict[str, str] = {
+    # US / Canada
+    "US": "US_CANADA", "CA": "US_CANADA",
+    # UK / Ireland
+    "GB": "UK_IRELAND", "IE": "UK_IRELAND",
+    # EU DACH
+    "DE": "EU_DACH", "AT": "EU_DACH", "CH": "EU_DACH",
+    # EU Francophone
+    "FR": "EU_FRANCOPHONE", "BE": "EU_FRANCOPHONE", "LU": "EU_FRANCOPHONE",
+    # EU South
+    "IT": "EU_SOUTH", "ES": "EU_SOUTH", "PT": "EU_SOUTH",
+    "GR": "EU_SOUTH", "HR": "EU_SOUTH", "RO": "EU_SOUTH",
+    # LATAM (non-Brazil)
+    "MX": "LATAM", "AR": "LATAM", "CO": "LATAM", "CL": "LATAM",
+    "PE": "LATAM", "VE": "LATAM", "EC": "LATAM", "BO": "LATAM",
+    "PY": "LATAM", "UY": "LATAM",
+    # Brazil (own bucket)
+    "BR": "BRAZIL",
+    # Middle East / GCC
+    "AE": "MIDDLE_EAST_GCC", "SA": "MIDDLE_EAST_GCC", "KW": "MIDDLE_EAST_GCC",
+    "QA": "MIDDLE_EAST_GCC", "BH": "MIDDLE_EAST_GCC", "OM": "MIDDLE_EAST_GCC",
+    "EG": "MIDDLE_EAST_GCC", "JO": "MIDDLE_EAST_GCC", "LB": "MIDDLE_EAST_GCC",
+    "IQ": "MIDDLE_EAST_GCC", "YE": "MIDDLE_EAST_GCC",
+    # South Asia
+    "IN": "SOUTH_ASIA", "PK": "SOUTH_ASIA", "BD": "SOUTH_ASIA",
+    "LK": "SOUTH_ASIA", "NP": "SOUTH_ASIA",
+    # East Asia
+    "JP": "EAST_ASIA", "KR": "EAST_ASIA", "CN": "EAST_ASIA",
+    "TW": "EAST_ASIA", "HK": "EAST_ASIA",
+    # Southeast Asia
+    "ID": "SOUTHEAST_ASIA", "MY": "SOUTHEAST_ASIA", "SG": "SOUTHEAST_ASIA",
+    "TH": "SOUTHEAST_ASIA", "PH": "SOUTHEAST_ASIA", "VN": "SOUTHEAST_ASIA",
+    "MM": "SOUTHEAST_ASIA",
+}
+
+
+def _resolve_content_language(channel_context: dict[str, Any] | None) -> str | None:
+    """Resolve content language from youtube_channels metadata.
+
+    Returns:
+        The channel language string if available.
+        "UNKNOWN" if context was provided but no language was determinable.
+        None if no context was provided (legacy / not attempted).
+
+    Distinction matters:
+        None  = not attempted (legacy rows, search-based ingestion)
+        UNKNOWN = attempted but not determinable (channel_poll with no language set)
+    """
+    if channel_context is None:
+        return None
+    lang = channel_context.get("language")
+    if lang and lang.strip():
+        return lang.strip()
+    return "UNKNOWN"
+
+
+def _resolve_content_region(channel_context: dict[str, Any] | None) -> str:
+    """Resolve content region from youtube_channels metadata using fallback chain.
+
+    Fallback order:
+        1. channel_context["source_region"] — explicitly set by operator (Phase 042 metadata)
+        2. _COUNTRY_TO_REGION[channel_context["country"]] — derived from country code
+        3. "UNKNOWN" — not determinable
+
+    Returns "UNKNOWN" instead of "US" when context is absent or resolution fails.
+    "US" must only appear when the channel is verifiably US-based.
+    """
+    if channel_context is None:
+        return "UNKNOWN"
+    # 1. Operator-set source_region (Phase 042)
+    source_region = channel_context.get("source_region")
+    if source_region and source_region.strip():
+        return source_region.strip()
+    # 2. Country → region map
+    country = channel_context.get("country")
+    if country and country.strip():
+        mapped = _COUNTRY_TO_REGION.get(country.strip().upper())
+        if mapped:
+            return mapped
+    return "UNKNOWN"
+
+
 class SocialContentNormalizer:
     version = "1.0"
 
@@ -18,7 +106,20 @@ class SocialContentNormalizer:
         raw_item: dict[str, Any],
         *,
         raw_payload_ref: str,
+        channel_context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
+        """Normalize a raw YouTube item into the canonical content item schema.
+
+        Args:
+            raw_item:        Raw item dict from the YouTube connector.
+            raw_payload_ref: Filesystem ref to the raw payload.
+            channel_context: Optional dict with youtube_channels metadata for this item's
+                             channel. Should contain: language, country, source_region.
+                             When provided, language and region are derived from channel
+                             metadata instead of defaulting to None / "UNKNOWN".
+                             Pass None (default) for legacy / search-based ingestion paths
+                             where channel metadata is not pre-loaded.
+        """
         search_item = raw_item.get("search_item", {})
         snippet = search_item.get("snippet", {})
         video_details = raw_item.get("video_details", {})
@@ -89,8 +190,8 @@ class SocialContentNormalizer:
             "mentions_raw": [],
             "media_metadata": media_metadata,
             "engagement": engagement,
-            "language": None,
-            "region": "US",
+            "language": _resolve_content_language(channel_context),
+            "region": _resolve_content_region(channel_context),
             "raw_payload_ref": raw_payload_ref,
             "normalizer_version": self.version,
             "query": raw_item.get("query"),
