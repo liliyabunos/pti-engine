@@ -58,12 +58,15 @@ Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 ro
 
 **Ingestion note:** The 2 new channels (UC-MsytPEXSO-2ZHmB5Y4xSw, UCWRTAJqkmpF_yS7MJOIOYNg) will be picked up by the next `ingest_youtube_channels.py` pipeline run automatically. Do not trigger ingestion manually from the admin UI.
 
-**Admin navigation fix (2026-05-11):**
-- Source Intake removed from general user sidebar (was leaking to all logged-in users)
-- Creator Claims was never in sidebar — now added
-- New Admin section in sidebar: visible only to admin users (same ADMIN_EMAILS/ADMIN_USER_IDS source of truth)
-- `isAdminUser()` extracted to `frontend/src/lib/auth/guards.server.ts` — shared by layout + all 3 admin page guards
-- Route/API security unchanged — 403 on direct access for non-admin remains enforced at page level
+**Admin navigation fix (2026-05-11) — COMPLETE — PRODUCTION VERIFIED (commit cd3d7ef):**
+- Source Intake removed from general user sidebar (was leaking to all logged-in users) ✓
+- Creator Claims added to admin sidebar (was only accessible by direct URL) ✓
+- New Admin section in sidebar: visible only when `isAdmin=true` (ADMIN_EMAILS/ADMIN_USER_IDS source of truth) ✓
+- `isAdminUser()` extracted to `frontend/src/lib/auth/guards.server.ts` — shared by layout + all 3 admin page guards (no duplication) ✓
+- Route/API security unchanged: unauthenticated → 307, non-admin direct access → 403, API without header → 401 ✓
+- Non-admin sidebar (royalstar015@gmail.com): no Admin section, no Source Intake, no Creator Claims ✓
+- Admin sidebar (liliyabunos27@gmail.com): Admin section with Creator Claims + Source Intake ✓
+- Batch YT-CREATOR-EXPANSION-01-REVIEW visible in /admin/source-intake (status=applied, 2 applied) ✓
 
 ---
 
