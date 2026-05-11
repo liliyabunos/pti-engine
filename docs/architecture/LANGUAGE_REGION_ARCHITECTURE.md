@@ -79,36 +79,52 @@ Current policy:
 
 **Status: COMPLETE — PRODUCTION VERIFIED**
 **Migration: `alembic/versions/042_language_region_metadata.py`**
-**Commit: see CLAUDE.md**
-**Tests: 50/50 pass (`tests/unit/test_admin_source_intake.py` — 11 new tests in `TestLanguageRegionMetadata`)**
+**Implementation commit: `3702a9c`**
+**Completion fix commit: `436fd6c`** — `source_language` / `source_country` carry-forward added
+**Tests: 52/52 pass** (`tests/unit/test_admin_source_intake.py` — 13 new tests in `TestLanguageRegionMetadata`)
+
+**Production verification:**
+- `alembic current = 042` ✓
+- `source_intake_candidates` has 5 new columns: `source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status` ✓
+- `youtube_channels` has 3 new columns: `source_region`, `audience_region`, `regional_policy_status` ✓
+- Apply carries all 5 metadata fields from candidate into `youtube_channels`:
+  - `source_language` → `youtube_channels.language` (existing column, migration 023) ✓
+  - `source_country` → `youtube_channels.country` (existing column, migration 023) ✓
+  - `source_region` → `youtube_channels.source_region` (new column, migration 042) ✓
+  - `audience_region` → `youtube_channels.audience_region` (new column, migration 042) ✓
+  - `regional_policy_status` → `youtube_channels.regional_policy_status` (new column, migration 042) ✓
+- Admin UI shows Language & Region controls in BatchReviewConsole ✓
+- Creator Leaderboard total/top rows unchanged ✓
 
 **What changed:**
-- `source_intake_candidates`: `source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status` — all nullable, no CHECK constraints
-- `youtube_channels`: `source_region`, `audience_region`, `regional_policy_status` — all nullable
-- Apply path carries the three channel-level fields from candidate into `youtube_channels`
-- `PATCH /candidates/{id}` accepts all five new fields
-- `CandidateRow` response exposes all five new fields
-- Admin UI (`BatchReviewConsole`) shows Language & Region controls per candidate (lang input, country input, region dropdown, audience dropdown, policy dropdown; Save Metadata button appears only when pending)
+- `source_intake_candidates`: 5 new nullable metadata fields — `source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status` — no CHECK constraints
+- `youtube_channels`: 3 new nullable columns — `source_region`, `audience_region`, `regional_policy_status`
+- Apply path now carries all 5 metadata fields from candidate into the YouTube source registry on apply
+- `PATCH /candidates/{id}` accepts all 5 new fields
+- `CandidateRow` GET response exposes all 5 new fields
+- Admin UI (`BatchReviewConsole`): Language & Region section per candidate card — lang/country text inputs, region/audience/policy dropdowns, Save Metadata button appears only when a field has a pending change
 
 **What did not change:**
+- No regional scoring
+- No regional leaderboard
+- No public UI filters
+- No propagation to `canonical_content_items` (Phase 043)
+- No propagation to `entity_mentions.region` (Phase 043)
+- No global score changes
 - Creator Leaderboard behavior unchanged — still gated on `creator_score_eligible IS NOT FALSE`
 - source_role routing unchanged
-- No scoring changes
-- No public UI filters added
-- No regional leaderboard
-- No propagation to `canonical_content_items` or `entity_mentions` (Phase 043)
 
 **Full carry-forward mapping (apply_batch → youtube_channels):**
 
-| candidate field | youtube_channels column | note |
-|----------------|------------------------|------|
-| `source_language` | `language` | existing column (migration 023) |
-| `source_country` | `country` | existing column (migration 023) |
-| `source_region` | `source_region` | new column (migration 042) |
-| `audience_region` | `audience_region` | new column (migration 042) |
-| `regional_policy_status` | `regional_policy_status` | new column (migration 042) |
+| candidate field | youtube_channels column | column origin |
+|----------------|------------------------|---------------|
+| `source_language` | `language` | migration 023 (existing) |
+| `source_country` | `country` | migration 023 (existing) |
+| `source_region` | `source_region` | migration 042 (new) |
+| `audience_region` | `audience_region` | migration 042 (new) |
+| `regional_policy_status` | `regional_policy_status` | migration 042 (new) |
 
-**Next recommended phase:** Phase 043 — Content Language & Region Propagation v1 (pending explicit approval)
+**Next phase: Phase 043 — Content Language & Region Propagation v1 — pending explicit approval.**
 
 ### Goal
 
