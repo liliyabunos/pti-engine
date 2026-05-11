@@ -327,6 +327,12 @@ Same-name accounts across platforms must NEVER be merged automatically.
 ---
 
 ## Active Roadmap
+
+**Language & Region Architecture — PENDING (do not begin until explicitly approved)**
+Full roadmap: `docs/architecture/LANGUAGE_REGION_ARCHITECTURE.md`
+Next phase: **042 — Language & Region Metadata v1** (metadata only, no scoring, no public UI changes)
+Phases defined: 042 (metadata) → 043 (content propagation) → 044 (regional creator policy) → 045 (filters) → 046 (aggregation design) → 047 (market availability) → 048 (UI concepts)
+
 - **YT-CREATOR-EXPANSION-02-AGENT-APPROVED-136 — APPLIED, PENDING PIPELINE VERIFICATION (2026-05-11)**
   - batch_id: `8b2f7141-7ec8-42e5-aaa9-6dca1230b68a`
   - Script: `scripts/youtube/verify_from_csv.py` (new — reads CSV with pre-known channel_ids, no URL resolution needed, batch channels.list fetch)
@@ -960,6 +966,7 @@ Weight changes logged in `weight_calibration_log` — human-reviewed, never sile
 - SDK contracts and sprint plan: docs/architecture/SDK_ARCHITECTURE.md
 - Verification queries: docs/verification/VERIFICATION_QUERIES.md
 - Deployment notes: docs/history/DEPLOYMENT_NOTES.md
+- Language & Region Architecture roadmap (phases 042–048): docs/architecture/LANGUAGE_REGION_ARCHITECTURE.md
 
 ---
 
@@ -1104,6 +1111,13 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Source Role Foundation v1 — source_role + creator_score_eligible | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | Source Intake Role Routing v1 — role selector on candidates | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
+| 042 — Language & Region Metadata v1 | PENDING — awaiting approval | — |
+| 043 — Content Language & Region Propagation v1 | PENDING | — |
+| 044 — Regional Creator Policy v1 | PENDING | — |
+| 045 — Regional Filters v1 | PENDING | — |
+| 046 — Regional Signal Aggregation Design | PENDING | — |
+| 047 — Market Availability Metadata v1 | PENDING | — |
+| 048 — Regional UI Concepts | PENDING | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
