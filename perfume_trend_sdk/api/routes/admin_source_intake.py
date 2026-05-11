@@ -117,6 +117,8 @@ def _row_to_candidate(r) -> CandidateRow:
         applied_at=_fmt(r[20]),
         apply_error=r[21],
         created_at=_fmt(r[22]),
+        source_role=r[23] if len(r) > 23 else None,
+        creator_score_eligible=bool(r[24]) if len(r) > 24 and r[24] is not None else None,
     )
 
 
@@ -126,8 +128,31 @@ _CANDIDATE_COLS = """
     total_content_count, recent_content_count, recent_titles_sample,
     resolve_method, confidence, status, decision_reason,
     operator_override_url, operator_notes, quality_tier,
-    reviewed_by, reviewed_at, applied_at, apply_error, created_at
+    reviewed_by, reviewed_at, applied_at, apply_error, created_at,
+    source_role, creator_score_eligible
 """
+
+
+# Roles that are eligible for creator leaderboard
+_CREATOR_ELIGIBLE_ROLES = frozenset({"independent_creator"})
+
+
+def _resolve_role_and_eligibility(
+    source_role: Optional[str],
+    creator_score_eligible: Optional[bool],
+) -> tuple:
+    """Resolve final source_role and creator_score_eligible for apply.
+
+    NULL source_role → 'independent_creator'
+    NULL creator_score_eligible → derived from role (True only for independent_creator)
+    Explicit creator_score_eligible overrides the derived value.
+    """
+    role = source_role or "independent_creator"
+    if creator_score_eligible is not None:
+        eligible = creator_score_eligible
+    else:
+        eligible = role in _CREATOR_ELIGIBLE_ROLES
+    return role, eligible
 
 
 def _write_audit(
@@ -583,6 +608,12 @@ def update_candidate(
     if body.operator_notes is not None:
         sets.append("operator_notes = :operator_notes")
         params["operator_notes"] = body.operator_notes.strip() or None
+    if body.source_role is not None:
+        sets.append("source_role = :source_role")
+        params["source_role"] = body.source_role.strip() or None
+    if body.creator_score_eligible is not None:
+        sets.append("creator_score_eligible = :creator_score_eligible")
+        params["creator_score_eligible"] = body.creator_score_eligible
 
     if not sets:
         return {"candidate_id": candidate_id, "updated": False}
@@ -892,6 +923,7 @@ def apply_batch(
         tier = c.quality_tier or "tier_3"
         priority = _TIER_PRIORITY.get(tier, "medium")
         notes = f"source_intake:{batch_label} | {c.candidate_name} | {c.decision_reason or ''}"
+        role, eligible = _resolve_role_and_eligibility(c.source_role, c.creator_score_eligible)
 
         try:
             result = db.execute(text("""
@@ -924,8 +956,8 @@ def apply_batch(
                 "added_at": now,
                 "added_by": f"source_intake:{batch_label}",
                 "notes": notes,
-                "source_role": "independent_creator",
-                "creator_score_eligible": True,
+                "source_role": role,
+                "creator_score_eligible": eligible,
             })
             rows_affected = result.rowcount
             if rows_affected == 1:

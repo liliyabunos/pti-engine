@@ -72,6 +72,9 @@ export interface CandidateRow {
   applied_at: string | null;
   apply_error: string | null;
   created_at: string | null;
+  // Role Routing v1
+  source_role: string | null;
+  creator_score_eligible: boolean | null;
 }
 
 export interface CandidateListResponse {
@@ -228,6 +231,20 @@ export async function updateCandidateOverride(
     body: JSON.stringify({
       operator_override_url: overrideUrl,
       operator_notes: notes ?? undefined,
+    }),
+  });
+}
+
+export async function updateCandidateRole(
+  candidateId: string,
+  sourceRole: string,
+  creatorScoreEligible?: boolean,
+): Promise<void> {
+  await apiFetch(`/candidates/${candidateId}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      source_role: sourceRole,
+      ...(creatorScoreEligible !== undefined ? { creator_score_eligible: creatorScoreEligible } : {}),
     }),
   });
 }

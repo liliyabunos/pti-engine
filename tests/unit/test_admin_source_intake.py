@@ -94,7 +94,9 @@ _TABLES = [
         reviewed_at TEXT,
         applied_at TEXT,
         apply_error TEXT,
-        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        source_role TEXT,
+        creator_score_eligible INTEGER
     )""",
     """CREATE TABLE IF NOT EXISTS source_intake_audit_log (
         id TEXT PRIMARY KEY,
@@ -122,7 +124,9 @@ _TABLES = [
         uploads_playlist_id TEXT,
         added_at TEXT DEFAULT CURRENT_TIMESTAMP,
         added_by TEXT,
-        notes TEXT
+        notes TEXT,
+        source_role TEXT DEFAULT 'independent_creator',
+        creator_score_eligible INTEGER DEFAULT 1
     )""",
     """CREATE TABLE IF NOT EXISTS canonical_content_items (
         id TEXT PRIMARY KEY,
@@ -686,3 +690,125 @@ class TestDataSafety:
 
         count = db_session.execute(text("SELECT COUNT(*) FROM creator_oauth_grants")).fetchone()[0]
         assert count == 0
+
+
+# ---------------------------------------------------------------------------
+# Source Role Routing v1
+# ---------------------------------------------------------------------------
+
+class TestSourceRoleRouting:
+    """Tests for source_role + creator_score_eligible role routing on candidates."""
+
+    def test_patch_sets_source_role(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCrole12345678901234567")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"source_role": "brand_official"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["updated"] is True
+
+        row = db_session.execute(
+            text("SELECT source_role FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == "brand_official"
+
+    def test_patch_sets_creator_score_eligible(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCeligible12345678901234")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"creator_score_eligible": False},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        row = db_session.execute(
+            text("SELECT creator_score_eligible FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == 0  # SQLite stores bool as 0/1
+
+    def test_apply_null_role_defaults_to_independent_creator(self, client, db_session):
+        """Candidate with NULL source_role → applied as independent_creator, eligible=True."""
+        bid = _make_batch(db_session)
+        _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                        resolved_platform_id="UCnullrole12345678901234")
+        # source_role is NULL (not set)
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("SELECT source_role, creator_score_eligible FROM youtube_channels WHERE channel_id = :cid"),
+            {"cid": "UCnullrole12345678901234"}).fetchone()
+        assert row[0] == "independent_creator"
+        assert row[1] == 1  # True in SQLite
+
+    def test_apply_brand_official_not_creator_eligible(self, client, db_session):
+        """Candidate with source_role=brand_official → creator_score_eligible=False."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                              resolved_platform_id="UCbrand12345678901234567")
+
+        # Set source_role to brand_official
+        db_session.execute(
+            text("UPDATE source_intake_candidates SET source_role = 'brand_official' WHERE id = :id"),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("SELECT source_role, creator_score_eligible FROM youtube_channels WHERE channel_id = :cid"),
+            {"cid": "UCbrand12345678901234567"}).fetchone()
+        assert row[0] == "brand_official"
+        assert row[1] == 0  # False — not eligible for leaderboard
+
+    def test_apply_explicit_eligible_overrides_role_default(self, client, db_session):
+        """Explicit creator_score_eligible=True overrides brand_official default of False."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="OPERATOR_APPROVED",
+                              resolved_platform_id="UCoverride123456789012345")
+
+        # brand_official but operator explicitly says eligible
+        db_session.execute(
+            text("UPDATE source_intake_candidates SET source_role = 'brand_official', "
+                 "creator_score_eligible = 1 WHERE id = :id"),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("SELECT source_role, creator_score_eligible FROM youtube_channels WHERE channel_id = :cid"),
+            {"cid": "UCoverride123456789012345"}).fetchone()
+        assert row[0] == "brand_official"
+        assert row[1] == 1  # Overridden to True
+
+    def test_candidate_row_exposes_source_role_fields(self, client, db_session):
+        """GET candidate includes source_role and creator_score_eligible in response."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                              resolved_platform_id="UCfieldtest12345678901234")
+        db_session.execute(
+            text("UPDATE source_intake_candidates SET source_role = 'retailer_shop', "
+                 "creator_score_eligible = 0 WHERE id = :id"),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.get(f"/api/v1/admin/source-intake/candidates/{cid}",
+                       headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["source_role"] == "retailer_shop"
+        assert data["creator_score_eligible"] is False

@@ -19,6 +19,7 @@ import {
   deferCandidate,
   markDuplicate,
   updateCandidateOverride,
+  updateCandidateRole,
   rerunCandidate,
   applyBatch,
   productionVerifyBatch,
@@ -32,6 +33,27 @@ import {
 } from "@/lib/api/source_intake";
 import { Header } from "@/components/shell/Header";
 import { TerminalPanel } from "@/components/primitives/TerminalPanel";
+
+// ---------------------------------------------------------------------------
+// Source role constants
+// ---------------------------------------------------------------------------
+
+const SOURCE_ROLE_OPTIONS = [
+  { value: "independent_creator", label: "Independent Creator" },
+  { value: "brand_official", label: "Brand Official" },
+  { value: "retailer_shop", label: "Retailer / Shop" },
+  { value: "formulation_education", label: "Formulation / Education" },
+  { value: "aggregator", label: "Aggregator" },
+  { value: "unknown", label: "Unknown" },
+] as const;
+
+const CREATOR_ELIGIBLE_ROLES = new Set(["independent_creator"]);
+
+function resolvedEligible(role: string | null, explicit: boolean | null): boolean | null {
+  if (explicit !== null && explicit !== undefined) return explicit;
+  if (!role) return null; // unset — will default to independent_creator at apply
+  return CREATOR_ELIGIBLE_ROLES.has(role);
+}
 
 // ---------------------------------------------------------------------------
 // Status filter tab
@@ -227,6 +249,7 @@ function CandidateCard({
   onDefer,
   onMarkDuplicate,
   onEditRerun,
+  onRoleChange,
 }: {
   candidate: CandidateRow;
   actionLoading: string | null;
@@ -235,6 +258,7 @@ function CandidateCard({
   onDefer: (id: string) => void;
   onMarkDuplicate: (id: string) => void;
   onEditRerun: (c: CandidateRow) => void;
+  onRoleChange: (id: string, role: string) => void;
 }) {
   const isTerminal = TERMINAL_STATUSES.has(candidate.status);
   const isReviewing = candidate.status === "NEEDS_OPERATOR_REVIEW" || candidate.status === "DEFERRED";
@@ -244,6 +268,32 @@ function CandidateCard({
       ? `${(candidate.subscriber_count / 1000).toFixed(0)}K`
       : String(candidate.subscriber_count)
     : "—";
+
+  // Local role state — initialised from candidate data
+  const [roleValue, setRoleValue] = useState(candidate.source_role ?? "");
+  const [roleSaving, setRoleSaving] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+  const pendingRole = roleValue !== (candidate.source_role ?? "");
+
+  async function handleSaveRole() {
+    if (!roleValue || roleSaving) return;
+    setRoleSaving(true);
+    setRoleError(null);
+    try {
+      await updateCandidateRole(candidate.id, roleValue);
+      onRoleChange(candidate.id, roleValue);
+    } catch (err: unknown) {
+      setRoleError((err as Error).message ?? "Save failed");
+    } finally {
+      setRoleSaving(false);
+    }
+  }
+
+  // Eligibility indicator for resolved value
+  const eligible = resolvedEligible(
+    pendingRole ? roleValue : candidate.source_role,
+    candidate.creator_score_eligible ?? null,
+  );
 
   // Parse recent titles sample
   let titlesSample: string[] = [];
@@ -291,6 +341,39 @@ function CandidateCard({
         <span>Tier: <span className="text-zinc-400">{candidate.quality_tier ?? "—"}</span></span>
         <span>Method: <span className="text-zinc-400">{candidate.resolve_method ?? "—"}</span></span>
       </div>
+
+      {/* Role selector row */}
+      {!isTerminal && (
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-zinc-600">Role:</span>
+          <select
+            value={roleValue}
+            onChange={(e) => { setRoleValue(e.target.value); setRoleError(null); }}
+            className="rounded border border-zinc-700 bg-zinc-950 px-2 py-0.5 text-[11px] text-zinc-300 outline-none focus:border-zinc-500"
+          >
+            <option value="">— unset (defaults to creator) —</option>
+            {SOURCE_ROLE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {pendingRole && (
+            <button
+              onClick={handleSaveRole}
+              disabled={roleSaving}
+              className="rounded border border-zinc-600 px-2 py-0.5 text-[10px] text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors"
+            >
+              {roleSaving ? "Saving…" : "Save"}
+            </button>
+          )}
+          {eligible === true && (
+            <span className="text-[10px] text-green-600">● creator eligible</span>
+          )}
+          {eligible === false && (
+            <span className="text-[10px] text-zinc-600">● not creator eligible</span>
+          )}
+          {roleError && <span className="text-[10px] text-red-400">{roleError}</span>}
+        </div>
+      )}
 
       {/* Original URL */}
       <p className="text-[10px] text-zinc-600 break-all">
@@ -459,6 +542,10 @@ export function BatchReviewConsole({
     setCandidates((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updates } : c)),
     );
+  }
+
+  function handleRoleChange(id: string, role: string) {
+    mutateCandidate(id, { source_role: role });
   }
 
   async function handleApprove(id: string) {
@@ -670,6 +757,7 @@ export function BatchReviewConsole({
                   onDefer={handleDefer}
                   onMarkDuplicate={handleMarkDuplicate}
                   onEditRerun={setRerunTarget}
+                  onRoleChange={handleRoleChange}
                 />
               ))}
             </div>

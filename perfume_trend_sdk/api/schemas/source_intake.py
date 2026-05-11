@@ -94,6 +94,9 @@ class CandidateRow(BaseModel):
     applied_at: Optional[str] = None
     apply_error: Optional[str] = None
     created_at: Optional[str] = None
+    # Role Routing v1 — operator-assigned source classification
+    source_role: Optional[str] = None
+    creator_score_eligible: Optional[bool] = None
 
 
 class CandidateListResponse(BaseModel):
@@ -120,6 +123,9 @@ class RejectRequest(BaseModel):
 class UpdateCandidateRequest(BaseModel):
     operator_override_url: Optional[str] = None
     operator_notes: Optional[str] = None
+    # Role Routing v1
+    source_role: Optional[str] = None
+    creator_score_eligible: Optional[bool] = None
 
 
 class PersistBatchRequest(BaseModel):
