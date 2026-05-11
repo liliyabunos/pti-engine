@@ -1099,7 +1099,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | YT-CREATOR-EXPANSION-01 — 8 new YouTube creator channels | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | SOURCE-INTAKE-V1A — YouTube source intake DB + admin review UI | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | Source Role Foundation v1 — source_role + creator_score_eligible | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
-| Source Intake Role Routing v1 — role selector on candidates | COMPLETE — PENDING MIGRATION | 2026-05-11 |
+| Source Intake Role Routing v1 — role selector on candidates | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
