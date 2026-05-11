@@ -433,11 +433,12 @@ Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (f
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below
   - Dashboard + Screener: search+filters row 1, range selector row 2 on narrow viewports
-- **FIX: Dashboard + Screener responsive controls overlap (2026-05-11)** — commit 5d4f802
-  - Root cause: ControlBar right slot `sm:w-auto sm:shrink-0` (640px+) caused left+right to share one row at tablet widths (~768px); search `w-48 shrink-0` overflowed left container and visually overlapped range selector
-  - Fix: right slot raised to `xl:w-auto xl:shrink-0` (1280px+) — left and right stack vertically at <1280px, join one row at ≥1280px
-  - Search input: `w-full sm:w-48 sm:shrink-0` — full-width on mobile, fixed 192px at 640px+
-  - Tested: desktop wide (single row, no overlap), tablet/medium (stacked rows, no overlap), mobile (full-width search)
+- **FIX: Dashboard + Screener responsive controls overlap (2026-05-11)** — commit 9717562
+  - Root cause (actual): ControlBar outer was `flex flex-wrap`. Left wrapper had `flex-1` (basis=0) + `min-w-0` (min-width=0), so flex calculated left=0 + right=100% = 100% — no overflow, no wrap → both slots on same line at all widths. `w-full` on right slot was ineffective.
+  - Fix: ControlBar outer changed from `flex flex-wrap` to `flex flex-col`. Column layout guarantees each slot is its own full-width row. At ≥2xl (1536px+) switches to `flex-row justify-between`.
+  - Search: `w-full 2xl:w-48 2xl:shrink-0` — full width on its own row at <2xl, fixed 192px inline at ≥2xl
+  - 390px / 768px / 1024px / 1280px / 1440px: Row 1 = search+chips, Row 2 = range+counts — no overlap possible
+  - 1536px+: single row, left/right side by side
 - **Legal Content Audit + Compliance Pages COMPLETE (2026-05-05)** — commit 8b0e055
   - New pages: /data-sources, /privacy/california, /cookies, /copyright, /privacy/request
   - Privacy Policy rewritten (15 sections: EEA/UK/CCPA/CPRA/GDPR, data broker statement)
