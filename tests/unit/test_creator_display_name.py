@@ -224,9 +224,10 @@ class TestCreatorDisplayName:
         )
 
     def test_display_name_fallback_to_creator_handle(self, client, db_session):
-        """When yc.title is None, display_name in API response should be None
-        (frontend uses creator_handle as fallback)."""
-        # Creator score with no matching youtube_channels row
+        """When yc.title is absent but creator_handle is set, display_name = creator_handle.
+        The API uses COALESCE(yc.title, cs.creator_handle) so it never returns None when
+        a handle is available — preventing raw channel_id fallback in the frontend."""
+        # Creator score with no matching youtube_channels row but with a handle
         db_session.execute(text("""
             INSERT INTO creator_scores (
                 platform, creator_id, creator_handle, quality_tier,
@@ -241,8 +242,8 @@ class TestCreatorDisplayName:
         creators = r.json()["creators"]
         found = next((c for c in creators if c["creator_id"] == "UCtest1234567890ABCDEFGHIf"), None)
         assert found is not None
-        # No youtube_channels row → display_name is None; frontend uses creator_handle
-        assert found["display_name"] is None
+        # No youtube_channels row → COALESCE returns creator_handle as display_name
+        assert found["display_name"] == "MyHandle"
         assert found["creator_handle"] == "MyHandle"
 
 
@@ -305,3 +306,94 @@ class TestDiscoverScriptTitlePlaceholder:
         assert "title = %s" in source or "title =" in source, (
             "ingest_youtube_channels must update youtube_channels.title from channelTitle"
         )
+
+
+# ---------------------------------------------------------------------------
+# Tests: is_raw_youtube_channel_id helper + COALESCE display_name fallback
+# ---------------------------------------------------------------------------
+
+class TestRawChannelIdDetection:
+    """Tests for _is_raw_youtube_channel_id and the COALESCE display_name fallback."""
+
+    def _is_raw(self, value):
+        """Import and call the helper from creators route."""
+        from perfume_trend_sdk.api.routes.creators import _is_raw_youtube_channel_id
+        return _is_raw_youtube_channel_id(value)
+
+    def test_raw_uc_channel_id_detected(self):
+        assert self._is_raw("UCNCza3W7C6CpfGmDoyR48Bg") is True
+
+    def test_typical_uc_ids_detected(self):
+        assert self._is_raw("UC1WnHB4FnOK6LocYxjAfFag") is True
+        assert self._is_raw("UCvUgUSfL31HkiRLkrChWoTg") is True
+        assert self._is_raw("UCp5Dt2Dt3xdARMBdtMHFhWQ") is True
+
+    def test_human_readable_names_not_detected(self):
+        assert self._is_raw("Nikki Griffin (HelloNikkiG)") is False
+        assert self._is_raw("G Fragrance") is False
+        assert self._is_raw("The Perfume Guy") is False
+        assert self._is_raw("@hellonikkigriffin") is False
+
+    def test_none_and_empty_not_detected(self):
+        assert self._is_raw(None) is False
+        assert self._is_raw("") is False
+
+    def test_too_short_or_long_not_detected(self):
+        assert self._is_raw("UC123") is False         # too short
+        assert self._is_raw("UC" + "a" * 30) is False  # too long
+
+    def test_leaderboard_does_not_show_raw_id_when_handle_exists(self, client, db_session):
+        """When yc.title is missing but creator_handle is set, display_name = creator_handle."""
+        # No youtube_channels row — only creator_scores with creator_handle
+        db_session.execute(text("""
+            INSERT INTO creator_scores (
+                platform, creator_id, creator_handle, quality_tier,
+                subscriber_count, influence_score, computed_at
+            ) VALUES ('youtube', 'UCRawIdNoTitle123456789xx', '@myhandle', 'tier_4',
+                      500, 0.1, :now)
+        """), {"now": datetime.now(timezone.utc).isoformat()})
+        db_session.commit()
+
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        found = next(
+            (c for c in r.json()["creators"] if c["creator_id"] == "UCRawIdNoTitle123456789xx"),
+            None
+        )
+        assert found is not None
+        # display_name should be the handle, NOT the raw channel_id
+        assert found["display_name"] == "@myhandle"
+        assert found["display_name"] != "UCRawIdNoTitle123456789xx"
+
+    def test_leaderboard_filters_raw_id_from_display_name(self, client, db_session):
+        """If a raw channel_id somehow ends up as yc.title, display_name must be None.
+        Note: real YouTube channel_ids are exactly 24 chars (UC + 22)."""
+        # Use exactly 24-char fake channel_id: UC + 22 chars
+        BAD_CHANNEL_ID = "UCBadTitle123456789abcde"  # UC + 22 = 24 chars
+        assert len(BAD_CHANNEL_ID) == 24
+
+        db_session.execute(text("""
+            INSERT INTO youtube_channels (id, channel_id, handle, title, status, added_by)
+            VALUES (:id, :cid, NULL, :title, 'active', 'test')
+        """), {
+            "id": str(uuid.uuid4()),
+            "cid": BAD_CHANNEL_ID,
+            "title": BAD_CHANNEL_ID,  # raw ID stored as title
+        })
+        db_session.execute(text("""
+            INSERT INTO creator_scores (
+                platform, creator_id, creator_handle, quality_tier,
+                subscriber_count, influence_score, computed_at
+            ) VALUES ('youtube', :cid, NULL, 'tier_4', 100, 0.05, :now)
+        """), {"cid": BAD_CHANNEL_ID, "now": datetime.now(timezone.utc).isoformat()})
+        db_session.commit()
+
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        found = next(
+            (c for c in r.json()["creators"] if c["creator_id"] == BAD_CHANNEL_ID),
+            None
+        )
+        assert found is not None
+        # Raw channel_id stored as title must be suppressed → None
+        assert found["display_name"] is None

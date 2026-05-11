@@ -8,6 +8,7 @@ GET /api/v1/creators/{creator_id}   — creator profile with entity portfolio
 """
 
 import logging
+import re
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -25,6 +26,17 @@ from perfume_trend_sdk.api.schemas.creators import (
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
+
+# Matches raw YouTube channel IDs (UC... 24 chars) — not a human-readable display name.
+_YT_CHANNEL_ID_RE = re.compile(r"^UC[a-zA-Z0-9_-]{22}$")
+
+
+def _is_raw_youtube_channel_id(value: Optional[str]) -> bool:
+    """Return True if value looks like a raw YouTube channel_id (UC...) with no display value."""
+    if not value:
+        return False
+    return bool(_YT_CHANNEL_ID_RE.match(value))
+
 
 _SORT_ALLOWLIST = frozenset({
     "influence_score",
@@ -77,6 +89,7 @@ def list_creators(
     if q and q.strip():
         where_clauses.append(
             "(LOWER(yc.title) LIKE :q_like"
+            " OR LOWER(yc.handle) LIKE :q_like"
             " OR LOWER(cs.creator_id) LIKE :q_like"
             " OR LOWER(cs.creator_handle) LIKE :q_like)"
         )
@@ -123,7 +136,7 @@ def list_creators(
             cs.influence_score,
             cs.score_components,
             cs.computed_at,
-            yc.title AS display_name
+            COALESCE(yc.title, cs.creator_handle) AS display_name
         FROM creator_scores cs
         {join_sql}
         WHERE {where_sql}
@@ -161,7 +174,7 @@ def list_creators(
             influence_score=float(r[20]) if r[20] is not None else None,
             score_components=sc,
             computed_at=_fmt_date(r[22]),
-            display_name=r[23] if r[23] else None,
+            display_name=r[23] if r[23] and not _is_raw_youtube_channel_id(r[23]) else None,
         ))
 
     return CreatorLeaderboardResponse(total=total, limit=limit, offset=offset, creators=creators)
@@ -347,12 +360,18 @@ def get_creator(
         # Table may not exist yet — non-fatal for existing routes
         _log.debug("[C1] creator_profile_claims unavailable: %s", exc)
 
+    _raw_title = ch_row[0] if ch_row else None
+    _resolved_title = (
+        _raw_title if _raw_title and not _is_raw_youtube_channel_id(_raw_title)
+        else score_row[2]  # fall back to creator_handle
+    )
+
     return CreatorProfileResponse(
         platform=score_row[0],
         creator_id=score_row[1],
         creator_handle=score_row[2],
         # Channel metadata (YouTube only)
-        title=ch_row[0] if ch_row else None,
+        title=_resolved_title,
         quality_tier=ch_row[1] if ch_row else score_row[3],
         category=ch_row[2] if ch_row else score_row[4],
         status=ch_row[3] if ch_row else None,
