@@ -12,6 +12,7 @@ import {
   PlusCircle,
   UserCircle,
   Inbox,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +38,10 @@ const SECONDARY_NAV: NavItem[] = [
   { href: "/alerts", label: "Alerts", icon: BellRing, placeholder: true },
   { href: "/submit-source", label: "Suggest Source", icon: PlusCircle },
   { href: "/account", label: "Account", icon: UserCircle },
+];
+
+const ADMIN_NAV: NavItem[] = [
+  { href: "/admin/creator-claims", label: "Creator Claims", icon: ShieldCheck },
   { href: "/admin/source-intake", label: "Source Intake", icon: Inbox },
 ];
 
@@ -93,7 +98,11 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 // Sidebar
 // ---------------------------------------------------------------------------
 
-export function Sidebar() {
+interface SidebarProps {
+  isAdmin?: boolean;
+}
+
+export function Sidebar({ isAdmin = false }: SidebarProps) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -145,6 +154,26 @@ export function Sidebar() {
             <NavLink key={item.href} item={item} active={isActive(item.href)} />
           ))}
         </div>
+
+        {/* ── Admin group (admin users only) ───────────────── */}
+        {isAdmin && (
+          <>
+            <div className="my-2 border-t border-zinc-800/70" />
+            {/* "Admin" label — expanded only */}
+            <p className="mb-1 hidden px-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-zinc-600 lg:block">
+              Admin
+            </p>
+            {/* Collapsed indicator dot */}
+            <div className="mb-1 flex justify-center lg:hidden">
+              <div className="h-px w-3 bg-zinc-700" />
+            </div>
+            <div className="space-y-px">
+              {ADMIN_NAV.map((item) => (
+                <NavLink key={item.href} item={item} active={isActive(item.href)} />
+              ))}
+            </div>
+          </>
+        )}
       </nav>
 
       {/* ── Footer ───────────────────────────────────────── */}

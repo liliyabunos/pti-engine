@@ -16,25 +16,8 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/auth/server";
+import { isAdminUser } from "@/lib/auth/guards.server";
 import { ClaimsConsole } from "./ClaimsConsole";
-
-function isAdminUser(email: string | undefined, userId: string): boolean {
-  const adminEmails = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-
-  const adminUserIds = (process.env.ADMIN_USER_IDS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const normalizedEmail = email?.toLowerCase() ?? "";
-  return (
-    (normalizedEmail !== "" && adminEmails.includes(normalizedEmail)) ||
-    adminUserIds.includes(userId)
-  );
-}
 
 export default async function AdminCreatorClaimsPage() {
   const supabase = await createClient();

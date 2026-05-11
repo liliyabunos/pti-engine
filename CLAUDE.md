@@ -58,6 +58,13 @@ Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 ro
 
 **Ingestion note:** The 2 new channels (UC-MsytPEXSO-2ZHmB5Y4xSw, UCWRTAJqkmpF_yS7MJOIOYNg) will be picked up by the next `ingest_youtube_channels.py` pipeline run automatically. Do not trigger ingestion manually from the admin UI.
 
+**Admin navigation fix (2026-05-11):**
+- Source Intake removed from general user sidebar (was leaking to all logged-in users)
+- Creator Claims was never in sidebar — now added
+- New Admin section in sidebar: visible only to admin users (same ADMIN_EMAILS/ADMIN_USER_IDS source of truth)
+- `isAdminUser()` extracted to `frontend/src/lib/auth/guards.server.ts` — shared by layout + all 3 admin page guards
+- Route/API security unchanged — 403 on direct access for non-admin remains enforced at page level
+
 ---
 
 ## D1.1A — Apex Domain + App Route Canonicalization Hotfix

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { StatusBar } from "@/components/shell/StatusBar";
 import { createClient } from "@/lib/auth/server";
+import { isAdminUser } from "@/lib/auth/guards.server";
 
 /**
  * Terminal shell layout — Server Component.
@@ -30,6 +31,8 @@ export default async function TerminalLayout({
     redirect("/login");
   }
 
+  const adminUser = isAdminUser(user.email, user.id);
+
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-zinc-950">
       {/* Global top status bar */}
@@ -37,7 +40,7 @@ export default async function TerminalLayout({
 
       {/* Sidebar + page content side-by-side */}
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
+        <Sidebar isAdmin={adminUser} />
 
         {/* Main region — pages own their internal scroll */}
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
