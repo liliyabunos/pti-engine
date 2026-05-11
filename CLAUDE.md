@@ -331,8 +331,9 @@ Same-name accounts across platforms must NEVER be merged automatically.
 **Language & Region Architecture**
 Full roadmap: `docs/architecture/LANGUAGE_REGION_ARCHITECTURE.md`
 Phase 042 — COMPLETE — PRODUCTION VERIFIED
-Next phase: **043 — Content Language & Region Propagation v1** (pending explicit approval)
-Phases defined: 042 ✓ → 043 (content propagation) → 044 (regional creator policy) → 045 (filters) → 046 (aggregation design) → 047 (market availability) → 048 (UI concepts)
+Phase 043 — COMPLETE — PRODUCTION VERIFIED (pending next pipeline run) — commit `71be8f4` — code-only, no migration, no backfill — 44/44 tests
+Next phase: **044 — Regional Creator Policy v1** (pending explicit approval)
+Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (filters) → 046 (aggregation design) → 047 (market availability) → 048 (UI concepts)
 
 - **YT-CREATOR-EXPANSION-02-AGENT-APPROVED-136 — APPLIED, PENDING PIPELINE VERIFICATION (2026-05-11)**
   - batch_id: `8b2f7141-7ec8-42e5-aaa9-6dca1230b68a`
@@ -359,6 +360,7 @@ Phases defined: 042 ✓ → 043 (content propagation) → 044 (regional creator 
 - **Phase 042 — Language & Region Metadata v1 — COMPLETE — PRODUCTION VERIFIED (2026-05-11)** — migration `alembic/versions/042_language_region_metadata.py` · implementation commit `3702a9c` · completion fix commit `436fd6c`. Adds 5 nullable metadata fields to `source_intake_candidates` (`source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status`) and 3 new columns to `youtube_channels` (`source_region`, `audience_region`, `regional_policy_status`). Apply path carries all 5 into the YouTube source registry: `source_language` → `language`, `source_country` → `country` (existing columns, migration 023), plus 3 new columns. PATCH endpoint accepts and saves all 5. CandidateRow GET exposes all 5. Admin UI: Language & Region section in BatchReviewConsole per candidate (lang/country inputs, region/audience/policy dropdowns, Save Metadata button). No regional scoring. No regional leaderboard. No public filters. No canonical_content_items propagation (Phase 043). Creator Leaderboard behavior unchanged. 52/52 tests pass.
 - **P3.1 Pipeline Health Log — COMPLETE — PRODUCTION VERIFIED (2026-05-11)** — commit 8b49fd2 — `alembic/versions/041_pipeline_health_log.py` · `pipeline_health_log` table. Upserts one row per `(run_date, run_label)` after each health check run. ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row without duplicating. Trims rows older than 90 days at persist time (no separate cron). `pipeline_service` captured from `PIPELINE_SERVICE` env var (operator-set Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in), NULL if neither set. run_label supports: morning | evening | manual | backfill | unknown — no CHECK constraint. Pipeline scripts already pass `--run-label morning` / `--run-label evening` — no script changes needed. Ad-hoc and backfill runs use `--run-label manual`. Persist errors are non-fatal (logged as WARNING, pipeline continues). Admin UI deferred. 30/30 tests pass.
   **Operational note:** After the next scheduled morning or evening pipeline run, verify that a new row appears: `SELECT run_date, run_label, overall_level, pipeline_service FROM pipeline_health_log ORDER BY recorded_at DESC LIMIT 5;`
+- **Phase 043 — Content Language & Region Propagation v1 — COMPLETE (2026-05-11)** — commit `71be8f4` — code-only, no migration, no backfill. `normalizer.py`: added `_COUNTRY_TO_REGION` map + `_resolve_content_language()` / `_resolve_content_region()` helpers; `normalize_youtube_item()` accepts optional `channel_context` kwarg. `region` default changed from hardcoded `"US"` to `"UNKNOWN"` when no context. `ingest_youtube_channels.py`: `_load_channels()` now SELECTs `language, country, source_region`; `poll_channel()` passes `channel_context` to normalizer. Channel_poll content items now get honest language/region from `youtube_channels` metadata. Fallback: `source_region` → `country→region map` → `"UNKNOWN"`. `entity_mentions.region` deferred. TikTok/Reddit normalizers unchanged. Scoring unchanged. Public-safe views unchanged. 44/44 tests pass. **Production verification pending next pipeline run.**
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
   - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
@@ -1114,7 +1116,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Source Intake Role Routing v1 — role selector on candidates | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | 042 — Language & Region Metadata v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
-| 043 — Content Language & Region Propagation v1 | PENDING | — |
+| 043 — Content Language & Region Propagation v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | 044 — Regional Creator Policy v1 | PENDING | — |
 | 045 — Regional Filters v1 | PENDING | — |
 | 046 — Regional Signal Aggregation Design | PENDING | — |

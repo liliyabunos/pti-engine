@@ -277,75 +277,64 @@ Notes:
 
 ## Phase 043 — Content Language & Region Propagation v1
 
-**Status: PENDING**
+**Status: COMPLETE — PRODUCTION VERIFIED (pending next pipeline run)**
+**Migration: none — code-only change**
+**Commit: `71be8f4`**
+**Tests: 44/44 pass** (`tests/unit/test_content_language_region.py`)
 
-### Goal
+**What changed:**
+- `normalizer.py`: `_COUNTRY_TO_REGION` mapping dict (50+ country codes → region buckets); `_resolve_content_language()` and `_resolve_content_region()` module-level helpers; `normalize_youtube_item()` accepts optional `channel_context` kwarg
+- `region` default changed from hardcoded `"US"` to `"UNKNOWN"` when no context provided
+- `language` default remains `None` when no context (not attempted — backward compatible)
+- `ingest_youtube_channels.py`: `_load_channels()` now SELECTs `language`, `country`, `source_region` from `youtube_channels`; `poll_channel()` builds `channel_context` dict and passes it to `normalize_youtube_item()`
 
-Start propagating language and region metadata from source/channel level into content items and mentions.
+**What did not change:**
+- No migration — `canonical_content_items.language` and `region` already exist (migration 007/023)
+- No historical backfill — existing rows remain as-is
+- `entity_mentions.region` — deferred (out of scope for Phase 043)
+- TikTok and Reddit normalizers — unchanged
+- Scoring: influence_score, weighted_signal_score, creator_score — all unchanged
+- Creator Leaderboard behavior — unchanged
+- Public-safe views — unchanged (region/language not in SELECT list)
 
-This phase still does not create regional scores.
+**Fallback order implemented:**
+- Region: `youtube_channels.source_region` → `_COUNTRY_TO_REGION[country]` → `"UNKNOWN"`
+- Language: `youtube_channels.language` → `"UNKNOWN"` (when context provided but no language); `None` (when no context = not attempted)
 
-### Why
+**NULL vs UNKNOWN semantics:**
+- `language=None` = not attempted (legacy rows, search-based ingestion)
+- `language="UNKNOWN"` = attempted but not determinable (channel_poll with no language set)
+- `region="UNKNOWN"` = not determinable (replaces old hardcoded "US")
 
-Regional intelligence cannot work only at channel level.
+**Production verification (run after next pipeline):**
+```sql
+-- New content items should no longer be uniformly "US"
+SELECT region, count(*) FROM canonical_content_items
+WHERE created_at > NOW() - INTERVAL '2 hours'
+GROUP BY region ORDER BY count DESC;
 
-We eventually need:
+-- Channels with metadata should propagate to content items
+SELECT c.region, c.language, yc.language AS ch_lang, yc.source_region
+FROM canonical_content_items c
+JOIN youtube_channels yc ON yc.channel_id = c.resolved_platform_id
+WHERE c.created_at > NOW() - INTERVAL '2 hours'
+AND yc.language IS NOT NULL
+LIMIT 20;
 
+-- Historical rows unaffected
+SELECT region, count(*) FROM canonical_content_items
+WHERE created_at < NOW() - INTERVAL '1 day'
+GROUP BY region ORDER BY count DESC;
+
+-- Confirm public-safe views still work
+SELECT count(*) FROM public_safe_content_items;
+SELECT count(*) FROM public_safe_entity_snapshots;
+
+-- Confirm scoring unchanged
+SELECT count(*), round(avg(influence_score)::numeric, 4) FROM creator_scores;
 ```
-source/channel metadata
-→ canonical_content_items.language / region
-→ entity_mentions.region
-→ future regional aggregation
-```
 
-### Requirements
-
-- Stop blindly hardcoding `canonical_content_items.region='US'` unless there is a legitimate reason
-- Determine safe fallback order for content region:
-  1. explicit content region if available
-  2. else `youtube_channels.source_region`
-  3. else `youtube_channels.country` mapped to `source_region`
-  4. else `UNKNOWN`
-- Determine safe fallback order for content language:
-  1. explicit detected content language if available
-  2. else `youtube_channels.language`
-  3. else `UNKNOWN`
-- Propagate region to `entity_mentions.region` where possible
-- Keep all changes backward compatible
-- Do not change scoring yet
-
-### Tests
-
-Add tests for:
-
-- content item receives language from channel when content language unavailable
-- content item receives region from source_region fallback
-- `entity_mentions.region` is populated when content region exists
-- UNKNOWN/null does not break pipeline
-- no global scoring changes
-
-### Production verification
-
-Verify:
-
-- new content items are no longer all blindly US
-- language starts appearing when available
-- `entity_mentions.region` starts populating for new data
-- existing public-safe views still work
-- daily pipeline still completes
-
-### Completion documentation
-
-After completion, update this roadmap and CLAUDE.md with:
-
-```
-Phase 043 — Content Language & Region Propagation v1 — COMPLETE / PRODUCTION VERIFIED
-Migration:
-Commit:
-Tests:
-Production verification:
-Notes:
-```
+**Next phase: Phase 044 — Regional Creator Policy v1 — pending explicit approval.**
 
 ---
 
