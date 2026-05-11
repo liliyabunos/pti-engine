@@ -327,19 +327,22 @@ Same-name accounts across platforms must NEVER be merged automatically.
 ---
 
 ## Active Roadmap
-- **YT-CREATOR-EXPANSION-02-AGENT-APPROVED-136 — VERIFIED, PENDING OPERATOR REVIEW (2026-05-11)**
+- **YT-CREATOR-EXPANSION-02-AGENT-APPROVED-136 — APPLIED, PENDING PIPELINE VERIFICATION (2026-05-11)**
   - batch_id: `8b2f7141-7ec8-42e5-aaa9-6dca1230b68a`
   - Script: `scripts/youtube/verify_from_csv.py` (new — reads CSV with pre-known channel_ids, no URL resolution needed, batch channels.list fetch)
   - Source CSV: `data_inputs/fragrance_channels_reviewed_2026-05-10.csv` — 190 rows total, 136 filtered (approved_creator_candidate only)
-  - Results: 70 VERIFIED_ADD_READY / 37 SKIP_DUPLICATE / 29 SKIP_INACTIVE / 0 NEEDS_OPERATOR_REVIEW
-  - All 136 channel_ids pre-validated by agent; YouTube API confirmed metadata for all 136 (0 unresolved)
-  - youtube_channels unchanged at 210 (no apply performed) ✓
-  - Admin review: `/admin/source-intake/8b2f7141-7ec8-42e5-aaa9-6dca1230b68a`
-  - Top VERIFIED_ADD_READY by subs: Andrés Perfume-Man (2.45M), NAUTIQUE LUXURY (1.13M), Robin James (511K), Perfume Network (369K), Amanzada Perfumes (255K)
-  - All 37 SKIP_DUPLICATE are already-registered channels (Jeremy Fragrance, Gents Scents, CurlyFragrance, etc.)
-  - 29 SKIP_INACTIVE: no videos in last 30 days (largest: Jus de Rose 210K, Baldassarre Fragrance 84K)
-  - Reports: `reports/source_intake_yt-creator-expansion-02-agent-approved-136_2026-05-11.{md,csv}`
-  - **Next step:** Operator reviews `/admin/source-intake/8b2f7141-...` and applies approved candidates
+  - Batch results: 70 VERIFIED_ADD_READY / 37 SKIP_DUPLICATE / 29 SKIP_INACTIVE / 0 NEEDS_OPERATOR_REVIEW
+  - **Disposition applied (2026-05-11):**
+    - APPLIED: 41 English/global independent fragrance creator channels → youtube_channels 210 → 251 ✓
+    - DEFERRED/ROUTE_TO_BRAND_RETAIL_WATCH (3): NAUTIQUE LUXURY (1.13M), Amanzada Perfumes (255K), SHAHIDI SCENT REVIEWS (10K)
+    - DEFERRED/ROUTE_TO_FORMULATION_EDUCATION_LAYER (3): Faizan Fragrances, babbs collection, Unravel Perfumery
+    - DEFERRED/REGIONAL_POLICY_PENDING (12): Andrés Perfume-Man (2.45M, Spanish), Leni's Scents (57K, DE), + 10 India/ME/other regional
+    - DEFERRED/LIFESTYLE_OR_AMBIGUOUS_REVIEW (8): Mila Le Blanc (99K), FragranceView (67K), Hassan Siddiqui (58K), + 5 others
+    - OPERATOR_REJECTED/true noise (3): MAGS FRAGS (automotive), Ai_TheGreat (lifestyle/bags), Scents N Stories (failed title extraction)
+  - Provenance: added_by = `source_intake:YT-CREATOR-EXPANSION-02-AGENT-APPROVED-136` — 0 duplicates ✓
+  - Audit log: 206 entries (136 initial_classification + 41 apply + 26 defer + 3 reject) ✓
+  - Policy: DEFERRED preserves all fragrance-relevant sources for future brand/retail/formulation/regional layers; REJECTED = true noise only
+  - **Next step:** Scheduled pipeline will poll 41 new channels; mark PRODUCTION_VERIFIED after confirmed ingestion
 
 - **YT-CREATOR-EXPANSION-01 — COMPLETE — PRODUCTION VERIFIED (2026-05-10)** — commit 914652e — Added 8 verified fragrance YouTube creator channels (189 → 197 total). Scripts: `scripts/youtube/verify_candidate_channels.py` (resolution + activity check + dedup), `scripts/youtube/seed_yt_creator_expansion_01.py` (idempotent INSERT). Reports: `reports/youtube_candidate_intake_2026-05-10.{md,csv,json}`. Reviewed 20 candidates: 8 ADD / 3 SKIP_DUPLICATE / 4 SKIP_INACTIVE_30D / 5 NEEDS_OPERATOR_REVIEW. All 8 polled and ingested (89 new content items). Channels added: Christopher Lee Fragrances (412K, tier_2), Soki London (151K, tier_2), The Niche Fragrance Collector (136K, tier_2), The Scented (126K, tier_2), Paulina&Perfumes (85K, tier_2), Gabby Loves Perfumes (34K, tier_3), Seldomly Often (22K, tier_3), Des Paons Dansent Cent Heures (5K, tier_4).
 - **SC1.2A+B TikTok Watchlist Registry — COMPLETE (2026-05-08)** — commit pending — migration 035: `creator_platform_accounts` (platform-neutral, unique on `(platform, platform_handle)`) + `creator_watchlist_audit_log`. Service: `perfume_trend_sdk/services/tiktok_watchlist.py` (add_account, list_accounts, get_account, change_status, bulk_import). Handles: bare/`@handle`/profile URL normalized; video URLs rejected. Statuses: pending_review|active|paused|rejected|error. API: `GET/POST /api/v1/tiktok-watchlist`, `GET/PATCH /{handle}`, `GET /{handle}/audit`. Seed script: `python3 -m perfume_trend_sdk.scripts.seed_tiktok_creators --file CSV [--dry-run] [--activate]`. Production: 6 creators seeded, 9 audit entries, duplicate protection verified, YouTube creator_scores (711 rows) untouched. 44/44 tests pass.
