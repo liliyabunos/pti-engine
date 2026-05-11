@@ -132,6 +132,8 @@ _TABLES = [
         notes TEXT,
         source_role TEXT DEFAULT 'independent_creator',
         creator_score_eligible INTEGER DEFAULT 1,
+        language TEXT,
+        country TEXT,
         source_region TEXT,
         audience_region TEXT,
         regional_policy_status TEXT
@@ -1023,6 +1025,44 @@ class TestLanguageRegionMetadata:
         assert data["source_region"] == "BRAZIL"
         assert data["audience_region"] == "LATAM"
         assert data["regional_policy_status"] == "regional_policy_pending"
+
+    def test_apply_carries_source_language_to_youtube_channels_language(self, client, db_session):
+        """source_intake_candidates.source_language → youtube_channels.language on apply."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                               resolved_platform_id="UClangmx042123456789012345")
+        db_session.execute(
+            text("UPDATE source_intake_candidates SET source_language = 'es', source_country = 'MX' WHERE id = :id"),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply", headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("SELECT language, country FROM youtube_channels WHERE channel_id = :cid"),
+            {"cid": "UClangmx042123456789012345"}).fetchone()
+        assert row[0] == "es"
+        assert row[1] == "MX"
+
+    def test_apply_null_language_country_backward_compatible(self, client, db_session):
+        """Apply with NULL source_language/source_country → youtube_channels.language/country remain NULL."""
+        bid = _make_batch(db_session)
+        _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                        resolved_platform_id="UCnulllang042123456789012")
+        # no language/country set
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply", headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("SELECT language, country FROM youtube_channels WHERE channel_id = :cid"),
+            {"cid": "UCnulllang042123456789012"}).fetchone()
+        assert row is not None
+        assert row[0] is None
+        assert row[1] is None
 
     def test_metadata_patch_does_not_change_creator_leaderboard_eligibility(self, client, db_session):
         """Setting region metadata does not alter creator_score_eligible."""

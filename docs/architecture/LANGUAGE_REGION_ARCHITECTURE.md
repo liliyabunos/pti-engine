@@ -96,7 +96,17 @@ Current policy:
 - No scoring changes
 - No public UI filters added
 - No regional leaderboard
-- `source_language` and `source_country` are not yet propagated to `youtube_channels` — only `source_region`, `audience_region`, `regional_policy_status` are carried at apply time (language/country already exist on youtube_channels as separate fields)
+- No propagation to `canonical_content_items` or `entity_mentions` (Phase 043)
+
+**Full carry-forward mapping (apply_batch → youtube_channels):**
+
+| candidate field | youtube_channels column | note |
+|----------------|------------------------|------|
+| `source_language` | `language` | existing column (migration 023) |
+| `source_country` | `country` | existing column (migration 023) |
+| `source_region` | `source_region` | new column (migration 042) |
+| `audience_region` | `audience_region` | new column (migration 042) |
+| `regional_policy_status` | `regional_policy_status` | new column (migration 042) |
 
 **Next recommended phase:** Phase 043 — Content Language & Region Propagation v1 (pending explicit approval)
 

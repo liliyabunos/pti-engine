@@ -955,12 +955,14 @@ def apply_batch(
                     quality_tier, category, status, priority, subscriber_count, video_count,
                     uploads_playlist_id, added_at, added_by, notes,
                     source_role, creator_score_eligible,
+                    language, country,
                     source_region, audience_region, regional_policy_status
                 ) VALUES (
                     :id, :channel_id, :handle, :channel_url, :title, :norm_title,
                     :quality_tier, :category, :status, :priority, :subscriber_count, :video_count,
                     :uploads_playlist_id, :added_at, :added_by, :notes,
                     :source_role, :creator_score_eligible,
+                    :language, :country,
                     :source_region, :audience_region, :regional_policy_status
                 )
                 ON CONFLICT (channel_id) DO NOTHING
@@ -984,6 +986,10 @@ def apply_batch(
                 "source_role": role,
                 "creator_score_eligible": eligible,
                 # Language & Region Metadata v1 (Phase 042) — carry-forward from candidate
+                # source_language → existing youtube_channels.language column
+                # source_country  → existing youtube_channels.country column
+                "language": c.source_language,
+                "country": c.source_country,
                 "source_region": c.source_region,
                 "audience_region": c.audience_region,
                 "regional_policy_status": c.regional_policy_status,
