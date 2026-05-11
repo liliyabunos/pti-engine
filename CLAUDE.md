@@ -1098,6 +1098,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | C2.3 Creator Claim Launch Readiness (copy + UX polish) | COMPLETE — PENDING VERIFICATION | 2026-05-10 |
 | YT-CREATOR-EXPANSION-01 — 8 new YouTube creator channels | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
 | SOURCE-INTAKE-V1A — YouTube source intake DB + admin review UI | COMPLETE — PRODUCTION VERIFIED | 2026-05-10 |
+| Source Role Foundation v1 — source_role + creator_score_eligible | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED | — |
@@ -1107,7 +1108,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ## Alembic Migrations
 
-Current production: **migration 038** (head)
+Current production: **migration 039** (head)
 
 | Migration | What |
 |-----------|------|
@@ -1126,6 +1127,7 @@ Current production: **migration 038** (head)
 | 036 | C1 — `creator_profile_claims` table: claim_status, claim_method (bio_code/screenshot/manual_review/domain_email/oauth), verification_code_hash + expiry, partial unique index on active claims |
 | 037 | C1 — `creator_oauth_grants` scaffold: platform_user_id, encrypted token fields, partial unique index on active grants per (user_id, platform, platform_user_id), nullable creator_id |
 | 038 | SOURCE-INTAKE-V1A — `source_intake_batches` + `source_intake_candidates` + `source_intake_audit_log`; 12-status lifecycle with CHECK constraints; FK cascade from candidates→batches, audit→candidates |
+| 039 | Source Role Foundation v1 — `source_role VARCHAR(64) DEFAULT 'independent_creator'` + `creator_score_eligible BOOLEAN DEFAULT TRUE` on `youtube_channels`; Creator Leaderboard gated on `creator_score_eligible IS NOT FALSE`; `YouTubeClient.get_channel_info()` captures country + language on first poll; 256 existing rows backfilled via server_default |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
