@@ -433,6 +433,11 @@ Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (f
   - ControlBar: removed fixed h-9, flex-wrap, right slot full-width on mobile
   - RangeSelector: preset buttons overflow-x-auto, custom date inputs wrap below
   - Dashboard + Screener: search+filters row 1, range selector row 2 on narrow viewports
+- **FIX: Dashboard + Screener responsive controls overlap (2026-05-11)** — commit 5d4f802
+  - Root cause: ControlBar right slot `sm:w-auto sm:shrink-0` (640px+) caused left+right to share one row at tablet widths (~768px); search `w-48 shrink-0` overflowed left container and visually overlapped range selector
+  - Fix: right slot raised to `xl:w-auto xl:shrink-0` (1280px+) — left and right stack vertically at <1280px, join one row at ≥1280px
+  - Search input: `w-full sm:w-48 sm:shrink-0` — full-width on mobile, fixed 192px at 640px+
+  - Tested: desktop wide (single row, no overlap), tablet/medium (stacked rows, no overlap), mobile (full-width search)
 - **Legal Content Audit + Compliance Pages COMPLETE (2026-05-05)** — commit 8b0e055
   - New pages: /data-sources, /privacy/california, /cookies, /copyright, /privacy/request
   - Privacy Policy rewritten (15 sections: EEA/UK/CCPA/CPRA/GDPR, data broker statement)
