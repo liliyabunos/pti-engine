@@ -75,6 +75,12 @@ export interface CandidateRow {
   // Role Routing v1
   source_role: string | null;
   creator_score_eligible: boolean | null;
+  // Language & Region Metadata v1 (Phase 042)
+  source_language: string | null;
+  source_country: string | null;
+  source_region: string | null;
+  audience_region: string | null;
+  regional_policy_status: string | null;
 }
 
 export interface CandidateListResponse {
@@ -246,6 +252,22 @@ export async function updateCandidateRole(
       source_role: sourceRole,
       ...(creatorScoreEligible !== undefined ? { creator_score_eligible: creatorScoreEligible } : {}),
     }),
+  });
+}
+
+export async function updateCandidateMetadata(
+  candidateId: string,
+  metadata: {
+    source_language?: string | null;
+    source_country?: string | null;
+    source_region?: string | null;
+    audience_region?: string | null;
+    regional_policy_status?: string | null;
+  },
+): Promise<void> {
+  await apiFetch(`/candidates/${candidateId}`, {
+    method: "PATCH",
+    body: JSON.stringify(metadata),
   });
 }
 

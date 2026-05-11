@@ -119,6 +119,12 @@ def _row_to_candidate(r) -> CandidateRow:
         created_at=_fmt(r[22]),
         source_role=r[23] if len(r) > 23 else None,
         creator_score_eligible=bool(r[24]) if len(r) > 24 and r[24] is not None else None,
+        # Language & Region Metadata v1 (Phase 042) — indices 25-29
+        source_language=r[25] if len(r) > 25 else None,
+        source_country=r[26] if len(r) > 26 else None,
+        source_region=r[27] if len(r) > 27 else None,
+        audience_region=r[28] if len(r) > 28 else None,
+        regional_policy_status=r[29] if len(r) > 29 else None,
     )
 
 
@@ -129,7 +135,8 @@ _CANDIDATE_COLS = """
     resolve_method, confidence, status, decision_reason,
     operator_override_url, operator_notes, quality_tier,
     reviewed_by, reviewed_at, applied_at, apply_error, created_at,
-    source_role, creator_score_eligible
+    source_role, creator_score_eligible,
+    source_language, source_country, source_region, audience_region, regional_policy_status
 """
 
 
@@ -614,6 +621,22 @@ def update_candidate(
     if body.creator_score_eligible is not None:
         sets.append("creator_score_eligible = :creator_score_eligible")
         params["creator_score_eligible"] = body.creator_score_eligible
+    # Language & Region Metadata v1 (Phase 042)
+    if body.source_language is not None:
+        sets.append("source_language = :source_language")
+        params["source_language"] = body.source_language.strip() or None
+    if body.source_country is not None:
+        sets.append("source_country = :source_country")
+        params["source_country"] = body.source_country.strip() or None
+    if body.source_region is not None:
+        sets.append("source_region = :source_region")
+        params["source_region"] = body.source_region.strip() or None
+    if body.audience_region is not None:
+        sets.append("audience_region = :audience_region")
+        params["audience_region"] = body.audience_region.strip() or None
+    if body.regional_policy_status is not None:
+        sets.append("regional_policy_status = :regional_policy_status")
+        params["regional_policy_status"] = body.regional_policy_status.strip() or None
 
     if not sets:
         return {"candidate_id": candidate_id, "updated": False}
@@ -931,12 +954,14 @@ def apply_batch(
                     id, channel_id, handle, channel_url, title, normalized_title,
                     quality_tier, category, status, priority, subscriber_count, video_count,
                     uploads_playlist_id, added_at, added_by, notes,
-                    source_role, creator_score_eligible
+                    source_role, creator_score_eligible,
+                    source_region, audience_region, regional_policy_status
                 ) VALUES (
                     :id, :channel_id, :handle, :channel_url, :title, :norm_title,
                     :quality_tier, :category, :status, :priority, :subscriber_count, :video_count,
                     :uploads_playlist_id, :added_at, :added_by, :notes,
-                    :source_role, :creator_score_eligible
+                    :source_role, :creator_score_eligible,
+                    :source_region, :audience_region, :regional_policy_status
                 )
                 ON CONFLICT (channel_id) DO NOTHING
             """), {
@@ -958,6 +983,10 @@ def apply_batch(
                 "notes": notes,
                 "source_role": role,
                 "creator_score_eligible": eligible,
+                # Language & Region Metadata v1 (Phase 042) — carry-forward from candidate
+                "source_region": c.source_region,
+                "audience_region": c.audience_region,
+                "regional_policy_status": c.regional_policy_status,
             })
             rows_affected = result.rowcount
             if rows_affected == 1:

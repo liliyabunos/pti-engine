@@ -77,7 +77,28 @@ Current policy:
 
 ## Phase 042 — Language & Region Metadata v1
 
-**Status: PENDING**
+**Status: COMPLETE — PRODUCTION VERIFIED**
+**Migration: `alembic/versions/042_language_region_metadata.py`**
+**Commit: see CLAUDE.md**
+**Tests: 50/50 pass (`tests/unit/test_admin_source_intake.py` — 11 new tests in `TestLanguageRegionMetadata`)**
+
+**What changed:**
+- `source_intake_candidates`: `source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status` — all nullable, no CHECK constraints
+- `youtube_channels`: `source_region`, `audience_region`, `regional_policy_status` — all nullable
+- Apply path carries the three channel-level fields from candidate into `youtube_channels`
+- `PATCH /candidates/{id}` accepts all five new fields
+- `CandidateRow` response exposes all five new fields
+- Admin UI (`BatchReviewConsole`) shows Language & Region controls per candidate (lang input, country input, region dropdown, audience dropdown, policy dropdown; Save Metadata button appears only when pending)
+
+**What did not change:**
+- Creator Leaderboard behavior unchanged — still gated on `creator_score_eligible IS NOT FALSE`
+- source_role routing unchanged
+- No scoring changes
+- No public UI filters added
+- No regional leaderboard
+- `source_language` and `source_country` are not yet propagated to `youtube_channels` — only `source_region`, `audience_region`, `regional_policy_status` are carried at apply time (language/country already exist on youtube_channels as separate fields)
+
+**Next recommended phase:** Phase 043 — Content Language & Region Propagation v1 (pending explicit approval)
 
 ### Goal
 

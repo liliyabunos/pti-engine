@@ -20,6 +20,7 @@ import {
   markDuplicate,
   updateCandidateOverride,
   updateCandidateRole,
+  updateCandidateMetadata,
   rerunCandidate,
   applyBatch,
   productionVerifyBatch,
@@ -48,6 +49,32 @@ const SOURCE_ROLE_OPTIONS = [
 ] as const;
 
 const CREATOR_ELIGIBLE_ROLES = new Set(["independent_creator"]);
+
+// Phase 042 — Language & Region Metadata v1
+const SOURCE_REGION_OPTIONS = [
+  { value: "US_CANADA", label: "US / Canada" },
+  { value: "UK_IRELAND", label: "UK / Ireland" },
+  { value: "EU_DACH", label: "EU — DACH" },
+  { value: "EU_FRANCOPHONE", label: "EU — Francophone" },
+  { value: "EU_SOUTH", label: "EU — South" },
+  { value: "LATAM", label: "LATAM" },
+  { value: "BRAZIL", label: "Brazil" },
+  { value: "MIDDLE_EAST_GCC", label: "Middle East / GCC" },
+  { value: "SOUTH_ASIA", label: "South Asia" },
+  { value: "EAST_ASIA", label: "East Asia" },
+  { value: "SOUTHEAST_ASIA", label: "Southeast Asia" },
+  { value: "GLOBAL_ENGLISH", label: "Global English" },
+  { value: "UNKNOWN", label: "Unknown" },
+] as const;
+
+const REGIONAL_POLICY_OPTIONS = [
+  { value: "approved_global", label: "Approved — Global" },
+  { value: "approved_regional", label: "Approved — Regional" },
+  { value: "regional_policy_pending", label: "Policy Pending" },
+  { value: "excluded_from_global", label: "Excluded from Global" },
+  { value: "needs_operator_review", label: "Needs Operator Review" },
+  { value: "unknown", label: "Unknown" },
+] as const;
 
 function resolvedEligible(role: string | null, explicit: boolean | null): boolean | null {
   if (explicit !== null && explicit !== undefined) return explicit;
@@ -259,6 +286,7 @@ function CandidateCard({
   onMarkDuplicate: (id: string) => void;
   onEditRerun: (c: CandidateRow) => void;
   onRoleChange: (id: string, role: string) => void;
+  onMetadataChange: (id: string, updates: Partial<CandidateRow>) => void;
 }) {
   const isTerminal = TERMINAL_STATUSES.has(candidate.status);
   const isReviewing = candidate.status === "NEEDS_OPERATOR_REVIEW" || candidate.status === "DEFERRED";
@@ -294,6 +322,48 @@ function CandidateCard({
     pendingRole ? roleValue : candidate.source_role,
     candidate.creator_score_eligible ?? null,
   );
+
+  // --- Language & Region Metadata state (Phase 042) ---
+  const [langValue, setLangValue] = useState(candidate.source_language ?? "");
+  const [countryValue, setCountryValue] = useState(candidate.source_country ?? "");
+  const [regionValue, setRegionValue] = useState(candidate.source_region ?? "");
+  const [audienceValue, setAudienceValue] = useState(candidate.audience_region ?? "");
+  const [policyValue, setPolicyValue] = useState(candidate.regional_policy_status ?? "");
+  const [metaSaving, setMetaSaving] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
+
+  const metaPending =
+    langValue !== (candidate.source_language ?? "") ||
+    countryValue !== (candidate.source_country ?? "") ||
+    regionValue !== (candidate.source_region ?? "") ||
+    audienceValue !== (candidate.audience_region ?? "") ||
+    policyValue !== (candidate.regional_policy_status ?? "");
+
+  async function handleSaveMetadata() {
+    if (!metaPending || metaSaving) return;
+    setMetaSaving(true);
+    setMetaError(null);
+    try {
+      await updateCandidateMetadata(candidate.id, {
+        source_language: langValue || null,
+        source_country: countryValue || null,
+        source_region: regionValue || null,
+        audience_region: audienceValue || null,
+        regional_policy_status: policyValue || null,
+      });
+      onMetadataChange(candidate.id, {
+        source_language: langValue || null,
+        source_country: countryValue || null,
+        source_region: regionValue || null,
+        audience_region: audienceValue || null,
+        regional_policy_status: policyValue || null,
+      });
+    } catch (err: unknown) {
+      setMetaError((err as Error).message ?? "Save failed");
+    } finally {
+      setMetaSaving(false);
+    }
+  }
 
   // Parse recent titles sample
   let titlesSample: string[] = [];
@@ -372,6 +442,90 @@ function CandidateCard({
             <span className="text-[10px] text-zinc-600">● not creator eligible</span>
           )}
           {roleError && <span className="text-[10px] text-red-400">{roleError}</span>}
+        </div>
+      )}
+
+      {/* Language & Region Metadata (Phase 042) */}
+      {!isTerminal && (
+        <div className="space-y-1.5 rounded border border-zinc-800/60 bg-zinc-950/30 px-3 py-2">
+          <p className="text-[10px] font-medium text-zinc-600 uppercase tracking-wide">Language & Region</p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-600 w-12 shrink-0">Lang:</span>
+              <input
+                type="text"
+                maxLength={16}
+                value={langValue}
+                onChange={(e) => { setLangValue(e.target.value); setMetaError(null); }}
+                placeholder="en"
+                className="w-14 rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[11px] text-zinc-300 outline-none focus:border-zinc-500 placeholder-zinc-700"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-600 w-14 shrink-0">Country:</span>
+              <input
+                type="text"
+                maxLength={8}
+                value={countryValue}
+                onChange={(e) => { setCountryValue(e.target.value.toUpperCase()); setMetaError(null); }}
+                placeholder="US"
+                className="w-14 rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[11px] text-zinc-300 outline-none focus:border-zinc-500 placeholder-zinc-700"
+              />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-600 w-14 shrink-0">Region:</span>
+              <select
+                value={regionValue}
+                onChange={(e) => { setRegionValue(e.target.value); setMetaError(null); }}
+                className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[11px] text-zinc-300 outline-none focus:border-zinc-500"
+              >
+                <option value="">— unset —</option>
+                {SOURCE_REGION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-600 w-20 shrink-0">Audience:</span>
+              <select
+                value={audienceValue}
+                onChange={(e) => { setAudienceValue(e.target.value); setMetaError(null); }}
+                className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[11px] text-zinc-300 outline-none focus:border-zinc-500"
+              >
+                <option value="">— unset —</option>
+                {SOURCE_REGION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-zinc-600 w-14 shrink-0">Policy:</span>
+              <select
+                value={policyValue}
+                onChange={(e) => { setPolicyValue(e.target.value); setMetaError(null); }}
+                className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[11px] text-zinc-300 outline-none focus:border-zinc-500"
+              >
+                <option value="">— unset —</option>
+                {REGIONAL_POLICY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {(metaPending || metaError) && (
+            <div className="flex items-center gap-2 pt-0.5">
+              {metaPending && (
+                <button
+                  onClick={handleSaveMetadata}
+                  disabled={metaSaving}
+                  className="rounded border border-zinc-600 px-2 py-0.5 text-[10px] text-zinc-400 hover:text-zinc-200 disabled:opacity-40 transition-colors"
+                >
+                  {metaSaving ? "Saving…" : "Save Metadata"}
+                </button>
+              )}
+              {metaError && <span className="text-[10px] text-red-400">{metaError}</span>}
+            </div>
+          )}
         </div>
       )}
 
@@ -546,6 +700,10 @@ export function BatchReviewConsole({
 
   function handleRoleChange(id: string, role: string) {
     mutateCandidate(id, { source_role: role });
+  }
+
+  function handleMetadataChange(id: string, updates: Partial<CandidateRow>) {
+    mutateCandidate(id, updates);
   }
 
   async function handleApprove(id: string) {
@@ -758,6 +916,7 @@ export function BatchReviewConsole({
                   onMarkDuplicate={handleMarkDuplicate}
                   onEditRerun={setRerunTarget}
                   onRoleChange={handleRoleChange}
+                  onMetadataChange={handleMetadataChange}
                 />
               ))}
             </div>

@@ -97,6 +97,12 @@ class CandidateRow(BaseModel):
     # Role Routing v1 — operator-assigned source classification
     source_role: Optional[str] = None
     creator_score_eligible: Optional[bool] = None
+    # Language & Region Metadata v1 (Phase 042)
+    source_language: Optional[str] = None
+    source_country: Optional[str] = None
+    source_region: Optional[str] = None
+    audience_region: Optional[str] = None
+    regional_policy_status: Optional[str] = None
 
 
 class CandidateListResponse(BaseModel):
@@ -126,6 +132,12 @@ class UpdateCandidateRequest(BaseModel):
     # Role Routing v1
     source_role: Optional[str] = None
     creator_score_eligible: Optional[bool] = None
+    # Language & Region Metadata v1 (Phase 042)
+    source_language: Optional[str] = None
+    source_country: Optional[str] = None
+    source_region: Optional[str] = None
+    audience_region: Optional[str] = None
+    regional_policy_status: Optional[str] = None
 
 
 class PersistBatchRequest(BaseModel):

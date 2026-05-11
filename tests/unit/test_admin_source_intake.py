@@ -96,7 +96,12 @@ _TABLES = [
         apply_error TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         source_role TEXT,
-        creator_score_eligible INTEGER
+        creator_score_eligible INTEGER,
+        source_language TEXT,
+        source_country TEXT,
+        source_region TEXT,
+        audience_region TEXT,
+        regional_policy_status TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS source_intake_audit_log (
         id TEXT PRIMARY KEY,
@@ -126,7 +131,10 @@ _TABLES = [
         added_by TEXT,
         notes TEXT,
         source_role TEXT DEFAULT 'independent_creator',
-        creator_score_eligible INTEGER DEFAULT 1
+        creator_score_eligible INTEGER DEFAULT 1,
+        source_region TEXT,
+        audience_region TEXT,
+        regional_policy_status TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS canonical_content_items (
         id TEXT PRIMARY KEY,
@@ -812,3 +820,237 @@ class TestSourceRoleRouting:
         data = r.json()
         assert data["source_role"] == "retailer_shop"
         assert data["creator_score_eligible"] is False
+
+
+# ---------------------------------------------------------------------------
+# Phase 042 — Language & Region Metadata v1
+# ---------------------------------------------------------------------------
+
+class TestLanguageRegionMetadata:
+    """Tests for source_language, source_country, source_region, audience_region,
+    regional_policy_status on source_intake_candidates and youtube_channels."""
+
+    def test_patch_sets_source_language(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UClangtestA1234567890123")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"source_language": "es"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["updated"] is True
+
+        row = db_session.execute(
+            text("SELECT source_language FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == "es"
+
+    def test_patch_sets_source_country(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCcountrytest12345678901")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"source_country": "ES"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        row = db_session.execute(
+            text("SELECT source_country FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == "ES"
+
+    def test_patch_sets_source_region(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCregiontest1234567890123")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"source_region": "LATAM"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        row = db_session.execute(
+            text("SELECT source_region FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == "LATAM"
+
+    def test_patch_sets_audience_region(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCaudiencetest123456789012")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"audience_region": "MIDDLE_EAST_GCC"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        row = db_session.execute(
+            text("SELECT audience_region FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == "MIDDLE_EAST_GCC"
+
+    def test_patch_sets_regional_policy_status(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCpolicytest12345678901234")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"regional_policy_status": "regional_policy_pending"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        row = db_session.execute(
+            text("SELECT regional_policy_status FROM source_intake_candidates WHERE id = :id"),
+            {"id": cid}).fetchone()
+        assert row[0] == "regional_policy_pending"
+
+    def test_patch_all_metadata_fields_at_once(self, client, db_session):
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="NEEDS_OPERATOR_REVIEW",
+                               resolved_platform_id="UCallmeta123456789012345")
+
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={
+                             "source_language": "ar",
+                             "source_country": "AE",
+                             "source_region": "MIDDLE_EAST_GCC",
+                             "audience_region": "MIDDLE_EAST_GCC",
+                             "regional_policy_status": "regional_policy_pending",
+                         },
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["updated"] is True
+
+        row = db_session.execute(
+            text("""SELECT source_language, source_country, source_region,
+                           audience_region, regional_policy_status
+                    FROM source_intake_candidates WHERE id = :id"""),
+            {"id": cid}).fetchone()
+        assert row[0] == "ar"
+        assert row[1] == "AE"
+        assert row[2] == "MIDDLE_EAST_GCC"
+        assert row[3] == "MIDDLE_EAST_GCC"
+        assert row[4] == "regional_policy_pending"
+
+    def test_apply_carries_metadata_to_youtube_channels(self, client, db_session):
+        """Apply carries source_region, audience_region, regional_policy_status into youtube_channels."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                               resolved_platform_id="UCmeta042apply1234567890")
+
+        db_session.execute(
+            text("""UPDATE source_intake_candidates
+                    SET source_region = 'LATAM', audience_region = 'LATAM',
+                        regional_policy_status = 'approved_regional'
+                    WHERE id = :id"""),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("""SELECT source_region, audience_region, regional_policy_status
+                    FROM youtube_channels WHERE channel_id = :cid"""),
+            {"cid": "UCmeta042apply1234567890"}).fetchone()
+        assert row[0] == "LATAM"
+        assert row[1] == "LATAM"
+        assert row[2] == "approved_regional"
+
+    def test_apply_null_metadata_backward_compatible(self, client, db_session):
+        """Apply with NULL language/region metadata still creates the youtube_channels row."""
+        bid = _make_batch(db_session)
+        _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                        resolved_platform_id="UCnullmeta042123456789012")
+        # no metadata set — all NULL
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+        row = db_session.execute(
+            text("""SELECT source_region, audience_region, regional_policy_status
+                    FROM youtube_channels WHERE channel_id = :cid"""),
+            {"cid": "UCnullmeta042123456789012"}).fetchone()
+        assert row is not None
+        assert row[0] is None
+        assert row[1] is None
+        assert row[2] is None
+
+    def test_apply_unknown_metadata_does_not_block_apply(self, client, db_session):
+        """Arbitrary/unknown string values for region fields do not block the apply."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                               resolved_platform_id="UCunknownmeta04234567890")
+
+        db_session.execute(
+            text("""UPDATE source_intake_candidates
+                    SET source_region = 'UNKNOWN', regional_policy_status = 'unknown'
+                    WHERE id = :id"""),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        assert r.json()["applied"] == 1
+
+    def test_candidate_row_exposes_metadata_fields(self, client, db_session):
+        """GET /candidates/{id} returns language/region metadata in response."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="DEFERRED",
+                               resolved_platform_id="UCmetafields04212345678901")
+        db_session.execute(
+            text("""UPDATE source_intake_candidates
+                    SET source_language = 'pt', source_country = 'BR',
+                        source_region = 'BRAZIL', audience_region = 'LATAM',
+                        regional_policy_status = 'regional_policy_pending'
+                    WHERE id = :id"""),
+            {"id": cid})
+        db_session.commit()
+
+        r = client.get(f"/api/v1/admin/source-intake/candidates/{cid}",
+                       headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["source_language"] == "pt"
+        assert data["source_country"] == "BR"
+        assert data["source_region"] == "BRAZIL"
+        assert data["audience_region"] == "LATAM"
+        assert data["regional_policy_status"] == "regional_policy_pending"
+
+    def test_metadata_patch_does_not_change_creator_leaderboard_eligibility(self, client, db_session):
+        """Setting region metadata does not alter creator_score_eligible."""
+        bid = _make_batch(db_session)
+        cid = _make_candidate(db_session, bid, status="VERIFIED_ADD_READY",
+                               resolved_platform_id="UCleaderboard042123456789")
+        # Set as independent_creator, eligible=True
+        db_session.execute(
+            text("UPDATE source_intake_candidates SET source_role = 'independent_creator', "
+                 "creator_score_eligible = 1 WHERE id = :id"),
+            {"id": cid})
+        db_session.commit()
+
+        # Patch metadata only
+        r = client.patch(f"/api/v1/admin/source-intake/candidates/{cid}",
+                         json={"source_region": "SOUTH_ASIA",
+                               "regional_policy_status": "regional_policy_pending"},
+                         headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        # Apply
+        r = client.post(f"/api/v1/admin/source-intake/batches/{bid}/apply",
+                        headers=_ADMIN_HEADER)
+        assert r.status_code == 200
+
+        row = db_session.execute(
+            text("SELECT source_role, creator_score_eligible, source_region FROM youtube_channels WHERE channel_id = :cid"),
+            {"cid": "UCleaderboard042123456789"}).fetchone()
+        assert row[0] == "independent_creator"
+        assert row[1] == 1   # still eligible — metadata did not change this
+        assert row[2] == "SOUTH_ASIA"

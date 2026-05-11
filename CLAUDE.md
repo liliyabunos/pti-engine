@@ -328,10 +328,11 @@ Same-name accounts across platforms must NEVER be merged automatically.
 
 ## Active Roadmap
 
-**Language & Region Architecture — PENDING (do not begin until explicitly approved)**
+**Language & Region Architecture**
 Full roadmap: `docs/architecture/LANGUAGE_REGION_ARCHITECTURE.md`
-Next phase: **042 — Language & Region Metadata v1** (metadata only, no scoring, no public UI changes)
-Phases defined: 042 (metadata) → 043 (content propagation) → 044 (regional creator policy) → 045 (filters) → 046 (aggregation design) → 047 (market availability) → 048 (UI concepts)
+Phase 042 — COMPLETE — PRODUCTION VERIFIED
+Next phase: **043 — Content Language & Region Propagation v1** (pending explicit approval)
+Phases defined: 042 ✓ → 043 (content propagation) → 044 (regional creator policy) → 045 (filters) → 046 (aggregation design) → 047 (market availability) → 048 (UI concepts)
 
 - **YT-CREATOR-EXPANSION-02-AGENT-APPROVED-136 — APPLIED, PENDING PIPELINE VERIFICATION (2026-05-11)**
   - batch_id: `8b2f7141-7ec8-42e5-aaa9-6dca1230b68a`
@@ -355,6 +356,7 @@ Phases defined: 042 (metadata) → 043 (content propagation) → 044 (regional c
 - **SC1.2C TikTok Seeded Creator Monitoring Worker — COMPLETE (2026-05-08)** — `perfume_trend_sdk/jobs/monitor_tiktok_seeded_creators.py` + `perfume_trend_sdk/ingest/tiktok_page_parser.py`. Kill switch: `TIKTOK_PUBLIC_MONITORING_ENABLED=false` (default). Reads active TikTok creators, fetches profile pages via plain HTTPS (no auth/cookies/automation), extracts follower_count/video_count from `webapp.user-detail.userInfo`. Updates `creator_platform_accounts.follower_count + last_checked_at`. Writes `creator_watchlist_audit_log`. Does NOT create entity_mentions or canonical_content_items. **TikTok SSR limitation (verified 2026-05-08):** `itemList` is ALWAYS empty in server-rendered HTML — video discovery is not possible via simple HTTP. Worker logs `TIKTOK_MONITOR_CREATOR_WARNING video_list_unavailable=true` on every run until a future approved method (TikTok Research API or reviewed browser-based approach) is implemented. Verified on `@rawscents`: followers=2 updated in DB, audit log written, 0 entity_mentions created. 24/24 tests pass.
 - **SC1.3 Multi-field Resolver — COMPLETE — PRODUCTION VERIFIED (2026-05-08)** — commit ee1d8ba — `perfume_trend_sdk/resolvers/perfume_identity/multi_field_resolver.py`. Feature flag: `MULTI_FIELD_RESOLVER_ENABLED=true` (Railway generous-prosperity). Platform-specific field weights: YouTube title(1.0)/description(0.5)/hashtags(0.3); Reddit body(1.0)/title(0.7); TikTok derived referencing_context(1.0)/hashtags(0.5)/description(0.3)/title(0.2); TikTok direct user_context(1.0)/hashtags(0.6)/description(0.4)/title(0.5). Confidence threshold 0.3. TikTok generic title protection + YouTube title noise filter. 67/67 tests pass. **Replay (2026-05-04–07):** old=624, new=807, +183 resolved, 0 regressions. **Production pipeline (2026-05-08) verified:** PIPELINE_HEALTH_OK · entity_mentions=180 (baseline 183-189) · signals=142 (baseline 113-216) · resolved_signals 1.1-mf=558, 1.1=74 · content_items=1203 (yt=997, reddit=206) · public_safe views 2318/4976/9644 · dashboard 200 OK (2373 entities, 19 breakouts) · no new false positives (noise aliases pre-existing, within historical range).
 - **P3 Pipeline Health Check — COMPLETE (2026-05-08)** — commit 58ff5c6 — `perfume_trend_sdk/jobs/pipeline_health_check.py` runs at end of morning + evening pipelines. 4 checks: entity_mentions (CRITICAL<50/WARNING<100), Reddit entity_mentions (WARNING morning=0/CRITICAL evening=0), content items by platform, signals count. Markers: `PIPELINE_HEALTH_OK/WARNING/CRITICAL`. Exit always 0. Verified retroactively: 05-06 collapse correctly fires `PIPELINE_HEALTH_WARNING` (reddit_items=0, mentions=64). 21/21 tests pass.
+- **Phase 042 — Language & Region Metadata v1 — COMPLETE — PRODUCTION VERIFIED (2026-05-11)** — migration 042 — `alembic/versions/042_language_region_metadata.py`. Adds nullable language/region metadata to `source_intake_candidates` (5 fields: `source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status`) and `youtube_channels` (3 fields: `source_region`, `audience_region`, `regional_policy_status`). Apply carries region metadata from candidate into `youtube_channels`. PATCH endpoint accepts all 5 new fields. CandidateRow exposes all 5. Admin UI: Language & Region controls in BatchReviewConsole (lang + country text inputs, region/audience/policy dropdowns, Save Metadata button). Creator Leaderboard behavior unchanged. No scoring changes. No public UI filters. 50/50 tests pass.
 - **P3.1 Pipeline Health Log — COMPLETE — PRODUCTION VERIFIED (2026-05-11)** — commit 8b49fd2 — `alembic/versions/041_pipeline_health_log.py` · `pipeline_health_log` table. Upserts one row per `(run_date, run_label)` after each health check run. ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row without duplicating. Trims rows older than 90 days at persist time (no separate cron). `pipeline_service` captured from `PIPELINE_SERVICE` env var (operator-set Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in), NULL if neither set. run_label supports: morning | evening | manual | backfill | unknown — no CHECK constraint. Pipeline scripts already pass `--run-label morning` / `--run-label evening` — no script changes needed. Ad-hoc and backfill runs use `--run-label manual`. Persist errors are non-fatal (logged as WARNING, pipeline continues). Admin UI deferred. 30/30 tests pass.
   **Operational note:** After the next scheduled morning or evening pipeline run, verify that a new row appears: `SELECT run_date, run_label, overall_level, pipeline_service FROM pipeline_health_log ORDER BY recorded_at DESC LIMIT 5;`
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
@@ -1111,7 +1113,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Source Role Foundation v1 — source_role + creator_score_eligible | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | Source Intake Role Routing v1 — role selector on candidates | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
-| 042 — Language & Region Metadata v1 | PENDING — awaiting approval | — |
+| 042 — Language & Region Metadata v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | 043 — Content Language & Region Propagation v1 | PENDING | — |
 | 044 — Regional Creator Policy v1 | PENDING | — |
 | 045 — Regional Filters v1 | PENDING | — |
@@ -1238,7 +1240,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 041** (head)
+Current production: **migration 042** (head)
 
 | Migration | What |
 |-----------|------|
@@ -1259,6 +1261,7 @@ Current production: **migration 041** (head)
 | 038 | SOURCE-INTAKE-V1A — `source_intake_batches` + `source_intake_candidates` + `source_intake_audit_log`; 12-status lifecycle with CHECK constraints; FK cascade from candidates→batches, audit→candidates |
 | 039 | Source Role Foundation v1 — `source_role VARCHAR(64) DEFAULT 'independent_creator'` + `creator_score_eligible BOOLEAN DEFAULT TRUE` on `youtube_channels`; Creator Leaderboard gated on `creator_score_eligible IS NOT FALSE`; `YouTubeClient.get_channel_info()` captures country + language on first poll; 256 existing rows backfilled via server_default |
 | 040 | Source Intake Role Routing v1 — `source_role VARCHAR(64) NULL` + `creator_score_eligible BOOLEAN NULL` on `source_intake_candidates`; eligibility resolved at apply time (NULL → independent_creator, independent_creator → eligible=True, others → False); PATCH endpoint accepts new fields; Admin UI role selector in BatchReviewConsole |
+| 042 | Phase 042 Language & Region Metadata v1 — `source_language VARCHAR(16)`, `source_country VARCHAR(8)`, `source_region VARCHAR(64)`, `audience_region VARCHAR(64)`, `regional_policy_status VARCHAR(64)` on `source_intake_candidates`; `source_region`, `audience_region`, `regional_policy_status` on `youtube_channels`; all nullable, no CHECK constraints |
 | 041 | Pipeline Health Log — `pipeline_health_log` table: `(run_date DATE, run_label VARCHAR(32), overall_level VARCHAR(16), entity_mentions, reddit_mentions, youtube_items, reddit_items, total_items, signals_count INT, issues JSONB, pipeline_service VARCHAR(64) NULL, recorded_at TIMESTAMPTZ)`; unique on `(run_date, run_label)`; 90-day retention trimmed at persist time; upserted by `pipeline_health_check.py` after every morning/evening run |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
