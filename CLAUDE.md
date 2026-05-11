@@ -349,6 +349,7 @@ Same-name accounts across platforms must NEVER be merged automatically.
 - **SC1.2C TikTok Seeded Creator Monitoring Worker — COMPLETE (2026-05-08)** — `perfume_trend_sdk/jobs/monitor_tiktok_seeded_creators.py` + `perfume_trend_sdk/ingest/tiktok_page_parser.py`. Kill switch: `TIKTOK_PUBLIC_MONITORING_ENABLED=false` (default). Reads active TikTok creators, fetches profile pages via plain HTTPS (no auth/cookies/automation), extracts follower_count/video_count from `webapp.user-detail.userInfo`. Updates `creator_platform_accounts.follower_count + last_checked_at`. Writes `creator_watchlist_audit_log`. Does NOT create entity_mentions or canonical_content_items. **TikTok SSR limitation (verified 2026-05-08):** `itemList` is ALWAYS empty in server-rendered HTML — video discovery is not possible via simple HTTP. Worker logs `TIKTOK_MONITOR_CREATOR_WARNING video_list_unavailable=true` on every run until a future approved method (TikTok Research API or reviewed browser-based approach) is implemented. Verified on `@rawscents`: followers=2 updated in DB, audit log written, 0 entity_mentions created. 24/24 tests pass.
 - **SC1.3 Multi-field Resolver — COMPLETE — PRODUCTION VERIFIED (2026-05-08)** — commit ee1d8ba — `perfume_trend_sdk/resolvers/perfume_identity/multi_field_resolver.py`. Feature flag: `MULTI_FIELD_RESOLVER_ENABLED=true` (Railway generous-prosperity). Platform-specific field weights: YouTube title(1.0)/description(0.5)/hashtags(0.3); Reddit body(1.0)/title(0.7); TikTok derived referencing_context(1.0)/hashtags(0.5)/description(0.3)/title(0.2); TikTok direct user_context(1.0)/hashtags(0.6)/description(0.4)/title(0.5). Confidence threshold 0.3. TikTok generic title protection + YouTube title noise filter. 67/67 tests pass. **Replay (2026-05-04–07):** old=624, new=807, +183 resolved, 0 regressions. **Production pipeline (2026-05-08) verified:** PIPELINE_HEALTH_OK · entity_mentions=180 (baseline 183-189) · signals=142 (baseline 113-216) · resolved_signals 1.1-mf=558, 1.1=74 · content_items=1203 (yt=997, reddit=206) · public_safe views 2318/4976/9644 · dashboard 200 OK (2373 entities, 19 breakouts) · no new false positives (noise aliases pre-existing, within historical range).
 - **P3 Pipeline Health Check — COMPLETE (2026-05-08)** — commit 58ff5c6 — `perfume_trend_sdk/jobs/pipeline_health_check.py` runs at end of morning + evening pipelines. 4 checks: entity_mentions (CRITICAL<50/WARNING<100), Reddit entity_mentions (WARNING morning=0/CRITICAL evening=0), content items by platform, signals count. Markers: `PIPELINE_HEALTH_OK/WARNING/CRITICAL`. Exit always 0. Verified retroactively: 05-06 collapse correctly fires `PIPELINE_HEALTH_WARNING` (reddit_items=0, mentions=64). 21/21 tests pass.
+- **P3.1 Pipeline Health Log — DB-persisted health history (2026-05-11)** — migration 041 — `pipeline_health_log` table. Upserts one row per `(run_date, run_label)` after each health check. ON CONFLICT DO UPDATE — idempotent re-runs. Trim rows older than 90 days at persist time. `pipeline_service` captured from `PIPELINE_SERVICE` env var (Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in). run_label: morning|evening|manual|backfill|unknown. No admin UI yet. 30/30 tests pass.
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
   - Form: URL + terms checkbox only. No name, email, platform dropdown, reason.
@@ -1085,6 +1086,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC0.2 Creator filters v1 | PLANNED | — |
 | SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | P3 Pipeline Health Check | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
+| P3.1 Pipeline Health Log — DB-persisted health history | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-11 |
 | SC1.2A TikTok — Schema + Registry Integration | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2B TikTok — Seed Import + Operator Workflow | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2C TikTok — Seeded Creator Monitoring Worker | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
@@ -1107,9 +1109,121 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 
 ---
 
+## Source Intake Policy after Migration 040
+
+Migration 039 added `youtube_channels.source_role` and `youtube_channels.creator_score_eligible`.
+
+Migration 040 added `source_intake_candidates.source_role` and `source_intake_candidates.creator_score_eligible`, and updated the admin source intake apply path so source role and creator leaderboard eligibility are carried from intake into `youtube_channels`.
+
+This creates a clear separation between:
+
+- accepted source
+- creator leaderboard eligible source
+- non-creator intelligence source
+
+### Policy Rules
+
+1. `OPERATOR_REJECTED` is reserved only for true irrelevant/noise sources.
+
+Examples:
+- automotive channels
+- unrelated lifestyle/fashion channels with no meaningful fragrance content
+- spam
+- invalid/non-recoverable candidates
+- clear non-fragrance noise
+
+`OPERATOR_REJECTED` must not be used for valuable sources that are simply not creator-leaderboard eligible.
+
+2. `DEFERRED` is used for uncertain or policy-pending sources.
+
+Examples:
+- unclear identity
+- unclear source role
+- uncertain brand/retail relationship
+- regional/language policy pending
+- source needs later review before apply
+
+`DEFERRED` is intentionally non-terminal and should be used when we want to preserve the candidate for future routing.
+
+3. `independent_creator` is `creator_score_eligible=TRUE` by default.
+
+This role is for independent fragrance reviewers / creators whose content can safely appear in Creator Intelligence and Creator Leaderboard.
+
+4. Non-creator roles are `creator_score_eligible=FALSE` by default.
+
+This includes:
+- `brand_official`
+- `retailer_shop`
+- `formulation_education`
+- `aggregator`
+- `unknown`
+
+These sources may be valuable for future intelligence layers, but they must not appear in the Creator Leaderboard unless explicitly reviewed and intentionally overridden.
+
+5. Applying non-creator sources is now technically safe for the Creator Leaderboard because `creator_score_eligible=FALSE` excludes them from `/api/v1/creators`.
+
+However, non-creator sources should only be applied when there is a clear downstream use case, such as:
+- Brand Intelligence
+- Retail Watch
+- Formulation Trends
+- Commercial/Promo Signals
+- Industry/Market Monitoring
+
+Until those downstream layers are visible, operators may still choose to keep non-creator sources as `DEFERRED`.
+
+6. Non-English independent creators remain policy-pending until language/regional policy is defined.
+
+Do not reject non-English fragrance creators only because they are non-English.
+
+For now:
+- clear non-English fragrance creators should usually be marked `DEFERRED`
+- add operator notes such as `REGIONAL_POLICY_PENDING`, `lang=es`, `lang=ar`, `country=BR`, etc. when known
+- do not apply them into the Creator Leaderboard until language/region filtering and display rules are defined
+- exception: a very strong global creator may be applied manually only if the operator intentionally accepts that they will appear in the current global Creator Leaderboard
+
+7. Current safe intake behavior:
+
+Apply:
+- clear independent fragrance reviewers
+- creator_score_eligible=TRUE
+
+Defer:
+- non-English/regional creators pending language policy
+- unclear role
+- unclear identity
+- valuable but not yet routed sources
+
+Apply carefully with `creator_score_eligible=FALSE` only when there is a clear use case:
+- brand_official
+- formulation_education
+- retailer_shop
+- aggregator
+
+Reject:
+- true unrelated/noise only
+
+### Important Boundary
+
+Source role routing is now implemented, but regional scoring is not implemented yet.
+
+Do not treat `source_role` as a replacement for language/region architecture.
+
+The next separate architecture layer should be:
+
+- source_language
+- source_country
+- source_region
+- audience_region
+- regional policy status
+- regional/global score separation
+
+This policy only protects source intake and Creator Leaderboard semantics after Migration 040.
+
+---
+
 ## Alembic Migrations
 
-Current production: **migration 040** (head)
+Current production: **migration 041** (head)
 
 | Migration | What |
 |-----------|------|
@@ -1130,6 +1244,7 @@ Current production: **migration 040** (head)
 | 038 | SOURCE-INTAKE-V1A — `source_intake_batches` + `source_intake_candidates` + `source_intake_audit_log`; 12-status lifecycle with CHECK constraints; FK cascade from candidates→batches, audit→candidates |
 | 039 | Source Role Foundation v1 — `source_role VARCHAR(64) DEFAULT 'independent_creator'` + `creator_score_eligible BOOLEAN DEFAULT TRUE` on `youtube_channels`; Creator Leaderboard gated on `creator_score_eligible IS NOT FALSE`; `YouTubeClient.get_channel_info()` captures country + language on first poll; 256 existing rows backfilled via server_default |
 | 040 | Source Intake Role Routing v1 — `source_role VARCHAR(64) NULL` + `creator_score_eligible BOOLEAN NULL` on `source_intake_candidates`; eligibility resolved at apply time (NULL → independent_creator, independent_creator → eligible=True, others → False); PATCH endpoint accepts new fields; Admin UI role selector in BatchReviewConsole |
+| 041 | Pipeline Health Log — `pipeline_health_log` table: `(run_date DATE, run_label VARCHAR(32), overall_level VARCHAR(16), entity_mentions, reddit_mentions, youtube_items, reddit_items, total_items, signals_count INT, issues JSONB, pipeline_service VARCHAR(64) NULL, recorded_at TIMESTAMPTZ)`; unique on `(run_date, run_label)`; 90-day retention trimmed at persist time; upserted by `pipeline_health_check.py` after every morning/evening run |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 

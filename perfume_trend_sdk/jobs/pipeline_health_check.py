@@ -9,6 +9,7 @@ ingestion / resolver collapse, especially Reddit outages.
 Usage:
     python3 -m perfume_trend_sdk.jobs.pipeline_health_check --date 2026-05-07 --run-label evening
     python3 -m perfume_trend_sdk.jobs.pipeline_health_check --date 2026-05-07 --run-label morning
+    python3 -m perfume_trend_sdk.jobs.pipeline_health_check --date 2026-05-11 --run-label manual
 
 Exit code is always 0 — health failures are logged only; they do not stop the pipeline.
 
@@ -16,13 +17,26 @@ Log markers (easy to grep / Railway alert on):
     PIPELINE_HEALTH_OK
     PIPELINE_HEALTH_WARNING
     PIPELINE_HEALTH_CRITICAL
+
+DB persistence:
+    Results are upserted into pipeline_health_log (migration 041).
+    ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row.
+    Rows older than 90 days are trimmed at persist time.
+    Persist errors are non-fatal and logged only.
+
+pipeline_service resolution order:
+    1. PIPELINE_SERVICE env var (set manually or in Railway service variables)
+    2. RAILWAY_SERVICE_NAME env var (injected automatically by Railway)
+    3. NULL (local / unknown context)
 """
 
 import argparse
+import json
 import logging
+import os
 import sys
 from datetime import datetime, timezone
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from sqlalchemy import text
 
@@ -192,11 +206,99 @@ def _evaluate(metrics: dict, run_label: str) -> Tuple[str, List[str]]:
 
 
 # ---------------------------------------------------------------------------
+# Persistence (migration 041)
+# ---------------------------------------------------------------------------
+
+def _resolve_pipeline_service() -> Optional[str]:
+    """
+    Resolve the pipeline_service context for logging.
+
+    Resolution order:
+      1. PIPELINE_SERVICE env var (operator-set)
+      2. RAILWAY_SERVICE_NAME (injected by Railway automatically)
+      3. None
+    """
+    return os.environ.get("PIPELINE_SERVICE") or os.environ.get("RAILWAY_SERVICE_NAME") or None
+
+
+def _persist_result(
+    engine,
+    date: str,
+    run_label: str,
+    level: str,
+    metrics: dict,
+    issues: List[str],
+    pipeline_service: Optional[str] = None,
+) -> None:
+    """
+    Upsert one row into pipeline_health_log and trim rows older than 90 days.
+
+    Idempotent: ON CONFLICT (run_date, run_label) DO UPDATE.
+    Non-fatal: any DB error is logged as a warning and execution continues.
+    """
+    try:
+        with engine.begin() as conn:
+            # Trim rows beyond 90-day retention window
+            conn.execute(
+                text(
+                    "DELETE FROM pipeline_health_log "
+                    "WHERE run_date < CURRENT_DATE - INTERVAL '90 days'"
+                )
+            )
+
+            # Upsert current run
+            conn.execute(
+                text("""
+                    INSERT INTO pipeline_health_log
+                        (run_date, run_label, overall_level,
+                         entity_mentions, reddit_mentions,
+                         youtube_items, reddit_items, total_items,
+                         signals_count, issues, pipeline_service, recorded_at)
+                    VALUES
+                        (:run_date, :run_label, :overall_level,
+                         :entity_mentions, :reddit_mentions,
+                         :youtube_items, :reddit_items, :total_items,
+                         :signals_count, :issues::jsonb, :pipeline_service, NOW())
+                    ON CONFLICT (run_date, run_label) DO UPDATE SET
+                        overall_level    = EXCLUDED.overall_level,
+                        entity_mentions  = EXCLUDED.entity_mentions,
+                        reddit_mentions  = EXCLUDED.reddit_mentions,
+                        youtube_items    = EXCLUDED.youtube_items,
+                        reddit_items     = EXCLUDED.reddit_items,
+                        total_items      = EXCLUDED.total_items,
+                        signals_count    = EXCLUDED.signals_count,
+                        issues           = EXCLUDED.issues,
+                        pipeline_service = EXCLUDED.pipeline_service,
+                        recorded_at      = EXCLUDED.recorded_at
+                """),
+                {
+                    "run_date": date,
+                    "run_label": run_label,
+                    "overall_level": level,
+                    "entity_mentions": metrics["total_mentions"],
+                    "reddit_mentions": metrics["reddit_mentions"],
+                    "youtube_items": metrics["youtube_items"],
+                    "reddit_items": metrics["reddit_items"],
+                    "total_items": metrics["total_items"],
+                    "signals_count": metrics["signals_today"],
+                    "issues": json.dumps(issues),
+                    "pipeline_service": pipeline_service,
+                },
+            )
+        _log.info(
+            "pipeline_health_persisted date=%s run=%s level=%s service=%s",
+            date, run_label, level, pipeline_service,
+        )
+    except Exception as exc:
+        _log.warning("pipeline_health_persist_failed error=%s — continuing", exc)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def run_health_check(date: str, run_label: str) -> str:
-    """Run all checks and log results. Returns overall level string."""
+    """Run all checks, log results, and persist to pipeline_health_log. Returns overall level string."""
     url = get_database_url()
     engine = _make_engine(url)
 
@@ -232,6 +334,10 @@ def run_health_check(date: str, run_label: str) -> str:
         marker, date, run_label, len(issues),
     )
 
+    # Persist result to DB (non-fatal)
+    pipeline_service = _resolve_pipeline_service()
+    _persist_result(engine, date, run_label, level, metrics, issues, pipeline_service)
+
     return level
 
 
@@ -244,9 +350,9 @@ def main() -> None:
     )
     parser.add_argument(
         "--run-label",
-        choices=["morning", "evening"],
+        choices=["morning", "evening", "manual", "backfill", "unknown"],
         default="morning",
-        help="Which pipeline run this is (affects thresholds)",
+        help="Which pipeline run this is (affects thresholds). Use 'manual' for ad-hoc runs.",
     )
     args = parser.parse_args()
     run_health_check(args.date, args.run_label)
