@@ -277,10 +277,10 @@ Notes:
 
 ## Phase 043 — Content Language & Region Propagation v1
 
-**Status: COMPLETE — PRODUCTION VERIFIED (pending next pipeline run)**
+**Status: IMPLEMENTED — PENDING PIPELINE VERIFICATION**
 **Migration: none — code-only change**
 **Commit: `71be8f4`**
-**Tests: 44/44 pass** (`tests/unit/test_content_language_region.py`)
+**Tests: 44/44 new (`tests/unit/test_content_language_region.py`) + 117/117 existing pass**
 
 **What changed:**
 - `normalizer.py`: `_COUNTRY_TO_REGION` mapping dict (50+ country codes → region buckets); `_resolve_content_language()` and `_resolve_content_region()` module-level helpers; `normalize_youtube_item()` accepts optional `channel_context` kwarg
@@ -306,32 +306,98 @@ Notes:
 - `language="UNKNOWN"` = attempted but not determinable (channel_poll with no language set)
 - `region="UNKNOWN"` = not determinable (replaces old hardcoded "US")
 
-**Production verification (run after next pipeline):**
+**Production verification checklist (run after next scheduled morning or evening pipeline):**
+
+1. `pipeline_health_log` has a new row for the scheduled run.
+2. New `canonical_content_items` rows created after commit `71be8f4` are not uniformly `region='US'`.
+3. Channels with `youtube_channels.source_region` set → new content items use that `source_region`.
+4. Channels with `country` but no `source_region` → country→region mapping applied where available.
+5. Channels with no reliable metadata → `region='UNKNOWN'`.
+6. `language` populated from `youtube_channels.language` when available.
+7. Creator Leaderboard total/top rows unchanged.
+8. `public_safe_content_items` still queries successfully.
+
 ```sql
--- New content items should no longer be uniformly "US"
+-- 1. Pipeline health log has a new row
+SELECT run_date, run_label, overall_level, pipeline_service, recorded_at
+FROM pipeline_health_log
+ORDER BY recorded_at DESC LIMIT 5;
+
+-- 2. New content items are NOT uniformly region='US'
 SELECT region, count(*) FROM canonical_content_items
-WHERE created_at > NOW() - INTERVAL '2 hours'
+WHERE ingestion_method = 'channel_poll'
+  AND created_at > NOW() - INTERVAL '4 hours'
 GROUP BY region ORDER BY count DESC;
 
--- Channels with metadata should propagate to content items
-SELECT c.region, c.language, yc.language AS ch_lang, yc.source_region
+-- 3. source_region propagation: channels with source_region set → content uses it
+SELECT yc.channel_id, yc.source_region, c.region, c.language, c.created_at
 FROM canonical_content_items c
 JOIN youtube_channels yc ON yc.channel_id = c.resolved_platform_id
-WHERE c.created_at > NOW() - INTERVAL '2 hours'
-AND yc.language IS NOT NULL
-LIMIT 20;
+WHERE c.ingestion_method = 'channel_poll'
+  AND c.created_at > NOW() - INTERVAL '4 hours'
+  AND yc.source_region IS NOT NULL
+ORDER BY c.created_at DESC LIMIT 20;
 
--- Historical rows unaffected
-SELECT region, count(*) FROM canonical_content_items
-WHERE created_at < NOW() - INTERVAL '1 day'
-GROUP BY region ORDER BY count DESC;
+-- 4. Country fallback: channels with country but no source_region → mapped region
+SELECT yc.channel_id, yc.country, yc.source_region, c.region
+FROM canonical_content_items c
+JOIN youtube_channels yc ON yc.channel_id = c.resolved_platform_id
+WHERE c.ingestion_method = 'channel_poll'
+  AND c.created_at > NOW() - INTERVAL '4 hours'
+  AND yc.source_region IS NULL
+  AND yc.country IS NOT NULL
+ORDER BY c.created_at DESC LIMIT 20;
 
--- Confirm public-safe views still work
+-- 5. Channels with no metadata → region='UNKNOWN'
+SELECT c.region, count(*) FROM canonical_content_items c
+JOIN youtube_channels yc ON yc.channel_id = c.resolved_platform_id
+WHERE c.ingestion_method = 'channel_poll'
+  AND c.created_at > NOW() - INTERVAL '4 hours'
+  AND yc.source_region IS NULL
+  AND yc.country IS NULL
+GROUP BY c.region;
+
+-- 6. Language propagation from youtube_channels.language
+SELECT yc.language AS ch_language, c.language AS content_language, count(*)
+FROM canonical_content_items c
+JOIN youtube_channels yc ON yc.channel_id = c.resolved_platform_id
+WHERE c.ingestion_method = 'channel_poll'
+  AND c.created_at > NOW() - INTERVAL '4 hours'
+GROUP BY yc.language, c.language
+ORDER BY count(*) DESC LIMIT 20;
+
+-- 7. Creator Leaderboard unchanged
+SELECT count(*) AS total_creators,
+       round(avg(influence_score)::numeric, 4) AS avg_score,
+       max(influence_score) AS top_score
+FROM creator_scores cs
+JOIN youtube_channels yc ON yc.channel_id = cs.creator_id
+WHERE yc.creator_score_eligible IS NOT FALSE;
+
+-- 8. Public-safe views still query successfully
 SELECT count(*) FROM public_safe_content_items;
 SELECT count(*) FROM public_safe_entity_snapshots;
+SELECT count(*) FROM public_safe_signals;
 
--- Confirm scoring unchanged
-SELECT count(*), round(avg(influence_score)::numeric, 4) FROM creator_scores;
+-- Sanity: historical rows (pre-043) unaffected — still show old region distribution
+SELECT region, count(*) FROM canonical_content_items
+WHERE created_at < '2026-05-11T00:00:00Z'
+GROUP BY region ORDER BY count DESC LIMIT 10;
+```
+
+**After verification completes, update this section:**
+```
+Status: COMPLETE — PRODUCTION VERIFIED
+Production verification date:
+Results:
+  pipeline_health_log new row: ✓/✗
+  new rows not uniformly US: ✓/✗
+  source_region propagation: ✓/✗
+  country fallback mapping: ✓/✗
+  UNKNOWN for no-metadata channels: ✓/✗
+  language propagation: ✓/✗
+  creator leaderboard unchanged: ✓/✗
+  public_safe_content_items: ✓/✗
 ```
 
 **Next phase: Phase 044 — Regional Creator Policy v1 — pending explicit approval.**
