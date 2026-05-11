@@ -221,7 +221,12 @@ export default function DashboardPage() {
         }
       />
 
-      {/* Control bar */}
+      {/* Control bar
+          Layout (<2xl): each slot is its own full-width row — no collision possible.
+            Row 1 (left slot):  Search input + entity filter chips (inline if they fit)
+            Row 2 (right slot): Range selector + KPI counts
+          Layout (≥2xl): single row, left fills space, right shrinks to content.
+      */}
       <ControlBar
         left={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -229,7 +234,7 @@ export default function DashboardPage() {
               value={search}
               onChange={setSearch}
               placeholder="Filter movers…"
-              className="w-full sm:w-48 sm:shrink-0"
+              className="w-full 2xl:w-48 2xl:shrink-0"
             />
             <ControlBarDivider />
             <div className="flex items-center gap-1">
