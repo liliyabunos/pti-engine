@@ -80,7 +80,11 @@ _TABLES = [
         last_video_count INTEGER,
         consecutive_empty_polls INTEGER DEFAULT 0,
         last_poll_status TEXT,
-        last_poll_error TEXT
+        last_poll_error TEXT,
+        source_role TEXT DEFAULT 'independent_creator',
+        creator_score_eligible INTEGER DEFAULT 1,
+        language TEXT,
+        country TEXT
     )""",
     """CREATE TABLE IF NOT EXISTS creator_oauth_grants (
         id TEXT PRIMARY KEY,
@@ -397,3 +401,168 @@ class TestRawChannelIdDetection:
         assert found is not None
         # Raw channel_id stored as title must be suppressed → None
         assert found["display_name"] is None
+
+
+# ---------------------------------------------------------------------------
+# Tests: Source Role Foundation v1 — creator_score_eligible leaderboard gate
+# ---------------------------------------------------------------------------
+
+class TestCreatorScoreEligible:
+    """Migration 039 — creator_score_eligible must gate the leaderboard.
+
+    Rows with creator_score_eligible = FALSE (brand_official, retailer, etc.)
+    must never appear in GET /api/v1/creators responses.
+    Rows with creator_score_eligible = TRUE or NULL must appear normally.
+    """
+
+    def _seed_scored_channel(
+        self,
+        db_session,
+        channel_id: str,
+        title: str,
+        handle: str,
+        source_role: str = "independent_creator",
+        creator_score_eligible: bool = True,
+    ) -> None:
+        db_session.execute(text("""
+            INSERT INTO youtube_channels
+                (id, channel_id, handle, title, status, added_by,
+                 source_role, creator_score_eligible)
+            VALUES
+                (:id, :cid, :handle, :title, 'active', 'test',
+                 :source_role, :eligible)
+        """), {
+            "id": str(uuid.uuid4()),
+            "cid": channel_id,
+            "handle": handle,
+            "title": title,
+            "source_role": source_role,
+            "eligible": 1 if creator_score_eligible else 0,
+        })
+        db_session.execute(text("""
+            INSERT INTO creator_scores (
+                platform, creator_id, creator_handle, quality_tier,
+                subscriber_count, influence_score, computed_at
+            ) VALUES ('youtube', :cid, :handle, 'tier_2', 50000, 0.5, :now)
+        """), {
+            "cid": channel_id,
+            "handle": handle,
+            "now": datetime.now(timezone.utc).isoformat(),
+        })
+        db_session.commit()
+
+    def test_independent_creator_appears_on_leaderboard(self, client, db_session):
+        """source_role=independent_creator, creator_score_eligible=TRUE → visible."""
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCCreator1234567890abcdef",
+            title="The Fragrance Reviewer",
+            handle="fragrancereview",
+            source_role="independent_creator",
+            creator_score_eligible=True,
+        )
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        ids = [c["creator_id"] for c in r.json()["creators"]]
+        assert "UCCreator1234567890abcdef" in ids
+
+    def test_brand_official_excluded_from_leaderboard(self, client, db_session):
+        """source_role=brand_official, creator_score_eligible=FALSE → excluded."""
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCBrandOfficial1234567890",
+            title="Creed Official",
+            handle="creedofficial",
+            source_role="brand_official",
+            creator_score_eligible=False,
+        )
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        ids = [c["creator_id"] for c in r.json()["creators"]]
+        assert "UCBrandOfficial1234567890" not in ids, (
+            "brand_official with creator_score_eligible=FALSE must not appear on leaderboard"
+        )
+
+    def test_retailer_excluded_from_leaderboard(self, client, db_session):
+        """source_role=retailer_shop, creator_score_eligible=FALSE → excluded."""
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCRetailerShop1234567890a",
+            title="Fragrance Shop Official",
+            handle="fragranceshop",
+            source_role="retailer_shop",
+            creator_score_eligible=False,
+        )
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        ids = [c["creator_id"] for c in r.json()["creators"]]
+        assert "UCRetailerShop1234567890a" not in ids
+
+    def test_mixed_batch_only_eligible_visible(self, client, db_session):
+        """With one eligible and one ineligible channel, only the eligible one appears."""
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCEligible123456789abcdef",
+            title="Good Reviewer",
+            handle="goodreviewer",
+            source_role="independent_creator",
+            creator_score_eligible=True,
+        )
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCIneligible12345678abcde",
+            title="Brand Channel",
+            handle="brandchannel",
+            source_role="brand_official",
+            creator_score_eligible=False,
+        )
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        ids = [c["creator_id"] for c in r.json()["creators"]]
+        assert "UCEligible123456789abcdef" in ids
+        assert "UCIneligible12345678abcde" not in ids
+
+    def test_no_youtube_channels_row_still_appears(self, client, db_session):
+        """creator_scores row with no youtube_channels row → NULL from LEFT JOIN.
+        NULL must be treated as eligible (backward compat for auto-discovered channels)."""
+        db_session.execute(text("""
+            INSERT INTO creator_scores (
+                platform, creator_id, creator_handle, quality_tier,
+                subscriber_count, influence_score, computed_at
+            ) VALUES ('youtube', 'UCNoYTRow1234567890abcde', '@norow', 'tier_4',
+                      1000, 0.1, :now)
+        """), {"now": datetime.now(timezone.utc).isoformat()})
+        db_session.commit()
+
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        ids = [c["creator_id"] for c in r.json()["creators"]]
+        assert "UCNoYTRow1234567890abcde" in ids, (
+            "creator_scores row with no youtube_channels row must appear on leaderboard "
+            "(NULL creator_score_eligible treated as eligible)"
+        )
+
+    def test_total_count_excludes_ineligible(self, client, db_session):
+        """The total count in the response must not include ineligible channels."""
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCEligCount123456789abcde",
+            title="Eligible Creator",
+            handle="eligiblecreator",
+            source_role="independent_creator",
+            creator_score_eligible=True,
+        )
+        self._seed_scored_channel(
+            db_session,
+            channel_id="UCIneligCount12345678abcd",
+            title="Brand Watch",
+            handle="brandwatch",
+            source_role="brand_official",
+            creator_score_eligible=False,
+        )
+        r = client.get("/api/v1/creators?platform=youtube")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["total"] == 1, (
+            f"total should be 1 (only eligible creator) but got {data['total']}"
+        )

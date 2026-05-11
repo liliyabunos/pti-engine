@@ -898,11 +898,13 @@ def apply_batch(
                 INSERT INTO youtube_channels (
                     id, channel_id, handle, channel_url, title, normalized_title,
                     quality_tier, category, status, priority, subscriber_count, video_count,
-                    uploads_playlist_id, added_at, added_by, notes
+                    uploads_playlist_id, added_at, added_by, notes,
+                    source_role, creator_score_eligible
                 ) VALUES (
                     :id, :channel_id, :handle, :channel_url, :title, :norm_title,
                     :quality_tier, :category, :status, :priority, :subscriber_count, :video_count,
-                    :uploads_playlist_id, :added_at, :added_by, :notes
+                    :uploads_playlist_id, :added_at, :added_by, :notes,
+                    :source_role, :creator_score_eligible
                 )
                 ON CONFLICT (channel_id) DO NOTHING
             """), {
@@ -922,6 +924,8 @@ def apply_batch(
                 "added_at": now,
                 "added_by": f"source_intake:{batch_label}",
                 "notes": notes,
+                "source_role": "independent_creator",
+                "creator_score_eligible": True,
             })
             rows_affected = result.rowcount
             if rows_affected == 1:

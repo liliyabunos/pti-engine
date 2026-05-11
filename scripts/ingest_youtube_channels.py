@@ -204,6 +204,8 @@ def _update_channel_after_poll(
     error: Optional[str] = None,
     next_poll_after: Optional[datetime] = None,
     channel_title: Optional[str] = None,
+    channel_country: Optional[str] = None,
+    channel_language: Optional[str] = None,
 ) -> None:
     fields = [
         "last_polled_at = NOW()",
@@ -227,6 +229,15 @@ def _update_channel_after_poll(
     if channel_title and channel_title.strip():
         fields.append("title = %s")
         params.append(channel_title.strip())
+
+    # Capture country and language from channels.list API response (first poll only).
+    # Only write when a non-None value is provided — never overwrite with None.
+    if channel_country:
+        fields.append("country = %s")
+        params.append(channel_country)
+    if channel_language:
+        fields.append("language = %s")
+        params.append(channel_language)
 
     params.append(channel_id)
 
@@ -476,12 +487,16 @@ def poll_channel(
         return {"channel_id": channel_id, "status": "dry_run", "video_count": 0}
 
     try:
-        # Step 1: Resolve uploads_playlist_id (cache it if not already stored)
+        # Step 1: Resolve uploads_playlist_id (cache it if not already stored).
+        # Use get_channel_info() on first poll — fetches playlist_id + country/language
+        # in a single 1-quota-unit call (same cost as the old contentDetails-only call).
         playlist_id = channel.get("uploads_playlist_id")
+        _first_poll_country: Optional[str] = None
+        _first_poll_language: Optional[str] = None
         if not playlist_id:
-            playlist_id = client.get_uploads_playlist_id(channel_id)
-            if not playlist_id:
-                print(f"    [warn] Could not get uploads_playlist_id — channel may be private or deleted.")
+            ch_info = client.get_channel_info(channel_id)
+            if not ch_info:
+                print(f"    [warn] Could not get channel info — channel may be private or deleted.")
                 new_empty_count = channel.get("consecutive_empty_polls", 0) + 1
                 _update_channel_after_poll(
                     conn, channel_id,
@@ -493,6 +508,9 @@ def poll_channel(
                     ),
                 )
                 return {"channel_id": channel_id, "status": "error", "video_count": 0}
+            playlist_id = ch_info["uploads_playlist_id"]
+            _first_poll_country = ch_info.get("country")
+            _first_poll_language = ch_info.get("language")
 
         # Step 2: Fetch recent playlist items
         playlist_items = _fetch_playlist_videos(
@@ -594,6 +612,8 @@ def poll_channel(
             status="ok",
             next_poll_after=npa,
             channel_title=seen_channel_title,
+            channel_country=_first_poll_country,
+            channel_language=_first_poll_language,
         )
 
         return {

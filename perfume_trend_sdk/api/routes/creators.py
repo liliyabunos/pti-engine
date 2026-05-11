@@ -77,7 +77,13 @@ def list_creators(
         sort_by = "influence_score"
     order_sql = "ASC" if order == "asc" else "DESC"
 
-    where_clauses = ["cs.platform = :platform"]
+    where_clauses = [
+        "cs.platform = :platform",
+        # Exclude non-creator sources (brand_official, retailer, etc.).
+        # NULL means the channel has no youtube_channels row (auto-discovered via content)
+        # — treat as eligible for backward compatibility.
+        "yc.creator_score_eligible IS NOT FALSE",
+    ]
     params: dict = {"platform": platform, "limit": limit, "offset": offset}
 
     if quality_tier:

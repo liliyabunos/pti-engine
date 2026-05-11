@@ -42,25 +42,45 @@ class YouTubeClient:
         response.raise_for_status()
         return response.json()
 
-    def get_uploads_playlist_id(self, channel_id: str) -> Optional[str]:
-        """Return the uploads playlist ID (UU...) for a channel. Costs 1 quota unit.
+    def get_channel_info(self, channel_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch snippet + contentDetails for a channel. Costs 1 quota unit.
 
-        The uploads playlist ID is stable for the lifetime of a channel.
-        Cache the result in youtube_channels.uploads_playlist_id to avoid
-        repeated API calls.
+        Returns a dict with:
+          uploads_playlist_id — stable UU... playlist ID (cache in youtube_channels)
+          title               — channel display name from snippet.title
+          country             — ISO 3166-1 alpha-2 code from snippet.country, or None
+          language            — BCP-47 language code from snippet.defaultLanguage, or None
+
+        Returns None if the channel is not found (private, deleted, or invalid ID).
         """
         params = {
-            "part": "contentDetails",
+            "part": "snippet,contentDetails",
             "id": channel_id,
             "key": self.api_key,
         }
         response = requests.get(YOUTUBE_CHANNELS_URL, params=params, timeout=self.timeout)
         response.raise_for_status()
-        payload = response.json()
-        items = payload.get("items", [])
+        items = response.json().get("items", [])
         if not items:
             return None
-        return items[0]["contentDetails"]["relatedPlaylists"]["uploads"]
+        item = items[0]
+        snippet = item.get("snippet", {})
+        return {
+            "uploads_playlist_id": item["contentDetails"]["relatedPlaylists"]["uploads"],
+            "title": snippet.get("title") or None,
+            "country": snippet.get("country") or None,
+            "language": snippet.get("defaultLanguage") or None,
+        }
+
+    def get_uploads_playlist_id(self, channel_id: str) -> Optional[str]:
+        """Return the uploads playlist ID (UU...) for a channel. Costs 1 quota unit.
+
+        Prefer get_channel_info() for first-poll paths — it fetches playlist_id +
+        language/country in the same single quota unit.
+        Kept for backward-compat callers that only need the playlist ID.
+        """
+        info = self.get_channel_info(channel_id)
+        return info["uploads_playlist_id"] if info else None
 
     def list_channel_uploads(
         self,
