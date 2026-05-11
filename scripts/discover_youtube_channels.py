@@ -207,12 +207,16 @@ def _insert_channel(
         f"Tier reflects reach only — confirm quality after first poll."
     )
 
+    # Use handle as title placeholder — never use sample_title (a video title).
+    # Real channel display name is fetched and stored on first ingest_youtube_channels poll.
+    title_placeholder = row.get("handle") or row["channel_id"]
+
     with conn.cursor() as cur:
         cur.execute(_INSERT_SQL, {
             "id": str(uuid.uuid4()),
             "channel_id": row["channel_id"],
             "handle": row.get("handle"),
-            "title": row.get("sample_title"),
+            "title": title_placeholder,
             "quality_tier": quality_tier,
             "notes": notes,
         })

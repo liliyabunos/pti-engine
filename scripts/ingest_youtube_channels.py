@@ -203,6 +203,7 @@ def _update_channel_after_poll(
     status: str = "ok",
     error: Optional[str] = None,
     next_poll_after: Optional[datetime] = None,
+    channel_title: Optional[str] = None,
 ) -> None:
     fields = [
         "last_polled_at = NOW()",
@@ -220,6 +221,12 @@ def _update_channel_after_poll(
     if next_poll_after is not None:
         fields.append("next_poll_after = %s")
         params.append(next_poll_after)
+
+    # Refresh display title from channelTitle seen in video snippets.
+    # Prevents stale placeholder titles (e.g. video titles set by auto-discovery).
+    if channel_title and channel_title.strip():
+        fields.append("title = %s")
+        params.append(channel_title.strip())
 
     params.append(channel_id)
 
@@ -568,6 +575,11 @@ def poll_channel(
         # consecutive_empty_polls resets to 0 when videos were found
         npa = _compute_next_poll_after(len(video_ids), 0, channel.get("quality_tier", "unrated"))
 
+        # Extract authoritative channel display name from first video's channelTitle
+        seen_channel_title: Optional[str] = None
+        if search_shaped_items:
+            seen_channel_title = search_shaped_items[0]["snippet"].get("channelTitle") or None
+
         print(
             f"    [ok] {len(video_ids)} videos → {entities_found} entity links"
             f"  transcript_needed={transcript_needed}"
@@ -581,6 +593,7 @@ def poll_channel(
             consecutive_empty_polls=0,
             status="ok",
             next_poll_after=npa,
+            channel_title=seen_channel_title,
         )
 
         return {

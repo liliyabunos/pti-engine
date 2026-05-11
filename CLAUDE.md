@@ -56,7 +56,24 @@ Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 ro
 - ON CONFLICT DO NOTHING enforced — skipped rows count correctly on idempotent re-run ✓
 - Note: apply response `applied` counter shows 0 due to `rowcount` read order bug (cosmetic — operations complete correctly); fixed in admin_source_intake.py
 
-**Ingestion note:** The 2 new channels (UC-MsytPEXSO-2ZHmB5Y4xSw, UCWRTAJqkmpF_yS7MJOIOYNg) will be picked up by the next `ingest_youtube_channels.py` pipeline run automatically. Do not trigger ingestion manually from the admin UI.
+**Pipeline ingestion + Source Intake PRODUCTION_VERIFIED (2026-05-11):**
+- Evening pipeline 2026-05-10 picked up both new channels (1 content item each) ✓
+- The Honest Perfume Reviewer (UC-MsytPEXSO-2ZHmB5Y4xSw): 1 content item, PRODUCTION_VERIFIED ✓
+- G Fragrance (UCWRTAJqkmpF_yS7MJOIOYNg): 1 content item, PRODUCTION_VERIFIED ✓
+- Both appear in /creators leaderboard by correct channel display name ✓
+
+**Creator leaderboard display-name bug — FIXED (2026-05-11):**
+- Root cause: `discover_youtube_channels.py` used `MAX(cci.title)` (a video title) as `youtube_channels.title` placeholder on auto-discovery
+- 93 `g3_auto_discovery` channels had video titles stored as channel display names (e.g. "Is AI right about these? #cologne #fragrance..." stored for channel "MPG fragrance")
+- Data repair: batch-fetched real channel titles from YouTube API for all 93 affected rows; 0 failures ✓
+- Script fix: `discover_youtube_channels.py` now uses `handle` (channel handle) as title placeholder — not video title
+- Polling fix: `ingest_youtube_channels.py` `_update_channel_after_poll()` now accepts `channel_title` kwarg and refreshes `youtube_channels.title` from `channelTitle` in video snippets on each successful poll
+- Regression test: `tests/unit/test_creator_display_name.py` — 7/7 pass
+  - display_name is channel title not video title
+  - search by channel name matches correctly
+  - search by video title does NOT create fake creator row
+  - discover script uses handle not sample_title
+  - poll function accepts channel_title param
 
 **Admin navigation fix (2026-05-11) — COMPLETE — PRODUCTION VERIFIED (commit cd3d7ef):**
 - Source Intake removed from general user sidebar (was leaking to all logged-in users) ✓
