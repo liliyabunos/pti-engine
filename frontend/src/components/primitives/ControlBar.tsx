@@ -33,20 +33,21 @@ export function ControlBar({
   return (
     <div
       className={clsx(
-        "flex shrink-0 flex-wrap items-start gap-x-2 gap-y-1",
+        "flex shrink-0 flex-wrap items-start gap-x-2 gap-y-2",
         "min-h-[36px] border-b border-zinc-800 bg-zinc-950 px-4 py-1.5",
         className,
       )}
     >
       {hasSlots ? (
         <>
-          {/* Left fills remaining space; wraps on small screens */}
+          {/* Left fills remaining space; always full-width below xl */}
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {left}
           </div>
-          {/* Right: on small screens becomes full-width row below */}
+          {/* Right: full-width row below left on mobile/tablet/laptop;
+              joins same row only at xl (1280px+) where there is enough room */}
           {right && (
-            <div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto sm:w-auto sm:shrink-0">
+            <div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto xl:w-auto xl:shrink-0">
               {right}
             </div>
           )}

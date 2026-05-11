@@ -849,7 +849,7 @@ function ScreenerPageInner() {
                   ? "Filter notes…"
                   : "Filter accords…"
               }
-              className="w-36 shrink-0 sm:w-48"
+              className="w-full sm:w-48 sm:shrink-0"
             />
             {mode === "active" && (
               <>

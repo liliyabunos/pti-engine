@@ -277,6 +277,7 @@ function CandidateCard({
   onMarkDuplicate,
   onEditRerun,
   onRoleChange,
+  onMetadataChange,
 }: {
   candidate: CandidateRow;
   actionLoading: string | null;

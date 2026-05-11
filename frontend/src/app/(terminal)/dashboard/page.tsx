@@ -229,7 +229,7 @@ export default function DashboardPage() {
               value={search}
               onChange={setSearch}
               placeholder="Filter movers…"
-              className="w-36 shrink-0 sm:w-48"
+              className="w-full sm:w-48 sm:shrink-0"
             />
             <ControlBarDivider />
             <div className="flex items-center gap-1">
