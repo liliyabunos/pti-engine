@@ -70,16 +70,26 @@ Migration 038 applied to production (alembic current: `038`). 3 new tables, 0 ro
 - Polling fix: `ingest_youtube_channels.py` `_update_channel_after_poll()` now accepts `channel_title` kwarg and refreshes `youtube_channels.title` from `channelTitle` in video snippets on each successful poll
 - Regression test: `tests/unit/test_creator_display_name.py` — 7/7 pass
 
-**Creator leaderboard raw channel_id display fallback — FIXED (2026-05-11):**
+**Creator leaderboard raw channel_id display fallback — FIXED + PRODUCTION VERIFIED (2026-05-11):**
+**Commit: 129dc2b**
 - Root cause: 11 `creator_scores` rows had no `youtube_channels` row AND no `creator_handle`, so the leaderboard LEFT JOIN returned `display_name=NULL` and the frontend fell back to raw `creator_id` (e.g. `UCNCza3W7C6CpfGmDoyR48Bg`)
 - Before fix: 11 creators showed raw UC... channel IDs as display names
-- Data repair: fetched real metadata from YouTube `channels.list` API for all 11 channels; inserted `youtube_channels` rows + updated `creator_scores.creator_handle`; 0 remaining raw-ID fallbacks ✓
+- Data repair: fetched real metadata from YouTube `channels.list` API for all 11 channels; inserted `youtube_channels` rows (added_by=`metadata_repair_2026-05-11`) + updated `creator_scores.creator_handle`; 0 remaining raw-ID fallbacks ✓
 - API fix (`routes/creators.py`): leaderboard query now uses `COALESCE(yc.title, cs.creator_handle)` as `display_name` — defensive fallback prevents future gaps
 - API fix: `_is_raw_youtube_channel_id()` helper detects `UC...` IDs and suppresses them from `display_name` response field
 - API fix: search query now also matches `yc.handle` (YouTube handle like `@hellonikkigriffin`)
 - Profile endpoint (`get_creator`): `title` field also filtered through `_is_raw_youtube_channel_id` + falls back to `creator_handle`
 - Tests: `tests/unit/test_creator_display_name.py` — 14/14 pass (7 new tests for raw_id detection + COALESCE fallback)
-- After fix: `UCNCza3W7C6CpfGmDoyR48Bg` → display_name `Nikki Griffin (HelloNikkiG)` ✓
+
+**Production verification (2026-05-11):**
+- `/creators` total=757, 0 raw UC... display_names across all 757 creators (all 8 pages) ✓
+- `UCNCza3W7C6CpfGmDoyR48Bg` → `Nikki Griffin (HelloNikkiG)` (before: raw channel_id) ✓
+- `/creators?q=Nikki` → total=1, `Nikki Griffin (HelloNikkiG)` ✓
+- `/creators?q=HelloNikki` → total=1, `Nikki Griffin (HelloNikkiG)` ✓
+- `/creators?q=hellonikkigriffin` → total=1 (handle search via `yc.handle`) ✓
+- `/creators?q=The+Honest+Perfume+Reviewer` → total=1 ✓
+- youtube_channels: 210 rows, 0 duplicates; 11 rows inserted by metadata_repair ✓
+- `creator_scores` raw-ID fallbacks: 0 ✓
 
 **Admin navigation fix (2026-05-11) — COMPLETE — PRODUCTION VERIFIED (commit cd3d7ef):**
 - Source Intake removed from general user sidebar (was leaking to all logged-in users) ✓
