@@ -551,7 +551,7 @@ export function BatchReviewConsole({
   const applyEligibleCount = candidates.filter((c) => APPLY_ELIGIBLE.has(c.status)).length;
 
   return (
-    <>
+    <div className="flex h-full flex-col overflow-hidden">
       {rejectTarget && (
         <RejectModal
           candidate={rejectTarget}
@@ -591,7 +591,8 @@ export function BatchReviewConsole({
         }
       />
 
-      <div className="mx-auto max-w-4xl space-y-4 p-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-4xl space-y-4 p-6 pb-12">
         {/* Error */}
         {error && (
           <div className="rounded border border-red-800/40 bg-red-950/20 px-3 py-2 text-[12px] text-red-400">
@@ -679,6 +680,7 @@ export function BatchReviewConsole({
           Spot incorrect data? support@fragranceindex.ai
         </p>
       </div>
-    </>
+      </div>
+    </div>
   );
 }
