@@ -42,7 +42,7 @@ def upgrade() -> None:
         sa.Column("total_items", sa.Integer, nullable=False),
         sa.Column("signals_count", sa.Integer, nullable=False),
         # --- Detail ---
-        sa.Column("issues", JSONB, nullable=False, server_default="'[]'::jsonb"),
+        sa.Column("issues", JSONB, nullable=False, server_default=sa.text("'[]'::jsonb")),
         # --- Context ---
         sa.Column("pipeline_service", sa.String(64), nullable=True),  # Railway service name or execution context
         sa.Column(

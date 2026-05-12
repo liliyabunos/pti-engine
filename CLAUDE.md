@@ -330,7 +330,7 @@ Same-name accounts across platforms must NEVER be merged automatically.
 
 **Language & Region Architecture**
 Full roadmap: `docs/architecture/LANGUAGE_REGION_ARCHITECTURE.md`
-Phase 042 — IMPLEMENTED — MIGRATION NOT YET APPLIED TO PRODUCTION
+Phase 042 — IMPLEMENTED — MIGRATION APPLIED TO PRODUCTION (2026-05-12)
 Phase 043 — IMPLEMENTED — PENDING PIPELINE VERIFICATION — commit `71be8f4` — code-only, no migration, no backfill — 44/44 new + 117/117 existing tests pass
 Next phase: **044 — Regional Creator Policy v1** (pending explicit approval)
 Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (filters) → 046 (aggregation design) → 047 (market availability) → 048 (UI concepts)
@@ -1112,7 +1112,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC0.2 Creator filters v1 | PLANNED | — |
 | SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | P3 Pipeline Health Check | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
-| P3.1 Pipeline Health Log — DB-persisted health history | IMPLEMENTED — MIGRATION 041 NOT APPLIED | 2026-05-11 |
+| P3.1 Pipeline Health Log — DB-persisted health history | COMPLETE — PRODUCTION VERIFIED | 2026-05-12 |
 | SC1.2A TikTok — Schema + Registry Integration | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2B TikTok — Seed Import + Operator Workflow | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2C TikTok — Seeded Creator Monitoring Worker | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
@@ -1129,7 +1129,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | Source Role Foundation v1 — source_role + creator_score_eligible | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | Source Intake Role Routing v1 — role selector on candidates | COMPLETE — PRODUCTION VERIFIED | 2026-05-11 |
 | C3 Multi-Platform Creator Identity Model | PLANNED | — |
-| 042 — Language & Region Metadata v1 | IMPLEMENTED — MIGRATION 042 NOT APPLIED | 2026-05-11 |
+| 042 — Language & Region Metadata v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-12 |
 | 043 — Content Language & Region Propagation v1 | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-11 |
 | 044 — Regional Creator Policy v1 | PENDING | — |
 | 045 — Regional Filters v1 | PENDING | — |
@@ -1256,8 +1256,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 040** (verified 2026-05-12 via public DB query)
-**NOTE: Migrations 041 (pipeline_health_log) and 042 (language_region_metadata) are NOT yet applied to production. CLAUDE.md previously claimed both were PRODUCTION VERIFIED — this was incorrect. Apply both before next feature work.**
+Current production: **migration 042** (verified 2026-05-12 — 040→041→042 applied cleanly)
 
 | Migration | What |
 |-----------|------|
