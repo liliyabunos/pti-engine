@@ -387,7 +387,7 @@ Risk if skipped: All subsequent phases implement wrong access boundaries; gating
 ---
 
 ### DATA0 — Historical Integrity & Metric Versioning
-**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-12)**
+**Status: IMPLEMENTED — PRODUCTION VERIFIED (2026-05-12)**
 **Migration: 043 — `alembic/versions/043_data0_history_versioning.py`**
 **Document: `docs/ops/DATA_RETENTION_POLICY.md`**
 **Purpose:** Protect the historical data that future reports and monetization depend on, before it accumulates without clean methodology provenance.
@@ -410,12 +410,12 @@ Chose snapshot table over append-with-date on `entity_topic_links` because exist
 
 **Provenance note:** Rows in `entity_timeseries_daily` and `signals` written before migration 043 are assigned version 1 via server_default. "Historical rows prior to 2026-05-12 are assigned baseline formula version 1."
 
-**Pending production verification:**
-- Migration 043 applied to Railway production (alembic current: 043)
-- `SELECT COUNT(*) FROM entity_timeseries_daily WHERE score_formula_version IS NULL` → 0
-- `SELECT COUNT(*) FROM signals WHERE signal_threshold_version IS NULL` → 0
-- `entity_topic_snapshots` table exists; first rows appear after next pipeline `--rebuild-links --snapshot` run
-- New timeseries rows after migration carry score_formula_version=1
+**Production verification (2026-05-12):**
+- alembic_version: 043 ✓
+- `entity_timeseries_daily`: 31,551 rows, null_score_formula_version=0 — all version=1 ✓
+- `signals`: 5,325 rows, null_signal_threshold_version=0 — all version=1 ✓
+- `entity_topic_snapshots` table exists ✓
+- First snapshot rows will appear after next pipeline `--rebuild-links --snapshot` run
 
 Depends on: M0 (completed — defines which derived metrics require versioning)
 Next phase: SEO0
@@ -1441,7 +1441,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC3.1 Meta / Instagram foundation | DEFERRED — reframed as IG1 in monetization roadmap | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
 | M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
-| DATA0 — Historical Data Integrity Hardening | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-12 |
+| DATA0 — Historical Data Integrity Hardening | COMPLETE — PRODUCTION VERIFIED | 2026-05-12 |
 | SEO0 — Public SEO Surface v1 | PLANNED | — |
 | PUB1 — Public Entity Pages v1 | PLANNED | — |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
@@ -1567,7 +1567,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 042** (verified 2026-05-12 — 040→041→042 applied cleanly) — **migration 043 pending apply**
+Current production: **migration 043** (verified 2026-05-12 — 043 applied cleanly)
 
 | Migration | What |
 |-----------|------|
