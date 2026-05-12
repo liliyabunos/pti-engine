@@ -50,5 +50,11 @@ class EntityTimeSeriesDaily(Base):
     # NULL = carry-forward row (mention_count == 0) or not yet computed.
     trend_state: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
 
+    # DATA0 — formula provenance for historical comparability.
+    # Identifies which version of the composite_market_score formula produced this row.
+    # Bump SCORE_FORMULA_VERSION in aggregate_daily_market_metrics.py when formula changes.
+    # Existing historical rows are backfilled to version 1 (baseline) via server_default.
+    score_formula_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

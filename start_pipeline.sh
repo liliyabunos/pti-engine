@@ -86,7 +86,7 @@ timeout 300 python3 -m perfume_trend_sdk.jobs.verify_market_state || \
 
 # Step 4b: Topic/Query Intelligence (Phase I5/I6) — extract new topics, rebuild links
 echo "[pipeline] Step 4b — Topic extraction + entity link rebuild (Phase I5/I6)"
-timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links || \
+timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links --snapshot || \
   echo "[pipeline] WARNING: extract_entity_topics failed — continuing"
 
 # Step 4c: Emerging signals extraction (Phase E3-E) — refresh channel-aware emerging candidates

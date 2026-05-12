@@ -8,10 +8,17 @@ Flow:
     → extract_topics()           → content_topics (upsert)
     → entity_mentions (join)     → entity_topic_links (upsert)
 
+DATA0 addition: --snapshot flag
+  After a --rebuild-links run, pass --snapshot to write a dated aggregate
+  snapshot of entity_topic_links to entity_topic_snapshots. This preserves
+  historical topic/intent distribution history across pipeline rebuild cycles.
+  The pipeline scripts pass --snapshot on every scheduled --rebuild-links call.
+
 Run:
   python3 -m perfume_trend_sdk.jobs.extract_entity_topics
   python3 -m perfume_trend_sdk.jobs.extract_entity_topics --dry-run
   python3 -m perfume_trend_sdk.jobs.extract_entity_topics --limit 100
+  python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links --snapshot
 """
 from __future__ import annotations
 
@@ -28,6 +35,15 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# DATA0 — Topic distribution formula version
+#
+# Increment this constant when the topic extraction / classification logic
+# changes in a way that makes historical distributions incomparable.
+# Each entity_topic_snapshots row carries this version.
+# ---------------------------------------------------------------------------
+TOPIC_DISTRIBUTION_VERSION = 1
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +76,11 @@ def main() -> None:
     parser.add_argument("--force", action="store_true", help="Re-process content items that already have topics")
     parser.add_argument("--rebuild-links", action="store_true",
                         help="Clear entity_topic_links and rebuild from existing content_topics (faster than --force)")
+    parser.add_argument("--snapshot", action="store_true",
+                        help="DATA0: after --rebuild-links, write a dated snapshot of topic distribution "
+                             "to entity_topic_snapshots (default snapshot_date = today UTC)")
+    parser.add_argument("--snapshot-date", default=None,
+                        help="Override snapshot date YYYY-MM-DD (default: today UTC)")
     args = parser.parse_args()
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -263,6 +284,50 @@ def main() -> None:
             db.commit()
             links_written += rl_links
             logger.info("Rebuild-links complete: %d entity_topic_links written", rl_links)
+
+        # ── 3c. DATA0: Topic distribution snapshot ──────────────────────────
+        # After a --rebuild-links run, persist an aggregate dated snapshot of
+        # entity_topic_links to entity_topic_snapshots.  This preserves the
+        # ability to query historical topic/intent distributions over time.
+        # The snapshot is idempotent: ON CONFLICT DO UPDATE overwrites any
+        # existing row for the same (snapshot_date, entity_id, topic_type, topic_text).
+        if args.rebuild_links and args.snapshot and not args.dry_run:
+            import datetime as _dt
+            snapshot_date_str = args.snapshot_date or _dt.date.today().isoformat()
+            try:
+                rows_snapped = db.execute(text("""
+                    INSERT INTO entity_topic_snapshots
+                        (snapshot_date, entity_id, entity_type, topic_type, topic_text,
+                         occurrence_count, avg_source_score, formula_version, generated_at)
+                    SELECT
+                        :snap_date,
+                        entity_id,
+                        entity_type,
+                        topic_type,
+                        topic_text,
+                        COUNT(*)::integer          AS occurrence_count,
+                        AVG(source_score)          AS avg_source_score,
+                        :fv,
+                        NOW()
+                    FROM entity_topic_links
+                    GROUP BY entity_id, entity_type, topic_type, topic_text
+                    ON CONFLICT (snapshot_date, entity_id, topic_type, topic_text) DO UPDATE SET
+                        occurrence_count = EXCLUDED.occurrence_count,
+                        avg_source_score = EXCLUDED.avg_source_score,
+                        formula_version  = EXCLUDED.formula_version,
+                        generated_at     = EXCLUDED.generated_at
+                """), {"snap_date": snapshot_date_str, "fv": TOPIC_DISTRIBUTION_VERSION}).rowcount
+                db.commit()
+                logger.info(
+                    "topic_snapshot_written snapshot_date=%s rows=%d formula_version=%d",
+                    snapshot_date_str, rows_snapped, TOPIC_DISTRIBUTION_VERSION,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "topic_snapshot_failed snapshot_date=%s reason=%s — non-fatal, continuing",
+                    snapshot_date_str, exc,
+                )
+                db.rollback()
 
         logger.info(
             "Done. items_with_topics=%d items_with_links=%d topics_written=%d links_written=%d%s",

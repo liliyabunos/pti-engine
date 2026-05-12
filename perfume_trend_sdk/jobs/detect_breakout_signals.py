@@ -34,6 +34,16 @@ from perfume_trend_sdk.db.market.session import _make_engine, get_database_url, 
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# DATA0 — Signal threshold version
+#
+# Increment this constant when breakout detection thresholds change.
+# Every signal row written by this job carries this version, making historical
+# signals methodologically comparable and citable with footnotes in reports.
+# Existing rows were backfilled to version 1 via migration 043 server_default.
+# ---------------------------------------------------------------------------
+SIGNAL_THRESHOLD_VERSION = 1
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -118,6 +128,7 @@ def _upsert_signal(db: Session, sig: Dict[str, Any], entity_type: str) -> bool:
         strength=sig.get("strength", 0.0),
         metadata_json=metadata,
         detected_at=sig["detected_at"],
+        signal_threshold_version=SIGNAL_THRESHOLD_VERSION,  # DATA0
         created_at=datetime.now(timezone.utc),
     ))
     return True

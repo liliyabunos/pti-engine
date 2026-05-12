@@ -54,6 +54,16 @@ from perfume_trend_sdk.db.market.source_intelligence import MentionSource, Sourc
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# DATA0 — Score formula version
+#
+# Increment this constant when the composite_market_score formula changes.
+# Every entity_timeseries_daily row written by this job carries this version,
+# making historical rows methodologically comparable and citable in reports.
+# Existing rows were backfilled to version 1 via migration 043 server_default.
+# ---------------------------------------------------------------------------
+SCORE_FORMULA_VERSION = 1
+
+# ---------------------------------------------------------------------------
 # Unmapped-entity sink (Step 7C)
 # ---------------------------------------------------------------------------
 # Writes one JSON line per unmapped entity to outputs/unmapped_entities.jsonl
@@ -482,6 +492,8 @@ def _rollup_brand_market_data(db: Session, target_date: date) -> int:
             "volatility":             float(avg_volatility) if avg_volatility is not None else None,
             "confidence_avg":         float(avg_confidence) if avg_confidence is not None else None,
             "trend_state":            brand_trend_state,
+            # DATA0 — formula version for methodology provenance
+            "score_formula_version":  SCORE_FORMULA_VERSION,
         }
 
         if existing:
@@ -579,6 +591,7 @@ def _carry_forward_quiet_entities(db: Session, target_date: date) -> int:
             acceleration=0.0,
             volatility=0.0,
             trend_state=None,  # Phase I3 — no activity, no trend state
+            score_formula_version=SCORE_FORMULA_VERSION,  # DATA0
             created_at=now,
             updated_at=now,
         ))
@@ -947,6 +960,8 @@ def run(
             acceleration=snap.get("acceleration"),
             mention_count=float(snap.get("mention_count") or 0.0),
         )
+        # DATA0 — stamp formula version so this row is methodologically citable
+        snap["score_formula_version"] = SCORE_FORMULA_VERSION
         _upsert_snapshot(db, snap, entity_uuid, target_date_obj)
 
     db.flush()

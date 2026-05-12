@@ -387,23 +387,38 @@ Risk if skipped: All subsequent phases implement wrong access boundaries; gating
 ---
 
 ### DATA0 — Historical Integrity & Metric Versioning
-**Status: APPROVED — FOLLOWS M0**
+**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-12)**
+**Migration: 043 — `alembic/versions/043_data0_history_versioning.py`**
+**Document: `docs/ops/DATA_RETENTION_POLICY.md`**
 **Purpose:** Protect the historical data that future reports and monetization depend on, before it accumulates without clean methodology provenance.
 
-Confirmed risks requiring resolution:
-- `entity_timeseries_daily`: rows persist (good) but carry **no score formula version**. If the aggregation formula ever changes, historical scores are incomparable in reports.
-- `signals` table: breakout thresholds are **hardcoded in `detect_breakout_signals.py`**. No version recorded. Historical signals cannot be cited with methodology footnotes.
-- `entity_topic_links`: **fully rebuilt on every `--rebuild-links` run** — historical topic intent distributions are permanently overwritten. Temporal intent analysis (was gifting intent rising in March?) is currently unrecoverable.
+**What was implemented:**
+- `score_formula_version INTEGER NOT NULL server_default=1` on `entity_timeseries_daily` — backfills all existing rows to version 1 via server_default
+- `signal_threshold_version INTEGER NOT NULL server_default=1` on `signals` — backfills all existing rows to version 1
+- `entity_topic_snapshots` table — Option A: dated aggregate snapshot of `entity_topic_links` written after each `--rebuild-links` run; preserves historical topic/intent distributions that would otherwise be destroyed on rebuild. Unique on `(snapshot_date, entity_id, topic_type, topic_text)`. Idempotent upsert.
+- `SCORE_FORMULA_VERSION = 1` constant in `aggregate_daily_market_metrics.py` — injected at all 3 write paths (perfume loop, brand roll-up, carry-forward)
+- `SIGNAL_THRESHOLD_VERSION = 1` constant in `detect_breakout_signals.py` — injected in `_upsert_signal()`
+- `TOPIC_DISTRIBUTION_VERSION = 1` constant in `extract_entity_topics.py` — written to each snapshot row
+- `--snapshot` flag on `extract_entity_topics.py` — triggers dated snapshot after `--rebuild-links`; non-fatal (pipeline continues on snapshot failure)
+- Pipeline scripts (`start_pipeline.sh`, `start_pipeline_evening.sh`) updated to pass `--snapshot` on every `--rebuild-links` call
+- `docs/ops/DATA_RETENTION_POLICY.md` — written retention policy: Keep Indefinitely table list, retention windows, versioning policy, change control rules
 
-Scope:
-- `score_formula_version` column on `entity_timeseries_daily`
-- `signal_threshold_version` column on `signals`
-- Decision on topic distribution snapshots: option A = add `topic_distribution_daily` snapshot table; option B = change `--rebuild-links` to append-with-date rather than overwrite
-- Written data retention / historical integrity policy: what is kept forever (raw items, mentions, timeseries rows), what has a retention window
-- Forward policy: any future scored/derived object introduced after DATA0 must carry `formula_version` from day one (applies to Opportunity Objects in IL1 and all future derived metrics)
+**Topic history design decision (Option A):**
+Chose snapshot table over append-with-date on `entity_topic_links` because existing API queries do `COUNT(*) GROUP BY topic_type, topic_text` across ALL rows for an entity — adding a date column would accumulate historical rows and distort current entity topic profiles. Snapshot table is purely additive; zero changes to existing query paths.
 
-Depends on: M0 (defines which derived metrics must be historically snapshotted vs recomputed)
-Risk if skipped: Reports cannot be produced with clean methodology provenance; topic intent history permanently unrecoverable as pipeline runs.
+**Forward policy (binding):** Any future scored/derived object introduced after DATA0 must carry `formula_version` from day one. Applies to Opportunity Objects in IL1 and all future derived metrics.
+
+**Provenance note:** Rows in `entity_timeseries_daily` and `signals` written before migration 043 are assigned version 1 via server_default. "Historical rows prior to 2026-05-12 are assigned baseline formula version 1."
+
+**Pending production verification:**
+- Migration 043 applied to Railway production (alembic current: 043)
+- `SELECT COUNT(*) FROM entity_timeseries_daily WHERE score_formula_version IS NULL` → 0
+- `SELECT COUNT(*) FROM signals WHERE signal_threshold_version IS NULL` → 0
+- `entity_topic_snapshots` table exists; first rows appear after next pipeline `--rebuild-links --snapshot` run
+- New timeseries rows after migration carry score_formula_version=1
+
+Depends on: M0 (completed — defines which derived metrics require versioning)
+Next phase: SEO0
 
 ---
 
@@ -1426,7 +1441,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC3.1 Meta / Instagram foundation | DEFERRED — reframed as IG1 in monetization roadmap | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
 | M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
-| DATA0 — Historical Data Integrity Hardening | PLANNED — NEXT PHASE | — |
+| DATA0 — Historical Data Integrity Hardening | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-12 |
 | SEO0 — Public SEO Surface v1 | PLANNED | — |
 | PUB1 — Public Entity Pages v1 | PLANNED | — |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
@@ -1552,7 +1567,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 042** (verified 2026-05-12 — 040→041→042 applied cleanly)
+Current production: **migration 042** (verified 2026-05-12 — 040→041→042 applied cleanly) — **migration 043 pending apply**
 
 | Migration | What |
 |-----------|------|
@@ -1575,6 +1590,7 @@ Current production: **migration 042** (verified 2026-05-12 — 040→041→042 a
 | 040 | Source Intake Role Routing v1 — `source_role VARCHAR(64) NULL` + `creator_score_eligible BOOLEAN NULL` on `source_intake_candidates`; eligibility resolved at apply time (NULL → independent_creator, independent_creator → eligible=True, others → False); PATCH endpoint accepts new fields; Admin UI role selector in BatchReviewConsole |
 | 042 | Phase 042 Language & Region Metadata v1 — `source_language VARCHAR(16)`, `source_country VARCHAR(8)`, `source_region VARCHAR(64)`, `audience_region VARCHAR(64)`, `regional_policy_status VARCHAR(64)` on `source_intake_candidates`; `source_region`, `audience_region`, `regional_policy_status` on `youtube_channels`; all nullable, no CHECK constraints |
 | 041 | Pipeline Health Log — `pipeline_health_log` table: `(run_date DATE, run_label VARCHAR(32), overall_level VARCHAR(16), entity_mentions, reddit_mentions, youtube_items, reddit_items, total_items, signals_count INT, issues JSONB, pipeline_service VARCHAR(64) NULL, recorded_at TIMESTAMPTZ)`; unique on `(run_date, run_label)`; 90-day retention trimmed at persist time; upserted by `pipeline_health_check.py` after every morning/evening run |
+| 043 | DATA0 — `score_formula_version INTEGER NOT NULL server_default=1` on `entity_timeseries_daily`; `signal_threshold_version INTEGER NOT NULL server_default=1` on `signals`; `entity_topic_snapshots` table (dated aggregate snapshots of topic/intent distribution per entity, preserving historical intent distributions destroyed by `--rebuild-links`); unique on `(snapshot_date, entity_id, topic_type, topic_text)` |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 

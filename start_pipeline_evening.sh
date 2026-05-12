@@ -57,7 +57,7 @@ timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.detect_breakout_signal
 
 # Step 3b: Topic/Query Intelligence (Phase I5/I6) — extract new topics, rebuild links
 echo "[pipeline-evening] Step 3b — Topic extraction + entity link rebuild (Phase I5/I6)"
-timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links || \
+timeout 600 python3 -m perfume_trend_sdk.jobs.extract_entity_topics --rebuild-links --snapshot || \
   echo "[pipeline-evening] WARNING: extract_entity_topics failed — continuing"
 
 # Step 3c: Emerging signals extraction (Phase E3-E) — refresh channel-aware emerging candidates

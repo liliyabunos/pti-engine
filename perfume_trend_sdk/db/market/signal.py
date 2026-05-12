@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from sqlalchemy import DateTime, Float, JSON, String, UniqueConstraint
+from sqlalchemy import DateTime, Float, Integer, JSON, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -37,4 +37,11 @@ class Signal(Base):
 
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+
+    # DATA0 — threshold provenance for historical comparability.
+    # Identifies which version of the breakout detection thresholds produced this signal.
+    # Bump SIGNAL_THRESHOLD_VERSION in detect_breakout_signals.py when thresholds change.
+    # Existing historical rows are backfilled to version 1 (baseline) via server_default.
+    signal_threshold_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
