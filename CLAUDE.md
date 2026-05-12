@@ -327,8 +327,9 @@ Same-name accounts across platforms must NEVER be merged automatically.
 ---
 
 ## Monetization & Public Intelligence — Approved Strategic Roadmap
-**STATUS: ROADMAP APPROVED 2026-05-12 — M0 IS THE NEXT PHASE TO EXECUTE**
+**STATUS: ROADMAP APPROVED 2026-05-12 — M0 COMPLETE — DATA0 IS THE NEXT PHASE**
 **Audit: Claude Sonnet 4.6 strategic architecture audit (2026-05-12) · Founder-reviewed and approved (2026-05-12)**
+**M0 Architecture document: `docs/architecture/MONETIZATION_ARCHITECTURE.md` (commit 83967f4 + M0 commit)**
 
 ### Strategic Verdict
 The intelligence engine is already strong. The next strategic gap is the commercial/public architecture layer — not additional isolated signal features. The platform currently has zero public acquisition surface: all entity pages are behind authentication, no sitemap exists, no dynamic metadata, no public entity URLs are indexed. Every month without the public layer is compounding opportunity cost on SEO and organic acquisition.
@@ -359,17 +360,28 @@ TT2: parallel administrative/decision track — must complete before IL1 begins
 ---
 
 ### M0 — Monetization Architecture Foundation
-**Status: APPROVED — NEXT PHASE TO EXECUTE**
+**Status: IMPLEMENTED — ARCHITECTURE DOCUMENTED (2026-05-12)**
+**Document: `docs/architecture/MONETIZATION_ARCHITECTURE.md`**
 **Purpose:** Define all future commercial boundaries before any public exposure, gating, or report implementation is built. This is a design/documentation phase, not code.
 
-Outputs (when executed as a dedicated task):
-- Public / Pro / Report / Enterprise field definitions for each entity type (perfume, brand, note, accord, creator)
-- Opportunity Object Model schema as a data contract (id, type, entity_id, confidence_score, evidence_refs, time_window, strength, is_active, formula_version, generated_at)
-- Tier access matrix: which history depth each tier receives (30-day public / 6-month Pro / 24-month Report)
-- Report data requirements for Perfume Deep Dive and Brand Report (section map with DB source per section)
-- URL / routing conventions for public entity pages (slug format; canonical relationship to terminal `/entities/` routes)
+**Outputs delivered:**
+- Four commercial layers defined: Public/SEO, Pro, Premium Report, Enterprise (section 2)
+- Entity monetization role map: Perfume + Brand are primary monetizable objects; Creator is attribution/provenance (section 3)
+- Full current capability audit: perfume, brand, creator, screener/alerts/watchlists (section 4)
+- Field-level tier access matrix for all entity types and product features (section 5)
+- Public perfume page architecture contract: name, brand, role badge, notes/accords, score, direction, top 1 opportunity label, top 2 differentiators, top 3 creator names, similar perfumes, CTA (section 6.1)
+- Public brand page architecture contract (section 6.2)
+- PUB2 note/accord page architecture role (section 6.3)
+- Pro layer specification: 90-day chart, 6-month history, full attribution, alerts, watchlists, comparison chart, CSV (section 7)
+- Perfume Deep Dive 12-section report map with data availability per section (section 8.1)
+- Opportunity Object formal schema: `entity_opportunities` table contract for IL1 (section 9)
+- History depth policy: Public=direction only (NO chart), Pro=90d default/6m on-demand, Report=24m, Enterprise=full (section 10)
+- Public URL structure locked: `/perfumes/[slug]`, `/brands/[slug]`, `/notes/[slug]`, `/accords/[slug]` (section 11)
+- Phase interfaces: what each downstream phase receives from M0 (section 12)
+- Decisions locked vs deferred (section 13)
+- Founder decision checklist: 2 items, both with defaults, neither blocking DATA0 (section 14)
 
-Depends on: Nothing. Execute as first task after roadmap is committed.
+Depends on: Nothing.
 Risk if skipped: All subsequent phases implement wrong access boundaries; gating requires rearchitecting after the fact.
 
 ---
@@ -1413,8 +1425,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC2.1 Snapchat foundation | DEFERRED | — |
 | SC3.1 Meta / Instagram foundation | DEFERRED — reframed as IG1 in monetization roadmap | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
-| M0 — Monetization Architecture | PLANNED | — |
-| DATA0 — Historical Data Integrity Hardening | PLANNED | — |
+| M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
+| DATA0 — Historical Data Integrity Hardening | PLANNED — NEXT PHASE | — |
 | SEO0 — Public SEO Surface v1 | PLANNED | — |
 | PUB1 — Public Entity Pages v1 | PLANNED | — |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
