@@ -326,6 +326,280 @@ Same-name accounts across platforms must NEVER be merged automatically.
 
 ---
 
+## Monetization & Public Intelligence — Approved Strategic Roadmap
+**STATUS: ROADMAP APPROVED 2026-05-12 — M0 IS THE NEXT PHASE TO EXECUTE**
+**Audit: Claude Sonnet 4.6 strategic architecture audit (2026-05-12) · Founder-reviewed and approved (2026-05-12)**
+
+### Strategic Verdict
+The intelligence engine is already strong. The next strategic gap is the commercial/public architecture layer — not additional isolated signal features. The platform currently has zero public acquisition surface: all entity pages are behind authentication, no sitemap exists, no dynamic metadata, no public entity URLs are indexed. Every month without the public layer is compounding opportunity cost on SEO and organic acquisition.
+
+### Approved Phase Sequence
+
+```
+M0 → DATA0 → SEO0 → PUB1
+                      ├─ PUB2   (parallel track after PUB1)
+                      └─ IG1    (parallel track after PUB1; IG1 preferred if single-track due to history irreversibility)
+
+After PUB2 + IG1:
+IL1 → REPORT1 → PRO1
+
+TT2: parallel administrative/decision track — must complete before IL1 begins
+```
+
+### Strategic Principles (binding — do not violate in implementation)
+1. **Intelligence engine is strong; the gap is public + commercial architecture.** Do not add more signal features before PUB1 is live.
+2. **Do NOT implement monetization checkout** (Stripe, paywall, pricing pages) before public acquisition layer (PUB1) and report-readiness architecture (IL1/REPORT1) exist.
+3. **Do NOT push Instagram (IG1) ahead of M0, DATA0, SEO0, PUB1.** After PUB1, IG1 can run in parallel with PUB2.
+4. **Do NOT treat TikTok official API/app approval as public TikTok trend ingestion solved.** These are separate technical and compliance problems. SC1.2D is closed.
+5. **Historical integrity is time-sensitive.** DATA0 must follow M0 immediately. Every day without score formula versioning is a day of report-incomparable history that cannot be recovered.
+6. **Public SEO pages are core product, not "marketing later."** The platform is invisible to search without them.
+7. **Instagram history accumulates forward only.** Every week IG1 is delayed after PUB1 is live is a week of cross-platform signal history permanently unrecoverable for future reports.
+8. **Opportunity Feed is a future high-value product.** Formal Opportunity Objects should be implemented in IL1 — not prematurely before M0/DATA0/PUB1/IG1.
+
+---
+
+### M0 — Monetization Architecture Foundation
+**Status: APPROVED — NEXT PHASE TO EXECUTE**
+**Purpose:** Define all future commercial boundaries before any public exposure, gating, or report implementation is built. This is a design/documentation phase, not code.
+
+Outputs (when executed as a dedicated task):
+- Public / Pro / Report / Enterprise field definitions for each entity type (perfume, brand, note, accord, creator)
+- Opportunity Object Model schema as a data contract (id, type, entity_id, confidence_score, evidence_refs, time_window, strength, is_active, formula_version, generated_at)
+- Tier access matrix: which history depth each tier receives (30-day public / 6-month Pro / 24-month Report)
+- Report data requirements for Perfume Deep Dive and Brand Report (section map with DB source per section)
+- URL / routing conventions for public entity pages (slug format; canonical relationship to terminal `/entities/` routes)
+
+Depends on: Nothing. Execute as first task after roadmap is committed.
+Risk if skipped: All subsequent phases implement wrong access boundaries; gating requires rearchitecting after the fact.
+
+---
+
+### DATA0 — Historical Integrity & Metric Versioning
+**Status: APPROVED — FOLLOWS M0**
+**Purpose:** Protect the historical data that future reports and monetization depend on, before it accumulates without clean methodology provenance.
+
+Confirmed risks requiring resolution:
+- `entity_timeseries_daily`: rows persist (good) but carry **no score formula version**. If the aggregation formula ever changes, historical scores are incomparable in reports.
+- `signals` table: breakout thresholds are **hardcoded in `detect_breakout_signals.py`**. No version recorded. Historical signals cannot be cited with methodology footnotes.
+- `entity_topic_links`: **fully rebuilt on every `--rebuild-links` run** — historical topic intent distributions are permanently overwritten. Temporal intent analysis (was gifting intent rising in March?) is currently unrecoverable.
+
+Scope:
+- `score_formula_version` column on `entity_timeseries_daily`
+- `signal_threshold_version` column on `signals`
+- Decision on topic distribution snapshots: option A = add `topic_distribution_daily` snapshot table; option B = change `--rebuild-links` to append-with-date rather than overwrite
+- Written data retention / historical integrity policy: what is kept forever (raw items, mentions, timeseries rows), what has a retention window
+- Forward policy: any future scored/derived object introduced after DATA0 must carry `formula_version` from day one (applies to Opportunity Objects in IL1 and all future derived metrics)
+
+Depends on: M0 (defines which derived metrics must be historically snapshotted vs recomputed)
+Risk if skipped: Reports cannot be produced with clean methodology provenance; topic intent history permanently unrecoverable as pipeline runs.
+
+---
+
+### SEO0 — SEO Infrastructure Foundation
+**Status: APPROVED — FOLLOWS DATA0**
+**Purpose:** Make the platform technically crawlable and indexable before public entity pages are built. Current state: no sitemap, no robots.txt, no dynamic metadata, no canonical URLs, no JSON-LD on any entity page.
+
+Scope:
+- `robots.ts` at app root: allow public routes; noindex all terminal routes (`/dashboard`, `/screener`, `/entities/*`, `/creators/*`, `/admin/*`, `/account/*`)
+- Paginated `sitemap.ts` with dynamic entity URL generation (sitemap index + per-entity-type child sitemaps; 55,000+ perfumes requires pagination)
+- `generateMetadata()` conventions established for future public entity pages (title, description, og:, canonical)
+- Canonical URL conventions documented: public slug URLs as canonical; terminal `/entities/[id]` routes rel=canonical to public slug
+- `metadataBase` confirmed correct for fragranceindex.ai (root layout)
+- JSON-LD schema patterns selected: `ItemPage` for perfume public pages, `Organization` for brand, `DefinedTerm` for notes/accords
+
+Depends on: M0 (public field definitions must exist before generating public metadata)
+Risk if skipped: Public pages will not rank. SEO compounds over time; every month of delay is compound loss that cannot be recovered.
+
+---
+
+### PUB1 — Public Perfume & Brand Pages
+**Status: APPROVED — FOLLOWS SEO0**
+**Purpose:** Launch auth-free, SEO-friendly public entity pages that create the organic acquisition funnel into the terminal. The intelligence engine exists; the missing step is a public window into it.
+
+Public perfume page scope (approved field policy):
+- name, brand, notes/accords — fully public (identity + ingredient search volume)
+- current market score (single number) — public (provokes curiosity, drives sign-up)
+- trend direction (up / stable / down) — public
+- top 1 opportunity tag, no evidence — public ("why trending" context for SEO)
+- top 3 creator names only, no engagement data — public
+- top 2 differentiators / top 2 positioning tags — public ("why trending" preview)
+- full chart, all drivers, all creators, full opportunity breakdown — **gated; CTA to terminal sign-up**
+
+Public brand page scope:
+- brand name, portfolio count, aggregate score, momentum status summary
+- top 5 SKUs with current state (active / tracked / catalog)
+- CTA into full portfolio in terminal
+
+Internal linking: perfume → brand → notes → accords → similar perfumes
+
+Depends on: M0 (field definitions), SEO0 (infrastructure), DATA0 (versioning before public data exposure)
+Risk if skipped: Platform remains invisible to search. No acquisition funnel. No conversion path.
+
+---
+
+### PUB2 — SEO Content Depth
+**Status: APPROVED — PARALLEL TRACK AFTER PUB1**
+**Purpose:** Add public content structures that help pages rank, not merely index. PUB1 gets pages into the index; PUB2 drives ranking on long-tail queries.
+
+Scope:
+- Note detail pages publicly exposed (top perfumes using note, fragrance family context)
+- Accord detail pages publicly exposed
+- "Compared Against" public section on perfume pages (entity-resolved competitors, no evidence depth)
+- Trending Notes / Trending Accords public pages (top 20 by mention velocity)
+- Full internal linking graph: perfume → brand → notes → accords → similar perfumes
+- Anti-thin-content rule: each public page must carry at least one unique data-driven signal
+- No duplicate content across concentration variants (flanker policy; define in M0)
+
+Depends on: PUB1 (live and indexed)
+Parallel with: IG1 — neither blocks the other. If only one can run, IG1 is preferred due to history irreversibility.
+Risk if skipped: PUB1 infrastructure indexed but doesn't rank at scale.
+
+---
+
+### IG1 — Instagram Public Signal Layer
+**Status: APPROVED — PARALLEL TRACK AFTER PUB1**
+**Purpose:** Add Instagram as an official third social signal source through the existing ingestion → normalization → resolver → metrics architecture.
+
+Critical constraint: **Instagram signal history cannot be accumulated retroactively.** Every week IG1 is delayed after PUB1 is live is a week of cross-platform intelligence permanently unavailable for future Deep Dive reports. This is the strongest argument for prioritizing IG1 over PUB2 if capacity allows only one parallel track.
+
+Scope:
+- Instagram content ingestion connector (hashtag/query search via Public Content API; rate limit and batch/sleep design)
+- `normalize_instagram_item()` in `social_content/normalizer.py` (extending existing platform-specific normalizer pattern)
+- Resolver integration (existing SC1.3 multi-field resolver; field weights: caption/description priority, hashtags secondary)
+- `source_platform='instagram'` in `canonical_content_items`
+- entity_mentions from Instagram sources
+- Platform weight decision: recommend 0.8× initially; calibrate upward after signal quality verified
+- `creator_platform_accounts` support for Instagram accounts (table already exists, migration 035)
+- Morning/evening pipeline health check validates Instagram item count
+
+Compliance / identity rules:
+- Use officially granted Instagram API scopes only (Public Content Access / hashtag search)
+- No raw comment text ingestion without approved method
+- Instagram creator identity must NOT be auto-merged with YouTube/Reddit creators by display name (existing platform-aware identity constraint from C2.2A applies)
+
+What IG1 unlocks: cross-platform trend confirmation; visual/aesthetic fragrance demand signals (gifting, unboxing, aesthetics); "trending across 3 platforms" as report evidence; brand-official content signals
+
+Depends on: M0 (field definitions + platform weight decision), DATA0 (versioning before new source adds data), PUB1 (public layer to display cross-platform data)
+Parallel with: PUB2 — neither blocks the other.
+Risk if skipped: Reports cite "2 platforms" indefinitely; cross-platform confidence permanently weaker; history unrecoverable for early cohort entities.
+
+---
+
+### IL1 — Intelligence Layer Formalization
+**Status: APPROVED — AFTER PUB2 AND IG1**
+**Purpose:** Upgrade existing string-based opportunity flags and topic-level intent aggregation into formal scored data models required for report generation and future paid intelligence.
+
+Current state in code:
+- 7 string opportunity flags in `market_intelligence.py` (no confidence score, no evidence refs, no time windows) — tag-level only
+- Intent classification aggregated at entity level from topic labels (not at mention level)
+- `confidence_avg` on entities = resolver quality metric, not opportunity confidence
+
+Scope:
+- `entity_opportunities` table: Opportunity Object schema (id, type, entity_id, confidence_score 0–1, evidence_items list of content_item_ids, time_window start/end, strength low/medium/high, is_active bool, formula_version, generated_at)
+- Daily opportunity computation job (replaces ad-hoc API computation)
+- API returns opportunities with confidence scores, evidence refs, time windows
+- Mention-level intent classification (deterministic rules; primary intent per mention: review / comparison / gifting / blind_buy / discovery / trending_mention)
+- Intent distribution per entity per week (enables "intent trend over time" in reports)
+- Opportunity Feed API endpoint: active opportunities ranked by confidence × recency across all entities
+
+Depends on: M0 (Opportunity Object schema defined there), DATA0 (formula_version policy applies), IG1 (multi-platform data strengthens opportunity evidence)
+TT2 must be complete before IL1 begins (to ensure no TikTok assumptions are embedded in Opportunity Object evidence design).
+Risk if skipped: Premium reports built on tag strings, not evidence-backed scored objects; credibility gap in paid products.
+
+---
+
+### REPORT1 — Perfume Deep Dive Report Architecture
+**Status: APPROVED — AFTER IL1**
+**Purpose:** Prototype the report data pipeline and research-style artifact for future premium report products. No paid checkout in this phase.
+
+Perfume Deep Dive v1 section map:
+1. Cover: entity name, brand, score, report date, score trend (30/90/180-day)
+2. Market Status: rising / stable / declining + plain-language reason
+3. Signal Timeline: all detected signals in window with strength and context
+4. Who Drives It: top 10 creators with tier, platform, first/last mention, early signal badge
+5. Why People Talk About It: intent breakdown (% review / % comparison / % gifting / % discovery) — requires IL1
+6. Compared Against: entity-resolved comparison graph with directionality
+7. Dupe / Alternative Landscape: reference_original, dupe_family, competing clones
+8. Opportunity Analysis: all active Opportunity Objects with confidence scores and evidence — requires IL1
+9. Notes & Accords Context: note/accord momentum related to this entity's trajectory
+10. Risk Assessment: concentration risk (creator-dependent growth?), velocity risk (acceleration vs sustainable)
+11. Methodology footnote: score formula version, data sources, confidence explanation — requires DATA0
+
+Internal prototype targets: Creed Aventus · Baccarat Rouge 540 · Armaf Club de Nuit Intense Man
+Depends on: IL1 (Opportunity Objects, intent classification), IG1 (multi-platform data for section 4/8)
+Risk if skipped: Highest-margin product tier delayed.
+
+---
+
+### PRO1 — Pro Tier Gating & Feature Completion
+**Status: APPROVED — AFTER REPORT1**
+**Purpose:** Implement actual Pro access control, monetization checkout, and Pro-specific product features — only after public acquisition and report/intelligence readiness are confirmed.
+
+Scope:
+- Access control per tier (public / pro / report / enterprise)
+- Comparison chart (multi-entity overlay on same chart)
+- CSV export
+- Extended history access (6-month Pro, 24-month Report/Enterprise)
+- Alert delivery (email / webhook)
+- Checkout / monetization implementation (Stripe or equivalent)
+
+Constraint: Build the checkout flow after there is organic traffic to convert. Premature checkout before acquisition exists converts no one.
+Depends on: M0 (field definitions), PUB1 (traffic source), IL1 (Opportunity Objects give Pro content real depth), REPORT1 (report product prototype ready for paid launch)
+Risk if delayed: No direct revenue — but premature before organic traffic exists is economically equivalent to no revenue anyway.
+
+---
+
+### TT2 — TikTok Path Decision & Closure
+**Status: APPROVED PARALLEL ADMINISTRATIVE TRACK — MUST COMPLETE BEFORE IL1**
+**Purpose:** Formally close the TikTok public monitoring uncertainty and document what official TikTok API approval does and does not solve for FTI. This is a documentation/decision exercise, not engineering work.
+
+Approved strategic conclusions (binding platform policy):
+
+**A) What official TikTok app/API approval actually grants FTI:**
+Authorized app/API access gives creator-authorized content (if creator grants permission), analytics for brand-managed accounts, and potentially video metadata for accounts that opt in. These are useful for Creator Intelligence (C3 track — creator linking, verified creator analytics) and future enterprise/brand offerings. They are NOT useful for general fragrance trend monitoring.
+
+**B) What official TikTok approval does NOT solve:**
+It does not provide access to public TikTok video content at scale for trend intelligence. General fragrance trend monitoring requires reading public posts across thousands of unaffiliated creators — this is not within standard app API scopes.
+
+**C) Public TikTok trend ingestion — decision: DEFERRED**
+Deferred unless a compliant and commercially viable technical path is confirmed. TikTok Research API is designed for qualifying academic/research institutions; eligibility for a commercial intelligence platform is unconfirmed and should not be assumed as a production path. No further investment in finding workarounds to the SSR/itemList limitation is authorized.
+
+**D) SC1.2D — CLOSED**
+Browser-rendered public monitoring is formally closed. The SSR/itemList limitation (confirmed 2026-05-08: `itemList` always empty in server-rendered HTML) is a definitive technical boundary. The compliance boundary prohibits headless browser or proxy workarounds. No further work on this path.
+
+**E) Current active TikTok layers:**
+- SC1.1 (ambient TikTok URL/handle extraction from YouTube/Reddit references): **REMAINS ACTIVE.** Low-cost, compliant, real signal. No additional investment required.
+- SC1.2C (seeded creator follower monitoring): **RETAINED AS INFRASTRUCTURE ONLY.** Delivers follower count updates only — not video-level signals. Not a trend intelligence source. May become relevant for C3 creator linking if official API grants video access scope. No further trend-intelligence investment.
+- SC1.2D: **CLOSED.**
+
+TT2 output: A written decision document recording the above as official platform policy, specifying conditions under which TikTok direct public monitoring may be reopened (e.g., confirmed Research API eligibility for commercial platforms, commercially viable licensed data partnership, explicit TikTok scope grant for public trend monitoring).
+
+---
+
+### Roadmap Status Summary Table
+
+| Phase | Name | Status | Parallel / Sequential |
+|-------|------|--------|-----------------------|
+| M0 | Monetization Architecture Foundation | **APPROVED — EXECUTE NEXT** | Sequential |
+| DATA0 | Historical Integrity & Metric Versioning | APPROVED | Sequential after M0 |
+| SEO0 | SEO Infrastructure Foundation | APPROVED | Sequential after DATA0 |
+| PUB1 | Public Perfume & Brand Pages | APPROVED | Sequential after SEO0 |
+| PUB2 | SEO Content Depth | APPROVED | Parallel after PUB1 |
+| IG1 | Instagram Public Signal Layer | APPROVED | Parallel after PUB1 (preferred if single-track) |
+| IL1 | Intelligence Layer Formalization | APPROVED | Sequential after PUB2 + IG1 |
+| REPORT1 | Perfume Deep Dive Report Architecture | APPROVED | Sequential after IL1 |
+| PRO1 | Pro Tier Gating & Feature Completion | APPROVED | Sequential after REPORT1 |
+| TT2 | TikTok Path Decision & Closure | APPROVED | Parallel admin track; complete before IL1 |
+
+**Documents to create when each phase begins:**
+- M0 → `docs/architecture/MONETIZATION_ARCHITECTURE.md`
+- SEO0 → `docs/architecture/SEO_ARCHITECTURE.md`
+- IG1 → `docs/architecture/INSTAGRAM_INGESTION.md`
+- DATA0 → `docs/ops/DATA_RETENTION_POLICY.md`
+- REPORT1 → `docs/architecture/REPORT_ARCHITECTURE.md`
+
+---
+
 ## Active Roadmap
 
 **Language & Region Architecture**
@@ -1137,8 +1411,18 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | 047 — Market Availability Metadata v1 | PENDING | — |
 | 048 — Regional UI Concepts | PENDING | — |
 | SC2.1 Snapchat foundation | DEFERRED | — |
-| SC3.1 Meta / Instagram foundation | DEFERRED | — |
+| SC3.1 Meta / Instagram foundation | DEFERRED — reframed as IG1 in monetization roadmap | — |
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
+| M0 — Monetization Architecture | PLANNED | — |
+| DATA0 — Historical Data Integrity Hardening | PLANNED | — |
+| SEO0 — Public SEO Surface v1 | PLANNED | — |
+| PUB1 — Public Entity Pages v1 | PLANNED | — |
+| PUB2 — Public Creator Pages v1 | PLANNED | — |
+| IG1 — Instagram Intelligence v1 | PLANNED | — |
+| IL1 — Intelligence Layer v2 (Opportunity Objects) | PLANNED | — |
+| REPORT1 — Fragrance Market Reports v1 | PLANNED | — |
+| PRO1 — Pro Tier + Paywall v1 | PLANNED | — |
+| TT2 — TikTok Research API Track | PLANNED (parallel admin track) | — |
 
 ---
 
