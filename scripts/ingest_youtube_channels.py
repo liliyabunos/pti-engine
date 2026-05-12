@@ -564,11 +564,13 @@ def poll_channel(
         raw_refs = raw_storage.save_raw_batch("youtube", run_id, raw_items)
 
         # Phase 043 — pass channel metadata so content items get honest language/region.
-        # source_region set by operator (Phase 042), country from YouTube API (first poll),
-        # language from YouTube API (first poll). All may be None for older channels.
+        # _first_poll_country/_first_poll_language are set when uploads_playlist_id was
+        # unknown (first poll), capturing country/language from channels.list before the
+        # DB update. Use them with priority so first-poll items get the correct region
+        # instead of UNKNOWN (the DB row hasn't been updated yet at this point).
         channel_context = {
-            "language": channel.get("language"),
-            "country": channel.get("country"),
+            "language": _first_poll_language or channel.get("language"),
+            "country": _first_poll_country or channel.get("country"),
             "source_region": channel.get("source_region"),
         }
 
