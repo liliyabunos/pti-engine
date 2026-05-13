@@ -42,17 +42,17 @@ No new migration (uses existing entity_market.entity_id as slug source).
 - Fix: added `_slugify_canonical()` + `_find_perfume_by_slug()` with PostgreSQL regex lookup
 - Brand top-5 links now emit correct slug: `_slugify_canonical(entity_id)` not raw entity_id
 
-**Production verification (2026-05-13) — VERIFIED:**
-- [x] `/perfumes/creed-aventus` → 200 HTML · h1="Creed Aventus" · canonical=`https://fragranceindex.ai/perfumes/creed-aventus` · og:title="Creed Aventus — Fragrance Trend Data" · score=69.5 · entity_role=niche_original ✓
-- [x] `/perfumes/yves-saint-laurent-libre` → 200 HTML · h1="Yves Saint Laurent Libre" · canonical=`https://fragranceindex.ai/perfumes/yves-saint-laurent-libre` ✓
-- [x] `/brands/creed` → 200 HTML · top-5 links: `/perfumes/creed-aventus`, `/perfumes/creed-aventus-for-her`, `/perfumes/creed-viking` (no %20 encoding) ✓
-- [x] Notes & Accords rendered correctly (Apple, Bergamot, Blackcurrant, Lemon, Pink pepper top notes) ✓
-- [x] No `/creators/*` hrefs on either public page — creator names are plain text ✓
+**Production verification (2026-05-13) — COMPLETE:**
+- [x] `/perfumes/creed-aventus` → 200 · h1="Creed Aventus" · canonical=`https://fragranceindex.ai/perfumes/creed-aventus` · og:title="Creed Aventus — Fragrance Trend Data" · score=69.5 · entity_role=niche_original ✓
+- [x] `/perfumes/yves-saint-laurent-libre` → 200 · h1="Yves Saint Laurent Libre" · canonical=`https://fragranceindex.ai/perfumes/yves-saint-laurent-libre` ✓
+- [x] `/brands/creed` top-5 RSC payload confirmed: all 5 hrefs use slugs — `creed-aventus`, `creed-aventus-for-her`, `creed-viking`, `creed-royal-oud`, `virgin-island-water` — zero `%20` encoding in HTML or RSC data · verified across 3 consecutive requests ✓
+- [x] `/perfumes/creed-aventus` returns 200 (clicking from brand page resolves correctly) ✓
+- [x] Notes & Accords correctly rendered (Apple, Bergamot, Blackcurrant top notes) ✓
+- [x] No `/creators/*` hrefs on either public page — creator names plain text only ✓
 - [x] `/perfumes/nonexistent-slug-xyz789` → 404 (anti-thin-content rule) ✓
-- [x] `/entities/perfume/Creed%20Aventus` → 307 → `/login?next=...` (terminal auth gate unchanged) ✓
-- [x] `/entities/perfume/Yves%20Saint%20Laurent%20Libre` → 307 → `/login?next=...` ✓
-- [x] Sitemap ISR cache predates entity endpoints — will revalidate within 3600s; static pages confirmed 200 ✓
-- Note: sitemap entity URLs confirmed by code (sitemap.ts fetches `/api/v1/public/sitemap/perfumes`) — live in code, cache refresh pending
+- [x] Terminal routes remain auth-gated (307 → /login) ✓
+- [x] Sitemap ISR predates entity endpoints — static pages confirmed; entity URLs in code, will populate on next TTL expiry ✓
+- **ISR timing note (for ops record):** After `9a26696` slug-fix deployed (backend only, frontend not restarted), the frontend ISR cache for `/brands/creed` served stale HTML with wrong slugs until TTL expired (~3600s). Self-resolved on ISR revalidation. No code change required. Future mitigations: `revalidateTag()` or force-redeploy frontend on backend slug contract changes.
 
 **Architecture decisions:**
 - No new DB migration: slug computed from entity_id (= canonical_name for perfumes)
