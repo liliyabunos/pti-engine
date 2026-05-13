@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
  *   /auth/*    — Supabase callback
  *   /_next/*   — Next.js internals
  *   /api/*     — backend proxy / health
+ *   /robots.txt, /sitemap.xml, /sitemap/* — SEO metadata routes (SEO0)
  *
  * Protected routes — require a valid Supabase session (httpOnly cookie).
  * No app_users approval check at this stage — access gating via payment layer later.
@@ -31,6 +32,16 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/healthz") ||
     pathname.startsWith("/health")
+  ) {
+    return NextResponse.next();
+  }
+
+  // SEO metadata routes — must be publicly accessible without auth.
+  // /sitemap/ prefix covers future partition routes (/sitemap/perfumes-0.xml etc.)
+  if (
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname.startsWith("/sitemap/")
   ) {
     return NextResponse.next();
   }
