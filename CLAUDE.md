@@ -11,10 +11,10 @@
 
 ## PUB1 — Public Perfume & Brand Pages v1
 **STATUS: DEPLOYED — PENDING PRODUCTION VERIFICATION**
-**Commit: e5b06b7**
+**Commit: e5b06b7 (initial) · 9a26696 (slug fix)**
 **Deployed: pushed to main 2026-05-12; Railway auto-deploys**
 
-No new migration (uses existing entity_market.entity_id as slug).
+No new migration (uses existing entity_market.entity_id as slug source).
 
 **What was implemented:**
 - `perfume_trend_sdk/api/routes/public_entities.py` — 4 unauthenticated FastAPI routes:
@@ -22,30 +22,44 @@ No new migration (uses existing entity_market.entity_id as slug).
   - GET `/api/v1/public/brands/{slug}` → PublicBrandDetail (M0 fields only)
   - GET `/api/v1/public/sitemap/perfumes` → slug list (anti-thin-content filtered)
   - GET `/api/v1/public/sitemap/brands` → slug list (anti-thin-content filtered)
-- Slug strategy: perfume slug = `entity_id` (e.g. `creed-aventus`); brand slug = `entity_id` minus `brand-` prefix (e.g. `creed`)
+- Slug strategy: perfume slug = `_slugify_canonical(entity_id)` e.g. `'Creed Aventus'` → `creed-aventus`; brand slug = `entity_id` minus `brand-` prefix (e.g. `creed`)
 - Anti-thin-content rule: 404 for entities with no `entity_timeseries_daily` rows with `mention_count > 0`
-- M0 public field boundary: score, trend_state, top_opportunity, top_2_differentiators, top_3_creator_names, notes/accords, entity_role, reference_original
+- M0 public field boundary: score, trend_state, top_opportunity, top_2_differentiators, top_3_creator_names (plain text only), notes/accords, entity_role, reference_original
 - `main.py`: registered router at `/api/v1/public`
 - `frontend/src/middleware.ts`: `/perfumes/*` and `/brands/*` pass through without auth
 - `frontend/src/app/(public)/perfumes/[slug]/page.tsx` — public perfume page (ISR revalidate=3600, generateMetadata with canonical/og/twitter)
 - `frontend/src/app/(public)/brands/[slug]/page.tsx` — public brand page (ISR revalidate=3600)
 - `frontend/src/app/sitemap.ts` — updated to async; fetches entity slugs from backend; perfume URLs priority=0.8 daily, brand URLs priority=0.7 daily
 
+**Slug contract (critical — do not change without migration):**
+- Perfume entity_id = canonical_name verbatim (e.g. `'Creed Aventus'`) — set by aggregation job, not slugified
+- Public slug = `LOWER(REGEXP_REPLACE(entity_id, '[^a-zA-Z0-9]+', '-', 'g'))` (PostgreSQL) = `_slugify_canonical(entity_id)` (Python)
+- Lookup: PostgreSQL functional WHERE; Python scan fallback for SQLite dev
+- Brand entity_id = `brand-{slugified_name}` (pre-slugified) — public slug strips `brand-` prefix directly
+
+**Slug fix (commit 9a26696):**
+- Initial implementation assumed entity_id was already `creed-aventus` — it is not (it's `'Creed Aventus'` with spaces)
+- Fix: added `_slugify_canonical()` + `_find_perfume_by_slug()` with PostgreSQL regex lookup
+- Brand top-5 links now emit correct slug: `_slugify_canonical(entity_id)` not raw entity_id
+
 **Production verification checklist:**
 - [ ] `curl https://fragranceindex.ai/api/v1/public/perfumes/creed-aventus` → 200 with canonical_name, score, notes
 - [ ] `curl https://fragranceindex.ai/perfumes/creed-aventus` → 200 HTML (public, no auth redirect)
-- [ ] `curl https://fragranceindex.ai/brands/creed` → 200 HTML (public, no auth redirect)  
+- [ ] `curl https://fragranceindex.ai/brands/creed` → 200 HTML (public, no auth redirect)
+- [ ] brands/creed → Creed Aventus link points to `/perfumes/creed-aventus` (not Creed%20Aventus)
 - [ ] `curl https://fragranceindex.ai/perfumes/creed-aventus` → contains canonical link + og:title
-- [ ] `curl https://fragranceindex.ai/api/v1/public/sitemap/perfumes` → array of {slug, canonical_name}
-- [ ] `curl https://fragranceindex.ai/sitemap.xml` → includes /perfumes/ and /brands/ entries
+- [ ] `curl https://fragranceindex.ai/api/v1/public/sitemap/perfumes` → array with slug='creed-aventus' (not 'Creed Aventus')
+- [ ] `curl https://fragranceindex.ai/sitemap.xml` → includes /perfumes/creed-aventus and /brands/ entries
 - [ ] `curl https://fragranceindex.ai/api/v1/public/perfumes/nonexistent-slug` → 404 (not 307 redirect)
 - [ ] `/dashboard` still returns 307 redirect (auth gate unchanged)
+- [ ] Creator names on perfume page are plain text, no links to /creators/*
 
 **Architecture decisions:**
-- No new DB migration: entity_id is already a stable slug derived from canonical_name
+- No new DB migration: slug computed from entity_id (= canonical_name for perfumes)
 - Brand entity_id format `brand-{slug}` → public slug strips prefix → `/brands/creed`
 - Catalog-only entities (no pipeline data) return 404 — no thin content pages
 - Public API routes have no Supabase dependency (pure DB queries, no auth headers)
+- /creators/* routes remain protected — creator names are plain text on public pages
 
 ---
 
