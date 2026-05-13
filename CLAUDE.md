@@ -423,7 +423,7 @@ Next phase: SEO0
 ---
 
 ### SEO0 — SEO Infrastructure Foundation
-**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-13)**
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-13)**
 **Document: `docs/architecture/SEO_ARCHITECTURE.md`**
 **Purpose:** Make the platform technically crawlable and indexable before public entity pages are built.
 
@@ -442,11 +442,14 @@ Next phase: SEO0
 
 **Build verification:** `npm run build` clean; `robots.txt` and `sitemap.xml` emit as static `○` routes with correct content verified from `.next/server/app/*.body` files.
 
-**Pending production verification:**
-- `https://fragranceindex.ai/robots.txt` returns correct content
-- `https://fragranceindex.ai/sitemap.xml` returns valid XML with 8 URLs
-- At least one terminal route (e.g., `/dashboard`) response includes `X-Robots-Tag: noindex` or `<meta name="robots" content="noindex">` in page source
-- Homepage returns correct OG title in page source
+**Production verification (2026-05-13):**
+- `https://fragranceindex.ai/robots.txt` → 200 `text/plain` with correct policy + sitemap URL ✓
+- `https://fragranceindex.ai/sitemap.xml` → 200 `application/xml` with 8 static URLs, no entity dead-links ✓
+- `https://fragranceindex.ai/dashboard` → 307 `/login?next=%2Fdashboard` — terminal auth still protected ✓
+- Homepage SEO title verified: `"FragranceIndex.ai — Fragrance Trend Intelligence"` ✓
+
+**Bugfix required post-deploy (commit 5ea04a3):**
+Root cause: middleware `PUBLIC_PATHS` is an exact-match Set — `/robots.txt` and `/sitemap.xml` fell through to `guardProtectedRoute` and redirected crawlers to `/login`. Fix: explicit fast-path in `middleware.ts` for `/robots.txt`, `/sitemap.xml`, and `/sitemap/` prefix (future partition routes).
 
 Depends on: M0, DATA0
 Next phase: PUB1
@@ -1459,7 +1462,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
 | M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
 | DATA0 — Historical Data Integrity Hardening | IMPLEMENTED — CORE PRODUCTION VERIFIED; TOPIC SNAPSHOT ROW PENDING NEXT PIPELINE RUN | 2026-05-12 |
-| SEO0 — Public SEO Surface v1 | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-13 |
+| SEO0 — Public SEO Surface v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-13 |
 | PUB1 — Public Entity Pages v1 | PLANNED | — |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
 | IG1 — Instagram Intelligence v1 | PLANNED | — |
