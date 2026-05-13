@@ -423,16 +423,33 @@ Next phase: SEO0
 ---
 
 ### SEO0 — SEO Infrastructure Foundation
-**Status: APPROVED — FOLLOWS DATA0**
-**Purpose:** Make the platform technically crawlable and indexable before public entity pages are built. Current state: no sitemap, no robots.txt, no dynamic metadata, no canonical URLs, no JSON-LD on any entity page.
+**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-13)**
+**Document: `docs/architecture/SEO_ARCHITECTURE.md`**
+**Purpose:** Make the platform technically crawlable and indexable before public entity pages are built.
 
-Scope:
-- `robots.ts` at app root: allow public routes; noindex all terminal routes (`/dashboard`, `/screener`, `/entities/*`, `/creators/*`, `/admin/*`, `/account/*`)
-- Paginated `sitemap.ts` with dynamic entity URL generation (sitemap index + per-entity-type child sitemaps; 55,000+ perfumes requires pagination)
-- `generateMetadata()` conventions established for future public entity pages (title, description, og:, canonical)
-- Canonical URL conventions documented: public slug URLs as canonical; terminal `/entities/[id]` routes rel=canonical to public slug
-- `metadataBase` confirmed correct for fragranceindex.ai (root layout)
-- JSON-LD schema patterns selected: `ItemPage` for perfume public pages, `Organization` for brand, `DefinedTerm` for notes/accords
+**What was implemented:**
+- `frontend/src/app/robots.ts` — Allow: `/`, `/glossary`, legal pages, `/login`, M0 entity route families (`/perfumes/`, `/brands/`, `/notes/`, `/accords/`); Disallow: `/dashboard`, `/screener`, `/entities/`, `/creators`, `/creator/`, `/watchlists`, `/alerts`, `/account`, `/admin/`, `/auth/`, `/submit-source`, `/api/`; Sitemap declared at `https://fragranceindex.ai/sitemap.xml`
+- `frontend/src/app/sitemap.ts` — Static sitemap: homepage (priority 1.0), glossary (0.6), data-sources (0.4), privacy/terms/cookies/copyright/data-deletion (0.2–0.3); architecture for future `generateSitemaps()` expansion documented in SEO_ARCHITECTURE.md §4; no dead entity URLs submitted
+- `frontend/src/app/(terminal)/layout.tsx` — `robots: { index: false, follow: false }` metadata cascades to ALL terminal routes (dashboard, screener, entities/*, creators, admin/*, account, alerts, watchlists, submit-source, creator/*)
+- `frontend/src/app/auth/callback/page.tsx` — explicit noindex (lives outside terminal group)
+- `frontend/src/app/layout.tsx` — OpenGraph (`type: website, siteName: FragranceIndex.ai`) and Twitter card (`summary`) site-level defaults added; metadataBase confirmed `https://fragranceindex.ai`
+- `frontend/src/app/page.tsx` — Homepage-specific metadata: `title: "FragranceIndex.ai — Fragrance Trend Intelligence"`, acquisition-oriented description, OG/Twitter overrides
+- `docs/architecture/SEO_ARCHITECTURE.md` — Full SEO reference: robots policy, sitemap strategy, noindex policy, canonical URL strategy, future entity sitemap architecture (`generateSitemaps` pattern, 50k URL limit handling, priority ordering), PUB1 `generateMetadata` contracts, anti-thin content rules
+
+**OG image:** No branded asset exists in `frontend/public/`; og:image field intentionally absent in SEO0. Follow-up in PUB1: create `og-image.png` (1200×630) and add to root OG metadata.
+
+**Canonical link handling:** `/entities/*` terminal routes are noindex in SEO0. `rel=canonical` links pointing to `/perfumes/[slug]` etc. are a PUB1 task — deferred until public target routes exist and are verified live.
+
+**Build verification:** `npm run build` clean; `robots.txt` and `sitemap.xml` emit as static `○` routes with correct content verified from `.next/server/app/*.body` files.
+
+**Pending production verification:**
+- `https://fragranceindex.ai/robots.txt` returns correct content
+- `https://fragranceindex.ai/sitemap.xml` returns valid XML with 8 URLs
+- At least one terminal route (e.g., `/dashboard`) response includes `X-Robots-Tag: noindex` or `<meta name="robots" content="noindex">` in page source
+- Homepage returns correct OG title in page source
+
+Depends on: M0, DATA0
+Next phase: PUB1
 
 Depends on: M0 (public field definitions must exist before generating public metadata)
 Risk if skipped: Public pages will not rank. SEO compounds over time; every month of delay is compound loss that cannot be recovered.
@@ -1442,7 +1459,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC-V1 Optional creator claim / verified module | DEFERRED | — |
 | M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
 | DATA0 — Historical Data Integrity Hardening | IMPLEMENTED — CORE PRODUCTION VERIFIED; TOPIC SNAPSHOT ROW PENDING NEXT PIPELINE RUN | 2026-05-12 |
-| SEO0 — Public SEO Surface v1 | PLANNED | — |
+| SEO0 — Public SEO Surface v1 | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-13 |
 | PUB1 — Public Entity Pages v1 | PLANNED | — |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
 | IG1 — Instagram Intelligence v1 | PLANNED | — |

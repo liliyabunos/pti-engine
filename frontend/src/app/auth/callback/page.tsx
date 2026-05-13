@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import CallbackClient from "./CallbackClient";
 
 // Must be dynamic — reads runtime env vars that are not available at Nixpacks build time.
 // Same pattern as /login/page.tsx.
 export const dynamic = "force-dynamic";
+
+// SEO0: auth callback is a technical redirect page, not content.
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function AuthCallbackPage() {
   const supabaseUrl =

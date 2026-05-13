@@ -6,6 +6,18 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://fragranceindex.ai"),
   title: "FTI Market Terminal",
   description: "Fragrance Trend Intelligence — market terminal for fragrance trends",
+  // SEO0: OpenGraph defaults — no og:image yet (PUB1 will add branded asset)
+  openGraph: {
+    type: "website",
+    siteName: "FragranceIndex.ai",
+    title: "FTI Market Terminal",
+    description: "Fragrance Trend Intelligence — market terminal for fragrance trends",
+  },
+  twitter: {
+    card: "summary",
+    title: "FTI Market Terminal",
+    description: "Fragrance Trend Intelligence — market terminal for fragrance trends",
+  },
 };
 
 export default function RootLayout({

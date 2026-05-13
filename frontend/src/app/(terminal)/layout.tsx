@@ -1,8 +1,23 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { StatusBar } from "@/components/shell/StatusBar";
 import { createClient } from "@/lib/auth/server";
 import { isAdminUser } from "@/lib/auth/guards.server";
+
+/**
+ * SEO0: all terminal routes are private authenticated surfaces.
+ * Noindex here cascades to every page under (terminal):
+ *   /dashboard, /screener, /entities/*, /creators, /creator/*,
+ *   /watchlists, /alerts, /account, /admin/*, /submit-source
+ *
+ * Canonical public entity URLs (/perfumes/[slug], /brands/[slug], etc.)
+ * will be implemented in PUB1 — canonical links from /entities/* to their
+ * public counterparts will also be added there once public targets exist.
+ */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /**
  * Terminal shell layout — Server Component.

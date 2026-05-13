@@ -1,7 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader } from "@/components/public/PublicHeader";
 import { PublicFooter } from "@/components/public/PublicFooter";
 import { SuggestSourceCta } from "@/components/public/SuggestSourceCta";
+
+// SEO0: homepage-specific metadata overrides root layout defaults
+export const metadata: Metadata = {
+  title: "FragranceIndex.ai — Fragrance Trend Intelligence",
+  description:
+    "Real-time fragrance market intelligence. Track which perfumes and brands are breaking out across YouTube and Reddit. Composite scores, signal detection, and source attribution — updated twice daily.",
+  openGraph: {
+    title: "FragranceIndex.ai — Fragrance Trend Intelligence",
+    description:
+      "Real-time fragrance market intelligence. Track which perfumes and brands are breaking out. Composite scores, signal detection, and source attribution.",
+    url: "https://fragranceindex.ai",
+  },
+  twitter: {
+    title: "FragranceIndex.ai — Fragrance Trend Intelligence",
+    description:
+      "Real-time fragrance market intelligence. Track which perfumes and brands are breaking out.",
+  },
+};
 
 // ─── Static data ────────────────────────────────────────────────────────────
 
