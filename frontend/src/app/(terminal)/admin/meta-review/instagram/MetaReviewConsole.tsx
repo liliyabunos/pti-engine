@@ -227,6 +227,7 @@ export function MetaReviewConsole() {
   // ---------------------------------------------------------------------------
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-3xl px-6 py-10 space-y-8">
 
       {/* ── Header ── */}
@@ -459,6 +460,7 @@ export function MetaReviewConsole() {
           Access restricted to platform operators.
         </p>
       </div>
+    </div>
     </div>
   );
 }
