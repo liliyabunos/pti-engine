@@ -1,0 +1,59 @@
+# IG1 Hashtag Budget Registry
+# ---------------------------------------------------------------------------
+# Instagram Hashtag Search allows 30 UNIQUE hashtags per rolling 7-day window
+# per IG Business Account per app. This is a hard Meta API limit.
+#
+# CRITICAL: Adding a new hashtag here consumes one budget slot for 7 days.
+# Only edit this file deliberately. Never add hashtags from code logic.
+#
+# IG1 MVP uses 6 of 30 available slots.
+# ---------------------------------------------------------------------------
+
+meta:
+  window_days: 7
+  max_unique_hashtags_per_window: 30
+  ig1_reserved_slots: 6
+  available_slots: 24  # do not use without approval
+
+hashtags:
+  # Tier 1 — broadest signal; query daily
+  - tag: perfume
+    priority: tier_1
+    active: true
+    notes: "Broadest signal — highest volume; aligned with YouTube search terms"
+
+  - tag: fragrance
+    priority: tier_1
+    active: true
+    notes: "Direct FTI source term; mirrors YouTube/Reddit source strategy"
+
+  - tag: nicheperfume
+    priority: tier_1
+    active: true
+    notes: "Niche community; higher signal-to-noise than broad tags"
+
+  # Tier 2 — community + intent signals
+  - tag: fragrancecommunity
+    priority: tier_2
+    active: true
+    notes: "Community anchor tag; review + discussion intent"
+
+  - tag: perfumereview
+    priority: tier_2
+    active: true
+    notes: "Review-intent signal; aligns with resolver entity extraction"
+
+  - tag: scentsoftheday
+    priority: tier_2
+    active: true
+    notes: "SOTD = strong engagement + direct product mentions"
+
+# ---------------------------------------------------------------------------
+# Reserved slots — do NOT activate without explicit operator decision
+# ---------------------------------------------------------------------------
+# Future candidates (do not add without budget review):
+#   perfumedupe       — high volume but lower intent specificity
+#   perfumecollection — collector intent; good for entity mentions
+#   fragrancetok      — TikTok crossover community
+#   scentoftheday     — variant of scentsoftheday
+#   brandname-specific tags (add per brand expansion initiative)
