@@ -557,10 +557,12 @@ Risk if skipped: PUB1 infrastructure indexed but doesn't rank at scale.
 
 ---
 
-### IG1 — Instagram Public Signal Layer
-**Status: ARCHITECTURE READY — LIVE INGESTION BLOCKED ON META CAPABILITY VERIFICATION (2026-05-13)**
+### IG1 — Instagram Public Signal Layer / IG1-R — App Review Demo Flow
+**Status: APP REVIEW DEMO FLOW IMPLEMENTED — PRODUCTION ACCESS PENDING META BUSINESS VERIFICATION + APP REVIEW APPROVAL (2026-05-13)**
 **Document: `docs/architecture/INSTAGRAM_INGESTION.md`**
-**Gate 0 Result: BLOCKED — no Meta credentials in environment; founder action required**
+**App Review support: `docs/ops/META_APP_REVIEW_INSTAGRAM_PUBLIC_CONTENT.md`**
+**Gate 0 Result: TEST CAPABILITY VERIFIED in Graph API Explorer; production credentials pending App Review**
+**Demo route: `/admin/meta-review/instagram` (admin-only)**
 **Purpose:** Add Instagram as an official third social signal source through the existing ingestion → normalization → resolver → metrics architecture.
 
 Critical constraint: **Instagram signal history cannot be accumulated retroactively.** Every week IG1 is delayed after PUB1 is live is a week of cross-platform intelligence permanently unavailable for future Deep Dive reports. This is the strongest argument for prioritizing IG1 over PUB2 if capacity allows only one parallel track.
@@ -1521,7 +1523,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SEO0 — Public SEO Surface v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-13 |
 | PUB1 — Public Entity Pages v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-13 |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
-| IG1 — Instagram Intelligence v1 | ARCHITECTURE READY — BLOCKED ON META CAPABILITY GATE | 2026-05-13 |
+| IG1 — Instagram Intelligence v1 | APP REVIEW DEMO IMPLEMENTED — PENDING META APPROVAL | 2026-05-13 |
 | IL1 — Intelligence Layer v2 (Opportunity Objects) | PLANNED | — |
 | REPORT1 — Fragrance Market Reports v1 | PLANNED | — |
 | PRO1 — Pro Tier + Paywall v1 | PLANNED | — |

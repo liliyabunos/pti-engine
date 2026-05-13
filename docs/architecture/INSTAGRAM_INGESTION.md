@@ -1,9 +1,9 @@
 # IG1 — Instagram Public Signal Layer
 # Architecture & Readiness Document
 
-**Phase:** IG1  
-**Status:** ARCHITECTURE READY — LIVE INGESTION BLOCKED ON META CAPABILITY VERIFICATION  
-**Gate 0 Result:** BLOCKED (no Meta credentials in environment)  
+**Phase:** IG1 / IG1-R  
+**Status:** APP REVIEW DEMO FLOW IMPLEMENTED — PRODUCTION ACCESS PENDING META BUSINESS VERIFICATION + APP REVIEW APPROVAL  
+**Gate 0 Result (2026-05-13 update):** TEST CAPABILITY VERIFIED IN GRAPH API EXPLORER; production credentials pending App Review approval  
 **Created:** 2026-05-13  
 **Depends on:** M0, DATA0, PUB1 (all complete)  
 **Next parallel track:** PUB2 (neither blocks the other)
@@ -26,23 +26,33 @@ Signal accumulation begins on the first day of ingestion. There is no retroactiv
 
 ## 2. Gate 0 Capability Verification Result
 
-### Result: BLOCKED
+### Result: TEST CAPABILITY VERIFIED — Production access pending App Review
 
-**Evidence:**
+**Initial result (2026-05-13):** BLOCKED — no credentials in codebase environment.
+
+**Updated result (2026-05-13 — founder manual verification):**
+
+The founder verified the following directly in Meta Graph API Explorer:
 
 | Check | Finding |
 |-------|---------|
-| `.env` — Instagram credentials | Not present |
-| `.env.example` — Instagram placeholder | `INSTAGRAM_ACCESS_TOKEN=your_instagram_access_token_here` (template only) |
-| Active env vars (`env \| grep -i instagram`) | None found |
-| Meta App ID / App Secret | Not in any config/env |
-| IG Business Account ID | Not found |
-| Facebook Page Token | Not found |
-| Prior API test script | None in codebase |
-| Prior app review documentation | None in codebase |
-| Live API call attempted | Not attempted — no credentials available |
+| Facebook Page → IG Business Account resolution | VERIFIED — Page ID `1141692112357701` → IG Business Account ID `17841426873066676` (username: `fragranceindex_ai`) |
+| Hashtag Search endpoint | VERIFIED — `GET /ig_hashtag_search?user_id=17841426873066676&q=perfume` returned a valid hashtag ID |
+| Recent Media endpoint | VERIFIED — `GET /{hashtag_id}/recent_media?user_id=...&fields=id,caption,timestamp,permalink,media_type,comments_count,like_count` returned real public media items with captions and metadata |
+| Fields confirmed available | `id`, `caption`, `timestamp`, `permalink`, `media_type`, `comments_count`, `like_count` |
+| Username in hashtag media response | NOT available (confirmed — Meta API design limitation) |
+| Meta Business Verification | SUBMITTED — currently "In review" |
+| App Review | BEING PREPARED — see `docs/ops/META_APP_REVIEW_INSTAGRAM_PUBLIC_CONTENT.md` |
+| Production credentials in Railway | NOT YET SET — pending App Review approval |
 
-**Conclusion:** Gate 0 cannot pass. No live Instagram capability verification is possible from this environment. Live ingestion must not be implemented or claimed.
+**Security note:** A test access token was accidentally visible in a paging.next URL from Graph API Explorer during verification. That token must be rotated before any production use. Do NOT use that token.
+
+**Gate 0 status:** TEST CAPABILITY VERIFIED. Production capability pending:
+1. Meta Business Verification approval
+2. Meta App Review approval for Instagram Public Content Access
+3. Long-lived production token generated and set in Railway env
+
+**Conclusion:** Hashtag Search and Recent Media work for our app in test access. The IG1 architecture is confirmed viable. Live ingestion blocked only on Meta approval process, not on technical viability.
 
 ---
 
