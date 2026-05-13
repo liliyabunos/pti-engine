@@ -69,7 +69,7 @@ Provide these instructions in the Meta App Review form for the reviewer:
    - Step 2: /{hashtag_id}/recent_media → returns public posts
 
 5. Observe the returned sample: caption preview, timestamp, permalink,
-   media type, and like count. Note that:
+   and media type. Note that:
    - No usernames or profile data are shown (not available from this endpoint)
    - No raw content is exposed on public pages
    - The access token is never visible in the UI
@@ -142,7 +142,7 @@ Specifically, the app:
 1. Calls GET /ig_hashtag_search to resolve a hashtag text (e.g., "perfume") to 
    an IG Hashtag Object ID.
 2. Calls GET /{hashtag_id}/recent_media to retrieve public posts with fields: 
-   id, caption, timestamp, permalink, media_type, like_count.
+   id, caption, timestamp, permalink, media_type.
 3. Processes caption text internally to extract fragrance entity mentions (perfume 
    names, brands) using our entity resolution engine.
 4. Aggregates these signals into trend scores and momentum indicators for the 

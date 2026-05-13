@@ -126,14 +126,19 @@ async def _resolve_hashtag_id(token: str, user_id: str, hashtag: str) -> str:
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(url, params=params)
     if resp.status_code != 200:
+        try:
+            err_body = resp.json()
+            ig_msg = err_body.get("error", {}).get("message", "")
+        except Exception:
+            ig_msg = resp.text[:200]
         logger.error(
-            "ig_hashtag_search failed status=%s body=%s",
-            resp.status_code, resp.text[:200],
+            "ig_hashtag_search failed status=%s msg=%s",
+            resp.status_code, ig_msg,
         )
-        raise HTTPException(
-            status_code=502,
-            detail=f"Instagram API error: {resp.status_code}",
-        )
+        detail = f"Instagram hashtag search error {resp.status_code}"
+        if ig_msg:
+            detail += f": {ig_msg}"
+        raise HTTPException(status_code=502, detail=detail)
     data = resp.json()
     items = data.get("data", [])
     if not items:
@@ -144,25 +149,36 @@ async def _resolve_hashtag_id(token: str, user_id: str, hashtag: str) -> str:
 async def _fetch_recent_media(
     token: str, user_id: str, hashtag_id: str, limit: int = 5
 ) -> List[Dict[str, Any]]:
-    """Fetch recent media for a hashtag ID (up to limit items)."""
+    """Fetch recent media for a hashtag ID (up to limit items).
+
+    Fields supported by the /{hashtag-id}/recent_media endpoint:
+        id, caption, media_type, media_url, permalink, timestamp
+    Note: like_count and comments_count are NOT available from hashtag media
+    endpoints (they are only available from user media endpoints).
+    """
     url = f"{_IG_GRAPH_BASE}/{hashtag_id}/recent_media"
     params = {
         "user_id": user_id,
-        "fields": "id,caption,timestamp,permalink,media_type,like_count",
+        "fields": "id,caption,timestamp,permalink,media_type",
         "limit": str(limit),
         "access_token": token,
     }
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(url, params=params)
     if resp.status_code != 200:
+        try:
+            err_body = resp.json()
+            ig_msg = err_body.get("error", {}).get("message", "")
+        except Exception:
+            ig_msg = resp.text[:200]
         logger.error(
-            "recent_media failed status=%s body=%s",
-            resp.status_code, resp.text[:200],
+            "recent_media failed status=%s msg=%s",
+            resp.status_code, ig_msg,
         )
-        raise HTTPException(
-            status_code=502,
-            detail=f"Instagram recent_media error: {resp.status_code}",
-        )
+        detail = f"Instagram recent_media error {resp.status_code}"
+        if ig_msg:
+            detail += f": {ig_msg}"
+        raise HTTPException(status_code=502, detail=detail)
     return resp.json().get("data", [])
 
 

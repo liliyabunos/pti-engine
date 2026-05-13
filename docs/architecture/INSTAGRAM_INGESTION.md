@@ -38,8 +38,8 @@ The founder verified the following directly in Meta Graph API Explorer:
 |-------|---------|
 | Facebook Page → IG Business Account resolution | VERIFIED — Page ID `1141692112357701` → IG Business Account ID `17841426873066676` (username: `fragranceindex_ai`) |
 | Hashtag Search endpoint | VERIFIED — `GET /ig_hashtag_search?user_id=17841426873066676&q=perfume` returned a valid hashtag ID |
-| Recent Media endpoint | VERIFIED — `GET /{hashtag_id}/recent_media?user_id=...&fields=id,caption,timestamp,permalink,media_type,comments_count,like_count` returned real public media items with captions and metadata |
-| Fields confirmed available | `id`, `caption`, `timestamp`, `permalink`, `media_type`, `comments_count`, `like_count` |
+| Recent Media endpoint | VERIFIED — `GET /{hashtag_id}/recent_media?user_id=...&fields=id,caption,timestamp,permalink,media_type` returned real public media items with captions and metadata |
+| Fields confirmed available | `id`, `caption`, `timestamp`, `permalink`, `media_type` (note: `like_count` and `comments_count` are NOT supported by the hashtag `recent_media` endpoint — they cause API 400 errors; they are only available from user-owned media endpoints) |
 | Username in hashtag media response | NOT available (confirmed — Meta API design limitation) |
 | Meta Business Verification | SUBMITTED — currently "In review" |
 | App Review | BEING PREPARED — see `docs/ops/META_APP_REVIEW_INSTAGRAM_PUBLIC_CONTENT.md` |
@@ -329,7 +329,7 @@ Add `normalize_instagram_item()` to `perfume_trend_sdk/normalizers/social_conten
 | `caption` | `title` + `description` | Caption split at first newline for title; full text for description |
 | `timestamp` | `published_at` | ISO8601 → datetime |
 | `permalink` | `source_url` | Full post URL |
-| `like_count` | `likes` | May be absent (optional field) |
+| `like_count` | `likes` | **NOT available from hashtag media endpoints** — causes 400 error; omit from fields param |
 | `media_type` | (metadata) | IMAGE / VIDEO / CAROUSEL — store for future use |
 | `username` | **NOT AVAILABLE** | Hashtag media endpoints do NOT return username |
 | channel/creator ID | **NOT AVAILABLE** | Same — no creator attribution from hashtag endpoints |
