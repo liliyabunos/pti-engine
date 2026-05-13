@@ -8,13 +8,25 @@ GET /api/v1/public/brands/{slug}       — public brand page data (M0 fields onl
 GET /api/v1/public/sitemap/perfumes    — slug list for sitemap generation
 GET /api/v1/public/sitemap/brands      — slug list for sitemap generation
 
+Slug contract (no DB migration required):
+
+  Perfume: entity_market.entity_id = canonical_name verbatim (e.g. 'Creed Aventus').
+           Public slug = LOWER(REGEXP_REPLACE(entity_id, '[^a-zA-Z0-9]+', '-', 'g'))
+           i.e.  'Creed Aventus' → 'creed-aventus'
+           Lookup: PostgreSQL functional filter (SQLite Python fallback for dev).
+
+  Brand:   entity_market.entity_id = 'brand-{slugified}' (e.g. 'brand-creed').
+           Public slug = entity_id.removeprefix('brand-') = 'creed'.
+           Lookup: entity_id = f'brand-{slug}' — direct, no functional lookup needed.
+
 Public routes must never require auth. 404 on missing entity (not redirect to login).
 Only entities with market data (mention_count > 0) are publicly routable —
-anti-thin-content rule from SEO_ARCHITECTURE.md.
+anti-thin-content rule from SEO_ARCHITECTURE.md §6.1.
 """
 
 import json
 import logging
+import re
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -34,19 +46,78 @@ _log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Slug helpers — must be consistent across all callers
+# ---------------------------------------------------------------------------
+
+def _slugify_canonical(name: str) -> str:
+    """
+    Compute URL-safe slug from entity canonical name (= entity_id for perfumes).
+
+    Rule: replace every run of non-alphanumeric characters with a single '-',
+    then lowercase, then strip leading/trailing '-'.
+
+    This exactly mirrors the PostgreSQL lookup expression:
+        LOWER(REGEXP_REPLACE(entity_id, '[^a-zA-Z0-9]+', '-', 'g'))
+
+    Examples:
+        'Creed Aventus'              → 'creed-aventus'
+        'Maison Francis Kurkdjian Baccarat Rouge 540'
+                                     → 'maison-francis-kurkdjian-baccarat-rouge-540'
+        'Dior Sauvage'               → 'dior-sauvage'
+    """
+    s = re.sub(r"[^a-zA-Z0-9]+", "-", name)
+    return s.lower().strip("-")
+
+
+def _find_perfume_by_slug(db: Session, slug: str) -> Optional[EntityMarket]:
+    """
+    Find a perfume entity by its public URL slug.
+
+    Primary path (PostgreSQL): functional WHERE clause using REGEXP_REPLACE.
+    Fallback (SQLite dev): Python-side slugification scan.
+    """
+    try:
+        row = db.execute(text("""
+            SELECT id FROM entity_market
+            WHERE entity_type = 'perfume'
+              AND LOWER(REGEXP_REPLACE(entity_id, '[^a-zA-Z0-9]+', '-', 'g')) = :slug
+            LIMIT 1
+        """), {"slug": slug}).fetchone()
+        if row:
+            return db.query(EntityMarket).filter(EntityMarket.id == row[0]).first()
+        return None
+    except Exception:
+        # SQLite fallback for local dev (REGEXP_REPLACE not available)
+        entities = db.query(EntityMarket).filter(
+            EntityMarket.entity_type == "perfume"
+        ).all()
+        return next(
+            (e for e in entities if _slugify_canonical(e.entity_id) == slug),
+            None,
+        )
+
+
+def _brand_slug_from_entity_id(entity_id: str) -> str:
+    """Strip 'brand-' prefix from brand entity_id to get the public slug."""
+    if entity_id.startswith("brand-"):
+        return entity_id[len("brand-"):]
+    return entity_id
+
+
+# ---------------------------------------------------------------------------
 # Response schemas — only M0-approved public fields
 # ---------------------------------------------------------------------------
 
 class PublicPerfumeRow(BaseModel):
     """Brief perfume row for brand page — top 5 SKUs."""
-    slug: str
+    slug: str           # URL-safe slug for /perfumes/[slug]
     canonical_name: str
     latest_score: Optional[float] = None
     trend_state: Optional[str] = None
 
 
 class PublicPerfumeDetail(BaseModel):
-    slug: str
+    slug: str           # URL-safe slug for /perfumes/[slug]
     canonical_name: str
     brand_name: Optional[str] = None
     brand_slug: Optional[str] = None   # for linking to /brands/[slug]
@@ -64,12 +135,12 @@ class PublicPerfumeDetail(BaseModel):
     top_opportunity: Optional[str] = None
     # Top 2 differentiators (uniqueness signals)
     top_2_differentiators: List[str] = []
-    # Top 3 creator display names only — no engagement data
+    # Top 3 creator display names only (plain text — NOT links to terminal routes)
     top_3_creator_names: List[str] = []
 
 
 class PublicBrandDetail(BaseModel):
-    slug: str
+    slug: str           # URL-safe slug for /brands/[slug]
     canonical_name: str
     latest_score: Optional[float] = None
     trend_state: Optional[str] = None
@@ -161,8 +232,9 @@ def _get_resolver_notes(db: Session, resolver_id: Optional[int]):
     return top, mid, base, acc
 
 
-def _get_perfume_notes(db: Session, entity_id_slug: str, resolver_id: Optional[int]):
-    top, mid, base, acc = _get_fragrantica_notes(db, entity_id_slug)
+def _get_perfume_notes(db: Session, entity_id: str, resolver_id: Optional[int]):
+    """entity_id here is the perfume's entity_id (= canonical name) used for fragrantica slug lookup."""
+    top, mid, base, acc = _get_fragrantica_notes(db, entity_id)
     if top or mid or base or acc:
         return top, mid, base, acc
     return _get_resolver_notes(db, resolver_id)
@@ -211,6 +283,11 @@ def _get_public_semantic(
 
 
 def _get_top_creator_names(db: Session, entity_uuid_str: str, limit: int = 3) -> List[str]:
+    """
+    Return top creator display names for the public page.
+    Plain strings only — NOT linked to terminal /creators/* routes.
+    creator_score_eligible IS NOT FALSE ensures only leaderboard-eligible creators.
+    """
     rows = _safe(lambda: db.execute(text("""
         SELECT COALESCE(yc.title, cs.creator_handle) AS display_name
         FROM creator_entity_relationships cer
@@ -225,13 +302,6 @@ def _get_top_creator_names(db: Session, entity_uuid_str: str, limit: int = 3) ->
     return [r[0] for r in rows if r[0]]
 
 
-def _brand_slug_from_entity_id(entity_id: str) -> str:
-    """Strip 'brand-' prefix from brand entity_id to get the public slug."""
-    if entity_id.startswith("brand-"):
-        return entity_id[len("brand-"):]
-    return entity_id
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -241,15 +311,14 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
     """
     Public perfume page data — M0-approved fields only, no auth required.
 
-    Slug = entity_market.entity_id for perfume entities (e.g. 'creed-aventus').
+    Slug: URL-safe form of canonical_name (= entity_id).
+      e.g. slug='creed-aventus' ← entity_id='Creed Aventus'
+
     Returns 404 for:
-      - entities not in entity_market
-      - entities with no market data (anti-thin-content rule from SEO_ARCHITECTURE.md)
+      - entities not found by slug (no match or wrong type)
+      - entities with no market data (anti-thin-content rule, SEO_ARCHITECTURE.md §6.1)
     """
-    em = db.query(EntityMarket).filter(
-        EntityMarket.entity_id == slug,
-        EntityMarket.entity_type == "perfume",
-    ).first()
+    em = _find_perfume_by_slug(db, slug)
     if not em or not _has_data(db, em.id):
         raise HTTPException(status_code=404, detail=f"Perfume not found: {slug}")
 
@@ -260,7 +329,7 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
     dupe = get_dupe_profile(em.brand_name, em.canonical_name)
     reference_original = dupe.reference_original if dupe else None
 
-    # Notes & accords
+    # Notes & accords — entity_id = canonical_name, used as slug for fragrantica join
     resolver_id_row = _safe(lambda: db.execute(text(
         "SELECT id FROM resolver_perfumes WHERE LOWER(canonical_name) = LOWER(:n) LIMIT 1"
     ), {"n": em.canonical_name}).fetchone(), None, "resolver_id")
@@ -269,14 +338,14 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
         db, em.entity_id, resolver_id
     )
 
-    # Semantic signals
+    # Semantic signals (differentiators + opportunities)
     differentiators, opportunities = _get_public_semantic(db, str(em.id), entity_role)
     top_opportunity = opportunities[0] if opportunities else None
 
-    # Top 3 creator names (display only)
+    # Top 3 creator names — plain text only, no links to terminal routes
     top_3_creator_names = _get_top_creator_names(db, str(em.id))
 
-    # Brand slug (for /brands/[slug] link)
+    # Brand slug (for /brands/[slug] link on the public page)
     brand_slug: Optional[str] = None
     if em.brand_name:
         brand_row = _safe(lambda: db.execute(text("""
@@ -287,7 +356,7 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
             brand_slug = _brand_slug_from_entity_id(brand_row[0])
 
     return PublicPerfumeDetail(
-        slug=em.entity_id,
+        slug=slug,                               # the slug that resolved this entity
         canonical_name=em.canonical_name,
         brand_name=em.brand_name,
         brand_slug=brand_slug,
@@ -310,7 +379,9 @@ def get_public_brand(slug: str, db: Session = Depends(get_db_session)) -> Public
     """
     Public brand page data — M0-approved fields only, no auth required.
 
-    Slug = entity_market.entity_id minus 'brand-' prefix (e.g. entity_id='brand-creed' → slug='creed').
+    Slug: entity_market.entity_id minus 'brand-' prefix.
+      e.g. entity_id='brand-creed' → slug='creed'
+
     Returns 404 if brand not found or has no market data.
     """
     entity_id = f"brand-{slug}"
@@ -331,7 +402,8 @@ def get_public_brand(slug: str, db: Session = Depends(get_db_session)) -> Public
     """), {"n": em.canonical_name}).fetchone(), None, "perfume_count")
     perfume_count = int(perfume_count_row[0]) if perfume_count_row else 0
 
-    # Top 5 tracked perfumes — only entities with data
+    # Top 5 tracked perfumes — only entities with data.
+    # slug for each = _slugify_canonical(entity_id = canonical_name)
     top_rows = _safe(lambda: db.execute(text("""
         SELECT em2.entity_id, em2.canonical_name,
                etd.composite_market_score, etd.trend_state
@@ -354,7 +426,8 @@ def get_public_brand(slug: str, db: Session = Depends(get_db_session)) -> Public
 
     top_5_perfumes = [
         PublicPerfumeRow(
-            slug=r[0],
+            # slug = URL-safe version of entity_id (which = canonical_name for perfumes)
+            slug=_slugify_canonical(r[0]),
             canonical_name=r[1],
             latest_score=float(r[2]) if r[2] is not None else None,
             trend_state=r[3],
@@ -377,6 +450,7 @@ def sitemap_perfumes(db: Session = Depends(get_db_session)) -> List[SitemapPerfu
     """
     Slug list for perfume sitemap generation.
     Only entities with market data (anti-thin-content rule) — no dead URLs.
+    slug = _slugify_canonical(entity_id = canonical_name)
     """
     rows = _safe(lambda: db.execute(text("""
         SELECT em.entity_id, em.canonical_name, em.brand_name
@@ -389,7 +463,11 @@ def sitemap_perfumes(db: Session = Depends(get_db_session)) -> List[SitemapPerfu
         ORDER BY em.canonical_name
     """)).fetchall(), [], "sitemap_perfumes")
     return [
-        SitemapPerfumeEntry(slug=r[0], canonical_name=r[1], brand_name=r[2])
+        SitemapPerfumeEntry(
+            slug=_slugify_canonical(r[0]),  # r[0] = entity_id = canonical_name
+            canonical_name=r[1],
+            brand_name=r[2],
+        )
         for r in rows
     ]
 
@@ -399,6 +477,7 @@ def sitemap_brands(db: Session = Depends(get_db_session)) -> List[SitemapBrandEn
     """
     Slug list for brand sitemap generation.
     Only brands with market data.
+    slug = entity_id minus 'brand-' prefix (brands ARE pre-slugified in entity_id)
     """
     rows = _safe(lambda: db.execute(text("""
         SELECT em.entity_id, em.canonical_name
