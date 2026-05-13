@@ -46,6 +46,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // PUB1 — public entity pages (perfumes + brands) are accessible without auth.
+  // These are canonical SEO-indexed pages; auth redirect would break indexing.
+  if (pathname.startsWith("/perfumes/") || pathname.startsWith("/brands/")) {
+    return NextResponse.next();
+  }
+
   // Public pages are always accessible
   if (PUBLIC_PATHS.has(pathname)) {
     return refreshSessionAndContinue(request);
