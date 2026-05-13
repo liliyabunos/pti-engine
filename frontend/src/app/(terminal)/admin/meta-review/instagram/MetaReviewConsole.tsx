@@ -147,7 +147,11 @@ type DemoHashtag = (typeof DEMO_HASHTAGS)[number];
 // Main console
 // ---------------------------------------------------------------------------
 
-export function MetaReviewConsole() {
+export function MetaReviewConsole({
+  apiBase = "/api/admin/instagram-review",
+}: {
+  apiBase?: string;
+} = {}) {
   const [status, setStatus] = useState<IGStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [selectedHashtag, setSelectedHashtag] =
@@ -161,7 +165,7 @@ export function MetaReviewConsole() {
     setLoadingStatus(true);
     setStatus(null);
     try {
-      const resp = await fetch("/api/admin/instagram-review?action=status");
+      const resp = await fetch(`${apiBase}?action=status`);
       const data: IGStatus = await resp.json();
       setStatus(data);
     } catch {
@@ -176,7 +180,7 @@ export function MetaReviewConsole() {
     setDemoResult(null);
     setDemoError(null);
 
-    const url = `/api/admin/instagram-review?action=demo&hashtag=${encodeURIComponent(
+    const url = `${apiBase}?action=demo&hashtag=${encodeURIComponent(
       selectedHashtag
     )}`;
 

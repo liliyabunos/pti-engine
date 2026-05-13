@@ -52,6 +52,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // IG1-R — Meta App Review demo route. Accessible without auth for Meta reviewers.
+  // Narrow scope: only /meta-review/instagram renders the Instagram demo console.
+  // No admin navigation, no access token, no other admin capabilities exposed.
+  if (pathname.startsWith("/meta-review/")) {
+    return NextResponse.next();
+  }
+
   // Public pages are always accessible
   if (PUBLIC_PATHS.has(pathname)) {
     return refreshSessionAndContinue(request);
