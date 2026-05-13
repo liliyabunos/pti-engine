@@ -9,6 +9,46 @@
 
 ---
 
+## PUB1 — Public Perfume & Brand Pages v1
+**STATUS: DEPLOYED — PENDING PRODUCTION VERIFICATION**
+**Commit: e5b06b7**
+**Deployed: pushed to main 2026-05-12; Railway auto-deploys**
+
+No new migration (uses existing entity_market.entity_id as slug).
+
+**What was implemented:**
+- `perfume_trend_sdk/api/routes/public_entities.py` — 4 unauthenticated FastAPI routes:
+  - GET `/api/v1/public/perfumes/{slug}` → PublicPerfumeDetail (M0 fields only)
+  - GET `/api/v1/public/brands/{slug}` → PublicBrandDetail (M0 fields only)
+  - GET `/api/v1/public/sitemap/perfumes` → slug list (anti-thin-content filtered)
+  - GET `/api/v1/public/sitemap/brands` → slug list (anti-thin-content filtered)
+- Slug strategy: perfume slug = `entity_id` (e.g. `creed-aventus`); brand slug = `entity_id` minus `brand-` prefix (e.g. `creed`)
+- Anti-thin-content rule: 404 for entities with no `entity_timeseries_daily` rows with `mention_count > 0`
+- M0 public field boundary: score, trend_state, top_opportunity, top_2_differentiators, top_3_creator_names, notes/accords, entity_role, reference_original
+- `main.py`: registered router at `/api/v1/public`
+- `frontend/src/middleware.ts`: `/perfumes/*` and `/brands/*` pass through without auth
+- `frontend/src/app/(public)/perfumes/[slug]/page.tsx` — public perfume page (ISR revalidate=3600, generateMetadata with canonical/og/twitter)
+- `frontend/src/app/(public)/brands/[slug]/page.tsx` — public brand page (ISR revalidate=3600)
+- `frontend/src/app/sitemap.ts` — updated to async; fetches entity slugs from backend; perfume URLs priority=0.8 daily, brand URLs priority=0.7 daily
+
+**Production verification checklist:**
+- [ ] `curl https://fragranceindex.ai/api/v1/public/perfumes/creed-aventus` → 200 with canonical_name, score, notes
+- [ ] `curl https://fragranceindex.ai/perfumes/creed-aventus` → 200 HTML (public, no auth redirect)
+- [ ] `curl https://fragranceindex.ai/brands/creed` → 200 HTML (public, no auth redirect)  
+- [ ] `curl https://fragranceindex.ai/perfumes/creed-aventus` → contains canonical link + og:title
+- [ ] `curl https://fragranceindex.ai/api/v1/public/sitemap/perfumes` → array of {slug, canonical_name}
+- [ ] `curl https://fragranceindex.ai/sitemap.xml` → includes /perfumes/ and /brands/ entries
+- [ ] `curl https://fragranceindex.ai/api/v1/public/perfumes/nonexistent-slug` → 404 (not 307 redirect)
+- [ ] `/dashboard` still returns 307 redirect (auth gate unchanged)
+
+**Architecture decisions:**
+- No new DB migration: entity_id is already a stable slug derived from canonical_name
+- Brand entity_id format `brand-{slug}` → public slug strips prefix → `/brands/creed`
+- Catalog-only entities (no pipeline data) return 404 — no thin content pages
+- Public API routes have no Supabase dependency (pure DB queries, no auth headers)
+
+---
+
 ## SOURCE-INTAKE-V1A — YouTube Source Intake DB + Admin Operator Review
 **STATUS: COMPLETE — PRODUCTION VERIFIED**
 **Commit: 842fb2b**
@@ -460,7 +500,7 @@ Risk if skipped: Public pages will not rank. SEO compounds over time; every mont
 ---
 
 ### PUB1 — Public Perfume & Brand Pages
-**Status: APPROVED — FOLLOWS SEO0**
+**Status: DEPLOYED — PENDING PRODUCTION VERIFICATION (2026-05-12) — commit e5b06b7**
 **Purpose:** Launch auth-free, SEO-friendly public entity pages that create the organic acquisition funnel into the terminal. The intelligence engine exists; the missing step is a public window into it.
 
 Public perfume page scope (approved field policy):
@@ -1463,7 +1503,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
 | DATA0 — Historical Data Integrity Hardening | IMPLEMENTED — CORE PRODUCTION VERIFIED; TOPIC SNAPSHOT ROW PENDING NEXT PIPELINE RUN | 2026-05-12 |
 | SEO0 — Public SEO Surface v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-13 |
-| PUB1 — Public Entity Pages v1 | PLANNED | — |
+| PUB1 — Public Entity Pages v1 | DEPLOYED — PENDING PRODUCTION VERIFICATION | 2026-05-12 |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
 | IG1 — Instagram Intelligence v1 | PLANNED | — |
 | IL1 — Intelligence Layer v2 (Opportunity Objects) | PLANNED | — |
