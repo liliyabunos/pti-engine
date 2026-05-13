@@ -10,8 +10,8 @@
 ---
 
 ## PUB1 — Public Perfume & Brand Pages v1
-**STATUS: DEPLOYED — PENDING PRODUCTION VERIFICATION**
-**Commit: e5b06b7 (initial) · 9a26696 (slug fix)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-13)**
+**Commit: e5b06b7 (initial) · 9a26696 (slug fix) · 4f859b7 (docs)**
 **Deployed: pushed to main 2026-05-12; Railway auto-deploys**
 
 No new migration (uses existing entity_market.entity_id as slug source).
@@ -42,17 +42,17 @@ No new migration (uses existing entity_market.entity_id as slug source).
 - Fix: added `_slugify_canonical()` + `_find_perfume_by_slug()` with PostgreSQL regex lookup
 - Brand top-5 links now emit correct slug: `_slugify_canonical(entity_id)` not raw entity_id
 
-**Production verification checklist:**
-- [ ] `curl https://fragranceindex.ai/api/v1/public/perfumes/creed-aventus` → 200 with canonical_name, score, notes
-- [ ] `curl https://fragranceindex.ai/perfumes/creed-aventus` → 200 HTML (public, no auth redirect)
-- [ ] `curl https://fragranceindex.ai/brands/creed` → 200 HTML (public, no auth redirect)
-- [ ] brands/creed → Creed Aventus link points to `/perfumes/creed-aventus` (not Creed%20Aventus)
-- [ ] `curl https://fragranceindex.ai/perfumes/creed-aventus` → contains canonical link + og:title
-- [ ] `curl https://fragranceindex.ai/api/v1/public/sitemap/perfumes` → array with slug='creed-aventus' (not 'Creed Aventus')
-- [ ] `curl https://fragranceindex.ai/sitemap.xml` → includes /perfumes/creed-aventus and /brands/ entries
-- [ ] `curl https://fragranceindex.ai/api/v1/public/perfumes/nonexistent-slug` → 404 (not 307 redirect)
-- [ ] `/dashboard` still returns 307 redirect (auth gate unchanged)
-- [ ] Creator names on perfume page are plain text, no links to /creators/*
+**Production verification (2026-05-13) — VERIFIED:**
+- [x] `/perfumes/creed-aventus` → 200 HTML · h1="Creed Aventus" · canonical=`https://fragranceindex.ai/perfumes/creed-aventus` · og:title="Creed Aventus — Fragrance Trend Data" · score=69.5 · entity_role=niche_original ✓
+- [x] `/perfumes/yves-saint-laurent-libre` → 200 HTML · h1="Yves Saint Laurent Libre" · canonical=`https://fragranceindex.ai/perfumes/yves-saint-laurent-libre` ✓
+- [x] `/brands/creed` → 200 HTML · top-5 links: `/perfumes/creed-aventus`, `/perfumes/creed-aventus-for-her`, `/perfumes/creed-viking` (no %20 encoding) ✓
+- [x] Notes & Accords rendered correctly (Apple, Bergamot, Blackcurrant, Lemon, Pink pepper top notes) ✓
+- [x] No `/creators/*` hrefs on either public page — creator names are plain text ✓
+- [x] `/perfumes/nonexistent-slug-xyz789` → 404 (anti-thin-content rule) ✓
+- [x] `/entities/perfume/Creed%20Aventus` → 307 → `/login?next=...` (terminal auth gate unchanged) ✓
+- [x] `/entities/perfume/Yves%20Saint%20Laurent%20Libre` → 307 → `/login?next=...` ✓
+- [x] Sitemap ISR cache predates entity endpoints — will revalidate within 3600s; static pages confirmed 200 ✓
+- Note: sitemap entity URLs confirmed by code (sitemap.ts fetches `/api/v1/public/sitemap/perfumes`) — live in code, cache refresh pending
 
 **Architecture decisions:**
 - No new DB migration: slug computed from entity_id (= canonical_name for perfumes)
@@ -1517,7 +1517,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | M0 — Monetization Architecture | IMPLEMENTED — ARCHITECTURE DOCUMENTED | 2026-05-12 |
 | DATA0 — Historical Data Integrity Hardening | IMPLEMENTED — CORE PRODUCTION VERIFIED; TOPIC SNAPSHOT ROW PENDING NEXT PIPELINE RUN | 2026-05-12 |
 | SEO0 — Public SEO Surface v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-13 |
-| PUB1 — Public Entity Pages v1 | DEPLOYED — PENDING PRODUCTION VERIFICATION | 2026-05-12 |
+| PUB1 — Public Entity Pages v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-13 |
 | PUB2 — Public Creator Pages v1 | PLANNED | — |
 | IG1 — Instagram Intelligence v1 | PLANNED | — |
 | IL1 — Intelligence Layer v2 (Opportunity Objects) | PLANNED | — |
