@@ -1212,10 +1212,38 @@ False positives: add as `node_type='brand'`, `parent_brand_normalized=NULL` only
 **Proposed roadmap:**
 
 KB-CAT1-B — brand_profiles Hierarchy Extension (migration)
-- Add `node_type` and `parent_brand_normalized` to brand_profiles
-- Seed Xerjoff hierarchy: Join the Club → collection → Xerjoff; Casamorati → sub_brand → Xerjoff; XJ Oud Attars → collection → Xerjoff
-- Backend: `get_brand_profile()` returns node_type and parent chain
-- API: expose node_type + parent_brand on brand entity detail response
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
+**Migration: 048 · Commit: 6800248**
+- `node_type VARCHAR(32) NOT NULL DEFAULT 'brand' CHECK (node_type IN ('brand','collection','sub_brand'))` added to brand_profiles
+- `parent_brand_normalized TEXT NULL` added (no FK — operator-reviewed integrity)
+- `get_brand_profile()` added to `brand_profile.py` — returns full dict with brand_tier, node_type, parent_brand_normalized
+- `BrandEntityDetail` Pydantic model and TypeScript interface extended with `node_type` + `parent_brand_normalized`
+- Both tracked and catalog-only API paths populate from `get_brand_profile()`
+- 4 hierarchy seed rows applied: xerjoff collections + casamorati sub_brand + filippo sorcinelli SAUF
+- 24/24 tests pass (test_kb_cat1b_brand_hierarchy.py); 239/239 combined pass
+- Production DB: 217 brand_profiles rows — 213 brand, 3 collection, 1 sub_brand
+
+**Production verify (2026-05-14):**
+```
+brand-xerjoff → node_type='brand', parent=null ✓
+brand-xerjoff---join-the-club → node_type='collection', parent='xerjoff' ✓
+brand-xerjoff---casamorati → node_type='sub_brand', parent='xerjoff' ✓
+brand-creed / brand-lattafa / brand-dior → node_type='brand', parent=null ✓ (no regression)
+Xerjoff - Join the Club Don perfume → state=tracked, score=68.4 ✓ (DATA2 unaffected)
+```
+
+**Verify commands:**
+```sql
+SELECT version_num FROM alembic_version;  -- expect 048
+SELECT node_type, COUNT(*) FROM brand_profiles GROUP BY node_type ORDER BY node_type;
+-- brand=213, collection=3, sub_brand=1
+SELECT brand_name_normalized, node_type, parent_brand_normalized
+FROM brand_profiles WHERE node_type != 'brand' ORDER BY brand_name_normalized;
+-- filippo sorcinelli - sauf | collection | filippo sorcinelli
+-- xerjoff - casamorati      | sub_brand  | xerjoff
+-- xerjoff - join the club   | collection | xerjoff
+-- xerjoff - xj oud attars   | collection | xerjoff
+```
 
 KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
 - Brand entity detail page: show node_type badge ("COLLECTION" / "SUB-BRAND") instead of implied "BRAND" for non-root nodes
@@ -2188,7 +2216,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
-| KB-CAT1-B — brand_profiles Hierarchy Extension | PENDING FOUNDER APPROVAL | — |
+| KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 
 ---
 
@@ -2306,7 +2334,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 047** (pending Railway deploy 2026-05-14 — 047 promotes all 7 seed relationships to is_public=TRUE)
+Current production: **migration 048** (KB-CAT1-B — node_type + parent_brand_normalized on brand_profiles; applied 2026-05-14)
 
 | Migration | What |
 |-----------|------|
@@ -2334,6 +2362,7 @@ Current production: **migration 047** (pending Railway deploy 2026-05-14 — 047
 | 045 | FTG-1 taxonomy correction — Zara reclassified from `celebrity` → `mass_market`; adds `mass_market` to conceptual taxonomy (no schema change; VARCHAR(32) has no CHECK constraint) |
 | 046 | FTG-2 / RI1 — `fragrance_relationships` table (subject_canonical_name TEXT, relation_type VARCHAR(32), object_canonical_name TEXT, confidence_score NUMERIC(4,3), is_public BOOLEAN DEFAULT FALSE, operator_reviewed BOOLEAN); `relationship_evidence` table (relationship_id FK CASCADE, evidence_type VARCHAR(32), note TEXT); 7 seed rows + 7 dupe_map_seed evidence rows; no CHECK constraint on relation_type (mirrors brand_tier pattern) |
 | 047 | FTG-3 / RI1-QA — Data-only migration: promotes all 7 seeded relationship rows to `is_public=TRUE` where `operator_reviewed=TRUE AND confidence_score >= 0.700`. No schema changes. Option A controlled seed promotion. |
+| 048 | KB-CAT1-B — `node_type VARCHAR(32) NOT NULL DEFAULT 'brand' CHECK (node_type IN ('brand','collection','sub_brand'))` + `parent_brand_normalized TEXT NULL` (no FK) on `brand_profiles`; seeds 4 hierarchy rows (Xerjoff × 3 + Filippo Sorcinelli SAUF). |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
