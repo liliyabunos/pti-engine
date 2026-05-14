@@ -1964,7 +1964,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 043** (verified 2026-05-12 — 043 applied cleanly)
+Current production: **migration 045** (verified 2026-05-14 — 044 brand_profiles + 045 Zara mass_market applied)
 
 | Migration | What |
 |-----------|------|
@@ -1988,7 +1988,8 @@ Current production: **migration 043** (verified 2026-05-12 — 043 applied clean
 | 042 | Phase 042 Language & Region Metadata v1 — `source_language VARCHAR(16)`, `source_country VARCHAR(8)`, `source_region VARCHAR(64)`, `audience_region VARCHAR(64)`, `regional_policy_status VARCHAR(64)` on `source_intake_candidates`; `source_region`, `audience_region`, `regional_policy_status` on `youtube_channels`; all nullable, no CHECK constraints |
 | 041 | Pipeline Health Log — `pipeline_health_log` table: `(run_date DATE, run_label VARCHAR(32), overall_level VARCHAR(16), entity_mentions, reddit_mentions, youtube_items, reddit_items, total_items, signals_count INT, issues JSONB, pipeline_service VARCHAR(64) NULL, recorded_at TIMESTAMPTZ)`; unique on `(run_date, run_label)`; 90-day retention trimmed at persist time; upserted by `pipeline_health_check.py` after every morning/evening run |
 | 043 | DATA0 — `score_formula_version INTEGER NOT NULL server_default=1` on `entity_timeseries_daily`; `signal_threshold_version INTEGER NOT NULL server_default=1` on `signals`; `entity_topic_snapshots` table (dated aggregate snapshots of topic/intent distribution per entity, preserving historical intent distributions destroyed by `--rebuild-links`); unique on `(snapshot_date, entity_id, topic_type, topic_text)` |
-| 044 | FTG-1/KB1-MIN — `brand_profiles` table: `brand_name_normalized TEXT UNIQUE`, `brand_tier VARCHAR(32)` (designer/niche/clone_house/celebrity/indie), `notes TEXT NULL`; seeded with 213 rows (66 designer, 136 niche, 9 clone_house, 2 celebrity) migrated from hardcoded Python frozensets |
+| 044 | FTG-1/KB1-MIN — `brand_profiles` table: `brand_name_normalized TEXT UNIQUE`, `brand_tier VARCHAR(32)` (designer/niche/clone_house/celebrity/indie/mass_market), `notes TEXT NULL`; seeded with 213 rows (66 designer, 136 niche, 9 clone_house, 2 celebrity: ariana grande + zara) migrated from hardcoded Python frozensets |
+| 045 | FTG-1 taxonomy correction — Zara reclassified from `celebrity` → `mass_market`; adds `mass_market` to conceptual taxonomy (no schema change; VARCHAR(32) has no CHECK constraint) |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
