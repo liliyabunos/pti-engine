@@ -857,43 +857,105 @@ SELECT brand_tier FROM brand_profiles WHERE brand_name_normalized = 'armaf';    
 ---
 
 #### FTG-2 / RI1 — Relationship Intelligence Core
-**Status: PLANNED**
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
+**Migration: 046**
+**Commit: 4f7569b**
 
 **Purpose:** Move dupe / alternative / comparison relationships from hardcoded Python into a first-class evidence-backed data model.
 
-**Expected data model (preliminary — finalize at design):**
+**Final schema (migration 046):**
+```sql
+fragrance_relationships (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  subject_canonical_name  TEXT NOT NULL  -- canonical name of alternative/clone
+  relation_type        VARCHAR(32) NOT NULL  -- see VALID_RELATION_TYPES below
+  object_canonical_name   TEXT NOT NULL  -- canonical name of original/reference
+  confidence_score     NUMERIC(4,3) NOT NULL DEFAULT 0.500
+  is_public            BOOLEAN NOT NULL DEFAULT FALSE
+  operator_reviewed    BOOLEAN NOT NULL DEFAULT FALSE
+  first_observed_date  DATE NOT NULL
+  last_confirmed_date  DATE NOT NULL
+  evidence_summary     TEXT NULL
+  formula_version      INTEGER NOT NULL DEFAULT 1
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+  UNIQUE (subject_canonical_name, relation_type, object_canonical_name)
+)
+
+relationship_evidence (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid()
+  relationship_id      UUID FK → fragrance_relationships ON DELETE CASCADE
+  evidence_type        VARCHAR(32) NOT NULL
+                       -- 'dupe_map_seed' | 'content_item' | 'query_pattern' | 'operator_note'
+  content_item_id      UUID NULL  -- FK to canonical_content_items (no hard constraint)
+  query_text           TEXT NULL
+  note                 TEXT NULL
+  observed_date        DATE NOT NULL
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+)
 ```
-fragrance_relationships
-  subject_entity_id   UUID FK → entity_market
-  relation_type       VARCHAR   — see taxonomy below
-  object_entity_id    UUID FK → entity_market
-  confidence_score    NUMERIC(4,3)
-  is_public           BOOLEAN DEFAULT FALSE
-  operator_reviewed   BOOLEAN DEFAULT FALSE
-  first_observed_date DATE
-  last_confirmed_date DATE
-  evidence_summary    TEXT
-  formula_version     INTEGER DEFAULT 1
-  UNIQUE (subject_entity_id, relation_type, object_entity_id)
 
-relationship_evidence
-  relationship_id     FK → fragrance_relationships
-  evidence_type       'content_item' | 'query_pattern' | 'operator_note'
-  content_item_id     FK → canonical_content_items (nullable)
-  query_text          TEXT (nullable)
-  note                TEXT (nullable)
-  observed_date       DATE
+**Entity reference design decision (TEXT, not UUID FK):**
+Columns are `subject_canonical_name` / `object_canonical_name` (TEXT).
+Rationale: Montblanc Explorer, Zara Red Temptation, Ariana Grande Cloud have no `entity_market` row at seed time. UUID FK would block seeding. TEXT stores the same value as `entity_market.canonical_name` for tracked entities; future joins: `JOIN entity_market em ON em.canonical_name = fr.subject_canonical_name`. The `_name` suffix makes clear this is a canonical name string, not a surrogate PK.
+
+**Relation type taxonomy (4 approved — VALID_RELATION_TYPES frozenset; no DB CHECK constraint):**
+- `dupe_of` — strong direct clone; community consensus it is a deliberate copy
+- `market_alternative_to` — commonly discussed as accessible alternative; may differ structurally
+- `inspired_by` — stylistically in the direction of the original; lighter claim
+- `commonly_compared_to` — high comparison query volume; no explicit clone claim
+
+**Confidence seed defaults:**
+- `dupe_of` → 0.850
+- `market_alternative_to` → 0.700
+
+**Seed: 7 relationship rows + 7 dupe_map_seed evidence rows (alias collapse from 12 _DUPE_RAW entries):**
+| Subject | relation_type | Object | confidence |
+|---|---|---|---|
+| Armaf Club de Nuit Intense Man | dupe_of | Creed Aventus | 0.850 |
+| Armaf Club de Nuit Intense | dupe_of | Creed Aventus | 0.850 |
+| Montblanc Explorer | market_alternative_to | Creed Aventus | 0.700 |
+| Lattafa Khamrah | market_alternative_to | Kilian Angels' Share | 0.700 |
+| Lattafa Khamrah Qahwa | market_alternative_to | Kilian Angels' Share | 0.700 |
+| Zara Red Temptation | dupe_of | Maison Francis Kurkdjian Baccarat Rouge 540 | 0.850 |
+| Ariana Grande Cloud | market_alternative_to | Maison Francis Kurkdjian Baccarat Rouge 540 | 0.700 |
+
+**Khamrah correction (founder 2026-05-14):** Khamrah → `market_alternative_to` (not `dupe_of`) — community signal is mixed on direct clone status; Truth Graph classifies conservatively.
+
+**Qahwa decision (FTG-2 engineering judgment):** Khamrah Qahwa → `market_alternative_to` — same reasoning as parent Khamrah; its Angels' Share connection derives from brand family identity, not independent dupe consensus.
+
+**Alias collapse:** CDNIM / "Club de Nuit Intense Man" / "Armaf CDNIM" are resolver aliases for "Armaf Club de Nuit Intense Man" — RI1 stores canonical identity, not resolver aliases.
+
+**What FTG-2 intentionally does NOT do:**
+- Does NOT change `entity_role` string or any existing API fields (legacy `_DUPE_RAW` path unchanged)
+- Does NOT display any relationship data publicly (`is_public=FALSE` for all seeded rows)
+- Does NOT implement operator review UI (that is FTG-3)
+- Does NOT add `consensus_status` field (deferred to FTG-3/FTG-4)
+
+**FTG-3 remains the gate:** FTG-3 / RI1-QA owns the `is_public=TRUE` promotion workflow and the admin review queue. All public display of relationship data requires FTG-3 completion.
+
+**Tests:** `tests/unit/test_ftg2_relationship_intelligence.py` — 42/42 pass. Combined: 235/235 pass.
+
+**Production verification (2026-05-14):**
+- ALEMBIC_EXIT=0 ✓
+- fragrance_relationships: 7 rows ✓
+- relationship_evidence: 7 rows ✓
+- Lattafa Khamrah: relation_type=market_alternative_to ✓
+- Zara mass_market cleanup intact ✓
+- Public entity pages unchanged ✓
+
+**Verify commands (production DB):**
+```sql
+SELECT version_num FROM alembic_version;  -- expect 046
+SELECT COUNT(*) FROM fragrance_relationships;  -- expect 7
+SELECT COUNT(*) FROM relationship_evidence;    -- expect 7
+SELECT subject_canonical_name, relation_type, confidence_score
+FROM fragrance_relationships WHERE subject_canonical_name LIKE 'Lattafa Khamrah%'
+ORDER BY subject_canonical_name;
+-- Lattafa Khamrah | market_alternative_to | 0.700
+-- Lattafa Khamrah Qahwa | market_alternative_to | 0.700
+SELECT is_public, COUNT(*) FROM fragrance_relationships GROUP BY is_public;
+-- FALSE | 7  (all rows non-public; FTG-3 gates promotion)
 ```
-
-**Relation type taxonomy note:**
-Do NOT embed brand type into `relation_type`. Preferred semantics:
-- `dupe_of` — strong direct clone
-- `market_alternative_to` — commonly sold/discussed as an affordable/accessible alternative
-- `inspired_by` — stylistically in the direction of, without being a direct dupe
-- `commonly_compared_to` — high comparison query volume; no explicit dupe claim
-Exact names finalized at design.
-
-**Migration seed:** 12 existing `_DUPE_RAW` rows → first DB rows with `operator_reviewed=TRUE` (founder-seeded), `confidence_score=0.8`.
 
 ---
 
@@ -1843,7 +1905,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | TT2 — TikTok Research API Track | PLANNED (parallel admin track) | — |
 | FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| FTG-2 / RI1 — Relationship Intelligence Core | PLANNED | — |
+| FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
@@ -1964,7 +2026,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 045** (verified 2026-05-14 — 044 brand_profiles + 045 Zara mass_market applied)
+Current production: **migration 046** (verified 2026-05-14 — 044 brand_profiles + 045 Zara mass_market + 046 fragrance_relationships applied)
 
 | Migration | What |
 |-----------|------|
@@ -1990,6 +2052,7 @@ Current production: **migration 045** (verified 2026-05-14 — 044 brand_profile
 | 043 | DATA0 — `score_formula_version INTEGER NOT NULL server_default=1` on `entity_timeseries_daily`; `signal_threshold_version INTEGER NOT NULL server_default=1` on `signals`; `entity_topic_snapshots` table (dated aggregate snapshots of topic/intent distribution per entity, preserving historical intent distributions destroyed by `--rebuild-links`); unique on `(snapshot_date, entity_id, topic_type, topic_text)` |
 | 044 | FTG-1/KB1-MIN — `brand_profiles` table: `brand_name_normalized TEXT UNIQUE`, `brand_tier VARCHAR(32)` (designer/niche/clone_house/celebrity/indie/mass_market), `notes TEXT NULL`; seeded with 213 rows (66 designer, 136 niche, 9 clone_house, 2 celebrity: ariana grande + zara) migrated from hardcoded Python frozensets |
 | 045 | FTG-1 taxonomy correction — Zara reclassified from `celebrity` → `mass_market`; adds `mass_market` to conceptual taxonomy (no schema change; VARCHAR(32) has no CHECK constraint) |
+| 046 | FTG-2 / RI1 — `fragrance_relationships` table (subject_canonical_name TEXT, relation_type VARCHAR(32), object_canonical_name TEXT, confidence_score NUMERIC(4,3), is_public BOOLEAN DEFAULT FALSE, operator_reviewed BOOLEAN); `relationship_evidence` table (relationship_id FK CASCADE, evidence_type VARCHAR(32), note TEXT); 7 seed rows + 7 dupe_map_seed evidence rows; no CHECK constraint on relation_type (mirrors brand_tier pattern) |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
