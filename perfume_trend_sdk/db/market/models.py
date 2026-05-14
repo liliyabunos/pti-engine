@@ -22,6 +22,10 @@ from perfume_trend_sdk.db.market.alert import Alert, AlertEvent  # noqa: F401
 from perfume_trend_sdk.db.market.base import Base  # noqa: F401
 from perfume_trend_sdk.db.market.brand import Brand  # noqa: F401
 from perfume_trend_sdk.db.market.brand_profile import BrandProfile  # noqa: F401
+from perfume_trend_sdk.db.market.fragrance_relationship import (  # noqa: F401
+    FragranceRelationship,
+    RelationshipEvidence,
+)
 from perfume_trend_sdk.db.market.entity_mention import EntityMention  # noqa: F401
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily  # noqa: F401
 from perfume_trend_sdk.db.market.notes_intelligence import (  # noqa: F401
@@ -70,12 +74,14 @@ __all__ = [
     "EntityMention",
     "EntityTimeSeriesDaily",
     "FragranceCandidate",
+    "FragranceRelationship",
     "NoteCanonical",
     "NoteCanonicalMap",
     "NoteBrandStats",
     "NoteStats",
     "Perfume",
     "Signal",
+    "RelationshipEvidence",
     "Watchlist",
     "WatchlistItem",
 ]
