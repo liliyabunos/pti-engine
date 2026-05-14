@@ -130,6 +130,8 @@ def get_dashboard(
     is_today_preset = (range_key == "today")
 
     brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "fetch_brand_name_map")
+    # KB-CAT1-D — pre-fetch hierarchy map once per request (tiny: ~4 rows)
+    hierarchy_map = _safe(lambda: fetch_brand_hierarchy_map(db), {}, "fetch_brand_hierarchy_map")
     latest_signal_map = _safe(lambda: fetch_latest_signal_map(db), {}, "fetch_latest_signal_map")
 
     if is_today_preset:
