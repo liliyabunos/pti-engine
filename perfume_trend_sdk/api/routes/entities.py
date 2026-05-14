@@ -528,6 +528,14 @@ class PerfumeEntityDetail(BaseModel):
     brand_entity_id: Optional[str] = None
 
 
+class ChildBrandNode(BaseModel):
+    """KB-CAT1-C — a child brand node (collection or sub_brand) under a parent brand."""
+    canonical_name: str
+    node_type: str            # 'collection' | 'sub_brand'
+    entity_id: Optional[str] = None   # None if not tracked in entity_market
+    state: str = "catalog_only"       # 'tracked' | 'catalog_only'
+
+
 class BrandEntityDetail(BaseModel):
     """Richer brand entity response — works for tracked AND catalog-only entities."""
     id: str
@@ -548,6 +556,10 @@ class BrandEntityDetail(BaseModel):
     # KB-CAT1-B — canonical hierarchy metadata (from brand_profiles)
     node_type: str = "brand"           # 'brand' | 'collection' | 'sub_brand'
     parent_brand_normalized: Optional[str] = None
+    # KB-CAT1-C — hierarchy navigation
+    parent_entity_id: Optional[str] = None   # resolved entity_id of parent brand (for navigation)
+    child_collections: List[ChildBrandNode] = []   # themed collections under this brand
+    child_sub_brands: List[ChildBrandNode] = []    # distinct sub-brands under this brand
     # Linked perfumes — catalog_perfumes: all from resolver (up to 100)
     # top_perfumes kept for backward compat (same data as catalog_perfumes)
     catalog_perfumes: List[BrandPerfumeRow] = []
@@ -972,6 +984,66 @@ def list_entities(db: Session = Depends(get_db_session)) -> List[EntitySummary]:
 # MUST be defined before /perfume/{id} and /brand/{id} to avoid shadowing.
 # ---------------------------------------------------------------------------
 
+def _get_parent_entity_id(db: Session, parent_brand_normalized: Optional[str]) -> Optional[str]:
+    """Return entity_id of the parent brand in entity_market, or None. KB-CAT1-C."""
+    if not parent_brand_normalized:
+        return None
+    row = _safe(lambda: db.execute(
+        text(
+            "SELECT entity_id FROM entity_market "
+            "WHERE entity_type = 'brand' AND LOWER(canonical_name) = :pnorm LIMIT 1"
+        ),
+        {"pnorm": parent_brand_normalized},
+    ).fetchone(), None, "parent_entity_id")
+    return row[0] if row else None
+
+
+def _get_child_brands(db: Session, canonical_name: str) -> tuple:
+    """Return (child_collections, child_sub_brands) for a root brand. KB-CAT1-C.
+
+    Queries brand_profiles WHERE parent_brand_normalized matches the normalized
+    canonical_name of this brand, then LEFT JOINs entity_market (tracked state)
+    and resolver_brands (display name fallback for untracked children).
+    """
+    from perfume_trend_sdk.analysis.topic_intelligence.entity_role import _normalize as _nrm
+    normalized = _nrm(canonical_name) or ""
+    if not normalized:
+        return [], []
+    rows = _safe(lambda: db.execute(
+        text("""
+        SELECT
+            bp.brand_name_normalized,
+            bp.node_type,
+            em.entity_id,
+            COALESCE(em.canonical_name, rb.canonical_name, bp.brand_name_normalized) AS display_name
+        FROM brand_profiles bp
+        LEFT JOIN entity_market em
+            ON em.entity_type = 'brand'
+           AND LOWER(em.canonical_name) = bp.brand_name_normalized
+        LEFT JOIN resolver_brands rb
+            ON LOWER(rb.canonical_name) = bp.brand_name_normalized
+        WHERE bp.parent_brand_normalized = :pnorm
+        ORDER BY bp.node_type, bp.brand_name_normalized
+        """),
+        {"pnorm": normalized},
+    ).fetchall(), [], "child_brands")
+
+    collections: list = []
+    sub_brands: list = []
+    for row in rows:
+        node = ChildBrandNode(
+            canonical_name=row[3],
+            node_type=row[1],
+            entity_id=row[2] if row[2] else None,
+            state="tracked" if row[2] else "catalog_only",
+        )
+        if row[1] == "sub_brand":
+            sub_brands.append(node)
+        else:
+            collections.append(node)
+    return collections, sub_brands
+
+
 def _slugify(s: str) -> str:
     """Lowercase, collapse non-alphanumeric chars to dashes."""
     s = s.lower().strip()
@@ -1314,8 +1386,16 @@ def get_brand_entity(
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
-        # KB-CAT1-B — canonical hierarchy metadata
+        # KB-CAT1-B/C — canonical hierarchy metadata
         _bp = get_brand_profile(db, em.canonical_name)
+        _node_type = _bp["node_type"] if _bp else "brand"
+        _parent_norm = _bp["parent_brand_normalized"] if _bp else None
+        _parent_eid = _get_parent_entity_id(db, _parent_norm)
+        # KB-CAT1-C: only root brands can have child nodes
+        if _node_type == "brand":
+            _child_cols, _child_subs = _get_child_brands(db, em.canonical_name)
+        else:
+            _child_cols, _child_subs = [], []
 
         return BrandEntityDetail(
             id=em.entity_id,
@@ -1330,8 +1410,11 @@ def get_brand_entity(
             latest_growth=latest.growth_rate if latest else None,
             latest_signal=latest_sig,
             trend_state=getattr(latest, "trend_state", None) if latest else None,  # Phase I3
-            node_type=_bp["node_type"] if _bp else "brand",                # KB-CAT1-B
-            parent_brand_normalized=_bp["parent_brand_normalized"] if _bp else None,  # KB-CAT1-B
+            node_type=_node_type,                          # KB-CAT1-B
+            parent_brand_normalized=_parent_norm,          # KB-CAT1-B
+            parent_entity_id=_parent_eid,                  # KB-CAT1-C
+            child_collections=_child_cols,                 # KB-CAT1-C
+            child_sub_brands=_child_subs,                  # KB-CAT1-C
             catalog_perfumes=catalog_perfumes,
             top_perfumes=catalog_perfumes,
             timeseries=_build_snapshot_rows(history_rows),
@@ -1369,8 +1452,15 @@ def get_brand_entity(
     top_notes = _brand_top_notes(db, rb_row[1])
     top_accords = _brand_top_accords(db, rb_row[1])
 
-    # KB-CAT1-B — canonical hierarchy metadata
+    # KB-CAT1-B/C — canonical hierarchy metadata
     _bp = get_brand_profile(db, rb_row[1])
+    _cat_node_type = _bp["node_type"] if _bp else "brand"
+    _cat_parent_norm = _bp["parent_brand_normalized"] if _bp else None
+    _cat_parent_eid = _get_parent_entity_id(db, _cat_parent_norm)
+    if _cat_node_type == "brand":
+        _cat_child_cols, _cat_child_subs = _get_child_brands(db, rb_row[1])
+    else:
+        _cat_child_cols, _cat_child_subs = [], []
 
     return BrandEntityDetail(
         id=str(resolver_id),
@@ -1382,8 +1472,11 @@ def get_brand_entity(
         top_perfumes=catalog_perfumes,
         top_notes=top_notes,
         top_accords=top_accords,
-        node_type=_bp["node_type"] if _bp else "brand",                # KB-CAT1-B
-        parent_brand_normalized=_bp["parent_brand_normalized"] if _bp else None,  # KB-CAT1-B
+        node_type=_cat_node_type,                         # KB-CAT1-B
+        parent_brand_normalized=_cat_parent_norm,         # KB-CAT1-B
+        parent_entity_id=_cat_parent_eid,                 # KB-CAT1-C
+        child_collections=_cat_child_cols,                # KB-CAT1-C
+        child_sub_brands=_cat_child_subs,                 # KB-CAT1-C
     )
 
 

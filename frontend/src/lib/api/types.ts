@@ -246,6 +246,14 @@ export interface PerfumeEntityDetail {
   competitors: string[];
 }
 
+/** KB-CAT1-C — a child brand node (collection or sub_brand) under a parent brand */
+export interface ChildBrandNode {
+  canonical_name: string;
+  node_type: string;        // 'collection' | 'sub_brand'
+  entity_id: string | null; // null if not tracked in entity_market
+  state: string;            // 'tracked' | 'catalog_only'
+}
+
 export interface BrandPerfumeRow {
   entity_id: string | null;
   resolver_id: number | null;
@@ -267,6 +275,12 @@ export interface BrandEntityDetail {
   node_type: string;
   /** KB-CAT1-B — normalized parent brand name, or null for root brands */
   parent_brand_normalized: string | null;
+  /** KB-CAT1-C — entity_id of parent brand for navigation, null for root brands */
+  parent_entity_id: string | null;
+  /** KB-CAT1-C — themed collections under this brand (populated for root brands only) */
+  child_collections: ChildBrandNode[];
+  /** KB-CAT1-C — distinct sub-brands under this brand (populated for root brands only) */
+  child_sub_brands: ChildBrandNode[];
   has_activity_today: boolean;
   perfume_count: number;
   active_perfume_count: number;

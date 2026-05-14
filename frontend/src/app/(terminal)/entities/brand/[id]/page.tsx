@@ -22,7 +22,7 @@ import { DeltaBadge } from "@/components/primitives/DeltaBadge";
 import { SignalBadge } from "@/components/primitives/SignalBadge";
 import { TrendStateBadge } from "@/components/primitives/TrendStateBadge";
 import { fmtScore, fmtGrowth } from "@/lib/formatters";
-import type { BrandPerfumeRow, DriverRow } from "@/lib/api/types";
+import type { BrandPerfumeRow, DriverRow, ChildBrandNode } from "@/lib/api/types";
 import { WhyTrending } from "@/components/entity/WhyTrending";
 import { MarketInsight } from "@/components/entity/MarketInsight";
 
@@ -46,6 +46,30 @@ function StateBadge({ state }: { state: string }) {
   return (
     <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
       Catalog
+    </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Node type badge — KB-CAT1-C
+// ---------------------------------------------------------------------------
+
+function NodeTypeBadge({ nodeType }: { nodeType: string }) {
+  if (nodeType === "collection")
+    return (
+      <span className="inline-flex items-center rounded border border-indigo-800 bg-indigo-950/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-indigo-400">
+        Collection
+      </span>
+    );
+  if (nodeType === "sub_brand")
+    return (
+      <span className="inline-flex items-center rounded border border-violet-800 bg-violet-950/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-violet-400">
+        Sub-Brand
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+      Brand
     </span>
   );
 }
@@ -362,9 +386,7 @@ export default function BrandEntityPage({ params }: PageProps) {
                         {data.ticker}
                       </span>
                     )}
-                    <span className="inline-flex items-center rounded border border-zinc-700 bg-zinc-800/60 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                      Brand
-                    </span>
+                    <NodeTypeBadge nodeType={data.node_type} />
                     <StateBadge state={data.state} />
                     {latestSignal && <SignalBadge type={latestSignal} />}
                     {data.trend_state && <TrendStateBadge state={data.trend_state} />}
@@ -372,6 +394,24 @@ export default function BrandEntityPage({ params }: PageProps) {
                   <h1 className="mt-1 text-xl font-bold leading-tight text-zinc-100">
                     {data.canonical_name}
                   </h1>
+                  {/* KB-CAT1-C — parent brand link for collections/sub-brands */}
+                  {data.parent_entity_id && (
+                    <p className="mt-1 text-[11px] text-zinc-500">
+                      Part of{" "}
+                      <Link
+                        href={`/entities/brand/${encodeURIComponent(data.parent_entity_id)}`}
+                        className="text-zinc-400 transition-colors hover:text-amber-400"
+                      >
+                        {data.parent_brand_normalized
+                          ? data.parent_brand_normalized
+                              .split(" ")
+                              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                              .join(" ")
+                          : data.canonical_name.split(" - ")[0]}
+                      </Link>
+                      {" →"}
+                    </p>
+                  )}
                 </div>
 
                 {isTracked && (
@@ -432,6 +472,75 @@ export default function BrandEntityPage({ params }: PageProps) {
                 />
               </div>
             </TerminalPanel>
+
+            {/* ── Brand Hierarchy (KB-CAT1-C) ─────────────────────────────── */}
+            {((data.child_collections?.length ?? 0) > 0 || (data.child_sub_brands?.length ?? 0) > 0) && (
+              <TerminalPanel>
+                <SectionHeader title="Brand Hierarchy" subtitle="collections and sub-brands" />
+                <div className="mt-3 space-y-4">
+                  {(data.child_collections?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="mb-2 text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                        Collections
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {data.child_collections.map((c: ChildBrandNode) => {
+                          const shortName = c.canonical_name.includes(" - ")
+                            ? c.canonical_name.split(" - ").slice(1).join(" - ")
+                            : c.canonical_name;
+                          return c.entity_id ? (
+                            <Link
+                              key={c.canonical_name}
+                              href={`/entities/brand/${encodeURIComponent(c.entity_id)}`}
+                              className="inline-flex items-center rounded border border-indigo-900/60 bg-indigo-950/20 px-2.5 py-1 text-[11px] text-indigo-400 transition-colors hover:border-indigo-700 hover:text-indigo-300"
+                            >
+                              {shortName}
+                            </Link>
+                          ) : (
+                            <span
+                              key={c.canonical_name}
+                              className="inline-flex items-center rounded border border-zinc-800 bg-zinc-900/40 px-2.5 py-1 text-[11px] text-zinc-500"
+                            >
+                              {shortName}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {(data.child_sub_brands?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="mb-2 text-[9px] font-semibold uppercase tracking-widest text-zinc-600">
+                        Sub-Brands
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {data.child_sub_brands.map((s: ChildBrandNode) => {
+                          const shortName = s.canonical_name.includes(" - ")
+                            ? s.canonical_name.split(" - ").slice(1).join(" - ")
+                            : s.canonical_name;
+                          return s.entity_id ? (
+                            <Link
+                              key={s.canonical_name}
+                              href={`/entities/brand/${encodeURIComponent(s.entity_id)}`}
+                              className="inline-flex items-center rounded border border-violet-900/60 bg-violet-950/20 px-2.5 py-1 text-[11px] text-violet-400 transition-colors hover:border-violet-700 hover:text-violet-300"
+                            >
+                              {shortName}
+                            </Link>
+                          ) : (
+                            <span
+                              key={s.canonical_name}
+                              className="inline-flex items-center rounded border border-zinc-800 bg-zinc-900/40 px-2.5 py-1 text-[11px] text-zinc-500"
+                            >
+                              {shortName}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TerminalPanel>
+            )}
 
             {/* ── Catalog perfumes ────────────────────────────────────────── */}
             <TerminalPanel noPad>
