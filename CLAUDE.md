@@ -1253,10 +1253,18 @@ KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
 - Parent brand page (Xerjoff): show "Collections" and "Sub-brands" sections using brand_profiles hierarchy query
 - No URL changes. No rollup changes. Display layer only.
 
-KB-CAT1-D — Perfume Breadcrumbs
-- Perfume entity page + public perfume page: breadcrumb uses brand_profiles chain
-- "Don" shows: Xerjoff → Join the Club → Don
-- "1888" shows: Xerjoff → Casamorati → 1888
+KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context
+**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**Commit: b834030**
+- `fetch_brand_hierarchy_map(db)` + `format_brand_hierarchy_label(brand_name, hierarchy_map)` in `brand_profile.py` — bulk-safe compact label (e.g. "Xerjoff · Join the Club"); ~4-row fetch per request, no N+1
+- `BrandDisplayContext` Pydantic model in `routes/entities.py` + `_resolve_brand_display_context()` helper; populated on `PerfumeEntityDetail` for tracked + catalog-only perfumes
+- Dashboard route: pre-fetches `hierarchy_map` once; populates `brand_hierarchy_label` on `TopMoverRow`
+- Screener route: pre-fetches `hierarchy_map` once; populates `brand_hierarchy_label` on `EntitySummary`
+- Perfume entity page: dual-link display ("Xerjoff → Join the Club") when `brand_display.node_name` present; falls back gracefully for root brands and missing brand_display
+- TopMoversTable + ScreenerTable: show `brand_hierarchy_label ?? brand_name` in secondary brand row
+- TypeScript: `BrandDisplayContext` interface + `brand_display` on `PerfumeEntityDetail`; `brand_hierarchy_label` on `TopMoverRow` + `EntitySummary`
+- 21/21 new tests pass (`test_kb_cat1d_hierarchy_display.py`); 0 regressions
+- **Casamorati finding (documented):** "Casamorati - Bouquet Ideale" uses resolver brand "Casamorati" (standalone entry, NOT "Xerjoff - Casamorati"). No `brand_profiles` entry for standalone "casamorati" → hierarchy display impossible for this perfume without KB-CAT1-E rollup. No heuristic override applied.
 
 KB-CAT1-E — Parent Brand Rollup (high risk — schedule last)
 - Add `parent_brand_name TEXT NULL` to entity_market perfume rows
@@ -2220,6 +2228,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
+| KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 
 ---
 
