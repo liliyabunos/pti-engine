@@ -25,6 +25,7 @@ import {
   fmtCount,
   fmtConfidence,
   fmtVolatility,
+  fmtDate,
 } from "@/lib/formatters";
 import type { EntitySummary } from "@/lib/api/types";
 
@@ -102,11 +103,21 @@ const COLUMNS = [
     header: "Score",
     size: 64,
     meta: { sortKey: "composite_market_score" },
-    cell: (c) => (
-      <span className="text-xs font-semibold tabular-nums text-zinc-100">
-        {fmtScore(c.getValue())}
-      </span>
-    ),
+    cell: (c) => {
+      const row = c.row.original;
+      return (
+        <div>
+          <span className="text-xs font-semibold tabular-nums text-zinc-100">
+            {fmtScore(c.getValue())}
+          </span>
+          {row.date && (
+            <div className="text-[9px] tabular-nums text-zinc-600">
+              {fmtDate(row.date)}
+            </div>
+          )}
+        </div>
+      );
+    },
   }),
   col.accessor("growth_rate", {
     header: "Growth",

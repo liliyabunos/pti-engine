@@ -1085,6 +1085,35 @@ These rules must not be violated in FTG implementation:
 
 ---
 
+## DATA1 — Last Active Display Snapshot Contract
+**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**No migration required.**
+
+**Problem:** Carry-forward zero rows (written for timeseries continuity) were being selected as the "latest snapshot" for headline/card/list displays. An entity active on May 12 with a quiet day on May 13 showed score=0.0, growth=-100% — technically correct for May 13 but user-facing misleading.
+
+**Root cause:** Three read paths used unconditional `MAX(date)` (absolute latest row) instead of `MAX(date) WHERE mention_count > 0` (last real activity):
+- `latest_snapshot_subquery()` in `queries.py` → used by dashboard (today preset) + screener (today preset)
+- `_get_latest_snapshot()` in `routes/entities.py` → used by perfume + brand entity headline
+- `_enrich_items()` subquery in `routes/watchlists.py` → used by watchlist card rows
+
+**Display contract:**
+- **Headline/list/card paths:** latest row where `mention_count > 0` — last real activity date
+- **Chart timeseries (`_get_history()`):** full series unchanged, including carry-forward zero rows
+- **`_check_activity_today()`:** already correct (`MAX(date) WHERE mention_count > 0`) — no change
+
+**Active Today alignment:** `_check_activity_today()` and `_get_latest_snapshot()` now reference the same underlying date. No entity can appear "Active Today" while its displayed score comes from a different (carry-forward) date.
+
+**Freshness cue:** `ScreenerTable.tsx` now shows the score date as small dim text below each score value (`fmtDate(row.date)`) so users can see what date the displayed score is from.
+
+The entity detail page already shows "As of {latest_date}" — after the fix, `latest_date` correctly reflects the last-active date, not the carry-forward date.
+
+**Affected paths (fixed):** `queries.py::latest_snapshot_subquery`, `routes/entities.py::_get_latest_snapshot`, `routes/watchlists.py::_enrich_items`
+**Unaffected (already correct):** `_check_activity_today`, `_brand_catalog_perfumes`, `_brand_active_perfume_count`, `public_entities.py::_get_latest_score_and_trend`, `_fetch_rows_aggregated` (range queries)
+
+**Tests:** `tests/unit/test_data1_last_active_display.py` — 16/16 pass. Combined: 273/273 pass.
+
+---
+
 ## Active Roadmap
 
 **Language & Region Architecture**
@@ -1913,6 +1942,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| DATA1 — Last Active Display Snapshot Contract | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |

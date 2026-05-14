@@ -72,9 +72,17 @@ def _get_entity_or_404(db: Session, entity_id: str) -> EntityMarket:
 
 
 def _get_latest_snapshot(db: Session, entity_uuid) -> Optional[EntityTimeSeriesDaily]:
+    """Return the most-recent *active* row (mention_count > 0) for headline display.
+
+    DATA1 — carry-forward zero rows are excluded. Charts use _get_history()
+    which returns the full timeseries including quiet-day zeros.
+    """
     return (
         db.query(EntityTimeSeriesDaily)
-        .filter_by(entity_id=entity_uuid)
+        .filter(
+            EntityTimeSeriesDaily.entity_id == entity_uuid,
+            EntityTimeSeriesDaily.mention_count > 0,
+        )
         .order_by(EntityTimeSeriesDaily.date.desc())
         .first()
     )

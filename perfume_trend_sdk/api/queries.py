@@ -156,12 +156,19 @@ def fetch_latest_signal_map(
 # ---------------------------------------------------------------------------
 
 def latest_snapshot_subquery(db: Session):
-    """SQLAlchemy subquery: most-recent snapshot date per entity UUID."""
+    """SQLAlchemy subquery: most-recent *active* snapshot date per entity UUID.
+
+    DATA1 — only rows with mention_count > 0 are considered. Carry-forward
+    zero rows (written to maintain timeseries continuity) are excluded so that
+    headline/list displays always reflect the last real pipeline activity, not
+    a quiet-day placeholder.
+    """
     return (
         db.query(
             EntityTimeSeriesDaily.entity_id,
             func.max(EntityTimeSeriesDaily.date).label("max_date"),
         )
+        .filter(EntityTimeSeriesDaily.mention_count > 0)
         .group_by(EntityTimeSeriesDaily.entity_id)
         .subquery()
     )

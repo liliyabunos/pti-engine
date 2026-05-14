@@ -102,12 +102,17 @@ def _enrich_items(
     # Batch-load latest snapshots
     # Sub-select the max date per entity UUID
     entity_uuids = [em.id for em in em_rows]
+    # DATA1 — filter mention_count > 0 so carry-forward zero rows are excluded.
+    # Watchlist cards must show last-active metrics, not quiet-day placeholders.
     sub = (
         db.query(
             EntityTimeSeriesDaily.entity_id,
             func.max(EntityTimeSeriesDaily.date).label("max_date"),
         )
-        .filter(EntityTimeSeriesDaily.entity_id.in_(entity_uuids))
+        .filter(
+            EntityTimeSeriesDaily.entity_id.in_(entity_uuids),
+            EntityTimeSeriesDaily.mention_count > 0,
+        )
         .group_by(EntityTimeSeriesDaily.entity_id)
         .subquery()
     )
