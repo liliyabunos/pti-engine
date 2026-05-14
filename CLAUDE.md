@@ -1115,7 +1115,8 @@ These rules must not be violated in FTG implementation:
 ---
 
 ## DATA2 — Brand Catalog Join Normalization
-**STATUS: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
+**Commit: e5f3614**
 **No migration required.**
 
 **Root cause:** `_brand_catalog_perfumes()` in `entities.py` joined `resolver_perfumes` to `entity_market` using exact case-insensitive name equality. The Fragrantica source catalog stores verbatim concentration-variant names (e.g. `"Xerjoff - Join the Club Don Eau de Parfum"`), while the aggregation job strips those suffixes via `_base_name()` before writing to `entity_market` (e.g. `"Xerjoff - Join the Club Don"`). The LEFT JOIN returned NULL for `entity_id`, so tracked perfumes appeared as catalog-only with no market data on their brand page.
@@ -1157,12 +1158,11 @@ AND EXISTS (
 
 **Tests:** `tests/unit/test_data2_brand_catalog_join.py` — 28/28 pass. Combined: 301/301 pass (DATA2 + DATA1 + FTG-3 + FTG-2 + FTG-1 + Semantic Phase 5 suites).
 
-**Production verification (pending — verify after Railway deploy):**
-- `/entities/brand/brand-xerjoff---join-the-club` → "Xerjoff - Join the Club Don Eau de Parfum" row now shows score/mentions, not "—" ✓ (pending)
-- Tracked count > 0 on that brand page ✓ (pending)
-- At least two other affected brand pages show previously-hidden tracked entities ✓ (pending)
-- Lattafa brand page unchanged ✓ (pending)
-- Dashboard/screener/perfume entity pages unchanged ✓ (pending)
+**Production verification (2026-05-14) — COMPLETE:**
+- `/entities/brand/brand-xerjoff---join-the-club` → Tracked: 5 · "Xerjoff - Join the Club Don Eau de Parfum" shows score ≈ 68.4, mentions 12, ACTIVE ✓
+- `/entities/brand/brand-xerjoff---casamorati` → Tracked: 6 · EDP-suffixed rows (e.g. "Xerjoff - Casamorati 1888 Eau de Parfum") now show scores/mentions ✓
+- Lattafa brand page unchanged ✓
+- Dashboard/screener/perfume entity pages unchanged ✓
 
 ---
 
@@ -2044,7 +2044,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| DATA2 — Brand Catalog Join Normalization | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
+| DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
