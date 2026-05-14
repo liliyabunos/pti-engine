@@ -705,6 +705,267 @@ TT2 output: A written decision document recording the above as official platform
 
 ---
 
+## FTG — Fragrance Truth Graph & Narrative Intelligence
+**Strategic program — opened 2026-05-14**
+**Trigger: KB0 Khamrah bugfix exposed that dupe/alternative relationships are hardcoded Python with no evidence, confidence, freshness, or history.**
+
+### Strategic Purpose
+
+FragranceIndex.ai must not become a generic trend tracker. The product moat is fragrance-native market intelligence:
+- Canonical classifications of brands and perfumes
+- Structured original / dupe / alternative / comparison relationships
+- Evidence and confidence around those claims — not just assertions
+- Time-series storage of how "why it is trending" and consumer intent evolve over months
+
+The product must evolve from:
+> "What fragrance is rising?"
+
+to:
+> "What relationship structure, consumer intent, creator spread, and market narrative are causing it to rise — and how has that changed over six months?"
+
+This is the commercial foundation for Deep Dive Reports and brand intelligence products.
+
+---
+
+### Architecture Boundary — 4-Layer Model
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  RESOLVER LAYER (existing)                              │
+│  "Which entity is this text referring to?"              │
+│  Data: resolver_aliases, resolver_perfumes, entity_market│
+│  Must remain separate. Knows nothing about relationships.│
+└─────────────────┬───────────────────────────────────────┘
+                  │ entity_id
+┌─────────────────▼───────────────────────────────────────┐
+│  ENCYCLOPEDIA / CANONICAL CLASSIFICATION LAYER (FTG-1)  │
+│  "What canonical role/classification does this have?"   │
+│  Data: brand_profiles (minimal: brand_tier only)        │
+│  Replaces Python frozensets with queryable data.        │
+│  Operator-curated, slow update cycle.                   │
+└─────────────────┬───────────────────────────────────────┘
+                  │ entity_id
+┌─────────────────▼───────────────────────────────────────┐
+│  RELATIONSHIP INTELLIGENCE LAYER (FTG-2, FTG-3, FTG-4) │
+│  "How does this fragrance relate to another?"           │
+│  Data: fragrance_relationships, relationship_evidence   │
+│  Confidence-scored, operator-reviewed, versioned.       │
+│  Public display gated: operator_reviewed + confidence.  │
+└─────────────────┬───────────────────────────────────────┘
+                  │ entity_id + snapshot_date
+┌─────────────────▼───────────────────────────────────────┐
+│  INTELLIGENCE SNAPSHOT LAYER (FTG-5)                    │
+│  "How has this entity's intelligence narrative changed?" │
+│  Data: entity_intelligence_snapshots (new, DATA0 style) │
+│  Stores: narrative, opportunity tags, intent mix, role. │
+│  Written after each aggregation cycle. 24-month retain. │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Dependency rules:**
+- Resolver feeds all layers via entity_id — knows nothing about any of them.
+- Market scoring layer (entity_timeseries_daily, signals) remains independent. Do not let early FTG classification mutate base market scores in v1.
+- Relationship Intelligence enriches explanations; it does not drive scores.
+- Encyclopedia layer feeds Relationship Intelligence with canonical brand tier.
+
+---
+
+### FTG Phase Roadmap
+
+#### FTG-0 / KB0 — Khamrah Truth Fix
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
+**Commit: b79143d · Backend deploy: 93ea2e4e**
+
+- **Root bug:** `_DUPE_RAW` in `entity_role.py` mapped "Lattafa Khamrah" → Maison Francis Kurkdjian Baccarat Rouge 540 (wrong). Correct reference: Kilian Angels' Share.
+- **Root cause:** manual entry error in initial Phase 5 seed — no evidence, no review gate, no test.
+- **Fix:** One-line correction in `_DUPE_RAW`. Khamrah Qahwa (distinct product) was already correct and remains unchanged.
+- **Regression tests:** `TestKhamrahRegression` (4 cases) added to `tests/unit/test_semantic_phase5.py`. 67/67 pass.
+- **Why it matters:** This bug in production exposed that the entire relationship layer is a hardcoded Python map with zero evidence backing. That gap is the FTG program.
+
+---
+
+#### FTG-1 / KB1-MIN — Canonical Brand Classification Foundation
+**Status: PLANNED**
+
+**Purpose:** Move brand tier classification out of hardcoded Python frozensets into queryable data. Required prerequisite before relationship intelligence can read canonical brand classification from DB.
+
+**Scope (minimal — do not overbuild):**
+- `brand_tier` taxonomy: `designer` / `niche` / `luxury` / `clone_house` / `indie` / `celebrity` (exact values TBD at design)
+- Decide: thin `brand_profiles` table OR `brand_tier` column on `entity_market` — choose at design time
+- Seed from existing `_DESIGNER_ORIGINALS` / `_NICHE_ORIGINALS` frozensets + any clear clone-house set (Lattafa, Armaf, Alexandria Fragrances, etc.)
+- `classify_entity_role()` should eventually read DB, not static frozensets — but frozensets remain as fallback until data is confirmed clean
+- New Alembic migration
+
+**Explicitly out of scope for FTG-1:**
+- Founded year, country, current owner
+- Perfumer credits
+- Reformulation history
+- Discontinued status
+- Any broad encyclopedia project
+- Any web scraping
+
+---
+
+#### FTG-2 / RI1 — Relationship Intelligence Core
+**Status: PLANNED**
+
+**Purpose:** Move dupe / alternative / comparison relationships from hardcoded Python into a first-class evidence-backed data model.
+
+**Expected data model (preliminary — finalize at design):**
+```
+fragrance_relationships
+  subject_entity_id   UUID FK → entity_market
+  relation_type       VARCHAR   — see taxonomy below
+  object_entity_id    UUID FK → entity_market
+  confidence_score    NUMERIC(4,3)
+  is_public           BOOLEAN DEFAULT FALSE
+  operator_reviewed   BOOLEAN DEFAULT FALSE
+  first_observed_date DATE
+  last_confirmed_date DATE
+  evidence_summary    TEXT
+  formula_version     INTEGER DEFAULT 1
+  UNIQUE (subject_entity_id, relation_type, object_entity_id)
+
+relationship_evidence
+  relationship_id     FK → fragrance_relationships
+  evidence_type       'content_item' | 'query_pattern' | 'operator_note'
+  content_item_id     FK → canonical_content_items (nullable)
+  query_text          TEXT (nullable)
+  note                TEXT (nullable)
+  observed_date       DATE
+```
+
+**Relation type taxonomy note:**
+Do NOT embed brand type into `relation_type`. Preferred semantics:
+- `dupe_of` — strong direct clone
+- `market_alternative_to` — commonly sold/discussed as an affordable/accessible alternative
+- `inspired_by` — stylistically in the direction of, without being a direct dupe
+- `commonly_compared_to` — high comparison query volume; no explicit dupe claim
+Exact names finalized at design.
+
+**Migration seed:** 12 existing `_DUPE_RAW` rows → first DB rows with `operator_reviewed=TRUE` (founder-seeded), `confidence_score=0.8`.
+
+---
+
+#### FTG-3 / RI1-QA — Operator Review Gate for Relationship Claims
+**Status: PLANNED**
+
+**Purpose:** Prevent low-confidence or false relationship claims from reaching public entity pages. This is a credibility safeguard, not optional polish.
+
+**Required quality model:**
+```
+Signal detected or manually entered
+        ↓
+Candidate created: confidence < 0.5, is_public=FALSE, operator_reviewed=FALSE
+        ↓
+Operator review queue (reuse source-intake / admin-console pattern)
+        ↓
+Operator approves with confidence assessment
+        ↓
+is_public=TRUE only if: confidence >= 0.70 AND operator_reviewed=TRUE
+        ↓
+Public entity page displays relationship
+```
+
+**Rule:** Never auto-publish relationship updates. Scheduled evidence jobs create candidates only. All public display requires explicit operator approval.
+
+**Admin UI:** Extend existing admin console pattern (same model as source-intake operator review).
+
+---
+
+#### FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals
+**Status: PLANNED**
+
+**Purpose:** Use already-collected internal signals to generate relationship candidates — no external scraping.
+
+**Evidence sources (already in DB):**
+- `entity_topic_links.top_queries` — comparison query strings per entity per cycle
+- `extract_vs_competitors()` in `market_intelligence.py` — already extracts VS pattern candidates
+- Query phrase patterns: `dupe / clone / alternative / smells like / vs / similar to / compared to`
+
+**Execution rules:**
+- Scheduled job creates low-confidence candidates (`confidence_score ~0.3`) with evidence_type=`query_pattern`
+- Evidence text stored in `relationship_evidence`
+- Never auto-publish — all candidates enter operator review queue
+- Job is idempotent; re-running the same cycle does not duplicate evidence
+
+**What this unlocks:** Every time our content pipeline collects "Khamrah vs Angels' Share" in query data, that automatically surfaces as relationship candidate evidence for an operator to review.
+
+---
+
+#### FTG-5 / SN1 — Historical Intelligence Snapshot Layer
+**Status: PLANNED**
+
+**Purpose:** Store assembled intelligence outputs over time — not only raw topic distributions. Required for the 6-month trend report commercial product.
+
+**Gap today:** `entity_topic_snapshots` (DATA0, migration 043) stores raw topic distributions. The assembled output — narrative text, opportunity tags, differentiators, intents — is computed at request time and discarded. There is no historical record of *why* we said a perfume was trending in March vs May.
+
+**Expected new table:**
+```
+entity_intelligence_snapshots
+  snapshot_date       DATE
+  entity_id           UUID FK → entity_market
+  narrative           TEXT
+  opportunity_tags    JSONB  — ["alternative_demand", "high_intent"]
+  differentiators     JSONB  — ["dupe / alternative", "compliment getter"]
+  intents             JSONB  — ["review", "comparison"]
+  entity_role         VARCHAR(64)
+  trend_state         VARCHAR(32)
+  score               NUMERIC(8,2)
+  formula_version     INTEGER DEFAULT 1
+  UNIQUE (snapshot_date, entity_id)
+```
+
+**Storage estimate:** ~2,400 entities × 1 row/day × 365 = ~876K rows/year, ~500B/row → ~440MB/year. Manageable. Retain 24 months; trim to monthly aggregates beyond that.
+
+**Commercial reason:** "How did the market narrative around Baccarat Rouge 540 change between January and June 2026?" becomes a queryable question. This is what brands and commercial clients will pay for.
+
+---
+
+### Future FTG Extensions — Strategic North Star (Document Only — Not Ready for Implementation)
+
+These modules are documented as strategic direction. Do not begin implementation until FTG-2 through FTG-5 are production-verified.
+
+**FTG-6 / RI2 — Relationship Freshness & Scheduled Reconfirmation**
+- Bi-weekly re-evaluation of existing relationship confidence from fresh signal data
+- Confidence decay: relationship not reconfirmed in 60 days → score reduced
+- Internal signals only in v1; no broad web scraping
+
+**FTG-7 — Dupe Pressure Index**
+- How many active alternatives surround a given original
+- New alternatives appearing over time
+- Alternative-demand acceleration for iconic perfumes
+- "Dupe pressure score" as a derivative market signal for originals
+
+**FTG-8 — Origin Classification Engine**
+- Signal-driven detection of original / clone / market alternative / inspired / disputed classifications
+- Evidence and confidence-based; operator reviewed before publication
+
+**FTG-9 — Fragrance Whitespace Intelligence**
+- Demand momentum + catalog saturation + dupe saturation + intent gap + olfactive opportunity
+- Enables "there is rising demand for X-type fragrances but limited market supply" as a signal
+
+**FTG-10 — Creator-to-Market Transmission Intelligence**
+- Which creators first amplified a dupe claim vs. an original's organic rise
+- Creator spread concentration: single-creator hype vs. broad independent consensus
+- Ties into existing Creator Intelligence roadmap
+
+---
+
+### FTG Anti-Overbuilding Rules (Binding)
+
+These rules must not be violated in FTG implementation:
+
+1. Do not build a full Fragrantica-style encyclopedia in FTG-1. Brand tier only.
+2. Do not merge Encyclopedia responsibilities into the Resolver. They are separate domains.
+3. Do not auto-publish relationship updates. Every public relationship requires operator review.
+4. Do not start broad internet scraping for relationship truth in RI1/RI1-E. Internal signals only.
+5. Do not let early relationship classifications alter base market score or signal logic.
+6. Do not ship public relationship display until the operator review gate (FTG-3) is in place.
+7. Keep the first implementation narrow, reviewable, and production-safe.
+
+---
+
 ## Active Roadmap
 
 **Language & Region Architecture**
@@ -873,19 +1134,21 @@ Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (f
 - New badges: DUPE / ALTERNATIVE (amber), DESIGNER ALTERNATIVE (blue), CELEBRITY ALTERNATIVE (pink)
 - "Alternative to: {reference_original}" line in entity hero (amber text, shown only when set)
 
-**Tests:** `tests/unit/test_semantic_phase5.py` — 63/63 pass. Combined: 186/186 semantic tests pass.
+**Tests:** `tests/unit/test_semantic_phase5.py` — 63/63 pass at Phase 5 launch. 67/67 after KB0 regression suite added (2026-05-14).
 
 **Production sanity sweep — 8 entities (2026-05-06, commits 64f3a02 + 96772e0):**
 - Creed Aventus: entity_role=niche_original · reference_original=None · narrative="alternative demand around this reference scent" ✓
 - Armaf Club de Nuit Intense Man: entity_role=dupe_alternative · reference_original="Creed Aventus" · dupe_family="Aventus alternatives" · narrative="gaining attention as an alternative to Creed Aventus, with active comparison activity" ✓
 - Armaf Club de Nuit (broad line): entity_role=unknown · no false badge · competitors=['Creed Aventus'] (DB-resolved only) ✓
 - MFK Baccarat Rouge 540: entity_role=niche_original · reference_original=None ✓
-- Lattafa Khamrah: entity_role=dupe_alternative · reference_original="Maison Francis Kurkdjian Baccarat Rouge 540" · dupe_family="BR540 alternatives" ✓
+- Lattafa Khamrah: entity_role=dupe_alternative · reference_original="Kilian Angels' Share" · dupe_family="Angels' Share alternatives" ✓ **(corrected by KB0 — was wrongly mapped to BR540 at Phase 5 launch)**
 - Zara Red Temptation: NOT IN entity_market (not yet tracked) — dupe map entry ready for when added ✓
 - Ariana Grande Cloud: NOT IN entity_market (not yet tracked) — dupe map entry ready for when added ✓
 - Montblanc Explorer: NOT IN entity_market (not yet tracked) — dupe map entry ready for when added ✓
 
 All 5 tracked entities pass. 3 untracked entities have correct dupe map entries.
+
+**KB0 correction (2026-05-14):** Lattafa Khamrah was incorrectly mapped to BR540 at Phase 5 launch. Corrected to Kilian Angels' Share in commit b79143d. Regression tests added (TestKhamrahRegression, 4 cases). This bug triggered the FTG — Fragrance Truth Graph program (see dedicated section).
 
 **No schema migration. No backfill.**
 
@@ -1528,6 +1791,12 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | REPORT1 — Fragrance Market Reports v1 | PLANNED | — |
 | PRO1 — Pro Tier + Paywall v1 | PLANNED | — |
 | TT2 — TikTok Research API Track | PLANNED (parallel admin track) | — |
+| FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | PLANNED | — |
+| FTG-2 / RI1 — Relationship Intelligence Core | PLANNED | — |
+| FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
+| FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
+| FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 
 ---
 
