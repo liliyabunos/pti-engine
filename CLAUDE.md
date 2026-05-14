@@ -1100,6 +1100,113 @@ These modules are documented as strategic direction. Do not begin implementation
 
 ---
 
+### KB-CAT1 — Canonical Brand / Collection / Sub-brand Model
+**STATUS: ARCHITECTURE ASSESSMENT COMPLETE (2026-05-14) — NOT YET ACTIVE IMPLEMENTATION**
+
+**Trigger:** DATA2 fixed the brand-page join bug for concentration suffixes, but exposed that some Fragrantica catalog "brand" nodes are actually collections or sub-brands (e.g. "Xerjoff - Join the Club", "Xerjoff - Casamorati"), causing fragmented brand pages that don't reflect real market brand architecture.
+
+**Problem confirmed — current state:**
+
+In the resolver/catalog (dev subset — 260 brands, production ~1,600):
+- 4 brands carry `"Parent - Collection"` notation: Xerjoff - Join the Club (6 perfumes), Xerjoff - Casamorati (11 perfumes), Xerjoff - XJ Oud Attars (5 perfumes), Filippo Sorcinelli - SAUF (5 perfumes; genuine standalone brand name, NOT a sub-collection)
+- Of these, 3 have a parent brand that also exists in the resolver: the three Xerjoff sub-collections
+- In production (~1,600 brands), expect 15–50 similar nodes; exact count requires production scope query
+
+**Current internal representation (Xerjoff):**
+- `brands` table: 4 separate nodes — "Xerjoff" (id=11, 38 perfumes), "Xerjoff - Join the Club" (id=116, 6 perfumes), "Xerjoff - Casamorati" (id=836, 11 perfumes), "Xerjoff - XJ Oud Attars" (id=856, 5 perfumes)
+- `entity_market`: each node gets its own brand entity via the brand rollup (`GROUP BY em.brand_name`)
+- `brand_identity_map`: slugs are xerjoff, xerjoff---join-the-club, xerjoff---casamorati, xerjoff---xj-oud-attars
+- Perfume `brand_name` in entity_market = resolver's brand canonical_name (e.g. "Xerjoff - Join the Club") — not the parent
+- `_brand_entity_id_for()` links perfume pages to their resolver brand entity, so "Don" links to brand-xerjoff---join-the-club, NOT brand-xerjoff
+- Currently: no parent/child relationship exists anywhere in the data model
+
+**Semantic distinction confirmed:**
+- "Xerjoff - Join the Club" → **collection** — themed fragrance collection within Xerjoff's portfolio, no independent brand identity
+- "Xerjoff - Casamorati" → **heritage sub-brand** — Casamorati is a historic Italian house acquired by Xerjoff in 2015, with its own distinct aesthetics, market positioning, and loyal customer base. Deserves richer semantic treatment than "collection."
+- "Xerjoff - XJ Oud Attars" → **product line** — specialized oud attars/oils line (not EDP fragrances), may be closer to a product category than a named collection
+
+**Recommended taxonomy (v1 minimal):** 3 node types:
+- `brand` — standalone top-level market brand with independent market identity (default)
+- `collection` — themed grouping of perfumes under a parent brand, no independent legal/brand identity
+- `sub_brand` — independently branded line under a parent brand, often an acquisition or distinct heritage identity (Casamorati)
+
+**Recommended relation model (v1):**
+- `collection belongs_to brand` via `parent_brand_normalized` reference
+- `sub_brand belongs_to brand` via `parent_brand_normalized` reference
+- `perfume belongs_to collection | sub_brand | brand` (derived from resolver brand assignment)
+
+**Recommended data model:** Extend `brand_profiles` (migration 044):
+- Add `node_type VARCHAR(32) DEFAULT 'brand'` — values: brand / collection / sub_brand
+- Add `parent_brand_normalized TEXT NULL` — normalized name of parent brand (matches brand_name_normalized on parent row)
+- Rationale: brand_profiles already exists, is already operator-reviewed, already has normalized lookup key — extending it avoids a new table and keeps brand canonicalization in one place
+
+**Client-visible navigation (target product state):**
+- Parent brand page (`/entities/brand/brand-xerjoff`): shows "Collections" section (Join the Club, XJ Oud Attars) and "Sub-brands" section (Casamorati) with rollup scores
+- Collection page (`/entities/brand/brand-xerjoff---join-the-club`): shows "COLLECTION · Xerjoff" label + parent brand link; current URL preserved
+- Sub-brand page (`/entities/brand/brand-xerjoff---casamorati`): shows "SUB-BRAND · Xerjoff" label + parent brand link; current URL preserved
+- Perfume page breadcrumb: Xerjoff → Join the Club → Don (via brand_profiles chain)
+- Screener: brand_name on results should ideally show "Xerjoff" (parent) for collection-parented perfumes
+
+**URL / backwards compatibility:**
+- Live indexed URLs (`/entities/brand/brand-xerjoff---join-the-club`, `/entities/brand/brand-xerjoff---casamorati`) must be preserved — no redirects until parent pages are verified
+- Change: semantic label from "BRAND" to "COLLECTION" or "SUB-BRAND" in the UI only — same URL, same entity, enriched display
+- Public pages (`/brands/xerjoff---join-the-club`) may eventually redirect to parent `/brands/xerjoff#join-the-club` in KB-CAT1-D+ — deferred
+
+**Rollup / scoring implications:**
+- Currently: "Xerjoff" brand score = only perfumes with `brand_name = "Xerjoff"` (excludes Join the Club, Casamorati perfumes)
+- After KB-CAT1-E: add `parent_brand_name` column to entity_market perfume rows; rollup aggregates by parent_brand_name to give "Xerjoff" a holistic score
+- This is the highest-risk change — "Xerjoff" brand score would jump significantly once sub-collection perfumes roll up to it; schedule for last
+- Safe sequencing: display/navigation changes first (KB-CAT1-B/C/D), rollup changes last (KB-CAT1-E)
+
+**Resolver and ingestion:** No changes to resolver. Resolver correctly identifies what brand Fragrantica assigns — that's correct for identity. The canonical hierarchy layer is purely a market-governance addition layered on top.
+
+**Operator review strategy:**
+- Auto-detect candidates: brands table entries where `canonical_name LIKE '% - %'` AND the prefix exists as another brand row → flag as candidate
+- Operator assigns: node_type (collection / sub_brand), parent_brand_normalized
+- Never auto-merge; never auto-parent
+
+**Risks if rushed:**
+- Brand rollup score changes (Xerjoff parent score inflates) — could distort dashboard/screener rankings
+- entity_type='brand' is assumed everywhere (brand pages, brand screener, brand filter) — changing semantics without URL/route changes first creates display inconsistencies
+- SEO: public brand pages (`/brands/xerjoff---join-the-club`) are indexed — reclassifying without preserving URLs causes 404s
+
+**Proposed roadmap:**
+
+KB-CAT1-A — Audit & Taxonomy Lock
+- Production scope query to count all `resolver_brands` rows with parent-brand pattern
+- Finalize node_type taxonomy (brand / collection / sub_brand)
+- Operator reviews: classify all ~15–50 candidates
+
+KB-CAT1-B — brand_profiles Hierarchy Extension (migration)
+- Add `node_type` and `parent_brand_normalized` to brand_profiles
+- Seed Xerjoff hierarchy: Join the Club → collection → Xerjoff; Casamorati → sub_brand → Xerjoff; XJ Oud Attars → collection → Xerjoff
+- Backend: `get_brand_profile()` returns node_type and parent chain
+- API: expose node_type + parent_brand on brand entity detail response
+
+KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
+- Brand entity detail page: show node_type badge ("COLLECTION" / "SUB-BRAND") instead of implied "BRAND" for non-root nodes
+- Brand entity detail page: show parent brand link/breadcrumb
+- Parent brand page (Xerjoff): show "Collections" and "Sub-brands" sections using brand_profiles hierarchy query
+- No URL changes. No rollup changes. Display layer only.
+
+KB-CAT1-D — Perfume Breadcrumbs
+- Perfume entity page + public perfume page: breadcrumb uses brand_profiles chain
+- "Don" shows: Xerjoff → Join the Club → Don
+- "1888" shows: Xerjoff → Casamorati → 1888
+
+KB-CAT1-E — Parent Brand Rollup (high risk — schedule last)
+- Add `parent_brand_name TEXT NULL` to entity_market perfume rows
+- Brand rollup aggregates by parent_brand_name for parent-level brand scores
+- Requires careful QA: Xerjoff brand score before/after comparison
+- Requires dashboard/screener filter updates
+
+KB-CAT1-F — Broader Governance Queue
+- Systematic rollout beyond Xerjoff using candidate detection + operator review UI
+
+**Add to CLAUDE.md active roadmap:** Yes — pending founder approval to activate as a roadmap branch.
+
+---
+
 ### FTG Anti-Overbuilding Rules (Binding)
 
 These rules must not be violated in FTG implementation:
@@ -1178,11 +1285,9 @@ FragranceIndex.ai treats external catalog imports (Fragrantica, Parfumo) as raw 
 
 ---
 
-### Future Canonical Catalog Governance (Not Part of DATA2)
+### Future Canonical Catalog Governance → KB-CAT1
 
-- **Parent-brand / collection normalization:** Fragrantica catalogs `"Xerjoff - Join the Club"` as a brand entry, not as parent brand "Xerjoff" + collection/line "Join the Club". This causes fragmented brand pages (a user browsing "Xerjoff" brand cannot find "Join the Club" variants). DATA2 does NOT fix this. Future work: operator-reviewed canonical brand overrides that remap source-catalog brand nodes to parent brands with collection metadata.
-- **Source-brand fragmentation review:** Other Fragrantica-modeled brands may have similar collection-as-brand patterns. A systematic audit should precede any broad catalog normalization.
-- **Operator-reviewed overrides:** Parent/collection remapping must be explicitly reviewed and not auto-applied from source data.
+See KB-CAT1 — Canonical Brand / Collection / Sub-brand Model in the FTG section below. Architecture assessment complete (2026-05-14). Implementation not started.
 
 ---
 
