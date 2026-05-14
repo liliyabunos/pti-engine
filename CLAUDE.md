@@ -785,9 +785,9 @@ This is the commercial foundation for Deep Dive Reports and brand intelligence p
 ---
 
 #### FTG-1 / KB1-MIN — Canonical Brand Classification Foundation
-**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
 **Migration: 044**
-**Commits: TBD (this workstream)**
+**Commit: 5085fab**
 
 **Schema decision: separate `brand_profiles` table** (not `entity_market` or `brands`)
 - `brands` table is the Fragrantica/resolver catalog — different domain
@@ -830,6 +830,23 @@ brand_profiles (
 **Frozensets remain:** `_DESIGNER_NORM` and `_NICHE_NORM` are still present as the safety fallback. They are NOT removed in this phase. Removal is FTG-1-CLEANUP (post-production verified, separate task).
 
 **Tests:** `tests/unit/test_ftg1_brand_profiles.py` — 31/31 pass. No regressions in `test_entity_role.py` (92) or `test_semantic_phase5.py` (67) or `test_semantic_phase3.py` (31) — 221 total pass.
+
+**Production verification (2026-05-14) — COMPLETE:**
+- Deploy `2eee0dce` · SUCCESS · ALEMBIC_EXIT=0 ✓
+- `/perfumes/creed-aventus` → "Niche Original" badge (violet) ✓
+- `/perfumes/dior-sauvage` → "Designer Original" badge (sky) ✓
+- `/perfumes/lattafa-khamrah` → "Dupe / Alternative" · "Alternative to: Kilian Angels' Share" ✓ (KB0 unaffected)
+- Entity role classification stable across all verified entities ✓
+
+**Verify commands (production DB):**
+```sql
+SELECT version_num FROM alembic_version;  -- expect 044
+SELECT COUNT(*), brand_tier FROM brand_profiles GROUP BY brand_tier ORDER BY brand_tier;
+-- expect: celebrity=2, clone_house=9, designer=66, niche=136 (total 213)
+SELECT brand_tier FROM brand_profiles WHERE brand_name_normalized = 'creed';    -- niche
+SELECT brand_tier FROM brand_profiles WHERE brand_name_normalized = 'dior';     -- designer
+SELECT brand_tier FROM brand_profiles WHERE brand_name_normalized = 'armaf';    -- clone_house
+```
 
 **Explicitly out of scope (unchanged):**
 - Founded year, country, current owner
@@ -1825,7 +1842,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | PRO1 — Pro Tier + Paywall v1 | PLANNED | — |
 | TT2 — TikTok Research API Track | PLANNED (parallel admin track) | — |
 | FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
+| FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-2 / RI1 — Relationship Intelligence Core | PLANNED | — |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
