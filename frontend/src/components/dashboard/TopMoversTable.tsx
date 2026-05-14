@@ -123,9 +123,9 @@ function buildColumns(
               )}
               <EntityTypePill type={row.entity_type} />
             </span>
-            {row.brand_name && !isBrand && (
+            {(row.brand_hierarchy_label ?? row.brand_name) && !isBrand && (
               <span className="block truncate max-w-[160px] text-[10px] text-zinc-600">
-                {row.brand_name}
+                {row.brand_hierarchy_label ?? row.brand_name}
               </span>
             )}
             {isBrand && (

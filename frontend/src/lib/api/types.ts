@@ -45,6 +45,8 @@ export interface TopMoverRow {
   trend_state: string | null;
   /** Concentration-variant canonical names collapsed into this row. */
   variant_names: string[];
+  /** KB-CAT1-D — compact hierarchy label e.g. "Xerjoff · Join the Club"; null for root brands */
+  brand_hierarchy_label: string | null;
 }
 
 export interface SignalRow {
@@ -95,6 +97,8 @@ export interface EntitySummary {
   trend_state: string | null;
   /** Top 3 notes — populated in screener response, empty otherwise */
   top_notes: string[];
+  /** KB-CAT1-D — compact hierarchy label e.g. "Xerjoff · Join the Club"; null for root brands */
+  brand_hierarchy_label: string | null;
 }
 
 export interface ScreenerResponse {
@@ -232,6 +236,8 @@ export interface PerfumeEntityDetail {
   similar_perfumes: SimilarPerfumeRow[];
   /** Brand entity_id slug for navigation to brand page (null if brand not tracked) */
   brand_entity_id: string | null;
+  /** KB-CAT1-D — hierarchy-aware brand context; null if brand_name is not set */
+  brand_display: BrandDisplayContext | null;
   /** Phase I5 — Topic Intelligence (raw) */
   top_topics: string[];
   top_queries: string[];
@@ -244,6 +250,17 @@ export interface PerfumeEntityDetail {
   narrative: string | null;
   opportunities: string[];
   competitors: string[];
+}
+
+/** KB-CAT1-D — hierarchy-aware brand display context for perfume entity pages */
+export interface BrandDisplayContext {
+  root_brand_name: string;
+  root_brand_entity_id: string | null;
+  /** Present when perfume belongs to a collection or sub_brand; absent for root-brand perfumes */
+  node_name: string | null;
+  /** "brand" | "collection" | "sub_brand" */
+  node_type: string;
+  node_entity_id: string | null;
 }
 
 /** KB-CAT1-C — a child brand node (collection or sub_brand) under a parent brand */

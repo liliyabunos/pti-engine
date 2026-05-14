@@ -18,6 +18,10 @@ from sqlalchemy.orm import Session
 
 from perfume_trend_sdk.analysis.ranking.variant_collapser import collapse_and_rank
 from perfume_trend_sdk.api.dependencies import get_db_session
+from perfume_trend_sdk.db.market.brand_profile import (
+    fetch_brand_hierarchy_map,
+    format_brand_hierarchy_label,
+)
 from perfume_trend_sdk.api.queries import (
     fetch_brand_name_map,
     fetch_dashboard_kpis,
@@ -180,6 +184,7 @@ def get_dashboard(
             latest_signal_strength=cr.latest_signal_strength,
             trend_state=cr.trend_state,  # Phase I3
             variant_names=cr.variant_names,
+            brand_hierarchy_label=format_brand_hierarchy_label(cr.brand_name, hierarchy_map),  # KB-CAT1-D
         ))
 
     breakouts = [m for m in top_movers if m.entity_id in breakout_entity_ids]
@@ -273,6 +278,8 @@ def get_screener(
             "fetch_rows_for_range",
         )
     brand_name_map = _safe(lambda: fetch_brand_name_map(db), {}, "fetch_brand_name_map")
+    # KB-CAT1-D — pre-fetch hierarchy map once per request (tiny: ~4 rows)
+    hierarchy_map = _safe(lambda: fetch_brand_hierarchy_map(db), {}, "fetch_brand_hierarchy_map")
     latest_signal_map = _safe(lambda: fetch_latest_signal_map(db), {}, "fetch_latest_signal_map")
 
     if sort_by not in _SORT_FIELDS:
@@ -356,6 +363,7 @@ def get_screener(
             latest_signal_type=sig_info[0] if sig_info else None,
             latest_signal_strength=sig_info[1] if sig_info else None,
             trend_state=snap.trend_state if snap else None,  # Phase I3
+            brand_hierarchy_label=format_brand_hierarchy_label(brand_name, hierarchy_map),  # KB-CAT1-D
         ))
 
     # Deduplicate by case-insensitive canonical_name: keep the row with the

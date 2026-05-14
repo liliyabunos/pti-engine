@@ -51,6 +51,8 @@ class TopMoverRow(BaseModel):
     # Phase I3 — directional trend state: breakout|rising|peak|stable|declining|emerging
     trend_state: Optional[str] = None
     variant_names: List[str] = []              # concentration variants collapsed into this row
+    # KB-CAT1-D — compact hierarchy label e.g. "Xerjoff · Join the Club"; None for root brands
+    brand_hierarchy_label: Optional[str] = None
 
 
 class DashboardResponse(BaseModel):

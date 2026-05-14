@@ -46,7 +46,12 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     classify_entity_role,
     get_dupe_profile,
 )
-from perfume_trend_sdk.db.market.brand_profile import get_brand_tier, get_brand_profile
+from perfume_trend_sdk.db.market.brand_profile import (
+    get_brand_tier,
+    get_brand_profile,
+    fetch_brand_hierarchy_map,
+    format_brand_hierarchy_label,
+)
 from perfume_trend_sdk.db.market.fragrance_relationship import get_approved_relationship
 
 router = APIRouter()
@@ -473,6 +478,19 @@ class SimilarPerfumeRow(BaseModel):
     shared_notes: int = 0
 
 
+class BrandDisplayContext(BaseModel):
+    """KB-CAT1-D — hierarchy-aware brand display context for perfume entity pages.
+
+    For root brands: root_brand_name=brand_name, node_name=None.
+    For collections/sub_brands: root_brand_name=parent brand, node_name=short label.
+    """
+    root_brand_name: str                     # top-level parent brand (or the brand itself)
+    root_brand_entity_id: Optional[str] = None   # entity_id of root brand in entity_market
+    node_name: Optional[str] = None          # short name of collection/sub_brand (None for root)
+    node_type: str = "brand"                 # "brand" | "collection" | "sub_brand"
+    node_entity_id: Optional[str] = None     # entity_id of the collection/sub_brand (None for root)
+
+
 class PerfumeEntityDetail(BaseModel):
     """Richer perfume entity response — works for tracked AND catalog-only entities."""
     id: str
@@ -526,6 +544,8 @@ class PerfumeEntityDetail(BaseModel):
     similar_perfumes: List[SimilarPerfumeRow] = []
     # Brand navigation — entity_id slug for the brand entity page (if the brand is tracked)
     brand_entity_id: Optional[str] = None
+    # KB-CAT1-D — hierarchy-aware brand display context
+    brand_display: Optional[BrandDisplayContext] = None
 
 
 class ChildBrandNode(BaseModel):
@@ -984,6 +1004,61 @@ def list_entities(db: Session = Depends(get_db_session)) -> List[EntitySummary]:
 # MUST be defined before /perfume/{id} and /brand/{id} to avoid shadowing.
 # ---------------------------------------------------------------------------
 
+def _resolve_brand_display_context(
+    db: Session,
+    brand_name: Optional[str],
+    brand_entity_id: Optional[str],
+) -> Optional[BrandDisplayContext]:
+    """Return BrandDisplayContext for a perfume entity. KB-CAT1-D.
+
+    For root brands: context carries root_brand_name + root_brand_entity_id, no node.
+    For collections/sub_brands: context carries parent info + short node name.
+    Non-fatal: returns simple root context on any error.
+    """
+    if not brand_name:
+        return None
+    bp = get_brand_profile(db, brand_name)
+    node_type = bp["node_type"] if bp else "brand"
+    parent_norm = bp["parent_brand_normalized"] if bp else None
+
+    if node_type != "brand" and parent_norm:
+        # This brand is a collection or sub_brand — resolve parent
+        parent_eid = _get_parent_entity_id(db, parent_norm)
+        parent_row = _safe(lambda: db.execute(
+            text(
+                "SELECT canonical_name FROM entity_market "
+                "WHERE entity_type = 'brand' AND LOWER(canonical_name) = :pnorm LIMIT 1"
+            ),
+            {"pnorm": parent_norm},
+        ).fetchone(), None, "brand_display_parent_name")
+        parent_name = (
+            parent_row[0]
+            if parent_row
+            else " ".join(w.capitalize() for w in parent_norm.split())
+        )
+        # Short node name: strip "Parent Brand - " prefix
+        prefix = parent_name + " - "
+        if brand_name.lower().startswith(prefix.lower()):
+            node_name = brand_name[len(prefix):]
+        else:
+            node_name = brand_name
+        return BrandDisplayContext(
+            root_brand_name=parent_name,
+            root_brand_entity_id=parent_eid,
+            node_name=node_name,
+            node_type=node_type,
+            node_entity_id=brand_entity_id,
+        )
+    # Root brand
+    return BrandDisplayContext(
+        root_brand_name=brand_name,
+        root_brand_entity_id=brand_entity_id,
+        node_name=None,
+        node_type=node_type,
+        node_entity_id=None,
+    )
+
+
 def _get_parent_entity_id(db: Session, parent_brand_normalized: Optional[str]) -> Optional[str]:
     """Return entity_id of the parent brand in entity_market, or None. KB-CAT1-C."""
     if not parent_brand_normalized:
@@ -1231,6 +1306,8 @@ def get_perfume_entity(
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
         brand_entity_id = _brand_entity_id_for(db, em.brand_name)
+        # KB-CAT1-D — hierarchy-aware brand display context
+        p_brand_display = _resolve_brand_display_context(db, em.brand_name, brand_entity_id)
         return PerfumeEntityDetail(
             id=em.entity_id,
             resolver_id=resolver_id,
@@ -1271,6 +1348,7 @@ def get_perfume_entity(
             notes_source=notes_source,
             similar_perfumes=similar,
             brand_entity_id=brand_entity_id,
+            brand_display=p_brand_display,             # KB-CAT1-D
         )
 
     # Step 2: try catalog-only lookup via resolver_id
@@ -1311,6 +1389,8 @@ def get_perfume_entity(
         cat_reference_original = _cat_dupe.reference_original if _cat_dupe else None
         cat_relation_type = None
         cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None
+    # KB-CAT1-D — hierarchy-aware brand display context
+    cat_brand_display = _resolve_brand_display_context(db, rp_row[2], brand_entity_id)
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
@@ -1329,6 +1409,7 @@ def get_perfume_entity(
         notes_source=cat_source,
         similar_perfumes=similar,
         brand_entity_id=brand_entity_id,
+        brand_display=cat_brand_display,              # KB-CAT1-D
     )
 
 

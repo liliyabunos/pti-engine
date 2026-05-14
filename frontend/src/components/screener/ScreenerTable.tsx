@@ -64,9 +64,9 @@ const COLUMNS = [
             <span className="block text-[10px] text-sky-700/70">
               portfolio aggregate
             </span>
-          ) : row.brand_name ? (
+          ) : (row.brand_hierarchy_label ?? row.brand_name) ? (
             <span className="block truncate max-w-[180px] text-[10px] text-zinc-600">
-              {row.brand_name}
+              {row.brand_hierarchy_label ?? row.brand_name}
             </span>
           ) : null}
         </div>

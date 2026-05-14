@@ -595,7 +595,48 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                   <h1 className="mt-1 text-xl font-bold leading-tight text-zinc-100">
                     {data.canonical_name}
                   </h1>
-                  {data.brand_name && (
+                  {/* KB-CAT1-D — hierarchy-aware brand display */}
+                  {data.brand_display ? (
+                    data.brand_display.node_name ? (
+                      // Collection or sub_brand: show "Root Brand → Node" with two links
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-zinc-400">
+                        {data.brand_display.root_brand_entity_id ? (
+                          <Link
+                            href={`/entities/brand/${encodeURIComponent(data.brand_display.root_brand_entity_id)}`}
+                            className="underline underline-offset-4 decoration-zinc-700 hover:text-zinc-200 hover:decoration-zinc-400 transition-colors cursor-pointer"
+                          >
+                            {data.brand_display.root_brand_name}
+                          </Link>
+                        ) : (
+                          <span>{data.brand_display.root_brand_name}</span>
+                        )}
+                        <span className="text-zinc-600">→</span>
+                        {data.brand_display.node_entity_id ? (
+                          <Link
+                            href={`/entities/brand/${encodeURIComponent(data.brand_display.node_entity_id)}`}
+                            className="underline underline-offset-4 decoration-zinc-700 hover:text-zinc-200 hover:decoration-zinc-400 transition-colors cursor-pointer"
+                          >
+                            {data.brand_display.node_name}
+                          </Link>
+                        ) : (
+                          <span>{data.brand_display.node_name}</span>
+                        )}
+                      </p>
+                    ) : (
+                      // Root brand: single link
+                      data.brand_display.root_brand_entity_id ? (
+                        <Link
+                          href={`/entities/brand/${encodeURIComponent(data.brand_display.root_brand_entity_id)}`}
+                          className="mt-0.5 block text-xs text-zinc-400 underline underline-offset-4 decoration-zinc-700 hover:text-zinc-200 hover:decoration-zinc-400 transition-colors cursor-pointer"
+                        >
+                          {data.brand_display.root_brand_name}
+                        </Link>
+                      ) : (
+                        <p className="mt-0.5 text-xs text-zinc-500">{data.brand_display.root_brand_name}</p>
+                      )
+                    )
+                  ) : data.brand_name ? (
+                    // Fallback: no brand_display (e.g. brand not in brand_profiles)
                     data.brand_entity_id ? (
                       <Link
                         href={`/entities/brand/${encodeURIComponent(data.brand_entity_id)}`}
@@ -606,7 +647,7 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                     ) : (
                       <p className="mt-0.5 text-xs text-zinc-500">{data.brand_name}</p>
                     )
-                  )}
+                  ) : null}
                   {data.reference_original && (
                     <p className="mt-0.5 text-xs text-amber-500/80">
                       {data.relation_type === "dupe_of"

@@ -40,6 +40,8 @@ class EntitySummary(BaseModel):
     trend_state: Optional[str] = None
     # Top 3 notes for screener chips (populated only in screener response, empty otherwise)
     top_notes: List[str] = []
+    # KB-CAT1-D — compact hierarchy label e.g. "Xerjoff · Join the Club"; None for root brands
+    brand_hierarchy_label: Optional[str] = None
 
 
 class SnapshotRow(BaseModel):
