@@ -80,8 +80,8 @@ _DUPE_RAW: dict[str, DupeProfile] = {
     # ── Maison Francis Kurkdjian Baccarat Rouge 540 alternatives ────────────
     "Lattafa Khamrah": DupeProfile(
         "dupe_alternative",
-        "Maison Francis Kurkdjian Baccarat Rouge 540",
-        "BR540 alternatives",
+        "Kilian Angels' Share",
+        "Angels' Share alternatives",
     ),
     "Zara Red Temptation": DupeProfile(
         "dupe_alternative",

@@ -13,6 +13,7 @@ Tests cover:
   F10. DupeProfile metadata correct (reference_original, dupe_family).
   F11. get_dupe_profile returns None for originals.
   F12. Role-aware narrative for dupe entities uses reference_original.
+  F13. KB0 regression — Lattafa Khamrah maps to Angels' Share, NOT BR540.
   F13. ROLE_LABELS covers all new roles.
   F14. New roles in RENDERABLE_ROLES.
 """
@@ -421,3 +422,42 @@ class TestExports:
 
     def test_unknown_not_in_renderable(self):
         assert "unknown" not in RENDERABLE_ROLES
+
+
+# ---------------------------------------------------------------------------
+# KB0 — Khamrah regression (bugfix 2026-05-14)
+# Lattafa Khamrah was incorrectly mapped to Baccarat Rouge 540.
+# Correct reference: Kilian Angels' Share.
+# Lattafa Khamrah Qahwa is a separate product — remains Angels' Share.
+# ---------------------------------------------------------------------------
+
+class TestKhamrahRegression:
+    """KB0: regression guard for the Khamrah / BR540 false mapping."""
+
+    def test_khamrah_is_not_br540(self):
+        """Lattafa Khamrah must NOT resolve to Baccarat Rouge 540."""
+        profile = get_dupe_profile("Lattafa", "Lattafa Khamrah")
+        assert profile is not None
+        assert profile.reference_original != "Maison Francis Kurkdjian Baccarat Rouge 540", (
+            "KB0 regression: Lattafa Khamrah was wrongly mapped to BR540. "
+            "The correct reference is Kilian Angels' Share."
+        )
+
+    def test_khamrah_is_angels_share(self):
+        """Lattafa Khamrah MUST resolve to Kilian Angels' Share."""
+        profile = get_dupe_profile("Lattafa", "Lattafa Khamrah")
+        assert profile is not None
+        assert profile.reference_original == "Kilian Angels' Share"
+        assert profile.dupe_family == "Angels' Share alternatives"
+        assert profile.role == "dupe_alternative"
+
+    def test_khamrah_role_is_dupe_alternative(self):
+        role = classify_entity_role("Lattafa", "Lattafa Khamrah")
+        assert role == "dupe_alternative"
+
+    def test_khamrah_qahwa_still_angels_share(self):
+        """Lattafa Khamrah Qahwa is a distinct product — must remain Angels' Share."""
+        profile = get_dupe_profile("Lattafa", "Lattafa Khamrah Qahwa")
+        assert profile is not None
+        assert profile.reference_original == "Kilian Angels' Share"
+        assert profile.dupe_family == "Angels' Share alternatives"
