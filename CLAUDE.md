@@ -1255,7 +1255,8 @@ KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
 
 KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context
 **STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
-**Commit: b834030**
+**Commit: b834030 · P0 hotfix: cc7e712**
+**P0 regression fixed (commit cc7e712):** KB-CAT1-D added `brand_hierarchy_label=format_brand_hierarchy_label(cr.brand_name, hierarchy_map)` to the dashboard route's TopMoverRow loop, but forgot to initialize `hierarchy_map` in the dashboard route (only initialized in screener route). Every dashboard request raised `NameError: name 'hierarchy_map' is not defined` → HTTP 500 → frontend "TypeError: Failed to fetch". Fix: added `hierarchy_map = _safe(lambda: fetch_brand_hierarchy_map(db), {}, "fetch_brand_hierarchy_map")` in the dashboard route at the same location as screener.
 - `fetch_brand_hierarchy_map(db)` + `format_brand_hierarchy_label(brand_name, hierarchy_map)` in `brand_profile.py` — bulk-safe compact label (e.g. "Xerjoff · Join the Club"); ~4-row fetch per request, no N+1
 - `BrandDisplayContext` Pydantic model in `routes/entities.py` + `_resolve_brand_display_context()` helper; populated on `PerfumeEntityDetail` for tracked + catalog-only perfumes
 - Dashboard route: pre-fetches `hierarchy_map` once; populates `brand_hierarchy_label` on `TopMoverRow`
@@ -2228,7 +2229,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
-| KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
+| KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — P0 HOTFIX DEPLOYED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 
 ---
 
