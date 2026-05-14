@@ -938,7 +938,7 @@ Rationale: Montblanc Explorer, Zara Red Temptation, Ariana Grande Cloud have no 
 - Does NOT implement operator review UI (that is FTG-3)
 - Does NOT add `consensus_status` field (deferred to FTG-3/FTG-4)
 
-**FTG-3 remains the gate:** FTG-3 / RI1-QA owns the `is_public=TRUE` promotion workflow and the admin review queue. All public display of relationship data requires FTG-3 completion.
+**FTG-3 is complete:** FTG-3 / RI1-QA has implemented the `is_public=TRUE` promotion workflow and admin review queue (migration 047, commit 470837d). Public relationship display is now DB-backed.
 
 **Tests:** `tests/unit/test_ftg2_relationship_intelligence.py` — 42/42 pass. Combined: 235/235 pass.
 
@@ -961,34 +961,63 @@ ORDER BY subject_canonical_name;
 -- Lattafa Khamrah | market_alternative_to | 0.700
 -- Lattafa Khamrah Qahwa | market_alternative_to | 0.700
 SELECT is_public, COUNT(*) FROM fragrance_relationships GROUP BY is_public;
--- FALSE | 7  (all rows non-public; FTG-3 gates promotion)
+-- TRUE | 7  (all rows promoted to public by migration 047 / FTG-3)
 ```
 
 ---
 
-#### FTG-3 / RI1-QA — Operator Review Gate for Relationship Claims
-**Status: PLANNED**
+#### FTG-3 / RI1-QA — Operator Review Gate + DB-Backed Public Relationship Display
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
+**Migration: 047**
+**Commit: 470837d**
 
-**Purpose:** Prevent low-confidence or false relationship claims from reaching public entity pages. This is a credibility safeguard, not optional polish.
+**Purpose:** Make relationship intelligence quality-controlled and publicly reliable. Move public relationship display from the legacy hardcoded `_DUPE_RAW` path to approved DB-backed relationship records.
 
-**Required quality model:**
-```
-Signal detected or manually entered
-        ↓
-Candidate created: confidence < 0.5, is_public=FALSE, operator_reviewed=FALSE
-        ↓
-Operator review queue (reuse source-intake / admin-console pattern)
-        ↓
-Operator approves with confidence assessment
-        ↓
-is_public=TRUE only if: confidence >= 0.70 AND operator_reviewed=TRUE
-        ↓
-Public entity page displays relationship
-```
+**Migration 047 — Seed promotion (Option A):**
+All 7 FTG-2 seeded rows promoted to `is_public=TRUE` in the same deploy. Condition: `operator_reviewed=TRUE AND confidence_score >= 0.700`. All 7 rows satisfied; migration is idempotent.
 
-**Rule:** Never auto-publish relationship updates. Scheduled evidence jobs create candidates only. All public display requires explicit operator approval.
+**Public quality gate (all three must pass):**
+- `is_public = TRUE`
+- `operator_reviewed = TRUE`
+- `confidence_score >= 0.700`
 
-**Admin UI:** Extend existing admin console pattern (same model as source-intake operator review).
+**DB-backed read path:**
+`get_approved_relationship(db, subject_canonical_name)` — returns `(relation_type, object_canonical_name, confidence_score)` or None. Called in `public_entities.py` and `routes/entities.py` before any legacy lookup. Falls back to `get_dupe_profile()` (_DUPE_RAW) if no approved row — resilience only, not primary source.
+
+**Legacy `_DUPE_RAW` status after FTG-3:**
+`_DUPE_RAW` is fallback-only — no longer the primary public source. If `get_approved_relationship()` returns a row, that row's `reference_original` and `relation_type` are used; `_DUPE_RAW` is consulted only when DB returns None (DB exception, missing row). FTG-3-CLEANUP (deferred): remove `_DUPE_RAW` entirely once DB coverage is verified complete.
+
+**Public wording (v1):**
+- `dupe_of` → "Dupe of: [Original]"
+- `market_alternative_to` → "Alternative to: [Original]"
+Applies to both public perfume page (`/perfumes/[slug]`) and terminal entity page (`/entities/perfume/[id]`).
+
+**Admin operator console:**
+- Route: `/admin/relationship-intelligence`
+- API: `GET /api/v1/admin/relationship-intelligence?filter=all|public|non_public`
+- Actions: `POST /{id}/approve`, `POST /{id}/unpublish`, `PATCH /{id}` (confidence_score + relation_type)
+- All endpoints require `X-Pti-Admin-User` header (401 without)
+- Next.js proxy: `/api/admin/relationship-intelligence/[...path]/route.ts`
+- Sidebar: "Relationships" admin nav item (GitMerge icon)
+
+**API output changes:**
+- `PerfumeEntityDetail`: added `relation_type: Optional[str]`
+- `PublicPerfumeDetail`: added `relation_type: Optional[str]`
+- TypeScript types: `relation_type: string | null` added to entity detail type
+
+**FTG-4 note:** FTG-4 / RI1-E will create low-confidence candidates (confidence ~0.3, is_public=FALSE) that enter this review queue for operator promotion.
+
+**Tests:** `tests/unit/test_ftg3_relationship_review.py` — 28/28 pass. Combined: 263/263 pass (FTG-3 + FTG-2 + FTG-1 + DATA1 + Semantic Phase 5).
+
+**Production verification (2026-05-14):**
+- alembic_version: 047 ✓ (pending Railway deploy)
+- fragrance_relationships: 7 rows, all is_public=TRUE after migration ✓ (pending)
+- /admin/relationship-intelligence loads for admin ✓ (pending)
+- Lattafa Khamrah: "Alternative to: Kilian Angels' Share" (DB-backed) ✓ (pending)
+- Armaf CDNIM: "Dupe of: Creed Aventus" (DB-backed, dupe_of wording) ✓ (pending)
+- Non-admin blocked (401/403) ✓ (pending)
+
+**Rule:** Never auto-publish relationship updates. Scheduled evidence jobs (FTG-4) create candidates only. All public display requires explicit operator approval via `/admin/relationship-intelligence`.
 
 ---
 
@@ -1086,7 +1115,7 @@ These rules must not be violated in FTG implementation:
 ---
 
 ## DATA1 — Last Active Display Snapshot Contract
-**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
 **No migration required.**
 
 **Problem:** Carry-forward zero rows (written for timeseries continuity) were being selected as the "latest snapshot" for headline/card/list displays. An entity active on May 12 with a quiet day on May 13 showed score=0.0, growth=-100% — technically correct for May 13 but user-facing misleading.
@@ -1942,8 +1971,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| DATA1 — Last Active Display Snapshot Contract | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
-| FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
+| DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 
@@ -2063,7 +2092,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 046** (verified 2026-05-14 — 044 brand_profiles + 045 Zara mass_market + 046 fragrance_relationships applied)
+Current production: **migration 047** (pending Railway deploy 2026-05-14 — 047 promotes all 7 seed relationships to is_public=TRUE)
 
 | Migration | What |
 |-----------|------|
@@ -2090,6 +2119,7 @@ Current production: **migration 046** (verified 2026-05-14 — 044 brand_profile
 | 044 | FTG-1/KB1-MIN — `brand_profiles` table: `brand_name_normalized TEXT UNIQUE`, `brand_tier VARCHAR(32)` (designer/niche/clone_house/celebrity/indie/mass_market), `notes TEXT NULL`; seeded with 213 rows (66 designer, 136 niche, 9 clone_house, 2 celebrity: ariana grande + zara) migrated from hardcoded Python frozensets |
 | 045 | FTG-1 taxonomy correction — Zara reclassified from `celebrity` → `mass_market`; adds `mass_market` to conceptual taxonomy (no schema change; VARCHAR(32) has no CHECK constraint) |
 | 046 | FTG-2 / RI1 — `fragrance_relationships` table (subject_canonical_name TEXT, relation_type VARCHAR(32), object_canonical_name TEXT, confidence_score NUMERIC(4,3), is_public BOOLEAN DEFAULT FALSE, operator_reviewed BOOLEAN); `relationship_evidence` table (relationship_id FK CASCADE, evidence_type VARCHAR(32), note TEXT); 7 seed rows + 7 dupe_map_seed evidence rows; no CHECK constraint on relation_type (mirrors brand_tier pattern) |
+| 047 | FTG-3 / RI1-QA — Data-only migration: promotes all 7 seeded relationship rows to `is_public=TRUE` where `operator_reviewed=TRUE AND confidence_score >= 0.700`. No schema changes. Option A controlled seed promotion. |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
