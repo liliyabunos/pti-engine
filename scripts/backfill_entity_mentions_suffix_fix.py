@@ -91,7 +91,9 @@ def _run_with_session(db, *, since: str, dry_run: bool) -> dict:
                ci.published_at
         FROM resolved_signals rs
         JOIN canonical_content_items ci ON ci.id = rs.content_item_id
-        WHERE ci.published_at::date >= :since
+        WHERE ci.published_at IS NOT NULL
+          AND ci.published_at != ''
+          AND ci.published_at::date >= :since
           AND rs.resolved_entities_json IS NOT NULL
           AND rs.resolved_entities_json != '[]'
         ORDER BY ci.published_at ASC
