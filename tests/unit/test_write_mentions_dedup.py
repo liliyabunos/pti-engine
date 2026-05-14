@@ -1,20 +1,34 @@
-"""Regression tests for _write_mentions() dedup fix (FIX-1D).
+"""Regression tests for _write_mentions() fixes.
 
-Root cause of the bug:
+FIX-1D — Dedup fix:
   The dedup check used `source_url=cid` (bare content_item_id, e.g. "abc123xyz")
   while the INSERT wrote `source_url=_resolve_source_url(item, cid)` (full URL,
   e.g. "https://www.youtube.com/watch?v=abc123xyz").  These never matched, so
   every re-aggregation of the same date inserted fresh duplicate entity_mentions.
 
-Fix:
-  source_url_resolved = _resolve_source_url(item, cid)
-  — used consistently for both the dedup check and the INSERT.
+  Fix:
+    source_url_resolved = _resolve_source_url(item, cid)
+    — used consistently for both the dedup check and the INSERT.
+
+FIX-2026-05-14 — Concentration suffix normalization:
+  entity_uuid_map is keyed by _base_name()-stripped canonical names (e.g. "Lattafa Khamrah"),
+  but _write_mentions() looked up the raw resolver canonical_name which may carry a
+  concentration suffix (e.g. "Lattafa Khamrah Eau de Parfum"). The UUID lookup
+  failed silently → no entity_mention row was written for suffix-bearing resolvers,
+  even though entity_timeseries_daily was computed correctly (aggregator already
+  applied _base_name()).
+
+  Fix:
+    entity_uuid_map.get(_base_name(canonical))
+    — same normalization as aggregate_from_data().
 
 Tests:
-  1. No duplicates on double-aggregation (same date run twice → count must not increase)
-  2. Dedup check uses the full resolved URL, not the bare content_item_id
-  3. One video resolving to two entities creates two distinct entity_mention rows
-     (different entity_id, same source_url — this is correct, not a duplicate)
+  1. _resolve_source_url returns full URL for YouTube items
+  2. Dedup check uses resolved URL, not bare content_item_id
+  3. One video → two entities = two distinct rows (not duplicates)
+  4. _base_name() strips concentration suffix for entity_uuid_map lookup (FIX-2026-05-14)
+  5. entity_uuid_map.get(_base_name(canonical)) resolves correctly
+  6. Raw name without suffix is unaffected by _base_name() normalization
 """
 
 import sys
@@ -29,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from perfume_trend_sdk.jobs.aggregate_daily_market_metrics import (
     _resolve_source_url,
 )
+from perfume_trend_sdk.analysis.market_signals.aggregator import _base_name
 
 
 # ---------------------------------------------------------------------------
@@ -247,3 +262,104 @@ class TestMultiEntityVideoDedup:
         seen.add((entity, url_a))
         seen.add((entity, url_b))
         assert len(seen) == 2, "Re-aggregation must not add duplicates"
+
+
+# ---------------------------------------------------------------------------
+# Test 4 — Concentration suffix normalization (FIX-2026-05-14)
+#
+# Verifies that _base_name() correctly strips suffixes so that
+# entity_uuid_map.get(_base_name(canonical)) resolves where
+# entity_uuid_map.get(canonical) would fail.
+# ---------------------------------------------------------------------------
+
+class TestConcentrationSuffixNormalization:
+    """_write_mentions() must apply _base_name() before entity_uuid_map lookup.
+
+    Root cause: resolver canonical_name may carry a concentration suffix
+    ("Lattafa Khamrah Eau de Parfum") but entity_uuid_map is keyed by
+    _base_name()-stripped names ("Lattafa Khamrah").  Without normalization,
+    UUID lookup returns None → no entity_mention written.
+    """
+
+    def test_base_name_strips_eau_de_parfum(self):
+        """'Lattafa Khamrah Eau de Parfum' → 'Lattafa Khamrah'."""
+        assert _base_name("Lattafa Khamrah Eau de Parfum") == "Lattafa Khamrah"
+
+    def test_base_name_strips_eau_de_toilette(self):
+        assert _base_name("Dior Sauvage Eau de Toilette") == "Dior Sauvage"
+
+    def test_base_name_strips_extrait_de_parfum(self):
+        assert _base_name("Creed Aventus Extrait de Parfum") == "Creed Aventus"
+
+    def test_base_name_strips_extrait(self):
+        assert _base_name("Baccarat Rouge 540 Extrait") == "Baccarat Rouge 540"
+
+    def test_base_name_strips_parfum(self):
+        assert _base_name("Some Perfume Parfum") == "Some Perfume"
+
+    def test_base_name_no_suffix_unchanged(self):
+        """Names without a concentration suffix are returned unchanged."""
+        assert _base_name("Creed Aventus") == "Creed Aventus"
+        assert _base_name("Lattafa Khamrah") == "Lattafa Khamrah"
+        assert _base_name("Dior Sauvage") == "Dior Sauvage"
+
+    def test_entity_uuid_map_lookup_with_suffix_fails_without_normalization(self):
+        """Demonstrates the pre-fix bug: raw lookup returns None for suffix-bearing names."""
+        entity_uuid = uuid.UUID("aabbccdd-aabb-ccdd-aabb-ccddaabbccdd")
+        entity_uuid_map = {"Lattafa Khamrah": entity_uuid}
+
+        raw_canonical = "Lattafa Khamrah Eau de Parfum"
+
+        # Old behavior (broken): direct lookup fails
+        result_broken = entity_uuid_map.get(raw_canonical)
+        assert result_broken is None, "Without normalization, suffix-bearing lookup returns None"
+
+    def test_entity_uuid_map_lookup_with_base_name_succeeds(self):
+        """After fix: _base_name() normalization resolves the correct UUID."""
+        entity_uuid = uuid.UUID("aabbccdd-aabb-ccdd-aabb-ccddaabbccdd")
+        entity_uuid_map = {"Lattafa Khamrah": entity_uuid}
+
+        raw_canonical = "Lattafa Khamrah Eau de Parfum"
+
+        # Fixed behavior: normalize before lookup
+        result_fixed = entity_uuid_map.get(_base_name(raw_canonical))
+        assert result_fixed == entity_uuid, "_base_name() lookup must resolve correct UUID"
+
+    def test_entity_uuid_map_lookup_no_suffix_unaffected(self):
+        """Names without suffix are unaffected — _base_name() returns same string."""
+        entity_uuid = uuid.UUID("11223344-1122-3344-1122-334411223344")
+        entity_uuid_map = {"Creed Aventus": entity_uuid}
+
+        canonical = "Creed Aventus"
+        result = entity_uuid_map.get(_base_name(canonical))
+        assert result == entity_uuid
+
+    def test_khamrah_specific_regression(self):
+        """Exact Khamrah regression case: 'Lattafa Khamrah Eau de Parfum' resolves to Khamrah UUID."""
+        khamrah_uuid = uuid.UUID("9b6533ea-06db-4309-9af3-4b785ca9b500")
+        entity_uuid_map = {"Lattafa Khamrah": khamrah_uuid}
+
+        # Resolver returns this suffix-bearing name
+        resolver_canonical = "Lattafa Khamrah Eau de Parfum"
+
+        # Old path — fails
+        assert entity_uuid_map.get(resolver_canonical) is None
+
+        # Fixed path — succeeds
+        assert entity_uuid_map.get(_base_name(resolver_canonical)) == khamrah_uuid
+
+    def test_double_suffix_stripped_iteratively(self):
+        """_base_name() handles double-suffix names like 'Baccarat Rouge 540 Extrait Extrait de Parfum'."""
+        result = _base_name("Baccarat Rouge 540 Extrait Extrait de Parfum")
+        assert result == "Baccarat Rouge 540"
+
+    def test_suffix_normalization_produces_correct_map_key_for_two_entities(self):
+        """Two concentration variants of the same base name map to the same UUID."""
+        entity_uuid = uuid.UUID("deadbeef-dead-beef-dead-beefdeadbeef")
+        entity_uuid_map = {"Dior Sauvage": entity_uuid}
+
+        edp = "Dior Sauvage Eau de Parfum"
+        edt = "Dior Sauvage Eau de Toilette"
+
+        assert entity_uuid_map.get(_base_name(edp)) == entity_uuid
+        assert entity_uuid_map.get(_base_name(edt)) == entity_uuid

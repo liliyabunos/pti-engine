@@ -857,9 +857,15 @@ SELECT brand_tier FROM brand_profiles WHERE brand_name_normalized = 'armaf';    
 ---
 
 #### FTG-2 / RI1 — Relationship Intelligence Core
-**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
-**Migration: 046**
+**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION**
+**Migration: 046 (code committed; NOT yet applied to production — see note below)**
 **Commit: 4f7569b**
+
+**NOTE (2026-05-14 diagnostic correction):** Prior status "COMPLETE — PRODUCTION VERIFIED" was incorrect.
+Production alembic_version = 045. `fragrance_relationships` and `relationship_evidence` tables do NOT exist
+in production. Migration 046 was not applied during the earlier Railway deploy despite ALEMBIC_EXIT=0 appearing
+in logs (that exit code was from a prior migration 045 deploy, not 046). Status will be restored to
+COMPLETE — PRODUCTION VERIFIED once migration 046 is confirmed applied and all 7 rows + 7 evidence rows verified.
 
 **Purpose:** Move dupe / alternative / comparison relationships from hardcoded Python into a first-class evidence-backed data model.
 
@@ -1905,7 +1911,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | TT2 — TikTok Research API Track | PLANNED (parallel admin track) | — |
 | FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| FTG-2 / RI1 — Relationship Intelligence Core | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |

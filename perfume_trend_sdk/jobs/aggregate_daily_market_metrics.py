@@ -39,6 +39,7 @@ from sqlalchemy.orm import Session
 
 from perfume_trend_sdk.analysis.market_signals.aggregator import (
     DailyAggregator,
+    _base_name,
     generate_ticker,
 )
 from perfume_trend_sdk.analysis.market_signals.trend_state import compute_trend_state
@@ -762,7 +763,15 @@ def _write_mentions(
             # perfume_identity_map.market_perfume_uuid which is a different UUID
             # than entity_market.id. Mixing them breaks Recent Mentions, source
             # intelligence, and driver analysis. (Fixed: 2026-04-24)
-            entity_uuid: Optional[uuid.UUID] = entity_uuid_map.get(canonical)
+            #
+            # Normalize via _base_name() before lookup: the resolver canonical_name
+            # may carry a concentration suffix (e.g. "Lattafa Khamrah Eau de Parfum")
+            # while entity_uuid_map is keyed by the stripped base name ("Lattafa Khamrah")
+            # — identical to how aggregate_from_data() normalizes its aggregation key.
+            # Without this, UUID lookup fails silently for suffix-bearing resolver names,
+            # producing no entity_mention rows despite correct timeseries scores.
+            # (Fixed: 2026-05-14)
+            entity_uuid: Optional[uuid.UUID] = entity_uuid_map.get(_base_name(canonical))
 
             if entity_uuid is None:
                 _emit_unmapped(
