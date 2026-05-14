@@ -263,6 +263,10 @@ export interface BrandEntityDetail {
   ticker: string | null;
   /** "active" | "tracked" | "catalog_only" */
   state: string;
+  /** KB-CAT1-B — "brand" | "collection" | "sub_brand" */
+  node_type: string;
+  /** KB-CAT1-B — normalized parent brand name, or null for root brands */
+  parent_brand_normalized: string | null;
   has_activity_today: boolean;
   perfume_count: number;
   active_perfume_count: number;

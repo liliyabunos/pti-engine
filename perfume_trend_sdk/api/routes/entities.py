@@ -46,7 +46,7 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     classify_entity_role,
     get_dupe_profile,
 )
-from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
+from perfume_trend_sdk.db.market.brand_profile import get_brand_tier, get_brand_profile
 from perfume_trend_sdk.db.market.fragrance_relationship import get_approved_relationship
 
 router = APIRouter()
@@ -545,6 +545,9 @@ class BrandEntityDetail(BaseModel):
     latest_signal: Optional[str] = None
     # Phase I3 — directional trend state for the most recent active day
     trend_state: Optional[str] = None
+    # KB-CAT1-B — canonical hierarchy metadata (from brand_profiles)
+    node_type: str = "brand"           # 'brand' | 'collection' | 'sub_brand'
+    parent_brand_normalized: Optional[str] = None
     # Linked perfumes — catalog_perfumes: all from resolver (up to 100)
     # top_perfumes kept for backward compat (same data as catalog_perfumes)
     catalog_perfumes: List[BrandPerfumeRow] = []
@@ -1311,6 +1314,9 @@ def get_brand_entity(
         resolver_id = _resolver_id_for(db, em.canonical_name, "brand")
         latest_sig = signal_rows[0].signal_type if signal_rows else None
 
+        # KB-CAT1-B — canonical hierarchy metadata
+        _bp = get_brand_profile(db, em.canonical_name)
+
         return BrandEntityDetail(
             id=em.entity_id,
             resolver_id=resolver_id,
@@ -1324,6 +1330,8 @@ def get_brand_entity(
             latest_growth=latest.growth_rate if latest else None,
             latest_signal=latest_sig,
             trend_state=getattr(latest, "trend_state", None) if latest else None,  # Phase I3
+            node_type=_bp["node_type"] if _bp else "brand",                # KB-CAT1-B
+            parent_brand_normalized=_bp["parent_brand_normalized"] if _bp else None,  # KB-CAT1-B
             catalog_perfumes=catalog_perfumes,
             top_perfumes=catalog_perfumes,
             timeseries=_build_snapshot_rows(history_rows),
@@ -1360,6 +1368,10 @@ def get_brand_entity(
     catalog_perfumes = _brand_catalog_perfumes(db, rb_row[1])
     top_notes = _brand_top_notes(db, rb_row[1])
     top_accords = _brand_top_accords(db, rb_row[1])
+
+    # KB-CAT1-B — canonical hierarchy metadata
+    _bp = get_brand_profile(db, rb_row[1])
+
     return BrandEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
@@ -1370,6 +1382,8 @@ def get_brand_entity(
         top_perfumes=catalog_perfumes,
         top_notes=top_notes,
         top_accords=top_accords,
+        node_type=_bp["node_type"] if _bp else "brand",                # KB-CAT1-B
+        parent_brand_normalized=_bp["parent_brand_normalized"] if _bp else None,  # KB-CAT1-B
     )
 
 

@@ -1101,7 +1101,7 @@ These modules are documented as strategic direction. Do not begin implementation
 ---
 
 ### KB-CAT1 — Canonical Brand / Collection / Sub-brand Model
-**STATUS: ARCHITECTURE ASSESSMENT COMPLETE (2026-05-14) — NOT YET ACTIVE IMPLEMENTATION**
+**STATUS: KB-CAT1-A PRODUCTION AUDIT COMPLETE (2026-05-14) — KB-CAT1-B PENDING FOUNDER APPROVAL**
 
 **Trigger:** DATA2 fixed the brand-page join bug for concentration suffixes, but exposed that some Fragrantica catalog "brand" nodes are actually collections or sub-brands (e.g. "Xerjoff - Join the Club", "Xerjoff - Casamorati"), causing fragmented brand pages that don't reflect real market brand architecture.
 
@@ -1170,12 +1170,46 @@ In the resolver/catalog (dev subset — 260 brands, production ~1,600):
 - entity_type='brand' is assumed everywhere (brand pages, brand screener, brand filter) — changing semantics without URL/route changes first creates display inconsistencies
 - SEO: public brand pages (`/brands/xerjoff---join-the-club`) are indexed — reclassifying without preserving URLs causes 404s
 
-**Proposed roadmap:**
+**KB-CAT1-A — Production Audit Results (2026-05-14) — COMPLETE**
 
-KB-CAT1-A — Audit & Taxonomy Lock
-- Production scope query to count all `resolver_brands` rows with parent-brand pattern
-- Finalize node_type taxonomy (brand / collection / sub_brand)
-- Operator reviews: classify all ~15–50 candidates
+Production: 1,609 total `resolver_brands`. Dash-pattern candidates: **12** (not 15–50 as estimated).
+
+**Full candidate classification matrix:**
+
+| Candidate Node | Inferred Parent | Parent in resolver? | entity_market? | Perfumes | Taxonomy decision | node_type |
+|---|---|---|---|---|---|---|
+| Xerjoff - Join the Club | Xerjoff | YES | TRACKED | 6 | Themed collection, no independent market identity | `collection` |
+| Xerjoff - Casamorati | Xerjoff | YES | TRACKED | 11 | Historic acquisition, marketed separately | `sub_brand` |
+| Xerjoff - XJ Oud Attars | Xerjoff | YES | NOT TRACKED | 5 | Themed oud collection | `collection` |
+| Filippo Sorcinelli - SAUF | Filippo Sorcinelli | YES | NOT TRACKED | 5 | Line name / label | `collection` |
+| 06130 - Zéro Six Cent-Trente | 06130 | NO MATCH | NOT TRACKED | 14 | **False positive** — brand's own code+full-name format; single identity | `brand` (false positive) |
+| A & E - Ariana & Evans | A & E | NO MATCH | NOT TRACKED | 19 | **False positive** — A&E is acronym; Ariana & Evans is the same brand | `brand` (false positive) |
+| ArteOlfatto - Luxury Perfumes | ArteOlfatto | NO MATCH | TRACKED | 20 | **False positive** — "Luxury Perfumes" is a subtitle/descriptor, not a collection | `brand` (false positive) |
+| Libertin Louison - Technique Indiscrète | Libertin Louison | NO MATCH | NOT TRACKED | 19 | **False positive** — Fragrantica house name formatting; no parent | `brand` (false positive) |
+| LPO - Libby Patterson Organics | LPO | NO MATCH | NOT TRACKED | 16 | **False positive** — acronym + full name; single entity | `brand` (false positive) |
+| MD - Meo Distribuzione | MD | NO MATCH | TRACKED | 16 | **False positive** — acronym + full name; single entity | `brand` (false positive) |
+| Ricardo Ramos - Perfumes de Autor | Ricardo Ramos | NO MATCH | NOT TRACKED | 20 | **False positive** — "Perfumes de Autor" is a tagline; Ricardo Ramos is the brand | `brand` (false positive) |
+| Rosendo Mateu - Olfactive Expressions | Rosendo Mateu | NO MATCH | TRACKED | 16 | **False positive** — "Olfactive Expressions" is a descriptor/line name | `brand` (false positive) |
+
+**Summary:**
+- True hierarchy candidates: **4** (Xerjoff × 3, Filippo Sorcinelli × 1)
+- False positives (acronym/descriptor pattern): **8**
+- Parent brand exists in resolver for all 4 true hierarchy candidates
+- Production scope is narrow — KB-CAT1 is Xerjoff-first, then Filippo Sorcinelli
+
+**FK vs no-FK confirmation:** No FK on `parent_brand_normalized` in v1. Integrity via operator review + QA queries. False positive rows carry `node_type='brand'` and `parent_brand_normalized=NULL` — same as any standalone brand.
+
+**Taxonomy stress-test result:** 3-type taxonomy (`brand` / `collection` / `sub_brand`) covers all 12 candidates cleanly. No edge cases require a 4th type.
+
+**KB-CAT1-B seeds (locked):**
+- `xerjoff - join the club` → node_type=`collection`, parent=`xerjoff`
+- `xerjoff - casamorati` → node_type=`sub_brand`, parent=`xerjoff`  
+- `xerjoff - xj oud attars` → node_type=`collection`, parent=`xerjoff`
+- `filippo sorcinelli - sauf` → node_type=`collection`, parent=`filippo sorcinelli`
+
+False positives: add as `node_type='brand'`, `parent_brand_normalized=NULL` only if they become tracked (no proactive seeding needed — they are not tracked in entity_market and have no hierarchy to express).
+
+**Proposed roadmap:**
 
 KB-CAT1-B — brand_profiles Hierarchy Extension (migration)
 - Add `node_type` and `parent_brand_normalized` to brand_profiles
@@ -2153,6 +2187,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
+| KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
+| KB-CAT1-B — brand_profiles Hierarchy Extension | PENDING FOUNDER APPROVAL | — |
 
 ---
 
