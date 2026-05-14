@@ -1246,8 +1246,10 @@ FROM brand_profiles WHERE node_type != 'brand' ORDER BY brand_name_normalized;
 ```
 
 KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
+**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**Commit: 233f74e**
 - Brand entity detail page: show node_type badge ("COLLECTION" / "SUB-BRAND") instead of implied "BRAND" for non-root nodes
-- Brand entity detail page: show parent brand link/breadcrumb
+- Brand entity detail page: show parent brand link/breadcrumb ("Part of Xerjoff →")
 - Parent brand page (Xerjoff): show "Collections" and "Sub-brands" sections using brand_profiles hierarchy query
 - No URL changes. No rollup changes. Display layer only.
 
@@ -2217,6 +2219,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 
 ---
 
