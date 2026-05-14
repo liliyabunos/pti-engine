@@ -420,6 +420,7 @@ def classify_entity_role(
         'indie'       → 'niche_original'  (indie houses are niche-tier)
         'clone_house' → 'unknown'          (no entity role yet; dupe map handles per-product)
         'celebrity'   → 'unknown'          (dupe map handles per-product)
+        'mass_market' → 'unknown'          (mass-market retail brands; dupe map handles per-product)
 
     Returns:
         One of: "designer_original" | "niche_original" | "original" |

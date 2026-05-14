@@ -45,6 +45,23 @@ class TestBrandTierOverride:
     def test_celebrity_tier_returns_unknown(self):
         assert classify_entity_role("Ariana Grande", brand_tier_override="celebrity") == "unknown"
 
+    def test_mass_market_tier_returns_unknown(self):
+        # mass_market brands → unknown; dupe map handles specific products (e.g. Zara Red Temptation)
+        assert classify_entity_role("Zara", brand_tier_override="mass_market") == "unknown"
+
+    def test_zara_with_mass_market_override_returns_unknown(self):
+        """Zara brand-level is unknown after mass_market reclassification (migration 045)."""
+        assert classify_entity_role("Zara", brand_tier_override="mass_market") == "unknown"
+
+    def test_zara_red_temptation_dupe_wins_over_mass_market_override(self):
+        """Zara Red Temptation is dupe_alternative regardless of brand_tier_override."""
+        role = classify_entity_role(
+            "Zara",
+            perfume_name="Zara Red Temptation",
+            brand_tier_override="mass_market",
+        )
+        assert role == "dupe_alternative"
+
     def test_override_supersedes_frozenset_for_designer(self):
         """Brand in designer frozenset gets designer_original via override too — consistent."""
         assert classify_entity_role("Dior", brand_tier_override="designer") == "designer_original"

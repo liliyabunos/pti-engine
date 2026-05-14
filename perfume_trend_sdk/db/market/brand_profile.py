@@ -31,7 +31,7 @@ class BrandProfile(Base):
 
     brand_name_normalized — pre-normalized lookup key; matches the output of
         entity_role._normalize(brand_name) exactly.
-    brand_tier — one of: 'designer' | 'niche' | 'clone_house' | 'celebrity' | 'indie'
+    brand_tier — one of: 'designer' | 'niche' | 'clone_house' | 'celebrity' | 'indie' | 'mass_market'
     notes — optional operator annotation (e.g. "removed from _NICHE_ORIGINALS at Phase 5")
     """
 
