@@ -392,26 +392,41 @@ def get_dupe_profile(
 def classify_entity_role(
     brand_name: str | None,
     perfume_name: str | None = None,
+    brand_tier_override: str | None = None,
 ) -> str:
     """Classify the entity's market role from its brand name and canonical perfume name.
 
-    Lookup order (Phase 5):
-      1. Dupe map — keyed by normalized canonical perfume name (most specific)
-      2. Designer brand set — keyed by normalized brand name
-      3. Niche brand set    — keyed by normalized brand name
-      4. Fallback           — "unknown"
+    Lookup order (FTG-1):
+      1. Dupe map — keyed by normalized canonical perfume name (most specific; always runs first)
+      2. brand_tier_override — tier from brand_profiles DB table (when caller supplies it)
+      3. Designer brand frozenset — fallback when brand not yet in DB
+      4. Niche brand frozenset   — fallback when brand not yet in DB
+      5. Fallback               — "unknown"
 
     Args:
-        brand_name:   The brand/house name (e.g. "Creed", "Armaf").
-        perfume_name: Full canonical entity name (e.g. "Armaf Club de Nuit Intense Man").
-                      Required for dupe map lookup; previously reserved for Phase 3.
+        brand_name:          The brand/house name (e.g. "Creed", "Armaf").
+        perfume_name:        Full canonical entity name (e.g. "Armaf Club de Nuit Intense Man").
+                             Required for dupe map lookup.
+        brand_tier_override: Brand tier from brand_profiles DB (FTG-1).
+                             When provided and not None, takes precedence over frozensets.
+                             Callers obtain this via:
+                               from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
+                               brand_tier_override = get_brand_tier(db, brand_name)
+                             Pass None (default) to use frozensets only (backward-compatible).
+
+    Tier → role mapping (brand_tier_override):
+        'designer'    → 'designer_original'
+        'niche'       → 'niche_original'
+        'indie'       → 'niche_original'  (indie houses are niche-tier)
+        'clone_house' → 'unknown'          (no entity role yet; dupe map handles per-product)
+        'celebrity'   → 'unknown'          (dupe map handles per-product)
 
     Returns:
         One of: "designer_original" | "niche_original" | "original" |
                 "dupe_alternative" | "designer_alternative" | "celebrity_alternative" |
                 "clone_positioned" | "inspired_alternative" | "flanker" | "unknown"
     """
-    # 1. Dupe map check — requires canonical perfume name
+    # 1. Dupe map check — perfume-specific, always first
     if perfume_name:
         profile = get_dupe_profile(brand_name, perfume_name)
         if profile:
@@ -425,6 +440,18 @@ def classify_entity_role(
     if not key:
         return "unknown"
 
+    # 2. DB-backed brand tier (FTG-1) — takes precedence over frozensets when present
+    if brand_tier_override is not None:
+        if brand_tier_override in ("designer",):
+            return "designer_original"
+        if brand_tier_override in ("niche", "indie"):
+            return "niche_original"
+        # clone_house / celebrity / unknown tier → no specific role yet; fall through
+        # to frozensets for any remaining entries (should be none once DB is full)
+        # but DO NOT fall through — if DB returned a tier, trust it.
+        return "unknown"
+
+    # 3. Frozenset fallback — used when brand not yet in brand_profiles or DB not queried
     if key in _DESIGNER_NORM:
         return "designer_original"
 

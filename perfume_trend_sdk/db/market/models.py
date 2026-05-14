@@ -21,6 +21,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from perfume_trend_sdk.db.market.alert import Alert, AlertEvent  # noqa: F401
 from perfume_trend_sdk.db.market.base import Base  # noqa: F401
 from perfume_trend_sdk.db.market.brand import Brand  # noqa: F401
+from perfume_trend_sdk.db.market.brand_profile import BrandProfile  # noqa: F401
 from perfume_trend_sdk.db.market.entity_mention import EntityMention  # noqa: F401
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily  # noqa: F401
 from perfume_trend_sdk.db.market.notes_intelligence import (  # noqa: F401
@@ -64,6 +65,7 @@ __all__ = [
     "AlertEvent",
     "Base",
     "Brand",
+    "BrandProfile",
     "EntityMarket",
     "EntityMention",
     "EntityTimeSeriesDaily",

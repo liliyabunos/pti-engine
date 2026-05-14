@@ -46,6 +46,7 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     classify_entity_role,
     get_dupe_profile,
 )
+from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
@@ -1085,8 +1086,10 @@ def get_perfume_entity(
         notes_top, notes_mid, notes_base, accords, notes_source = _get_perfume_notes(db, em.entity_id, resolver_id)
         similar = _similar_by_notes(db, resolver_id) if resolver_id else []
         drivers = _safe(lambda: _get_top_drivers(db, em.id, limit=10), [], "top_drivers")
-        # Phase I7.5 — Entity role (computed early; drives semantic routing below)
-        p_role = classify_entity_role(em.brand_name, em.canonical_name)
+        # Phase I7.5 / FTG-1 — Entity role (computed early; drives semantic routing below)
+        # DB brand tier takes precedence over frozensets; falls back gracefully when absent.
+        _p_brand_tier = get_brand_tier(db, em.brand_name)
+        p_role = classify_entity_role(em.brand_name, em.canonical_name, brand_tier_override=_p_brand_tier)
         _p_dupe = get_dupe_profile(em.brand_name, em.canonical_name)
         p_reference_original = _p_dupe.reference_original if _p_dupe else None
         p_dupe_family = _p_dupe.dupe_family if _p_dupe else None
@@ -1184,7 +1187,8 @@ def get_perfume_entity(
     cat_source = "parfumo" if (cat_top or cat_mid or cat_base or cat_acc) else None
     similar = _similar_by_notes(db, resolver_id)
     brand_entity_id = _brand_entity_id_for(db, rp_row[2])
-    cat_role = classify_entity_role(rp_row[2], rp_row[1])  # Phase I7.5
+    _cat_brand_tier = get_brand_tier(db, rp_row[2])  # FTG-1
+    cat_role = classify_entity_role(rp_row[2], rp_row[1], brand_tier_override=_cat_brand_tier)  # Phase I7.5/FTG-1
     _cat_dupe = get_dupe_profile(rp_row[2], rp_row[1])
     cat_reference_original = _cat_dupe.reference_original if _cat_dupe else None
     cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None

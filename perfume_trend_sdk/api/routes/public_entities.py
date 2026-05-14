@@ -39,6 +39,7 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     classify_entity_role,
     get_dupe_profile,
 )
+from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
 from perfume_trend_sdk.db.market.models import EntityMarket
 
 router = APIRouter()
@@ -324,8 +325,9 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
 
     latest_score, trend_state = _get_latest_score_and_trend(db, em.id)
 
-    # Entity role + dupe context
-    entity_role = classify_entity_role(em.brand_name, em.canonical_name)
+    # Entity role + dupe context (FTG-1: DB tier lookup; frozenset fallback if absent)
+    _brand_tier = get_brand_tier(db, em.brand_name)
+    entity_role = classify_entity_role(em.brand_name, em.canonical_name, brand_tier_override=_brand_tier)
     dupe = get_dupe_profile(em.brand_name, em.canonical_name)
     reference_original = dupe.reference_original if dupe else None
 

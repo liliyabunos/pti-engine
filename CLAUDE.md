@@ -607,7 +607,7 @@ Scope:
 - Intent distribution per entity per week (enables "intent trend over time" in reports)
 - Opportunity Feed API endpoint: active opportunities ranked by confidence × recency across all entities
 
-Depends on: M0 (Opportunity Object schema defined there), DATA0 (formula_version policy applies), IG1 (multi-platform data strengthens opportunity evidence)
+Depends on: M0 (Opportunity Object schema defined there), DATA0 (formula_version policy applies), IG1 (multi-platform data strengthens opportunity evidence), FTG-2 / RI1 (relationship evidence backing opportunity classifications — `reference_original` + dupe family should come from DB rows with confidence scores, not hardcoded Python)
 TT2 must be complete before IL1 begins (to ensure no TikTok assumptions are embedded in Opportunity Object evidence design).
 Risk if skipped: Premium reports built on tag strings, not evidence-backed scored objects; credibility gap in paid products.
 
@@ -785,24 +785,57 @@ This is the commercial foundation for Deep Dive Reports and brand intelligence p
 ---
 
 #### FTG-1 / KB1-MIN — Canonical Brand Classification Foundation
-**Status: PLANNED**
+**Status: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**Migration: 044**
+**Commits: TBD (this workstream)**
 
-**Purpose:** Move brand tier classification out of hardcoded Python frozensets into queryable data. Required prerequisite before relationship intelligence can read canonical brand classification from DB.
+**Schema decision: separate `brand_profiles` table** (not `entity_market` or `brands`)
+- `brands` table is the Fragrantica/resolver catalog — different domain
+- `entity_market` only contains tracked market brands — many brands we classify (Armaf, Lattafa, Montblanc) appear only as `brand_name` strings on perfume rows, not as tracked entities
+- Separate table keeps canonical knowledge cleanly separated from market metrics and resolver data
+- Can grow into a deeper Brand Profile Dictionary (FTG-5/SN1 direction) without bloating entity_market
 
-**Scope (minimal — do not overbuild):**
-- `brand_tier` taxonomy: `designer` / `niche` / `luxury` / `clone_house` / `indie` / `celebrity` (exact values TBD at design)
-- Decide: thin `brand_profiles` table OR `brand_tier` column on `entity_market` — choose at design time
-- Seed from existing `_DESIGNER_ORIGINALS` / `_NICHE_ORIGINALS` frozensets + any clear clone-house set (Lattafa, Armaf, Alexandria Fragrances, etc.)
-- `classify_entity_role()` should eventually read DB, not static frozensets — but frozensets remain as fallback until data is confirmed clean
-- New Alembic migration
+**brand_profiles schema:**
+```sql
+brand_profiles (
+    id                    UUID PK  gen_random_uuid()
+    brand_name_normalized TEXT UNIQUE NOT NULL  -- pre-normalized lookup key; matches _normalize(brand_name)
+    brand_tier            VARCHAR(32) NOT NULL  -- designer | niche | clone_house | celebrity | indie
+    notes                 TEXT NULL             -- optional operator annotation
+    created_at            TIMESTAMPTZ NOT NULL  -- default now()
+)
+```
 
-**Explicitly out of scope for FTG-1:**
+**Taxonomy (5 values):**
+- `designer` — maps to entity_role `designer_original`
+- `niche`    — maps to entity_role `niche_original`
+- `indie`    — maps to entity_role `niche_original` (indie houses are niche-tier)
+- `clone_house` — maps to entity_role `unknown` (dupe map handles per-product)
+- `celebrity`   — maps to entity_role `unknown` (dupe map handles per-product)
+
+**Seeded (213 rows from hardcoded Python):**
+- 66 rows from `_DESIGNER_ORIGINALS` → brand_tier='designer' (all aliases deduplicated by normalized key)
+- 136 rows from `_NICHE_ORIGINALS` → brand_tier='niche'
+- 9 rows clone_house: armaf, lattafa, zimaya, fragrance world, orientica, arabiyat, ard al zaafaran, afnan, alexandria fragrances (brands removed from `_NICHE_ORIGINALS` at Semantic Phase 5)
+- 2 rows celebrity: ariana grande, zara
+
+**classify_entity_role() refactor:**
+- Added optional `brand_tier_override: str | None = None` parameter (backward-compatible)
+- DB lookup done at call site via `get_brand_tier(db, brand_name)` in `entities.py` and `public_entities.py`
+- When `brand_tier_override` is provided: DB takes precedence over frozensets
+- When `brand_tier_override` is None: frozensets used (full fallback, existing behavior)
+- Dupe map (step 1) always fires before brand-level lookup — KB0 Khamrah fix unaffected
+- `get_brand_tier()` in `brand_profile.py` is non-fatal: returns None on DB exception → frozenset fallback
+
+**Frozensets remain:** `_DESIGNER_NORM` and `_NICHE_NORM` are still present as the safety fallback. They are NOT removed in this phase. Removal is FTG-1-CLEANUP (post-production verified, separate task).
+
+**Tests:** `tests/unit/test_ftg1_brand_profiles.py` — 31/31 pass. No regressions in `test_entity_role.py` (92) or `test_semantic_phase5.py` (67) or `test_semantic_phase3.py` (31) — 221 total pass.
+
+**Explicitly out of scope (unchanged):**
 - Founded year, country, current owner
-- Perfumer credits
-- Reformulation history
-- Discontinued status
-- Any broad encyclopedia project
-- Any web scraping
+- Perfumer credits, reformulation history, discontinued status
+- Any broad encyclopedia project, any web scraping
+- Relationship tables (those are FTG-2/RI1)
 
 ---
 
@@ -1792,7 +1825,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | PRO1 — Pro Tier + Paywall v1 | PLANNED | — |
 | TT2 — TikTok Research API Track | PLANNED (parallel admin track) | — |
 | FTG-0 / KB0 — Khamrah Truth Fix | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | PLANNED | — |
+| FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 | FTG-2 / RI1 — Relationship Intelligence Core | PLANNED | — |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | PLANNED | — |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
@@ -1938,6 +1971,7 @@ Current production: **migration 043** (verified 2026-05-12 — 043 applied clean
 | 042 | Phase 042 Language & Region Metadata v1 — `source_language VARCHAR(16)`, `source_country VARCHAR(8)`, `source_region VARCHAR(64)`, `audience_region VARCHAR(64)`, `regional_policy_status VARCHAR(64)` on `source_intake_candidates`; `source_region`, `audience_region`, `regional_policy_status` on `youtube_channels`; all nullable, no CHECK constraints |
 | 041 | Pipeline Health Log — `pipeline_health_log` table: `(run_date DATE, run_label VARCHAR(32), overall_level VARCHAR(16), entity_mentions, reddit_mentions, youtube_items, reddit_items, total_items, signals_count INT, issues JSONB, pipeline_service VARCHAR(64) NULL, recorded_at TIMESTAMPTZ)`; unique on `(run_date, run_label)`; 90-day retention trimmed at persist time; upserted by `pipeline_health_check.py` after every morning/evening run |
 | 043 | DATA0 — `score_formula_version INTEGER NOT NULL server_default=1` on `entity_timeseries_daily`; `signal_threshold_version INTEGER NOT NULL server_default=1` on `signals`; `entity_topic_snapshots` table (dated aggregate snapshots of topic/intent distribution per entity, preserving historical intent distributions destroyed by `--rebuild-links`); unique on `(snapshot_date, entity_id, topic_type, topic_text)` |
+| 044 | FTG-1/KB1-MIN — `brand_profiles` table: `brand_name_normalized TEXT UNIQUE`, `brand_tier VARCHAR(32)` (designer/niche/clone_house/celebrity/indie), `notes TEXT NULL`; seeded with 213 rows (66 designer, 136 niche, 9 clone_house, 2 celebrity) migrated from hardcoded Python frozensets |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
