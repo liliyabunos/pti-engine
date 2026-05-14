@@ -1114,6 +1114,78 @@ These rules must not be violated in FTG implementation:
 
 ---
 
+## DATA2 — Brand Catalog Join Normalization
+**STATUS: IMPLEMENTED — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**No migration required.**
+
+**Root cause:** `_brand_catalog_perfumes()` in `entities.py` joined `resolver_perfumes` to `entity_market` using exact case-insensitive name equality. The Fragrantica source catalog stores verbatim concentration-variant names (e.g. `"Xerjoff - Join the Club Don Eau de Parfum"`), while the aggregation job strips those suffixes via `_base_name()` before writing to `entity_market` (e.g. `"Xerjoff - Join the Club Don"`). The LEFT JOIN returned NULL for `entity_id`, so tracked perfumes appeared as catalog-only with no market data on their brand page.
+
+**Observed symptom:** `Xerjoff - Join the Club Don` was #1 Top Mover (score 68.4, growth +200%) on the dashboard, but the brand page `/entities/brand/brand-xerjoff---join-the-club` showed it as "IN CATALOG" with `—` for score/mentions and Tracked: 0.
+
+**Fix:** Extended the LEFT JOIN `IN` clause to also test the double-pass suffix-normalized form using PostgreSQL `REGEXP_REPLACE`, matching the same suffix list as `_base_name()` in the aggregation job. Two passes handle double-suffixed names (e.g. "Extrait Extrait de Parfum"). Exact match is tried first (zero regression on non-suffix names).
+
+**Changed:** `_brand_catalog_perfumes()` in `perfume_trend_sdk/api/routes/entities.py` — LEFT JOIN now:
+```sql
+ON LOWER(em.canonical_name) IN (
+    LOWER(rp.canonical_name),
+    LOWER(TRIM(REGEXP_REPLACE(
+        REGEXP_REPLACE(rp.canonical_name, '\s+(Extrait de Parfum|Eau de Parfum|...)\s*$', '', 'i'),
+        '\s+(Extrait de Parfum|Eau de Parfum|...)\s*$', '', 'i'
+    )))
+)
+```
+
+**Scope:** Affects every brand page where Fragrantica catalogs a perfume under a concentration-variant canonical name while the market engine tracked it under the base name. Scope audit query (run on production):
+```sql
+SELECT COUNT(*) AS newly_matchable
+FROM resolver_perfumes rp
+WHERE NOT EXISTS (
+    SELECT 1 FROM entity_market em
+    WHERE LOWER(em.canonical_name) = LOWER(rp.canonical_name) AND em.entity_type = 'perfume'
+)
+AND EXISTS (
+    SELECT 1 FROM entity_market em
+    WHERE LOWER(em.canonical_name) = LOWER(TRIM(REGEXP_REPLACE(
+        REGEXP_REPLACE(rp.canonical_name,
+            '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$','','i'),
+        '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$','','i'
+    ))) AND em.entity_type = 'perfume'
+);
+```
+
+**Unrelated separate issue (future):** "brand as collection" modeling — Fragrantica catalogs `"Xerjoff - Join the Club"` as a brand entry rather than as parent brand "Xerjoff" + collection "Join the Club". DATA2 does NOT fix this. See Future Canonical Catalog Governance note below.
+
+**Tests:** `tests/unit/test_data2_brand_catalog_join.py` — 28/28 pass. Combined: 301/301 pass (DATA2 + DATA1 + FTG-3 + FTG-2 + FTG-1 + Semantic Phase 5 suites).
+
+**Production verification (pending — verify after Railway deploy):**
+- `/entities/brand/brand-xerjoff---join-the-club` → "Xerjoff - Join the Club Don Eau de Parfum" row now shows score/mentions, not "—" ✓ (pending)
+- Tracked count > 0 on that brand page ✓ (pending)
+- At least two other affected brand pages show previously-hidden tracked entities ✓ (pending)
+- Lattafa brand page unchanged ✓ (pending)
+- Dashboard/screener/perfume entity pages unchanged ✓ (pending)
+
+---
+
+### Catalog Truth Principle
+
+FragranceIndex.ai treats external catalog imports (Fragrantica, Parfumo) as raw reference inputs, not immutable final truth. The platform maintains its own canonical market model and must correct inherited catalog limitations including:
+- concentration suffix naming variants (DATA2)
+- brand/collection fragmentation (future)
+- stale or source-specific modeling choices
+- source structures that conflict with live market reality
+
+**Rule:** When source catalogs create canonical-display mismatches, normalize them through explicit, reviewable canonicalization layers (`_base_name()`, brand profile overrides, future canonical governance) rather than blindly exposing inherited source structure.
+
+---
+
+### Future Canonical Catalog Governance (Not Part of DATA2)
+
+- **Parent-brand / collection normalization:** Fragrantica catalogs `"Xerjoff - Join the Club"` as a brand entry, not as parent brand "Xerjoff" + collection/line "Join the Club". This causes fragmented brand pages (a user browsing "Xerjoff" brand cannot find "Join the Club" variants). DATA2 does NOT fix this. Future work: operator-reviewed canonical brand overrides that remap source-catalog brand nodes to parent brands with collection metadata.
+- **Source-brand fragmentation review:** Other Fragrantica-modeled brands may have similar collection-as-brand patterns. A systematic audit should precede any broad catalog normalization.
+- **Operator-reviewed overrides:** Parent/collection remapping must be explicitly reviewed and not auto-applied from source data.
+
+---
+
 ## DATA1 — Last Active Display Snapshot Contract
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
 **No migration required.**
@@ -1972,6 +2044,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-1 / KB1-MIN — Canonical Brand Classification Foundation | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| DATA2 — Brand Catalog Join Normalization | IMPLEMENTED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |

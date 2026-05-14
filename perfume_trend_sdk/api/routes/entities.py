@@ -818,7 +818,20 @@ def _brand_catalog_perfumes(db: Session, brand_canonical_name: str, limit: int =
         FROM resolver_perfumes rp
         JOIN resolver_brands rb ON rp.brand_id = rb.id
         LEFT JOIN entity_market em
-            ON LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+            ON LOWER(em.canonical_name) IN (
+                LOWER(rp.canonical_name),
+                LOWER(TRIM(REGEXP_REPLACE(
+                    REGEXP_REPLACE(
+                        rp.canonical_name,
+                        '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$',
+                        '',
+                        'i'
+                    ),
+                    '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$',
+                    '',
+                    'i'
+                )))
+            )
             AND em.entity_type = 'perfume'
         LEFT JOIN latest_date_per_entity ld ON ld.entity_id = em.id
         LEFT JOIN entity_timeseries_daily etd
