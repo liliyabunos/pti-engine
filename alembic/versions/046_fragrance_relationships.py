@@ -297,7 +297,7 @@ def upgrade() -> None:
                   nullable=False, primary_key=True),
         sa.Column("relationship_id", PG_UUID(as_uuid=True),
                   sa.ForeignKey("fragrance_relationships.id", ondelete="CASCADE"),
-                  nullable=False, index=True),
+                  nullable=False),
         sa.Column("evidence_type", sa.String(32), nullable=False),
         sa.Column("content_item_id", PG_UUID(as_uuid=True), nullable=True),
         sa.Column("query_text", sa.Text(), nullable=True),
