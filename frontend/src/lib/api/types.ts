@@ -207,6 +207,8 @@ export interface PerfumeEntityDetail {
   reference_original: string | null;
   /** Phase I7.5-P5 — dupe family grouping, e.g. "Aventus alternatives" */
   dupe_family: string | null;
+  /** FTG-3 — relation type from approved DB row ("dupe_of" | "market_alternative_to" | …) */
+  relation_type: string | null;
   has_activity_today: boolean;
   aliases_count: number;
   latest_score: number | null;

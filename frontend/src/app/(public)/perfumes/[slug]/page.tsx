@@ -18,6 +18,7 @@ interface PublicPerfumeDetail {
   brand_slug: string | null;
   entity_role: string;
   reference_original: string | null;
+  relation_type: string | null;
   notes_top: string[];
   notes_middle: string[];
   notes_base: string[];
@@ -210,7 +211,10 @@ export default async function PublicPerfumePage({
           )}
           {perfume.reference_original && (
             <span className="text-xs text-amber-400/70">
-              Alternative to: {perfume.reference_original}
+              {perfume.relation_type === "dupe_of"
+                ? "Dupe of:"
+                : "Alternative to:"}{" "}
+              {perfume.reference_original}
             </span>
           )}
         </div>

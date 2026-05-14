@@ -40,6 +40,7 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     get_dupe_profile,
 )
 from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
+from perfume_trend_sdk.db.market.fragrance_relationship import get_approved_relationship
 from perfume_trend_sdk.db.market.models import EntityMarket
 
 router = APIRouter()
@@ -124,6 +125,8 @@ class PublicPerfumeDetail(BaseModel):
     brand_slug: Optional[str] = None   # for linking to /brands/[slug]
     entity_role: str = "unknown"
     reference_original: Optional[str] = None  # dupe context (M0 approved)
+    # FTG-3 — relation type from approved DB row ("dupe_of" | "market_alternative_to" | …)
+    relation_type: Optional[str] = None
     # Notes & accords
     notes_top: List[str] = []
     notes_middle: List[str] = []
@@ -328,8 +331,16 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
     # Entity role + dupe context (FTG-1: DB tier lookup; frozenset fallback if absent)
     _brand_tier = get_brand_tier(db, em.brand_name)
     entity_role = classify_entity_role(em.brand_name, em.canonical_name, brand_tier_override=_brand_tier)
-    dupe = get_dupe_profile(em.brand_name, em.canonical_name)
-    reference_original = dupe.reference_original if dupe else None
+    # FTG-3 — DB-backed approved relationship (quality gate: is_public + operator_reviewed + confidence>=0.700)
+    # Falls back to legacy _DUPE_RAW if no approved DB row (resilience).
+    _approved_rel = get_approved_relationship(db, em.canonical_name)
+    if _approved_rel:
+        reference_original = _approved_rel[1]
+        relation_type = _approved_rel[0]
+    else:
+        dupe = get_dupe_profile(em.brand_name, em.canonical_name)
+        reference_original = dupe.reference_original if dupe else None
+        relation_type = None
 
     # Notes & accords — entity_id = canonical_name, used as slug for fragrantica join
     resolver_id_row = _safe(lambda: db.execute(text(
@@ -364,6 +375,7 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
         brand_slug=brand_slug,
         entity_role=entity_role,
         reference_original=reference_original,
+        relation_type=relation_type,
         notes_top=notes_top,
         notes_middle=notes_mid,
         notes_base=notes_base,

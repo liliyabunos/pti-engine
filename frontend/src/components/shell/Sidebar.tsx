@@ -13,6 +13,7 @@ import {
   UserCircle,
   Inbox,
   ShieldCheck,
+  GitMerge,
   type LucideIcon,
 } from "lucide-react";
 
@@ -43,6 +44,7 @@ const SECONDARY_NAV: NavItem[] = [
 const ADMIN_NAV: NavItem[] = [
   { href: "/admin/creator-claims", label: "Creator Claims", icon: ShieldCheck },
   { href: "/admin/source-intake", label: "Source Intake", icon: Inbox },
+  { href: "/admin/relationship-intelligence", label: "Relationships", icon: GitMerge },
 ];
 
 // ---------------------------------------------------------------------------

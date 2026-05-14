@@ -47,6 +47,7 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     get_dupe_profile,
 )
 from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
+from perfume_trend_sdk.db.market.fragrance_relationship import get_approved_relationship
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
@@ -486,6 +487,8 @@ class PerfumeEntityDetail(BaseModel):
     # Phase I7.5-P5 — Dupe/alternative metadata (None for non-dupe entities)
     reference_original: Optional[str] = None  # e.g. "Creed Aventus"
     dupe_family: Optional[str] = None          # e.g. "Aventus alternatives"
+    # FTG-3 — relation type from approved DB row ("dupe_of" | "market_alternative_to" | …)
+    relation_type: Optional[str] = None
     has_activity_today: bool = False
     aliases_count: int = 0
     # Market metrics — None for catalog_only
@@ -1098,9 +1101,19 @@ def get_perfume_entity(
         # DB brand tier takes precedence over frozensets; falls back gracefully when absent.
         _p_brand_tier = get_brand_tier(db, em.brand_name)
         p_role = classify_entity_role(em.brand_name, em.canonical_name, brand_tier_override=_p_brand_tier)
-        _p_dupe = get_dupe_profile(em.brand_name, em.canonical_name)
-        p_reference_original = _p_dupe.reference_original if _p_dupe else None
-        p_dupe_family = _p_dupe.dupe_family if _p_dupe else None
+        # FTG-3 — DB-backed approved relationship row (quality gate: is_public + operator_reviewed + confidence>=0.700)
+        # Falls back to legacy _DUPE_RAW if no approved DB row (resilience).
+        _p_approved_rel = get_approved_relationship(db, em.canonical_name)
+        if _p_approved_rel:
+            p_reference_original = _p_approved_rel[1]
+            p_relation_type = _p_approved_rel[0]
+            _p_dupe = get_dupe_profile(em.brand_name, em.canonical_name)
+            p_dupe_family = _p_dupe.dupe_family if _p_dupe else None
+        else:
+            _p_dupe = get_dupe_profile(em.brand_name, em.canonical_name)
+            p_reference_original = _p_dupe.reference_original if _p_dupe else None
+            p_relation_type = None
+            p_dupe_family = _p_dupe.dupe_family if _p_dupe else None
         # Phase I5/I7 — topic/query intelligence + semantic profile (role-aware)
         p_topics, p_queries, p_subs, p_diff, p_pos, p_intents = _safe(
             lambda: _get_entity_topics(db, str(em.id), entity_role=p_role),
@@ -1138,8 +1151,9 @@ def get_perfume_entity(
             ticker=em.ticker,
             state=state,
             entity_role=p_role,                    # Phase I7.5
-            reference_original=p_reference_original,  # Phase I7.5-P5
+            reference_original=p_reference_original,  # Phase I7.5-P5 / FTG-3 DB-backed
             dupe_family=p_dupe_family,                 # Phase I7.5-P5
+            relation_type=p_relation_type,             # FTG-3 DB-backed
             has_activity_today=has_activity,
             aliases_count=aliases,
             latest_score=latest.composite_market_score if latest else None,
@@ -1197,9 +1211,18 @@ def get_perfume_entity(
     brand_entity_id = _brand_entity_id_for(db, rp_row[2])
     _cat_brand_tier = get_brand_tier(db, rp_row[2])  # FTG-1
     cat_role = classify_entity_role(rp_row[2], rp_row[1], brand_tier_override=_cat_brand_tier)  # Phase I7.5/FTG-1
-    _cat_dupe = get_dupe_profile(rp_row[2], rp_row[1])
-    cat_reference_original = _cat_dupe.reference_original if _cat_dupe else None
-    cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None
+    # FTG-3 — DB-backed approved relationship (catalog path)
+    _cat_approved_rel = get_approved_relationship(db, rp_row[1])
+    if _cat_approved_rel:
+        cat_reference_original = _cat_approved_rel[1]
+        cat_relation_type = _cat_approved_rel[0]
+        _cat_dupe = get_dupe_profile(rp_row[2], rp_row[1])
+        cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None
+    else:
+        _cat_dupe = get_dupe_profile(rp_row[2], rp_row[1])
+        cat_reference_original = _cat_dupe.reference_original if _cat_dupe else None
+        cat_relation_type = None
+        cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None
     return PerfumeEntityDetail(
         id=str(resolver_id),
         resolver_id=resolver_id,
@@ -1207,8 +1230,9 @@ def get_perfume_entity(
         brand_name=rp_row[2],
         state="catalog_only",
         entity_role=cat_role,                        # Phase I7.5
-        reference_original=cat_reference_original,   # Phase I7.5-P5
+        reference_original=cat_reference_original,   # FTG-3 DB-backed / I7.5-P5 fallback
         dupe_family=cat_dupe_family,                  # Phase I7.5-P5
+        relation_type=cat_relation_type,              # FTG-3 DB-backed
         aliases_count=aliases,
         notes_top=cat_top,
         notes_middle=cat_mid,

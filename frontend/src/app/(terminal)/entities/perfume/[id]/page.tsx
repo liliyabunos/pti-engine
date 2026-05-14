@@ -609,7 +609,10 @@ export default function PerfumeEntityPage({ params }: PageProps) {
                   )}
                   {data.reference_original && (
                     <p className="mt-0.5 text-xs text-amber-500/80">
-                      Alternative to: {data.reference_original}
+                      {data.relation_type === "dupe_of"
+                        ? "Dupe of:"
+                        : "Alternative to:"}{" "}
+                      {data.reference_original}
                     </p>
                   )}
                 </div>

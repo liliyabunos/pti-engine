@@ -259,6 +259,43 @@ RELATIONSHIP_SEED: list[dict] = [
 # Public API
 # ---------------------------------------------------------------------------
 
+def get_approved_relationship(
+    db: Session,
+    subject_canonical_name: str,
+) -> Optional[tuple[str, str, str]]:
+    """Return (relation_type, object_canonical_name, confidence_score) for the best
+    approved public relationship row satisfying the FTG-3 quality gate, or None.
+
+    Quality gate (all three must pass):
+      is_public = TRUE
+      operator_reviewed = TRUE
+      confidence_score >= 0.700
+
+    Returns the highest-confidence row. Non-fatal: returns None on any exception.
+
+    Use this for public entity page display. Callers should fall back to
+    get_dupe_profile() only if this returns None (resilience layer).
+    """
+    try:
+        row = db.execute(
+            sa.text(
+                "SELECT relation_type, object_canonical_name, confidence_score "
+                "FROM fragrance_relationships "
+                "WHERE subject_canonical_name = :subject "
+                "  AND is_public = TRUE "
+                "  AND operator_reviewed = TRUE "
+                "  AND confidence_score >= 0.700 "
+                "ORDER BY confidence_score DESC LIMIT 1"
+            ),
+            {"subject": subject_canonical_name},
+        ).fetchone()
+        if row:
+            return (str(row[0]), str(row[1]), str(row[2]))
+        return None
+    except Exception:
+        return None
+
+
 def get_relationships(
     db: Session,
     subject_canonical_name: str,
