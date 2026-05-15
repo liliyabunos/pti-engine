@@ -1393,6 +1393,32 @@ The entity detail page already shows "As of {latest_date}" — after the fix, `l
 
 ---
 
+## REL-1 — Staging & Production Release Gate Architecture
+**STATUS: APPROVED — DEFERRED (2026-05-15)**
+**Assessment completed: 2026-05-15 · Implementation deferred until KB-CAT1/FTG block is complete**
+
+Architecture approved. Implementation deferred. Current temporary operating mode:
+- Production deploys continue as before (commit → push main → Railway auto-deploys)
+- Founder performs live visual QA immediately after each Railway deploy
+- Phase reports must include explicit production verification checklist
+- Any regression = immediate P0 hotfix before next task
+
+**Approved implementation phases (to execute after KB-CAT1/FTG complete):**
+- REL-1A: Railway staging environment setup (founder action — create staging env, postgres-staging, staging branch)
+- REL-1B: `scripts/seed_staging_db.py` — minimal representative staging seed (Claude action)
+- REL-1C: `scripts/staging_smoke.sh` + CLAUDE.md release protocol update (Claude action)
+- REL-1D: First real staging cycle on next non-hotfix feature
+
+**Key design decisions (locked):**
+- Railway Environments model (same project, `staging` environment)
+- `staging` branch → staging env; `main` branch → production env
+- Separate `postgres-staging` DB; no prod clone (GDPR + freshness concerns)
+- Staging-first for all Alembic migrations before production promotion
+- P0 hotfix exception: may bypass staging gate if production actively broken + fix is narrow (labeled `fix: P0 hotfix —`)
+- Status vocabulary: IMPLEMENTED — LOCAL TESTED → STAGING DEPLOYED → STAGING VERIFIED — READY FOR PROD → PRODUCTION DEPLOYED → COMPLETE — PRODUCTION VERIFIED
+
+---
+
 ## Active Roadmap
 
 **Language & Region Architecture**
@@ -2230,6 +2256,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
 | KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — P0 HOTFIX DEPLOYED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
+| REL-1 — Staging & Production Release Gate Architecture | APPROVED — DEFERRED (after KB-CAT1/FTG block) | 2026-05-15 |
 
 ---
 
