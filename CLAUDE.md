@@ -1355,6 +1355,40 @@ These rules must not be violated in FTG implementation:
 
 ---
 
+## DATA3 — Brand Catalog & Brand Identity Consistency
+**STATUS: LAYER 1 COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-15)**
+**Commit: pending**
+**No migration required.**
+
+**Root cause 1 (Duplicate rows — FIXED):**
+`_brand_catalog_perfumes()` returned one SQL row per `resolver_perfumes` row. When the resolver has both "Lattafa Khamrah" (rp.id=16) and "Lattafa Khamrah Eau de Parfum" (rp.id=3684), both suffix-normalize to the same `entity_market` row via the DATA2 REGEXP_REPLACE join. Both rows appeared in the API output — brand page showed Khamrah twice with identical score 46.1. Same issue for Ameer Al Oudh pair.
+
+**Fix (Layer 1):** Wrapped the main SELECT in a `raw` CTE with `ROW_NUMBER() OVER (PARTITION BY COALESCE(em.id::text, rp.id::text))`:
+- For matched rows (em.id IS NOT NULL): keeps only the best resolver row per em.id. Preference: exact canonical_name match first, then shorter name.
+- For catalog-only rows (em.id IS NULL): COALESCE falls back to rp.id (unique), so each catalog-only entry is its own partition — all kept.
+- Changed SQL text to `r"""..."""` raw string to fix pre-existing `\s` deprecation warning.
+
+**Root cause 2 (Brand identity split — documented, Layer 3 deferred):**
+"Lattafa / لطافة" exists as a separate `entity_market` brand entity (score 32.1). Created by the aggregation pipeline grouping mentions by `brand_name` string. Only one resolver brand exists: "Lattafa" (id=9). Ajayeb Dubai and Ajayeb Dubai Portrait have `entity_market.brand_name='Lattafa / لطافة'` (multilingual variant from ingest-time resolution). This creates a ghost brand entity with no catalog perfumes.
+
+Note: Ajayeb Dubai correctly appears on the Lattafa brand page (the canonical_name join works). The ghost "Lattafa / لطافة" brand entity is a separate display/screener issue. No brand guard was added to the JOIN (would incorrectly hide Ajayeb Dubai from Lattafa catalog).
+
+**Layer 3 — follow-up task:** Investigate why `brand_name='Lattafa / لطافة'` appears in entity_market (resolver or ingest path). Fix by normalizing the brand_name variant at ingest time or via a brand_profiles alias. Until then, the ghost brand entity may appear in screener/dashboard with 0 catalog perfumes.
+
+**Changed:** `_brand_catalog_perfumes()` in `perfume_trend_sdk/api/routes/entities.py`
+
+**Tests:** `tests/unit/test_data3_brand_catalog_consistency.py` — 21/21 pass. Combined: 241/241 pass (DATA3 + DATA2 + DATA1 + FTG-4 + FTG-3 + FTG-2 + FTG-1).
+
+**Production verification checklist:**
+- [ ] `/entities/brand/brand-lattafa` — Lattafa Khamrah appears exactly once (score 46.1, not duplicated)
+- [ ] `/entities/brand/brand-lattafa` — Lattafa Ameer Al Oudh appears exactly once
+- [ ] `/entities/brand/brand-lattafa` — Ajayeb Dubai still appears (not broken by any guard)
+- [ ] `/entities/brand/brand-xerjoff---join-the-club` — Xerjoff Join the Club Don still shows tracked (DATA2 not regressed)
+- [ ] `/entities/brand/brand-xerjoff---casamorati` — Casamorati EDP rows still show tracked
+- [ ] `/dashboard` loads · `/screener` loads
+
+---
+
 ## DATA2 — Brand Catalog Join Normalization
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-14)**
 **Commit: e5f3614**
@@ -2310,6 +2344,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
+| DATA3 — Brand Catalog & Brand Identity Consistency (Layer 1 dedup) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |

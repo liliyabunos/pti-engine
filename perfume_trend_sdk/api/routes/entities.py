@@ -836,48 +836,68 @@ def _brand_catalog_perfumes(db: Session, brand_canonical_name: str, limit: int =
     is applied to hide malformed KB entries.
     """
     rows = _safe(lambda: db.execute(
-        text("""
+        text(r"""
         WITH latest_date_per_entity AS (
             SELECT entity_id, MAX(date) AS latest_date
             FROM entity_timeseries_daily
             WHERE mention_count > 0
             GROUP BY entity_id
-        )
-        SELECT
-            em.entity_id,
-            rp.canonical_name,
-            etd.composite_market_score,
-            etd.mention_count,
-            CASE WHEN etd.mention_count > 0 THEN true ELSE false END AS has_activity_today,
-            rp.id AS resolver_id
-        FROM resolver_perfumes rp
-        JOIN resolver_brands rb ON rp.brand_id = rb.id
-        LEFT JOIN entity_market em
-            ON LOWER(em.canonical_name) IN (
-                LOWER(rp.canonical_name),
-                LOWER(TRIM(REGEXP_REPLACE(
-                    REGEXP_REPLACE(
-                        rp.canonical_name,
+        ),
+        raw AS (
+            SELECT
+                em.id AS em_id,
+                em.entity_id,
+                rp.canonical_name,
+                etd.composite_market_score,
+                etd.mention_count,
+                CASE WHEN etd.mention_count > 0 THEN true ELSE false END AS has_activity_today,
+                rp.id AS resolver_id,
+                -- Deduplicate: when two resolver rows join to the same em row (e.g.
+                -- "Lattafa Khamrah" and "Lattafa Khamrah Eau de Parfum" both matching
+                -- the same entity_market row), keep only the best match per em.id.
+                -- Partition by em.id for matched rows, or by resolver_id for
+                -- catalog-only rows (em.id IS NULL) so each catalog row is kept.
+                ROW_NUMBER() OVER (
+                    PARTITION BY COALESCE(em.id::text, rp.id::text)
+                    ORDER BY
+                        -- Prefer exact canonical name match over suffix-normalized match
+                        CASE WHEN LOWER(em.canonical_name) = LOWER(rp.canonical_name)
+                             THEN 0 ELSE 1 END ASC,
+                        LENGTH(rp.canonical_name) ASC
+                ) AS rn
+            FROM resolver_perfumes rp
+            JOIN resolver_brands rb ON rp.brand_id = rb.id
+            LEFT JOIN entity_market em
+                ON LOWER(em.canonical_name) IN (
+                    LOWER(rp.canonical_name),
+                    LOWER(TRIM(REGEXP_REPLACE(
+                        REGEXP_REPLACE(
+                            rp.canonical_name,
+                            '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$',
+                            '',
+                            'i'
+                        ),
                         '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$',
                         '',
                         'i'
-                    ),
-                    '\s+(Extrait de Parfum|Eau de Parfum|Eau de Toilette|Eau de Cologne|Eau Fraiche|Extrait|Parfum)\s*$',
-                    '',
-                    'i'
-                )))
-            )
-            AND em.entity_type = 'perfume'
-        LEFT JOIN latest_date_per_entity ld ON ld.entity_id = em.id
-        LEFT JOIN entity_timeseries_daily etd
-            ON etd.entity_id = em.id AND etd.date = ld.latest_date
-        WHERE LOWER(rb.canonical_name) = LOWER(:n)
-          AND LENGTH(REGEXP_REPLACE(rp.canonical_name, '[^a-zA-Z]', '', 'g')) >= 2
-          AND rp.canonical_name ~ '^[a-zA-Z0-9]'
-          AND LOWER(rp.canonical_name) NOT IN
-              ('cologne','fragrance','perfume','scent','mist','spray')
-        ORDER BY COALESCE(etd.composite_market_score, 0) DESC,
-                 rp.canonical_name ASC
+                    )))
+                )
+                AND em.entity_type = 'perfume'
+            LEFT JOIN latest_date_per_entity ld ON ld.entity_id = em.id
+            LEFT JOIN entity_timeseries_daily etd
+                ON etd.entity_id = em.id AND etd.date = ld.latest_date
+            WHERE LOWER(rb.canonical_name) = LOWER(:n)
+              AND LENGTH(REGEXP_REPLACE(rp.canonical_name, '[^a-zA-Z]', '', 'g')) >= 2
+              AND rp.canonical_name ~ '^[a-zA-Z0-9]'
+              AND LOWER(rp.canonical_name) NOT IN
+                  ('cologne','fragrance','perfume','scent','mist','spray')
+        )
+        SELECT entity_id, canonical_name, composite_market_score, mention_count,
+               has_activity_today, resolver_id
+        FROM raw
+        WHERE rn = 1
+        ORDER BY COALESCE(composite_market_score, 0) DESC,
+                 canonical_name ASC
         LIMIT :lim
         """),
         {"n": brand_canonical_name, "lim": limit},
