@@ -99,6 +99,12 @@ _DUPE_RAW: dict[str, DupeProfile] = {
         "Kilian Angels' Share",
         "Angels' Share alternatives",
     ),
+    # ── Dior Sauvage Elixir alternatives ────────────────────────────────────
+    "Lattafa Asad": DupeProfile(
+        "dupe_alternative",
+        "Sauvage Elixir",
+        "Sauvage Elixir alternatives",
+    ),
 }
 
 

@@ -461,3 +461,41 @@ class TestKhamrahRegression:
         assert profile is not None
         assert profile.reference_original == "Kilian Angels' Share"
         assert profile.dupe_family == "Angels' Share alternatives"
+
+
+# ---------------------------------------------------------------------------
+# RI1-E1B regression — Lattafa Asad → Sauvage Elixir
+# ---------------------------------------------------------------------------
+
+class TestLattafaAsadRI1E1B:
+    """RI1-E1B: Lattafa Asad is a community-consensus dupe of Dior Sauvage Elixir.
+    Canonical object name in entity_market: 'Sauvage Elixir' (Dior).
+    """
+
+    def test_asad_has_dupe_profile(self):
+        profile = get_dupe_profile("Lattafa", "Lattafa Asad")
+        assert profile is not None, "Lattafa Asad must have a DupeProfile"
+
+    def test_asad_is_dupe_of_sauvage_elixir(self):
+        profile = get_dupe_profile("Lattafa", "Lattafa Asad")
+        assert profile.reference_original == "Sauvage Elixir"
+
+    def test_asad_role_is_dupe_alternative(self):
+        role = classify_entity_role("Lattafa", "Lattafa Asad")
+        assert role == "dupe_alternative"
+
+    def test_asad_dupe_family(self):
+        profile = get_dupe_profile("Lattafa", "Lattafa Asad")
+        assert profile.dupe_family == "Sauvage Elixir alternatives"
+
+    def test_asad_does_not_reference_khamrah_original(self):
+        """Asad and Khamrah have different references — must not cross-contaminate."""
+        profile = get_dupe_profile("Lattafa", "Lattafa Asad")
+        assert profile.reference_original != "Kilian Angels' Share"
+
+    def test_khamrah_unchanged_by_asad_addition(self):
+        """Adding Asad must not affect Khamrah's profile."""
+        profile = get_dupe_profile("Lattafa", "Lattafa Khamrah")
+        assert profile is not None
+        assert profile.reference_original == "Kilian Angels' Share"
+        assert profile.role == "dupe_alternative"
