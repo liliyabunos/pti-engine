@@ -1447,6 +1447,37 @@ Note: All mismatched perfumes correctly appear on their parent brand's catalog p
 
 ---
 
+## DATA5 / SEARCH1 — Market-Readable Perfume Catalog Search
+**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-15)**
+**Commit: 39eb700**
+**No migration required.**
+
+**Root cause:** `catalog_perfumes()` searched only `rp.canonical_name` OR `rb.canonical_name`. Fragrantica stores many perfumes with brand embedded in the name or with reversed ordering (e.g. "Red Temptation Women Zara Eau de Parfum"), so queries like "Zara Red Temptation" returned 0 results.
+
+**Fix:** Added a third OR condition to the WHERE clause in `catalog.py`:
+```python
+"OR LOWER(rb.canonical_name || ' ' || rp.canonical_name) LIKE LOWER(:q))"
+```
+Applies to both the COUNT and rows queries via shared `where_clauses` list.
+
+**Production-validated before fix (Railway SSH):**
+- "Zara Red Temptation" → 10 matches ✓
+- "Ariana Grande Cloud" → 4 matches ✓
+- "Montblanc Explorer" → 2 matches ✓
+- "Red Temptation" (name-only) → still works ✓
+- "Ariana Grande" (brand-only) → still works ✓
+
+**Tests:** `tests/unit/test_data5_catalog_search.py` — 21/21 pass.
+
+**Production verification checklist:**
+- [ ] Screener → All Perfumes → "Zara Red Temptation" → ≥1 results
+- [ ] Screener → All Perfumes → "Ariana Grande Cloud" → ≥1 results
+- [ ] Screener → All Perfumes → "Montblanc Explorer" → ≥1 results
+- [ ] "Red Temptation" still returns results (no regression)
+- [ ] "Creed Aventus" still returns results (no regression)
+
+---
+
 ## DATA4 — Brand Name Canonicalization & Ghost Brand Repair
 **STATUS: PLANNED**
 
@@ -2427,6 +2458,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA3 — Duplicate Brand Catalog Display after Normalized Join (Layer 1 dedup) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
+| DATA5 / SEARCH1 — Market-Readable Catalog Search (brand+name concat) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
 | DATA4 — Brand Name Canonicalization & Ghost Brand Repair | PLANNED | — |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
