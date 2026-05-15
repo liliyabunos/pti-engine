@@ -1,44 +1,38 @@
-"""FTG-4 / RI1-E — Relationship Evidence Harvesting v1.
+"""FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment v1.
 
-Harvests relationship candidates from internal query signals in entity_topic_links.
-Creates operator-reviewable fragrance_relationship candidates (is_public=FALSE,
-operator_reviewed=FALSE) and appends query_pattern evidence to existing relationships.
+Attaches cross_query_retrieval evidence to existing operator-reviewed
+fragrance_relationship rows.  Does NOT create new machine-generated relationship
+candidates (see Source Semantics note below).
 
-Internal signal source (chosen over alternatives):
-  entity_topic_links WHERE topic_type='query' — YouTube search queries already
-  stored structurally per entity per cycle.  These are the highest-signal source
-  because they are actual user search strings that drove content discovery, not
-  raw text that needs parsing.  The extract_vs_competitors() function is already
-  tuned for this source.
+Source semantics:
+  entity_topic_links WHERE topic_type='query' stores YouTube discovery search
+  queries used by the ingestion pipeline — e.g. "creed aventus perfume".
+  These are NOT explicit consumer comparison queries ("creed aventus vs armaf").
 
-  Alternative rejected: raw text NLP on canonical_content_items — requires broad
-  text parsing, much higher false-positive rate, no existing extraction path.
+  The signal this source actually encodes is cross-query co-retrieval:
+    Entity B appears in YouTube content retrieved by a discovery query for Entity A.
+
+  This is a WEAK signal — weaker than explicit VS/dupe comparison phrases.
+  It can be real (CDNIM videos appear in Aventus searches because of the dupe
+  relationship) or noisy (unrelated niche fragrances surfaced by YouTube's
+  algorithm).
+
+Hard gate — no new candidate creation:
+  cross_query_retrieval evidence may only be attached to pairs that already exist
+  in fragrance_relationships under any relation_type (operator-reviewed seed rows).
+  Pairs with no existing relationship are counted under
+  candidates_skipped_no_existing_relationship and logged but not persisted.
+
+  Rationale: co-retrieval alone does not justify a new relationship claim.
+  New candidate creation requires a pair-level explicit comparison source
+  (VS-pattern queries, content body NLP, or operator seed) — none of which
+  is currently persisted in production entity_topic_links.
 
 Idempotency rules:
-  - fragrance_relationships has UNIQUE on
-      (subject_canonical_name, relation_type, object_canonical_name)
-    → INSERT ON CONFLICT DO NOTHING prevents duplicate relationship rows.
-  - relationship_evidence has no DB-level unique constraint on query_text, so
-    the harvester checks for an existing row with the same
-      (relationship_id, evidence_type='query_pattern', query_text)
-    before inserting evidence — preventing duplicate evidence on repeated runs.
-
-Candidate row rules (FTG-4 public safety contract):
-  - operator_reviewed = FALSE  (always — machine candidates are never auto-reviewed)
-  - is_public = FALSE          (always — must pass FTG-3 quality gate via human review)
-  - relation_type = 'commonly_compared_to'  (conservative — never overclaim dupe_of)
-
-Existing relationship handling:
-  If a (subject, object) pair already exists in fragrance_relationships under ANY
-  relation_type, the harvester attaches query evidence to the existing row instead
-  of creating a new candidate.  This strengthens the evidence trail behind seeded
-  canonical rows without creating duplicates.
-
-Confidence policy (machine-generated, must never reach 0.700 gate automatically):
-  occurrence_count 1–2  → 0.200
-  occurrence_count 3–5  → 0.250
-  occurrence_count 6–10 → 0.300
-  occurrence_count 11+  → 0.350
+  - relationship_evidence has no DB-level unique constraint, so the harvester
+    checks for an existing row with the same
+      (relationship_id, evidence_type='cross_query_retrieval', query_text)
+    before inserting — preventing duplicate evidence on repeated runs.
 
 Usage:
   python3 scripts/harvest_relationship_evidence.py --dry-run   # preview only
@@ -73,9 +67,27 @@ from perfume_trend_sdk.analysis.topic_intelligence.market_intelligence import (
 # Constants
 # ---------------------------------------------------------------------------
 
-EVIDENCE_TYPE = "query_pattern"
+EVIDENCE_TYPE = "cross_query_retrieval"
 RELATION_TYPE_DEFAULT = "commonly_compared_to"
 FORMULA_VERSION = 1
+
+# Trailing noise suffixes stripped from co-retrieval candidate strings before
+# exact-match resolution.  These are descriptor words appended to entity names
+# in YouTube discovery search queries (e.g. "creed aventus perfume" →
+# "creed aventus").  Stripped only when the raw candidate fails exact match.
+_NOISE_SUFFIXES = [
+    "eau de parfum",
+    "eau de toilette",
+    "eau de cologne",
+    "edp",
+    "edt",
+    "parfum",
+    "perfume",
+    "fragrance",
+    "cologne",
+    "review",
+    "scent",
+]
 
 # Minimum cumulative occurrence count for a query pair to generate a candidate.
 # Default 2: require the comparison query to have appeared at least twice for
@@ -94,7 +106,7 @@ MAX_CANDIDATES_PER_ENTITY = 20
 # ---------------------------------------------------------------------------
 
 def _compute_confidence(occurrence_count: int) -> float:
-    """Return machine confidence score for a query_pattern evidence observation.
+    """Return machine confidence score for a cross_query_retrieval evidence observation.
 
     All values are intentionally below the 0.700 public display gate so that
     no machine-generated candidate can ever auto-publish.
@@ -148,18 +160,44 @@ def _fetch_entity_queries(db, min_occurrences: int = 2, limit: int = 500):
 def _resolve_candidate(db, candidate_str: str) -> Optional[str]:
     """Try to resolve a raw candidate string to a known entity canonical name.
 
-    Attempts case-insensitive exact match on entity_market.canonical_name.
+    Step 1: case-insensitive exact match on entity_market.canonical_name.
+    Step 2: if Step 1 fails, strip known noise suffixes (e.g. "perfume",
+            "review", "eau de parfum") from the end of the candidate and retry.
+            This handles discovery-query strings like "creed aventus perfume"
+            which should resolve to "Creed Aventus".
+
     Returns the canonical_name from entity_market if matched, else None.
-    Does NOT use the resolver alias table (v1 is conservative — exact match only).
+    Does NOT use the resolver alias table (v1 is conservative).
     """
     from sqlalchemy import text
-    row = db.execute(text(
-        "SELECT canonical_name FROM entity_market "
-        "WHERE entity_type = 'perfume' "
-        "  AND LOWER(canonical_name) = LOWER(:cand) "
-        "LIMIT 1"
-    ), {"cand": candidate_str.strip()}).fetchone()
-    return row[0] if row else None
+
+    def _query(cand: str) -> Optional[str]:
+        row = db.execute(text(
+            "SELECT canonical_name FROM entity_market "
+            "WHERE entity_type = 'perfume' "
+            "  AND LOWER(canonical_name) = LOWER(:cand) "
+            "LIMIT 1"
+        ), {"cand": cand}).fetchone()
+        return row[0] if row else None
+
+    # Step 1: raw exact match
+    raw = candidate_str.strip()
+    result = _query(raw)
+    if result:
+        return result
+
+    # Step 2: strip trailing noise suffixes (longest first to avoid partial strips)
+    lower = raw.lower()
+    for suffix in sorted(_NOISE_SUFFIXES, key=len, reverse=True):
+        if lower.endswith(" " + suffix):
+            stripped = raw[:-(len(suffix) + 1)].strip()
+            if stripped:
+                result = _query(stripped)
+                if result:
+                    return result
+            break  # only strip one suffix per candidate
+
+    return None
 
 
 def _find_existing_relationship(db, subject: str, object_name: str) -> Optional[str]:
@@ -180,12 +218,12 @@ def _find_existing_relationship(db, subject: str, object_name: str) -> Optional[
 
 
 def _evidence_already_exists(db, relationship_id: str, query_text: str) -> bool:
-    """Return True if a query_pattern evidence row already exists for this pair."""
+    """Return True if a cross_query_retrieval evidence row already exists for this pair."""
     from sqlalchemy import text
     row = db.execute(text(
         "SELECT 1 FROM relationship_evidence "
         "WHERE relationship_id = :rid "
-        "  AND evidence_type = 'query_pattern' "
+        f"  AND evidence_type = '{EVIDENCE_TYPE}' "
         "  AND query_text = :qt "
         "LIMIT 1"
     ), {"rid": relationship_id, "qt": query_text}).fetchone()
@@ -234,7 +272,7 @@ def _insert_relationship(db, subject: str, object_name: str, confidence: float,
 
 
 def _insert_evidence(db, relationship_id: str, query_text: str, today: date):
-    """Insert a query_pattern evidence row.
+    """Insert a cross_query_retrieval evidence row.
 
     Caller must check _evidence_already_exists() before calling to maintain
     idempotency (no DB-level unique constraint on evidence).
@@ -298,13 +336,15 @@ def harvest(
 
     print(f"[FTG-4] processing {len(entity_queries)} distinct entities")
 
-    # Step 3: extract VS candidates and resolve
+    # Step 3: extract VS/co-retrieval candidates and resolve
     stats = {
         "entities_processed": 0,
         "candidates_resolved": 0,
-        "new_relationships": 0,
         "evidence_added_to_existing": 0,
         "evidence_skipped_duplicate": 0,
+        # Hard gate: cross_query_retrieval never creates new relationship rows.
+        # Only pairs that already exist in fragrance_relationships receive evidence.
+        "candidates_skipped_no_existing_relationship": 0,
         "examples": [],
     }
 
@@ -320,8 +360,8 @@ def harvest(
             stats["candidates_resolved"] += 1
 
             # Determine total occurrence count for this (subject, resolved) pair.
-            # Count queries that contain either the raw candidate string or the
-            # resolved canonical name — both indicate the same comparison signal.
+            # Match queries containing the resolved canonical name or the raw
+            # candidate string (both indicate the same co-retrieval signal).
             resolved_lower = resolved.lower()
             cand_lower = candidate_str.lower()
             total_occ = 0
@@ -335,46 +375,38 @@ def harvest(
             if total_occ < min_occurrences:
                 continue
 
-            confidence = _compute_confidence(total_occ)
-
-            # Step 4: check for existing relationship (any relation_type)
+            # Step 4: check for existing relationship (any relation_type).
+            # HARD GATE: cross_query_retrieval evidence may only be attached to
+            # existing operator-reviewed relationship rows.  Do not create new
+            # machine candidate rows from co-retrieval evidence alone — the signal
+            # is too weak to justify a new relationship claim without corroboration.
             existing_id = _find_existing_relationship(db, canonical_name, resolved)
-            is_new_row = existing_id is None
+
+            if existing_id is None:
+                stats["candidates_skipped_no_existing_relationship"] += 1
+                continue
 
             example = {
                 "subject": canonical_name,
                 "object": resolved,
-                "relation": RELATION_TYPE_DEFAULT if is_new_row else "EXISTING",
+                "existing_relation": "EXISTING",
+                "evidence_type": EVIDENCE_TYPE,
                 "evidence_count": len(matching_queries),
-                "confidence": confidence if is_new_row else "n/a (existing)",
-                "new_row": is_new_row,
+                "action": "ATTACH" if not dry_run else "WOULD_ATTACH",
             }
 
             if dry_run:
                 stats["examples"].append(example)
-                if is_new_row:
-                    stats["new_relationships"] += 1
-                else:
-                    stats["evidence_added_to_existing"] += 1
+                stats["evidence_added_to_existing"] += len(matching_queries)
                 continue
 
-            # Write mode
-            if is_new_row:
-                rel_id = _insert_relationship(db, canonical_name, resolved, confidence, today)
-                stats["new_relationships"] += 1
-            else:
-                rel_id = existing_id
-
-            # Add evidence for each distinct matching query string
+            # Write mode — attach evidence only
             for q in matching_queries:
-                if _evidence_already_exists(db, rel_id, q):
+                if _evidence_already_exists(db, existing_id, q):
                     stats["evidence_skipped_duplicate"] += 1
                 else:
-                    _insert_evidence(db, rel_id, q, today)
-                    if is_new_row:
-                        pass  # counted above
-                    else:
-                        stats["evidence_added_to_existing"] += 1
+                    _insert_evidence(db, existing_id, q, today)
+                    stats["evidence_added_to_existing"] += 1
 
             stats["examples"].append(example)
 
@@ -431,23 +463,22 @@ def main():
     print(f"\n[FTG-4] {mode} RESULTS")
     print(f"  entities_processed:          {stats['entities_processed']}")
     print(f"  candidates_resolved:         {stats['candidates_resolved']}")
-    print(f"  new_relationships:           {stats['new_relationships']}")
-    print(f"  evidence_added_to_existing:  {stats['evidence_added_to_existing']}")
-    print(f"  evidence_skipped_duplicate:  {stats['evidence_skipped_duplicate']}")
+    print(f"  evidence_added_to_existing:            {stats['evidence_added_to_existing']}")
+    print(f"  evidence_skipped_duplicate:            {stats['evidence_skipped_duplicate']}")
+    print(f"  candidates_skipped_no_existing_rel:    {stats['candidates_skipped_no_existing_relationship']}")
 
     if stats["examples"]:
-        print(f"\n[FTG-4] EXAMPLE CANDIDATES (first {min(10, len(stats['examples']))}):")
-        print(f"  {'Subject':<40} {'Object':<40} {'Relation':<25} {'Ev':>3} {'Conf':>6} {'New'}")
-        print(f"  {'-'*40} {'-'*40} {'-'*25} {'-':>3} {'-':>6} {'-'*3}")
+        print(f"\n[FTG-4] EVIDENCE ATTACHMENT ROWS (first {min(10, len(stats['examples']))}):")
+        print(f"  {'Subject':<40} {'Object':<35} {'Ev Type':<22} {'Ev':>3} {'Action'}")
+        print(f"  {'-'*40} {'-'*35} {'-'*22} {'-':>3} {'-'*12}")
         for ex in stats["examples"][:10]:
-            conf_str = f"{ex['confidence']:.3f}" if isinstance(ex["confidence"], float) else str(ex["confidence"])
-            print(f"  {ex['subject'][:40]:<40} {ex['object'][:40]:<40} "
-                  f"{ex['relation'][:25]:<25} {ex['evidence_count']:>3} {conf_str:>6} "
-                  f"{'YES' if ex['new_row'] else 'NO'}")
+            print(f"  {ex['subject'][:40]:<40} {ex['object'][:35]:<35} "
+                  f"{ex['evidence_type'][:22]:<22} {ex['evidence_count']:>3} {ex['action']}")
 
-    if args.dry_run and (stats["new_relationships"] > 0 or stats["evidence_added_to_existing"] > 0):
-        print(f"\n[FTG-4] Re-run without --dry-run to write {stats['new_relationships']} "
-              f"new relationship candidates and {stats['evidence_added_to_existing']} evidence additions.")
+    if args.dry_run and stats["evidence_added_to_existing"] > 0:
+        print(f"\n[FTG-4] Re-run without --dry-run to attach "
+              f"{stats['evidence_added_to_existing']} cross_query_retrieval evidence rows "
+              f"to existing canonical relationships.")
 
     return 0
 

@@ -1,4 +1,4 @@
-"""FTG-4 / RI1-E — Relationship Evidence Harvesting v1.
+"""FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment v1.
 
 Tests cover:
 
@@ -10,10 +10,10 @@ Confidence policy:
   E  occurrence 11 → 0.350
   F  All confidence values are below 0.700 (public gate threshold)
 
-Candidate public-safety contract:
-  G  New harvested row: operator_reviewed=FALSE
-  H  New harvested row: is_public=FALSE
-  I  New harvested row: relation_type='commonly_compared_to'
+Candidate public-safety contract (kept for _insert_relationship helper integrity):
+  G  New row: operator_reviewed=FALSE
+  H  New row: is_public=FALSE
+  I  New row: relation_type='commonly_compared_to'
 
 Admin filter:
   J  Backend list accepts filter='pending_review'
@@ -22,16 +22,27 @@ Admin filter:
 
 VS candidate extraction (integration with market_intelligence):
   M  'Creed Aventus vs Baccarat Rouge 540' for entity Creed Aventus → candidate 'Baccarat Rouge 540'
-  N  'baccarat rouge 540 review' (orphan) for entity 'Creed Aventus' → candidate
+  N  'baccarat rouge 540 review' (orphan) for entity 'Creed Aventus' → candidate extracted
   O  Query that equals own entity name → not a candidate (self-reference)
+
+Suffix stripping in _resolve_candidate:
+  N2 'creed aventus perfume' → strips 'perfume' → resolves to 'Creed Aventus'
+  N3 'creed aventus review' → strips 'review' → resolves to 'Creed Aventus'
+  N4 'creed aventus eau de parfum' → strips longest suffix → resolves to 'Creed Aventus'
+  N5 Raw 'Creed Aventus' (exact) → resolves without stripping
 
 Idempotency:
   P  Running harvest with same data twice does not duplicate relationship rows
   Q  Running harvest with same data twice does not duplicate evidence rows
 
-Existing relationship handling:
-  R  Pair (A, B) with existing seeded row → evidence attached, no new row created
-  S  Pair (A, B) without existing row → new commonly_compared_to row created
+Hard gate — no new candidates from cross_query_retrieval:
+  R  Pair (A, B) with existing relationship → evidence attached (ATTACH)
+  S  Pair (A, B) without existing relationship → SKIPPED, counted under
+     candidates_skipped_no_existing_relationship (no new row created)
+
+Evidence type:
+  U  EVIDENCE_TYPE constant is 'cross_query_retrieval'
+  V  _evidence_already_exists checks against 'cross_query_retrieval' in SQL
 
 Script-level: dry-run mode
   T  Dry-run returns non-zero counts but writes nothing to DB
@@ -81,10 +92,6 @@ def _make_db(
     """Build a lightweight mock DB session for harvesting tests."""
     db = MagicMock()
 
-    # _fetch_entity_queries returns structured dicts via execute().fetchall()
-    # We need execute() to return different things for different SQL patterns.
-    # Simplest: use side_effect to return values in call order.
-
     topic_fetchall = []
     if topic_rows:
         for r in topic_rows:
@@ -103,17 +110,14 @@ def _make_db(
     if evidence_exists:
         evidence_row = MagicMock()
 
-    call_count = {"n": 0}
-
     def fake_execute(sql_obj, params=None):
         sql = str(sql_obj)
         result = MagicMock()
         if "entity_topic_links" in sql:
             result.fetchall.return_value = topic_fetchall
         elif "LOWER(canonical_name)" in sql:
-            # _resolve_candidate
+            # _resolve_candidate — exact match only for mock purposes
             candidate = (params or {}).get("cand", "")
-            # Return a row if candidate matches our known objects
             if candidate.lower() in ("creed aventus", "baccarat rouge 540",
                                      "kilian angels' share", "some other perfume"):
                 mock_row = MagicMock()
@@ -124,7 +128,7 @@ def _make_db(
         elif "fragrance_relationships" in sql and "ORDER BY operator_reviewed" in sql:
             # _find_existing_relationship
             result.fetchone.return_value = existing_row
-        elif "relationship_evidence" in sql and "evidence_type = 'query_pattern'" in sql and "SELECT 1" in sql:
+        elif "relationship_evidence" in sql and "evidence_type = 'cross_query_retrieval'" in sql and "SELECT 1" in sql:
             # _evidence_already_exists
             result.fetchone.return_value = evidence_row if evidence_exists else None
         elif "SELECT id FROM fragrance_relationships" in sql:
@@ -170,22 +174,22 @@ class TestConfidencePolicy:
 
 
 # ---------------------------------------------------------------------------
-# G–I: Candidate row public-safety contract
+# G–I: Candidate row public-safety contract (_insert_relationship helper)
 # ---------------------------------------------------------------------------
 
 class TestCandidatePublicSafety:
-    """Verify that harvested DB inserts always use safe default values."""
+    """Verify that _insert_relationship always uses safe default values.
+
+    The function is still used when operator seeds new rows manually;
+    the hard gate prevents the harvester from calling it in co-retrieval mode.
+    """
 
     def test_G_new_row_operator_reviewed_false(self):
         db = MagicMock()
-        captured = {}
 
         def capture_execute(sql_obj, params=None):
-            sql = str(sql_obj)
             result = MagicMock()
-            if "INSERT INTO fragrance_relationships" in sql:
-                captured["params"] = params
-            elif "SELECT id FROM fragrance_relationships" in sql:
+            if "SELECT id FROM fragrance_relationships" in str(sql_obj):
                 mock_row = MagicMock()
                 mock_row.__getitem__ = lambda self, i: str(uuid.uuid4())
                 result.fetchone.return_value = mock_row
@@ -195,7 +199,6 @@ class TestCandidatePublicSafety:
 
         db.execute.side_effect = capture_execute
         harv._insert_relationship(db, "Subject Perfume", "Object Perfume", 0.250, date.today())
-        # The SQL literal FALSE for operator_reviewed
         insert_sql = str(db.execute.call_args_list[0][0][0])
         assert "FALSE, FALSE" in insert_sql  # is_public=FALSE, operator_reviewed=FALSE
 
@@ -331,9 +334,60 @@ class TestVsCandidateExtraction:
     def test_O_own_name_not_candidate(self):
         queries = ["Creed Aventus vs Creed Aventus"]
         candidates = extract_vs_competitors(queries, "Creed Aventus")
-        # Should not include self-referential match
         for c in candidates:
             assert c.lower() != "creed aventus"
+
+
+# ---------------------------------------------------------------------------
+# N2–N5: Suffix stripping in _resolve_candidate
+# ---------------------------------------------------------------------------
+
+class TestSuffixStripping:
+    """_resolve_candidate must strip noise suffixes before giving up on exact match."""
+
+    def _make_resolve_db(self, known_names):
+        """DB mock that resolves lowercase canonical names from known_names set."""
+        db = MagicMock()
+
+        def fake_execute(sql_obj, params=None):
+            result = MagicMock()
+            cand = (params or {}).get("cand", "").lower()
+            match = next((n for n in known_names if n.lower() == cand), None)
+            if match:
+                mock_row = MagicMock()
+                mock_row.__getitem__ = lambda self, i: match
+                result.fetchone.return_value = mock_row
+            else:
+                result.fetchone.return_value = None
+            return result
+
+        db.execute.side_effect = fake_execute
+        return db
+
+    def test_N2_strips_perfume_suffix(self):
+        db = self._make_resolve_db(["Creed Aventus"])
+        result = harv._resolve_candidate(db, "creed aventus perfume")
+        assert result == "Creed Aventus"
+
+    def test_N3_strips_review_suffix(self):
+        db = self._make_resolve_db(["Creed Aventus"])
+        result = harv._resolve_candidate(db, "creed aventus review")
+        assert result == "Creed Aventus"
+
+    def test_N4_strips_eau_de_parfum_suffix(self):
+        db = self._make_resolve_db(["Creed Aventus"])
+        result = harv._resolve_candidate(db, "creed aventus eau de parfum")
+        assert result == "Creed Aventus"
+
+    def test_N5_exact_match_no_stripping_needed(self):
+        db = self._make_resolve_db(["Creed Aventus"])
+        result = harv._resolve_candidate(db, "Creed Aventus")
+        assert result == "Creed Aventus"
+
+    def test_N6_unresolvable_even_after_stripping_returns_none(self):
+        db = self._make_resolve_db(["Creed Aventus"])
+        result = harv._resolve_candidate(db, "etat libre cologne fragrance")
+        assert result is None
 
 
 # ---------------------------------------------------------------------------
@@ -364,9 +418,7 @@ class TestIdempotency:
         today = date.today()
         harv._insert_relationship(db, "A", "B", 0.250, today)
         harv._insert_relationship(db, "A", "B", 0.250, today)
-        # Both calls issue INSERT, but DB ON CONFLICT suppresses second row
         assert insert_count["n"] == 2  # Two calls issued; DB handles conflict
-        # This verifies the INSERT uses ON CONFLICT DO NOTHING in SQL
         insert_sql = str(db.execute.call_args_list[0][0][0])
         assert "ON CONFLICT" in insert_sql
         assert "DO NOTHING" in insert_sql
@@ -394,7 +446,6 @@ class TestIdempotency:
         query_text = "creed aventus vs armaf"
         today = date.today()
 
-        # Simulate the idempotency check
         if not harv._evidence_already_exists(db, rel_id, query_text):
             harv._insert_evidence(db, rel_id, query_text, today)
 
@@ -402,12 +453,12 @@ class TestIdempotency:
 
 
 # ---------------------------------------------------------------------------
-# R–S: Existing relationship handling
+# R–S: Hard gate — existing relationship required for evidence attachment
 # ---------------------------------------------------------------------------
 
-class TestExistingRelationshipHandling:
-    def test_R_existing_pair_no_new_row(self):
-        """If (subject, object) pair exists, _find_existing_relationship returns it."""
+class TestHardGate:
+    def test_R_existing_pair_evidence_attached(self):
+        """If (subject, object) pair exists, _find_existing_relationship returns its ID."""
         existing_id = str(uuid.uuid4())
         db = MagicMock()
 
@@ -425,17 +476,82 @@ class TestExistingRelationshipHandling:
         found_id = harv._find_existing_relationship(db, "Subject", "Object")
         assert found_id == existing_id
 
-    def test_S_no_existing_pair_returns_none(self):
+    def test_S_no_existing_pair_skipped_not_created(self):
+        """If no (subject, object) pair exists, harvest skips — does NOT create new row.
+
+        This is the hard gate: cross_query_retrieval evidence must never create
+        new relationship candidates. The pair must already exist.
+        """
+        insert_calls = []
+
         db = MagicMock()
 
         def fake_execute(sql_obj, params=None):
+            sql = str(sql_obj)
+            result = MagicMock()
+            if "entity_topic_links" in sql:
+                # One entity with an orphan query
+                mock_row = MagicMock()
+                mock_row.__getitem__ = lambda self, i: [
+                    "test-uuid", "Etat Libre d'Orange Cologne",
+                    "creed aventus perfume", 5
+                ][i]
+                result.fetchall.return_value = [mock_row]
+            elif "LOWER(canonical_name)" in sql:
+                cand = (params or {}).get("cand", "").lower()
+                if cand == "creed aventus":
+                    mock_row = MagicMock()
+                    mock_row.__getitem__ = lambda self, i: "Creed Aventus"
+                    result.fetchone.return_value = mock_row
+                else:
+                    result.fetchone.return_value = None
+            elif "ORDER BY operator_reviewed" in sql:
+                # No existing relationship for this pair
+                result.fetchone.return_value = None
+            elif "INSERT" in sql:
+                insert_calls.append(sql)
+                result.fetchone.return_value = None
+            else:
+                result.fetchone.return_value = None
+                result.fetchall.return_value = []
+            return result
+
+        db.execute.side_effect = fake_execute
+
+        stats = harv.harvest(db, dry_run=False, min_occurrences=1, entity_limit=10)
+
+        assert len(insert_calls) == 0, (
+            "Hard gate violated: harvest must not INSERT when no existing relationship exists"
+        )
+        assert stats["candidates_skipped_no_existing_relationship"] >= 1
+        assert stats["evidence_added_to_existing"] == 0
+
+
+# ---------------------------------------------------------------------------
+# U–V: Evidence type constant
+# ---------------------------------------------------------------------------
+
+class TestEvidenceType:
+    def test_U_evidence_type_is_cross_query_retrieval(self):
+        assert harv.EVIDENCE_TYPE == "cross_query_retrieval"
+
+    def test_V_evidence_already_exists_checks_cross_query_retrieval(self):
+        """_evidence_already_exists must filter by 'cross_query_retrieval' in SQL."""
+        captured_sql = []
+
+        db = MagicMock()
+
+        def capture_execute(sql_obj, params=None):
+            captured_sql.append(str(sql_obj))
             result = MagicMock()
             result.fetchone.return_value = None
             return result
 
-        db.execute.side_effect = fake_execute
-        found_id = harv._find_existing_relationship(db, "Unknown A", "Unknown B")
-        assert found_id is None
+        db.execute.side_effect = capture_execute
+        harv._evidence_already_exists(db, str(uuid.uuid4()), "some query text")
+
+        assert len(captured_sql) == 1
+        assert "cross_query_retrieval" in captured_sql[0]
 
 
 # ---------------------------------------------------------------------------
@@ -453,7 +569,6 @@ class TestDryRunMode:
             sql = str(sql_obj)
             result = MagicMock()
             if "entity_topic_links" in sql:
-                # Return one entity with one query
                 mock_row = MagicMock()
                 mock_row.__getitem__ = lambda self, i: [
                     "test-uuid", "Creed Aventus", "armaf vs creed aventus", 5
@@ -468,7 +583,10 @@ class TestDryRunMode:
                 else:
                     result.fetchone.return_value = None
             elif "ORDER BY operator_reviewed" in sql:
-                result.fetchone.return_value = None
+                # Simulate existing relationship (so hard gate passes in dry-run)
+                mock_row = MagicMock()
+                mock_row.__getitem__ = lambda self, i: str(uuid.uuid4())
+                result.fetchone.return_value = mock_row
             elif "INSERT" in sql:
                 insert_calls.append(sql)
                 result.fetchone.return_value = None

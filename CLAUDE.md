@@ -1021,47 +1021,75 @@ Applies to both public perfume page (`/perfumes/[slug]`) and terminal entity pag
 
 ---
 
-#### FTG-4 / RI1-E — Relationship Evidence Harvesting + Admin Console Repair
-**Status: COMPLETE — PENDING PRODUCTION VERIFICATION**
-**Commit: 7e928bc**
+#### FTG-4 / RI1-E — Admin Console Repair + Evidence Harvesting (Source Semantics Correction)
+**Status: RI1-E1 EVIDENCE ATTACHMENT READY — PENDING WRITE-MODE APPROVAL**
+**Commits: 7e928bc (admin console fix + initial harvester) · [current] (source semantics correction)**
 **Deployed: pushed to main 2026-05-15; Railway auto-deploys**
 
-**Admin console 404 fix (immediate prerequisite):**
+**Admin console 404 fix (immediate prerequisite — complete):**
 - **Symptom:** `/admin/relationship-intelligence` returned HTTP 404 on All/Public/Non-Public tabs
 - **Root cause:** `[...path]/route.ts` catch-all requires ≥1 path segment; `GET /api/admin/relationship-intelligence?filter=all` has zero segments → Next.js 404
 - **Fix:** Added `frontend/src/app/api/admin/relationship-intelligence/route.ts` — base GET handler (mirrors creator-claims pattern)
-- No code change needed in backend or console component
+- **Verified:** All/Public/Pending Review tabs confirmed working (7 rows)
 
-**FTG-4 / RI1-E — Evidence Harvesting v1:**
-- **Script:** `scripts/harvest_relationship_evidence.py` — script-first (not pipeline-integrated in v1)
-- **Evidence source:** `entity_topic_links WHERE topic_type='query'` — structured YouTube search queries already aggregated per entity; fed through `extract_vs_competitors()` (existing function from market_intelligence.py)
-- **Why this source:** Highest signal, lowest false-positive rate among available internal sources. Already structured. No new parsing needed.
-- **Candidate rules (public safety contract):** `operator_reviewed=FALSE`, `is_public=FALSE`, `relation_type='commonly_compared_to'` (conservative — never overclaim)
-- **Confidence policy:** occurrence 1-2 → 0.200; 3-5 → 0.250; 6-10 → 0.300; 11+ → 0.350. All < 0.700 gate. Never auto-approved.
-- **Idempotency:** `ON CONFLICT (subject_canonical_name, relation_type, object_canonical_name) DO NOTHING` on relationships; evidence existence check before inserting
-- **Existing relationship handling:** If (subject, object) pair exists under ANY relation_type, attach evidence to existing row instead of creating new candidate
-- **Admin console enhancement:** Added `pending_review` filter tab (`operator_reviewed=FALSE AND is_public=FALSE`) to surface machine-generated candidates for operator review
+**FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment:**
+
+**Source semantics (corrected after production dry-run):**
+- `entity_topic_links WHERE topic_type='query'` stores YouTube **discovery search queries** used by the ingestion pipeline (e.g. "creed aventus perfume"), not user comparison queries ("creed aventus vs armaf")
+- Signal actually encoded: **cross-query co-retrieval** — Entity B appears in content retrieved by a discovery query for Entity A
+- This is a WEAK signal; renamed `evidence_type='cross_query_retrieval'` to reflect this accurately
+
+**Hard gate (no new candidate creation):**
+- `cross_query_retrieval` evidence may only be attached to pairs already in `fragrance_relationships` under any relation_type (operator-reviewed seed rows)
+- Pairs with no existing relationship → `candidates_skipped_no_existing_relationship` — never create new relationship rows from co-retrieval alone
+- Rationale: co-retrieval signal does not justify a new relationship claim; CDNIM → Aventus is valid evidence attachment because the dupe_of row already exists; ELdO → Aventus would be noise and is skipped
+
+**Suffix stripping in `_resolve_candidate()`:**
+- Before giving up on exact match, strips trailing noise words: "perfume", "review", "fragrance", "eau de parfum", "eau de toilette", "eau de cologne", "edp", "edt", "cologne", "scent", "parfum"
+- "creed aventus perfume" → strip "perfume" → "creed aventus" → resolves to "Creed Aventus" ✓
+- Only strips one suffix (longest match first); raw exact match tried first
+
+**What FTG-4 does NOT deliver (strategic distinction):**
+- **Does NOT** automatically discover new reviewable relationship candidates from production data
+- Production `entity_topic_links` currently contains no persisted pair-level explicit comparison source (no VS-pattern queries, no content NLP pairs)
+- The original FTG-4 goal — machine-generated candidate pool for operator review — requires a stronger pair-level signal source (Track B: `topic_type='topic'` mining, or future VS-query accumulation)
+
+**Production dry-run results (2026-05-15, --min-occurrences 3):**
+```
+entities_processed:          19
+candidates_resolved:         13
+evidence_added_to_existing:  1    ← Armaf CDNIM → Creed Aventus
+evidence_skipped_duplicate:  0
+candidates_skipped_no_rel:   12   ← all other pairs (no existing relationship)
+```
+Evidence attachment table:
+| Subject | Object | Ev Type | Ev | Action |
+|---|---|---|---|---|
+| Armaf Club de Nuit Intense Man | Creed Aventus | cross_query_retrieval | 1 | WOULD_ATTACH |
+
+- CDNIM → Aventus: real signal (CDNIM content surfaces in Aventus searches because of the dupe relationship) ✓
+- 12 skipped pairs including ELdO → Aventus: correctly gated (no existing relationship) ✓
 
 **Invocation:**
 ```bash
-DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --dry-run   # preview
-DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py             # write
-DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --limit 100 --min-occurrences 3
+DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --dry-run --min-occurrences 3
+DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --min-occurrences 3
 ```
 
 **No schema migration required.** Uses existing `fragrance_relationships` + `relationship_evidence` tables.
 
-**Tests:** `tests/unit/test_ftg4_evidence_harvesting.py` — 20/20 pass. Combined FTG: 169/169 pass.
+**Tests:** `tests/unit/test_ftg4_evidence_harvesting.py` — 27/27 pass. (6 new tests: N2-N6 suffix stripping, S hard gate, U-V evidence type)
 
 **Production verification checklist:**
-- [ ] `/admin/relationship-intelligence` loads — no HTTP 404 on any filter tab
-- [ ] All/Public/Non-Public tabs show seeded relationships (7 rows)
-- [ ] Pending Review tab visible
-- [ ] Run dry-run against production DB — review candidate table output
-- [ ] If dry-run sane, run write mode — verify new rows in fragrance_relationships
-- [ ] Harvested candidates appear in Pending Review tab
+- [x] `/admin/relationship-intelligence` loads — no HTTP 404 on any filter tab (verified 2026-05-15)
+- [x] All/Public tabs show 7 seeded relationships (verified 2026-05-15)
+- [x] Pending Review tab visible (verified 2026-05-15)
+- [x] Dry-run sane: CDNIM → Aventus WOULD_ATTACH, 12 pairs correctly skipped (verified 2026-05-15)
+- [ ] **PENDING FOUNDER APPROVAL:** Run write mode — verify 1 cross_query_retrieval evidence row in relationship_evidence for CDNIM → Aventus
 - [ ] Public entity relationship display unchanged (no new public rows without operator approval)
 - [ ] `/dashboard` loads · `/screener` loads
+
+**Admin console enhancement:** `pending_review` filter tab (`operator_reviewed=FALSE AND is_public=FALSE`) already deployed.
 
 ---
 
@@ -2274,7 +2302,9 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
-| FTG-4 / RI1-E — Relationship Evidence Harvesting + admin console repair | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
+| FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
+| FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | DRY-RUN VERIFIED — PENDING WRITE-MODE APPROVAL | 2026-05-15 |
+| FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
