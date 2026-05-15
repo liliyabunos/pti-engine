@@ -1102,6 +1102,40 @@ DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --min-o
 
 ---
 
+#### FTG-4 / RI1-E1B — Curated Canonical Relationship Gap Fill: Lattafa Asad → Sauvage Elixir
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-15)**
+**Migration: 049 · Commit: 787b101**
+
+**Canonical names confirmed from production entity_market:**
+- Subject: `Lattafa Asad` (brand=Lattafa)
+- Object: `Sauvage Elixir` (brand=Dior) — NOT "Dior Sauvage Elixir"; Dior's Elixir concentration is stored without brand prefix in entity_market
+
+**Relation type: `dupe_of` · Confidence: 0.850**
+Lattafa Asad has stronger direct-clone community consensus than Khamrah → Angels' Share. "Asad" (Arabic: "lion") was explicitly marketed and widely discussed as a Sauvage Elixir clone from launch. 0.850 matches CDNIM → Aventus and Zara → BR540 (strong dupe_of tier).
+
+**Seed: 1 relationship row + 1 dupe_map_seed evidence row**
+- `is_public=TRUE`, `operator_reviewed=TRUE` — operator-curated gap fill, no separate promotion migration needed
+- ON CONFLICT DO NOTHING (idempotent)
+
+**entity_role.py:** `Lattafa Asad` added to `_DUPE_RAW` → `DupeProfile("dupe_alternative", "Sauvage Elixir", "Sauvage Elixir alternatives")`
+
+**Tests:** 6 new tests in `TestLattafaAsadRI1E1B` (test_semantic_phase5.py); 73/73 semantic_phase5 pass; 250/250 combined (CDNIM + Khamrah + Khamrah Qahwa regressions clean)
+
+**Production verification (2026-05-15):**
+- alembic_version: 049 ✓
+- fragrance_relationships: 8 rows, all is_public=TRUE ✓
+- Lattafa Asad → dupe_of → Sauvage Elixir · confidence=0.850 · is_public=TRUE · operator_reviewed=TRUE ✓
+- relationship_evidence: 1 dupe_map_seed row for Asad ✓
+- CDNIM → Creed Aventus (dupe_of) — regression clean ✓
+- Lattafa Khamrah → Angels' Share (market_alternative_to) — regression clean ✓
+- Lattafa Khamrah Qahwa → Angels' Share (market_alternative_to) — regression clean ✓
+
+**Operator verification steps (Liliya):**
+- [ ] `/entities/perfume/lattafa-asad` → "Dupe of: Sauvage Elixir" displayed ✓
+- [ ] `/admin/relationship-intelligence` → 8 rows, Lattafa Asad row visible under All/Public tabs ✓
+
+---
+
 #### FTG-5 / SN1 — Historical Intelligence Snapshot Layer
 **Status: PLANNED**
 
@@ -2381,6 +2415,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
+| FTG-4 / RI1-E1B — Lattafa Asad → Sauvage Elixir dupe_of gap fill | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
@@ -2534,6 +2569,7 @@ Current production: **migration 048** (KB-CAT1-B — node_type + parent_brand_no
 | 046 | FTG-2 / RI1 — `fragrance_relationships` table (subject_canonical_name TEXT, relation_type VARCHAR(32), object_canonical_name TEXT, confidence_score NUMERIC(4,3), is_public BOOLEAN DEFAULT FALSE, operator_reviewed BOOLEAN); `relationship_evidence` table (relationship_id FK CASCADE, evidence_type VARCHAR(32), note TEXT); 7 seed rows + 7 dupe_map_seed evidence rows; no CHECK constraint on relation_type (mirrors brand_tier pattern) |
 | 047 | FTG-3 / RI1-QA — Data-only migration: promotes all 7 seeded relationship rows to `is_public=TRUE` where `operator_reviewed=TRUE AND confidence_score >= 0.700`. No schema changes. Option A controlled seed promotion. |
 | 048 | KB-CAT1-B — `node_type VARCHAR(32) NOT NULL DEFAULT 'brand' CHECK (node_type IN ('brand','collection','sub_brand'))` + `parent_brand_normalized TEXT NULL` (no FK) on `brand_profiles`; seeds 4 hierarchy rows (Xerjoff × 3 + Filippo Sorcinelli SAUF). |
+| 049 | FTG-4 / RI1-E1B — Data-only: 1 relationship row (Lattafa Asad → dupe_of → Sauvage Elixir, confidence=0.850, is_public=TRUE, operator_reviewed=TRUE) + 1 dupe_map_seed evidence row. No schema changes. |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
