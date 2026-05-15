@@ -1085,9 +1085,10 @@ DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --min-o
 - [x] All/Public tabs show 7 seeded relationships (verified 2026-05-15)
 - [x] Pending Review tab visible (verified 2026-05-15)
 - [x] Dry-run sane: CDNIM → Aventus WOULD_ATTACH, 12 pairs correctly skipped (verified 2026-05-15)
-- [ ] **PENDING FOUNDER APPROVAL:** Run write mode — verify 1 cross_query_retrieval evidence row in relationship_evidence for CDNIM → Aventus
-- [ ] Public entity relationship display unchanged (no new public rows without operator approval)
-- [ ] `/dashboard` loads · `/screener` loads
+- [x] **Write mode executed (2026-05-15):** 1 `cross_query_retrieval` evidence row inserted for CDNIM → Creed Aventus; 12 pairs skipped; 0 new relationship rows created ✓
+- [x] DB verified: `relationship_evidence` for CDNIM → Creed Aventus = 2 rows (dupe_map_seed 2026-05-14 + cross_query_retrieval 'creed aventus perfume' 2026-05-15) ✓
+- [x] Idempotency verified: re-run shows `evidence_skipped_duplicate: 1`, `evidence_added_to_existing: 0` ✓
+- [x] Public entity relationship display unchanged (CDNIM still shows "Dupe of: Creed Aventus") ✓
 
 **Admin console enhancement:** `pending_review` filter tab (`operator_reviewed=FALSE AND is_public=FALSE`) already deployed.
 
@@ -2303,7 +2304,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
-| FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | DRY-RUN VERIFIED — PENDING WRITE-MODE APPROVAL | 2026-05-15 |
+| FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |

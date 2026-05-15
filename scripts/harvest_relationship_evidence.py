@@ -282,7 +282,7 @@ def _insert_evidence(db, relationship_id: str, query_text: str, today: date):
     db.execute(text(
         "INSERT INTO relationship_evidence "
         "(id, relationship_id, evidence_type, query_text, observed_date) "
-        "VALUES (:id, :rid, 'query_pattern', :qt, :obs)"
+        f"VALUES (:id, :rid, '{EVIDENCE_TYPE}', :qt, :obs)"
     ), {
         "id": ev_id,
         "rid": relationship_id,
@@ -469,11 +469,12 @@ def main():
 
     if stats["examples"]:
         print(f"\n[FTG-4] EVIDENCE ATTACHMENT ROWS (first {min(10, len(stats['examples']))}):")
-        print(f"  {'Subject':<40} {'Object':<35} {'Ev Type':<22} {'Ev':>3} {'Action'}")
-        print(f"  {'-'*40} {'-'*35} {'-'*22} {'-':>3} {'-'*12}")
+        print(f"  {'Subject':<40} {'Object':<35} {'Ev Type':<22} {'Rows':>4} {'Action'}")
+        print(f"  {'-'*40} {'-'*35} {'-'*22} {'-':>4} {'-'*12}")
         for ex in stats["examples"][:10]:
             print(f"  {ex['subject'][:40]:<40} {ex['object'][:35]:<35} "
-                  f"{ex['evidence_type'][:22]:<22} {ex['evidence_count']:>3} {ex['action']}")
+                  f"{ex['evidence_type'][:22]:<22} {ex['evidence_count']:>4} {ex['action']}")
+        print(f"  (Rows = distinct query strings that would become relationship_evidence rows)")
 
     if args.dry_run and stats["evidence_added_to_existing"] > 0:
         print(f"\n[FTG-4] Re-run without --dry-run to attach "
