@@ -50,7 +50,7 @@ interface RelationshipRow {
   evidence: EvidenceRow[];
 }
 
-type FilterType = "all" | "public" | "non_public";
+type FilterType = "all" | "public" | "non_public" | "pending_review";
 
 const VALID_RELATION_TYPES = [
   "dupe_of",
@@ -350,6 +350,7 @@ export function RelationshipIntelligenceConsole({ adminEmail }: { adminEmail: st
     { key: "all", label: "All" },
     { key: "public", label: "Public" },
     { key: "non_public", label: "Non-Public" },
+    { key: "pending_review", label: "Pending Review" },
   ];
 
   return (

@@ -161,7 +161,7 @@ def list_relationships(
     admin: str = Depends(_get_admin_user),
 ) -> RelationshipListResponse:
     """List all fragrance relationships with optional filter."""
-    valid_filters = {"all", "public", "non_public"}
+    valid_filters = {"all", "public", "non_public", "pending_review"}
     if filter not in valid_filters:
         raise HTTPException(status_code=422, detail=f"filter must be one of {valid_filters}")
 
@@ -170,6 +170,9 @@ def list_relationships(
         where = "WHERE is_public = TRUE"
     elif filter == "non_public":
         where = "WHERE is_public = FALSE"
+    elif filter == "pending_review":
+        # FTG-4: machine-generated candidates awaiting operator decision
+        where = "WHERE operator_reviewed = FALSE AND is_public = FALSE"
 
     rows = db.execute(text(
         "SELECT id, subject_canonical_name, relation_type, object_canonical_name, "
