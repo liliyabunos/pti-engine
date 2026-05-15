@@ -1085,10 +1085,18 @@ DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --min-o
 - [x] All/Public tabs show 7 seeded relationships (verified 2026-05-15)
 - [x] Pending Review tab visible (verified 2026-05-15)
 - [x] Dry-run sane: CDNIM → Aventus WOULD_ATTACH, 12 pairs correctly skipped (verified 2026-05-15)
-- [x] **Write mode executed (2026-05-15):** 1 `cross_query_retrieval` evidence row inserted for CDNIM → Creed Aventus; 12 pairs skipped; 0 new relationship rows created ✓
+- [x] **Write mode executed (2026-05-15):** 1 evidence row inserted for CDNIM → Creed Aventus; 12 pairs skipped; 0 new relationship rows created ✓
 - [x] DB verified: `relationship_evidence` for CDNIM → Creed Aventus = 2 rows (dupe_map_seed 2026-05-14 + cross_query_retrieval 'creed aventus perfume' 2026-05-15) ✓
 - [x] Idempotency verified: re-run shows `evidence_skipped_duplicate: 1`, `evidence_added_to_existing: 0` ✓
 - [x] Public entity relationship display unchanged (CDNIM still shows "Dupe of: Creed Aventus") ✓
+
+**Micro-incident (2026-05-15) — documented for ops record:**
+- `_insert_evidence()` had a hardcoded `'query_pattern'` string literal in the INSERT SQL — missed when renaming `EVIDENCE_TYPE` to `'cross_query_retrieval'` earlier in the same session
+- First write-mode run inserted the row with `evidence_type='query_pattern'` (incorrect)
+- Corrected immediately via direct `UPDATE relationship_evidence SET evidence_type='cross_query_retrieval' WHERE evidence_type='query_pattern' AND query_text='creed aventus perfume' AND observed_date='2026-05-15'` — 1 row updated
+- Code fixed to use `f"VALUES (:id, :rid, '{EVIDENCE_TYPE}', :qt, :obs)"` in commit `9a62125`
+- Root cause: three separate places used the constant (`_evidence_already_exists` via f-string, `_insert_evidence` SQL literal, module docstring) — only two were updated in the rename pass
+- Prevention: `EVIDENCE_TYPE` is now the single source of truth for all three paths; test V confirms the idempotency check uses the correct string
 
 **Admin console enhancement:** `pending_review` filter tab (`operator_reviewed=FALSE AND is_public=FALSE`) already deployed.
 
