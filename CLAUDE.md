@@ -1355,8 +1355,8 @@ These rules must not be violated in FTG implementation:
 
 ---
 
-## DATA3 — Brand Catalog & Brand Identity Consistency
-**STATUS: LAYER 1 COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-15)**
+## DATA3 — Duplicate Brand Catalog Display after Normalized Join
+**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-15)**
 **Commit: pending**
 **No migration required.**
 
@@ -1394,6 +1394,30 @@ Note: All mismatched perfumes correctly appear on their parent brand's catalog p
 - [ ] `/entities/brand/brand-xerjoff---join-the-club` — Xerjoff Join the Club Don still shows tracked (DATA2 not regressed)
 - [ ] `/entities/brand/brand-xerjoff---casamorati` — Casamorati EDP rows still show tracked
 - [ ] `/dashboard` loads · `/screener` loads
+
+---
+
+## DATA4 — Brand Name Canonicalization & Ghost Brand Repair
+**STATUS: PLANNED**
+
+**Trigger:** DATA3 production audit (2026-05-15) revealed that the brand_name mismatch and ghost brand problems are systemic — not a one-off Lattafa case.
+
+**Audit scope (production, 2026-05-15):**
+- **15 brand mismatch groups** (95 individual mismatch join rows): resolver brand ≠ entity_market.brand_name across tracked entities
+- **15 ghost brand entities** with non-zero market score and 0 catalog perfumes (top: `One &` score 46.9, `Rose &` score 41.7, `Vanilla |` score 37.0, `Ombré` score 37.0)
+- Root categories:
+  - **Encoding variants:** `Comme des Garcons` → `Comme des Garçons`, `Areej Le Dore` → `Areej Le Doré`
+  - **Multilingual variants:** `Khadlaj / خدلج` → `Khadlaj`, `Lattafa` → `Lattafa / لطافة`
+  - **Collection/sub-brand identity:** `Xerjoff` → `Casamorati -` (KB-CAT1 scope), `Escentric Molecules` → `Molecule 01 +`
+  - **Truncated brand_name at ingest** (ampersand/accent handling failures): `Cartier` → `Oud &` / `Baiser`, `Chanel` → `Allure Homme Sport Eau`, `Banana Republic` → `Tobacco & Tonka`, `Bath & Body Works` → `Citrus &`, `Clive Christian` → `Town &`, `Caron` → `Aimez-Moi Comme Je`
+
+**Scope of fix (to be designed in DATA4):**
+1. Identify ingest/aggregation path that writes malformed brand_names (accent stripping failures, ampersand truncation, multilingual variant leakage)
+2. Normalize at source (ingest-time brand_name canonicalization)
+3. Migration to correct existing entity_market rows
+4. Suppress or merge ghost brand entities with no resolver brand match
+
+**Do not start implementation yet.** DATA4 is a separate systemic canonicalization phase. Return to active FTG Relationship Intelligence roadmap first.
 
 ---
 
@@ -2352,7 +2376,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| DATA3 — Brand Catalog & Brand Identity Consistency (Layer 1 dedup) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
+| DATA3 — Duplicate Brand Catalog Display after Normalized Join (Layer 1 dedup) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
+| DATA4 — Brand Name Canonicalization & Ghost Brand Repair | PLANNED | — |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
