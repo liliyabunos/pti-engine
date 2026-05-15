@@ -1130,8 +1130,24 @@ Lattafa Asad has stronger direct-clone community consensus than Khamrah → Ange
 - Lattafa Khamrah → Angels' Share (market_alternative_to) — regression clean ✓
 - Lattafa Khamrah Qahwa → Angels' Share (market_alternative_to) — regression clean ✓
 
+**Display label fix (RI1-E1B-DISPLAY · commit 365034c):**
+- `format_relationship_object_label(canonical_name, brand_name)` added to `fragrance_relationship.py`
+- `get_object_brand_for_relationship(db, canonical_name)` — non-fatal entity_market brand lookup
+- Applied at all 3 call sites (entities.py tracked + catalog, public_entities.py)
+- "Sauvage Elixir" + "Dior" → "Dior Sauvage Elixir" — only label that changes
+- All 7 other relationship labels confirmed correct (no double-prefix, no regression)
+- 8 new formatter tests (TestRelationshipDisplayFormatter); 243/243 combined pass
+
+**Production label audit (all 8 public relationships):**
+- Lattafa Asad → **Dupe of: Dior Sauvage Elixir** ✓ (was: "Sauvage Elixir")
+- Armaf CDNI/M → Dupe of: Creed Aventus ✓ (no change)
+- Montblanc Explorer → Alternative to: Creed Aventus ✓ (no change)
+- Lattafa Khamrah/Qahwa → Alternative to: Kilian Angels' Share ✓ (no change — untracked object)
+- Zara Red Temptation → Dupe of: Maison Francis Kurkdjian Baccarat Rouge 540 ✓ (no change)
+- Ariana Grande Cloud → Alternative to: Maison Francis Kurkdjian Baccarat Rouge 540 ✓ (no change)
+
 **Operator verification steps (Liliya):**
-- [ ] `/entities/perfume/lattafa-asad` → "Dupe of: Sauvage Elixir" displayed ✓
+- [ ] `/entities/perfume/lattafa-asad` → "Dupe of: Dior Sauvage Elixir" (not "Sauvage Elixir")
 - [ ] `/admin/relationship-intelligence` → 8 rows, Lattafa Asad row visible under All/Public tabs ✓
 
 ---
@@ -2416,6 +2432,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1B — Lattafa Asad → Sauvage Elixir dupe_of gap fill | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
+| FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
