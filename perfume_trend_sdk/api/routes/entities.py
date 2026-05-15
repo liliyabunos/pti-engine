@@ -52,7 +52,11 @@ from perfume_trend_sdk.db.market.brand_profile import (
     fetch_brand_hierarchy_map,
     format_brand_hierarchy_label,
 )
-from perfume_trend_sdk.db.market.fragrance_relationship import get_approved_relationship
+from perfume_trend_sdk.db.market.fragrance_relationship import (
+    get_approved_relationship,
+    get_object_brand_for_relationship,
+    format_relationship_object_label,
+)
 
 router = APIRouter()
 _log = logging.getLogger(__name__)
@@ -1288,7 +1292,8 @@ def get_perfume_entity(
         # Falls back to legacy _DUPE_RAW if no approved DB row (resilience).
         _p_approved_rel = get_approved_relationship(db, em.canonical_name)
         if _p_approved_rel:
-            p_reference_original = _p_approved_rel[1]
+            _p_obj_brand = get_object_brand_for_relationship(db, _p_approved_rel[1])
+            p_reference_original = format_relationship_object_label(_p_approved_rel[1], _p_obj_brand)
             p_relation_type = _p_approved_rel[0]
             _p_dupe = get_dupe_profile(em.brand_name, em.canonical_name)
             p_dupe_family = _p_dupe.dupe_family if _p_dupe else None
@@ -1400,7 +1405,8 @@ def get_perfume_entity(
     # FTG-3 — DB-backed approved relationship (catalog path)
     _cat_approved_rel = get_approved_relationship(db, rp_row[1])
     if _cat_approved_rel:
-        cat_reference_original = _cat_approved_rel[1]
+        _cat_obj_brand = get_object_brand_for_relationship(db, _cat_approved_rel[1])
+        cat_reference_original = format_relationship_object_label(_cat_approved_rel[1], _cat_obj_brand)
         cat_relation_type = _cat_approved_rel[0]
         _cat_dupe = get_dupe_profile(rp_row[2], rp_row[1])
         cat_dupe_family = _cat_dupe.dupe_family if _cat_dupe else None

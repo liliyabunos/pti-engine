@@ -259,6 +259,62 @@ RELATIONSHIP_SEED: list[dict] = [
 # Public API
 # ---------------------------------------------------------------------------
 
+def format_relationship_object_label(
+    canonical_name: str,
+    brand_name: Optional[str],
+) -> str:
+    """Format a relationship object's canonical name for market-readable display.
+
+    When a perfume's canonical name does not include the brand prefix
+    (e.g. "Sauvage Elixir" stored without "Dior"), prepend the brand
+    for human-readable display ("Dior Sauvage Elixir").
+
+    Rules:
+      - If brand_name is None or empty, return canonical_name unchanged.
+      - If canonical_name already starts with brand_name (case-insensitive),
+        return canonical_name unchanged (no double-prefix).
+      - Otherwise prepend brand_name with a space.
+
+    Examples:
+      "Sauvage Elixir" + "Dior"                   → "Dior Sauvage Elixir"
+      "Creed Aventus" + "Creed"                    → "Creed Aventus"
+      "Neroli Sauvage" + "Creed"                   → "Creed Neroli Sauvage"
+      "Kilian Angels' Share" + None                → "Kilian Angels' Share"
+      "Maison Francis Kurkdjian Baccarat Rouge 540"
+          + "Maison Francis Kurkdjian"              → unchanged
+    """
+    if not brand_name:
+        return canonical_name
+    if canonical_name.lower().startswith(brand_name.lower()):
+        return canonical_name
+    return f"{brand_name} {canonical_name}"
+
+
+def get_object_brand_for_relationship(
+    db: Session,
+    object_canonical_name: str,
+) -> Optional[str]:
+    """Look up the brand_name from entity_market for a relationship object perfume.
+
+    Used to enrich relationship display labels with brand context when
+    the canonical perfume name does not include the brand prefix.
+
+    Non-fatal: returns None on any exception or if the object is not tracked
+    in entity_market (e.g. untracked dupes like Zara Red Temptation at seed time).
+    """
+    try:
+        row = db.execute(
+            sa.text(
+                "SELECT brand_name FROM entity_market "
+                "WHERE canonical_name = :name AND entity_type = 'perfume' LIMIT 1"
+            ),
+            {"name": object_canonical_name},
+        ).fetchone()
+        return str(row[0]) if row and row[0] else None
+    except Exception:
+        return None
+
+
 def get_approved_relationship(
     db: Session,
     subject_canonical_name: str,

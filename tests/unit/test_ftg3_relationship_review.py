@@ -438,3 +438,63 @@ class TestRegressions:
         db.execute.side_effect = RuntimeError("unexpected DB error")
         result = get_approved_relationship(db, "any entity")
         assert result is None
+
+
+# ---------------------------------------------------------------------------
+# RI1-E1B-DISPLAY — Relationship object display label formatter
+# ---------------------------------------------------------------------------
+
+class TestRelationshipDisplayFormatter:
+    """format_relationship_object_label() produces market-readable display labels.
+
+    Covers the core case (Sauvage Elixir + Dior → Dior Sauvage Elixir)
+    and all guard conditions: brand already prefixed, no brand, empty brand.
+    """
+
+    from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+
+    def test_prepend_brand_when_not_prefixed(self):
+        """Primary fix: Sauvage Elixir + Dior → Dior Sauvage Elixir."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        assert format_relationship_object_label("Sauvage Elixir", "Dior") == "Dior Sauvage Elixir"
+
+    def test_no_change_when_already_prefixed(self):
+        """Creed Aventus already starts with 'Creed' — must not double-prefix."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        assert format_relationship_object_label("Creed Aventus", "Creed") == "Creed Aventus"
+
+    def test_prepend_brand_for_unprefixed_niche(self):
+        """Neroli Sauvage (Creed) does not start with 'Creed' — must prepend."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        assert format_relationship_object_label("Neroli Sauvage", "Creed") == "Creed Neroli Sauvage"
+
+    def test_no_change_when_brand_is_none(self):
+        """Object not in entity_market (brand=None) — return canonical name unchanged."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        assert format_relationship_object_label("Kilian Angels' Share", None) == "Kilian Angels' Share"
+
+    def test_no_change_when_brand_is_empty_string(self):
+        """Empty brand treated same as None — no prepend."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        assert format_relationship_object_label("Sauvage Elixir", "") == "Sauvage Elixir"
+
+    def test_no_double_prefix_mfk(self):
+        """MFK Baccarat Rouge 540 already starts with 'Maison Francis Kurkdjian'."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        name = "Maison Francis Kurkdjian Baccarat Rouge 540"
+        brand = "Maison Francis Kurkdjian"
+        assert format_relationship_object_label(name, brand) == name
+
+    def test_case_insensitive_prefix_check(self):
+        """Prefix check is case-insensitive to avoid double-prefix on case variants."""
+        from perfume_trend_sdk.db.market.fragrance_relationship import format_relationship_object_label
+        assert format_relationship_object_label("creed aventus", "Creed") == "creed aventus"
+
+    def test_get_object_brand_nonfatal(self):
+        """get_object_brand_for_relationship never raises; returns None on DB error."""
+        from unittest.mock import MagicMock
+        from perfume_trend_sdk.db.market.fragrance_relationship import get_object_brand_for_relationship
+        db = MagicMock()
+        db.execute.side_effect = RuntimeError("connection error")
+        result = get_object_brand_for_relationship(db, "Sauvage Elixir")
+        assert result is None

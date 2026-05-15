@@ -40,7 +40,11 @@ from perfume_trend_sdk.analysis.topic_intelligence.entity_role import (
     get_dupe_profile,
 )
 from perfume_trend_sdk.db.market.brand_profile import get_brand_tier
-from perfume_trend_sdk.db.market.fragrance_relationship import get_approved_relationship
+from perfume_trend_sdk.db.market.fragrance_relationship import (
+    get_approved_relationship,
+    get_object_brand_for_relationship,
+    format_relationship_object_label,
+)
 from perfume_trend_sdk.db.market.models import EntityMarket
 
 router = APIRouter()
@@ -335,7 +339,8 @@ def get_public_perfume(slug: str, db: Session = Depends(get_db_session)) -> Publ
     # Falls back to legacy _DUPE_RAW if no approved DB row (resilience).
     _approved_rel = get_approved_relationship(db, em.canonical_name)
     if _approved_rel:
-        reference_original = _approved_rel[1]
+        _obj_brand = get_object_brand_for_relationship(db, _approved_rel[1])
+        reference_original = format_relationship_object_label(_approved_rel[1], _obj_brand)
         relation_type = _approved_rel[0]
     else:
         dupe = get_dupe_profile(em.brand_name, em.canonical_name)
