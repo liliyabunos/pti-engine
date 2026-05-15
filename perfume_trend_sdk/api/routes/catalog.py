@@ -169,7 +169,8 @@ def catalog_perfumes(
         if q_pattern:
             where_clauses.append(
                 "(LOWER(rp.canonical_name) LIKE LOWER(:q) "
-                "OR LOWER(rb.canonical_name) LIKE LOWER(:q))"
+                "OR LOWER(rb.canonical_name) LIKE LOWER(:q) "
+                "OR LOWER(rb.canonical_name || ' ' || rp.canonical_name) LIKE LOWER(:q))"
             )
         if active_only:
             where_clauses.append("at.entity_id IS NOT NULL")
