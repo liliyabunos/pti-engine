@@ -1021,23 +1021,47 @@ Applies to both public perfume page (`/perfumes/[slug]`) and terminal entity pag
 
 ---
 
-#### FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals
-**Status: PLANNED**
+#### FTG-4 / RI1-E — Relationship Evidence Harvesting + Admin Console Repair
+**Status: COMPLETE — PENDING PRODUCTION VERIFICATION**
+**Commit: 7e928bc**
+**Deployed: pushed to main 2026-05-15; Railway auto-deploys**
 
-**Purpose:** Use already-collected internal signals to generate relationship candidates — no external scraping.
+**Admin console 404 fix (immediate prerequisite):**
+- **Symptom:** `/admin/relationship-intelligence` returned HTTP 404 on All/Public/Non-Public tabs
+- **Root cause:** `[...path]/route.ts` catch-all requires ≥1 path segment; `GET /api/admin/relationship-intelligence?filter=all` has zero segments → Next.js 404
+- **Fix:** Added `frontend/src/app/api/admin/relationship-intelligence/route.ts` — base GET handler (mirrors creator-claims pattern)
+- No code change needed in backend or console component
 
-**Evidence sources (already in DB):**
-- `entity_topic_links.top_queries` — comparison query strings per entity per cycle
-- `extract_vs_competitors()` in `market_intelligence.py` — already extracts VS pattern candidates
-- Query phrase patterns: `dupe / clone / alternative / smells like / vs / similar to / compared to`
+**FTG-4 / RI1-E — Evidence Harvesting v1:**
+- **Script:** `scripts/harvest_relationship_evidence.py` — script-first (not pipeline-integrated in v1)
+- **Evidence source:** `entity_topic_links WHERE topic_type='query'` — structured YouTube search queries already aggregated per entity; fed through `extract_vs_competitors()` (existing function from market_intelligence.py)
+- **Why this source:** Highest signal, lowest false-positive rate among available internal sources. Already structured. No new parsing needed.
+- **Candidate rules (public safety contract):** `operator_reviewed=FALSE`, `is_public=FALSE`, `relation_type='commonly_compared_to'` (conservative — never overclaim)
+- **Confidence policy:** occurrence 1-2 → 0.200; 3-5 → 0.250; 6-10 → 0.300; 11+ → 0.350. All < 0.700 gate. Never auto-approved.
+- **Idempotency:** `ON CONFLICT (subject_canonical_name, relation_type, object_canonical_name) DO NOTHING` on relationships; evidence existence check before inserting
+- **Existing relationship handling:** If (subject, object) pair exists under ANY relation_type, attach evidence to existing row instead of creating new candidate
+- **Admin console enhancement:** Added `pending_review` filter tab (`operator_reviewed=FALSE AND is_public=FALSE`) to surface machine-generated candidates for operator review
 
-**Execution rules:**
-- Scheduled job creates low-confidence candidates (`confidence_score ~0.3`) with evidence_type=`query_pattern`
-- Evidence text stored in `relationship_evidence`
-- Never auto-publish — all candidates enter operator review queue
-- Job is idempotent; re-running the same cycle does not duplicate evidence
+**Invocation:**
+```bash
+DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --dry-run   # preview
+DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py             # write
+DATABASE_URL=<prod-url> python3 scripts/harvest_relationship_evidence.py --limit 100 --min-occurrences 3
+```
 
-**What this unlocks:** Every time our content pipeline collects "Khamrah vs Angels' Share" in query data, that automatically surfaces as relationship candidate evidence for an operator to review.
+**No schema migration required.** Uses existing `fragrance_relationships` + `relationship_evidence` tables.
+
+**Tests:** `tests/unit/test_ftg4_evidence_harvesting.py` — 20/20 pass. Combined FTG: 169/169 pass.
+
+**Production verification checklist:**
+- [ ] `/admin/relationship-intelligence` loads — no HTTP 404 on any filter tab
+- [ ] All/Public/Non-Public tabs show seeded relationships (7 rows)
+- [ ] Pending Review tab visible
+- [ ] Run dry-run against production DB — review candidate table output
+- [ ] If dry-run sane, run write mode — verify new rows in fragrance_relationships
+- [ ] Harvested candidates appear in Pending Review tab
+- [ ] Public entity relationship display unchanged (no new public rows without operator approval)
+- [ ] `/dashboard` loads · `/screener` loads
 
 ---
 
@@ -2250,7 +2274,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
-| FTG-4 / RI1-E — Evidence Harvesting v1 from Internal Signals | PLANNED | — |
+| FTG-4 / RI1-E — Relationship Evidence Harvesting + admin console repair | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
 | FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
