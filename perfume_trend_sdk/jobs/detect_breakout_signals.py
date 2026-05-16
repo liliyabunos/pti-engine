@@ -30,6 +30,7 @@ from perfume_trend_sdk.analysis.market_signals.detector import BreakoutDetector
 from perfume_trend_sdk.db.market.entity_timeseries_daily import EntityTimeSeriesDaily
 from perfume_trend_sdk.db.market.models import Base, EntityMarket
 from perfume_trend_sdk.db.market.signal import Signal
+from perfume_trend_sdk.db.market.signal_intelligence_snapshot import write_signal_snapshot
 from perfume_trend_sdk.db.market.session import _make_engine, get_database_url, make_session_factory
 
 logger = logging.getLogger(__name__)
@@ -178,6 +179,18 @@ def run(
         if uid not in entity_type_cache:
             entity_type_cache[uid] = snap.get("entity_type") or _get_entity_type(db, uid)
 
+    # FTG-5 / SN1-A — Build caches for snapshot writing
+    # snap_by_entity_id: entity UUID → EntityTimeSeriesDaily dict (metrics at detection time)
+    snap_by_entity_id: Dict[uuid.UUID, Dict[str, Any]] = {
+        s["entity_id"]: s for s in current_snaps
+    }
+    # entity_market_cache: entity UUID → (canonical_name, brand_name) for denormalization
+    entity_market_cache: Dict[uuid.UUID, tuple] = {}
+    if entity_uuids:
+        em_rows = db.query(EntityMarket).filter(EntityMarket.id.in_(entity_uuids)).all()
+        for em in em_rows:
+            entity_market_cache[em.id] = (em.canonical_name, em.brand_name)
+
     detector = BreakoutDetector()
     signals = detector.detect_batch(
         snapshots=current_snaps,
@@ -191,23 +204,39 @@ def run(
             sig["detected_at"] = detected_at_dt
 
     new_count = 0
+    snapshots_written = 0
     for sig in signals:
         entity_type = entity_type_cache.get(sig["entity_id"], "perfume")
         if _upsert_signal(db, sig, entity_type):
             new_count += 1
+        # FTG-5 / SN1-A — Write immutable first-capture intelligence snapshot.
+        # Non-fatal: snapshot failure never blocks signal generation.
+        em_info = entity_market_cache.get(sig["entity_id"], ("", None))
+        wrote = write_signal_snapshot(
+            db=db,
+            sig=sig,
+            snap=snap_by_entity_id.get(sig["entity_id"], {}),
+            entity_type=entity_type,
+            entity_canonical_name=em_info[0],
+            entity_brand_name=em_info[1],
+            signal_threshold_version=SIGNAL_THRESHOLD_VERSION,
+        )
+        if wrote:
+            snapshots_written += 1
 
     db.flush()
 
     signal_types = list({s["signal_type"] for s in signals})
     logger.info(
-        "detect_breakout_signals_completed date=%s total=%d new=%d types=%s",
-        detected_at, len(signals), new_count, signal_types,
+        "detect_breakout_signals_completed date=%s total=%d new=%d snapshots_written=%d types=%s",
+        detected_at, len(signals), new_count, snapshots_written, signal_types,
     )
 
     return {
         "detected_at": detected_at,
         "signals_detected": len(signals),
         "new_signals": new_count,
+        "snapshots_written": snapshots_written,
         "signal_types": signal_types,
     }
 
