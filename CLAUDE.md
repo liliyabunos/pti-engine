@@ -36,6 +36,11 @@ If no: create a ledger entry before moving on.
 
 **Rule:** No phase may be marked `COMPLETE — PRODUCTION VERIFIED` while it has an open entry in the ledger.
 
+### Repair-Complete Rule (binding)
+A data repair phase may not be marked `COMPLETE — PRODUCTION VERIFIED` unless all data layers that could recreate the false data have also been cleaned. If downstream rows (entity_mentions, entity_timeseries_daily, signals) are deleted but the upstream source (e.g. `resolved_signals.resolved_entities_json`) still contains the false entities, status must remain `IMPLEMENTED — FINAL SOURCE STRIP PENDING` until the upstream strip is executed and verified at 0.
+
+**Delivery Report Rule:** A delivery report may not contain `COMPLETE — PRODUCTION VERIFIED` together with any "remaining open item" that is structurally required to preserve the repair.
+
 ### Required Delivery Line
 Every task report with deferred verification must include:
 ```

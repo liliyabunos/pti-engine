@@ -36,6 +36,19 @@ If no: create a ledger entry BEFORE moving on to new work.
 **No phase or task may be marked `COMPLETE — PRODUCTION VERIFIED` in CLAUDE.md
 while it has an open unresolved entry in this ledger.**
 
+### Repair-Complete Rule
+
+**A data repair phase may not be marked `COMPLETE — PRODUCTION VERIFIED` unless all data layers that could recreate the false data have also been cleaned.**
+
+Specifically: if downstream rows (`entity_mentions`, `entity_timeseries_daily`, `signals`) are deleted or repaired, but the upstream source layer that can recreate them (e.g. `resolved_signals.resolved_entities_json`) still contains the removed false entities, the phase must remain in status `IMPLEMENTED — FINAL SOURCE STRIP PENDING` until the upstream strip/cleanup is executed and verified at 0.
+
+**Delivery Report Rule:** A delivery report may not contain `COMPLETE — PRODUCTION VERIFIED` together with any "remaining open item" that is structurally required to preserve the repair.
+
+**Status to use when downstream is clean but upstream strip is pending:**
+```
+IMPLEMENTED — FINAL SOURCE STRIP PENDING
+```
+
 ### Required Delivery Line
 
 Every task report that includes deferred verification must end with one of:
