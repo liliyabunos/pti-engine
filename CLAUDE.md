@@ -9,6 +9,45 @@
 
 ---
 
+## OPS-PV1 — Pending Production Verification Policy
+
+**Ledger:** `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`
+
+### Session Opening Rule (mandatory)
+Before starting any new implementation work, Claude must:
+1. Read `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`
+2. Check whether any `READY TO VERIFY` or `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` entries have their trigger event passed
+3. Resolve those first unless founder explicitly prioritizes otherwise
+
+### Verification-First Policy
+Before deferring any production verification, ask:
+> Can this be verified NOW via direct SQL, API smoke test, targeted job run, or safe UI check?
+
+If yes: verify immediately — do not create a ledger entry.
+If no: create a ledger entry before moving on.
+
+### Status Vocabulary (binding)
+| Status | Meaning |
+|--------|---------|
+| `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` | Shipped; immediate verification not possible |
+| `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Waiting on next scheduled pipeline run |
+| `COMPLETE — PRODUCTION VERIFIED` | Confirmed with real production evidence |
+| `FAILED PRODUCTION VERIFICATION — FOLLOW-UP REQUIRED` | Verification ran; checks did not pass |
+
+**Rule:** No phase may be marked `COMPLETE — PRODUCTION VERIFIED` while it has an open entry in the ledger.
+
+### Required Delivery Line
+Every task report with deferred verification must include:
+```
+Production verification mode: IMMEDIATE — VERIFIED
+```
+or
+```
+Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-XXX
+```
+
+---
+
 ## PUB1 — Public Perfume & Brand Pages v1
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-13)**
 **Commit: e5b06b7 (initial) · 9a26696 (slug fix) · 4f859b7 (docs)**
@@ -2394,6 +2433,7 @@ Weight changes logged in `weight_calibration_log` — human-reviewed, never sile
 - If auth blocks git push, report clearly and do not pretend deploy happened.
 
 ## Documentation Map
+- **Pending production verifications (read at session start): docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md**
 - Full phase history: docs/history/PHASE_LOG.md
 - Resolver architecture: docs/architecture/RESOLVER_ARCHITECTURE.md
 - Pipeline architecture: docs/architecture/DATA_PIPELINE.md
