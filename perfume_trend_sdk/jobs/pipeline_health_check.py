@@ -258,7 +258,7 @@ def _persist_result(
                         (:run_date, :run_label, :overall_level,
                          :entity_mentions, :reddit_mentions,
                          :youtube_items, :reddit_items, :total_items,
-                         :signals_count, :issues::jsonb, :pipeline_service, NOW())
+                         :signals_count, CAST(:issues AS JSONB), :pipeline_service, NOW())
                     ON CONFLICT (run_date, run_label) DO UPDATE SET
                         overall_level    = EXCLUDED.overall_level,
                         entity_mentions  = EXCLUDED.entity_mentions,
