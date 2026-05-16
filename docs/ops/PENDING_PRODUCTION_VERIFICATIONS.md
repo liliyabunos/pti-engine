@@ -235,6 +235,67 @@ Hypothesis confirmed via production SQL (`railway ssh --service generous-prosper
 
 ---
 
+---
+
+### PV-004 — DATA4-B Brand Promotion Guard + Ghost Brand Repair
+
+| Field | Value |
+|-------|-------|
+| **Verification ID** | PV-004 |
+| **Phase / task** | DATA4-B — Brand promotion guard + ghost brand repair script |
+| **Related commits** | `48784ed` (implementation) |
+| **Implementation shipped** | 2026-05-16 |
+| **Current status** | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` |
+| **Immediate verification considered?** | Yes — repair script can be run immediately via Railway SSH. Guard verification requires running `aggregate_daily_market_metrics` after deploy. |
+| **Why deferred** | Requires Railway auto-deploy of `48784ed` to complete, then run repair script + aggregation rerun via Railway SSH. Cannot verify guard effectiveness until at least one pipeline run post-deploy. |
+| **Trigger event** | Railway deploy of `48784ed` completes (Railway auto-deploys on push to main) |
+| **Blocking severity** | High — guard prevents future ghost brand pollution; repair removes existing ghosts. Both must be verified before DATA4-B can be marked COMPLETE. |
+
+**Verification steps:**
+
+```bash
+# Step 1: Confirm Railway deployed 48784ed
+railway deployment list --limit 5 --json | grep -A5 "48784ed"
+
+# Step 2: Run repair script dry-run
+DATABASE_URL=<prod-url> python3 scripts/data4b_ghost_brand_repair.py
+
+# Step 3: Run repair script --apply
+DATABASE_URL=<prod-url> python3 scripts/data4b_ghost_brand_repair.py --apply
+
+# Step 4: Verify ghost brands gone (via Railway SSH)
+# SQL:
+SELECT em.canonical_name, COUNT(etd.id) AS ts_rows
+FROM entity_market em
+LEFT JOIN entity_timeseries_daily etd ON etd.entity_id = em.id
+WHERE em.entity_type = 'brand'
+  AND NOT EXISTS (SELECT 1 FROM resolver_brands rb WHERE LOWER(rb.canonical_name) = LOWER(em.canonical_name))
+  AND NOT EXISTS (SELECT 1 FROM brand_profiles bp WHERE LOWER(bp.brand_name_normalized) = LOWER(em.canonical_name))
+GROUP BY em.canonical_name HAVING COUNT(etd.id) > 0 ORDER BY ts_rows DESC;
+-- Expect: 0 rows (TOM FORD Private Blend and encoding-mismatch brands exempt)
+
+# Step 5: Re-run aggregation for last 7 days
+for D in $(seq 0 6); do
+  DATE=$(date -u -d "-$D days" +%Y-%m-%d 2>/dev/null || date -u -v-${D}d +%Y-%m-%d)
+  python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date $DATE
+done
+
+# Step 6: Confirm guard fires for known ghost brand in WARNING logs
+# (Check railway logs for "brand_promotion_blocked" warnings — should appear if any
+# entity_market.perfume rows still have ghost brand_names after repair)
+```
+
+**Pass criteria:**
+- Ghost brand query returns 0 rows with `ts_rows > 0` (excluding TOM FORD Private Blend and encoding variants)
+- `brand_promotion_blocked` warnings appear in aggregation logs for any residual ghost brands
+- Dashboard and screener load correctly after aggregation rerun (no P0 regressions)
+
+**CLAUDE.md update after pass:**
+- Change DATA4-B status to `COMPLETE — PRODUCTION VERIFIED (YYYY-MM-DD)`
+- Close this ledger entry
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -242,3 +303,4 @@ Hypothesis confirmed via production SQL (`railway ssh --service generous-prosper
 | PV-001 | P3.1 Health Log persistence | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tonight 23:00 UTC |
 | PV-002 | FTG-5 / SN1-A snapshots | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next healthy pipeline (signals > 10) |
 | PV-003 | May 16 incident root-cause | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
+| PV-004 | DATA4-B brand promotion guard + repair | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` | Railway deploy of 48784ed + repair script run |
