@@ -68,10 +68,10 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
 })
 
 # ---------------------------------------------------------------------------
-# Ambiguous multi-token phrase guard (RES-AMB1)
+# Ambiguous multi-token phrase guard (RES-AMB1 / RES-AMB2)
 # ---------------------------------------------------------------------------
 #
-# Some 2-token aliases are common English phrases that happen to match a
+# Some 2–3-token aliases are common English phrases that happen to match a
 # perfume name.  For these, a match is allowed ONLY when at least one brand
 # token from the corresponding brand_token_set appears within ±10 tokens of
 # the match position in the same text window.
@@ -82,22 +82,42 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
 # A phrase is allowed if at least one brand token from ANY of the listed sets
 # appears in the surrounding context window.
 #
-# Seed list (RES-AMB1 — founder-confirmed false-positive entities):
+# RES-AMB1 seed (2026-05-16 — founder-confirmed false-positive entities):
 #   "i am"       → I Am Juicy Couture     (brand: Juicy Couture)
 #   "right now"  → Right Now West Third Brand (brand: West Third Brand)
 #   "scent of"   → Scent of Liu·Jo        (brand: Liu·Jo → "liu jo" normalized)
 #   "blue oud"   → Blue Oud Ajwaa Perfumes (brand: Ajwaa Perfumes)
 #   "peace love" → Peace, Love & Juicy Couture (brand: Juicy Couture)
 #
+# RES-AMB2 expansion (2026-05-16 — audit-confirmed false-positive entities):
+#   "so you"              → So You (Alia Touch) — conversational phrase; 55 false mentions confirmed
+#   "you are"             → You Are (Geparlys) — SOTD daily thread-title artifact; 101 false mentions
+#   "en route"            → En Route (Botanicae Expressions) — Davidoff Cool Water posts; 2 false mentions
+#   "fragrance of summer" → Fragrance of Summer (M. Asam) — editorial headline phrase
+#   "one only"            → One & Only (Swiss Arabian) — "the One & Only Parfumer" creator tagline;
+#                            normalize_text("one & only") → "one only" (& stripped to space)
+#   "one and only"        → One & Only (Swiss Arabian) — variant alias form
+#   "good vibes"          → Good Vibes (Ricarda M.) — Jeremy Fragrance channel catchphrase
+#                            ("Australia Fragrance Talk Good Vibes: #jeremyfragrance" ×4 videos)
+#
 # "knize two" is fixed via _BLOCKED_SINGLE_WORD_ALIASES ("two") above — its
 # only registered alias is the single token "two", not the phrase "knize two".
 #
 _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
-    "i am":        [frozenset({"juicy", "couture"})],
-    "right now":   [frozenset({"west", "third"})],
-    "scent of":    [frozenset({"liu", "jo"})],
-    "blue oud":    [frozenset({"ajwaa"})],
-    "peace love":  [frozenset({"juicy", "couture"})],
+    # RES-AMB1
+    "i am":               [frozenset({"juicy", "couture"})],
+    "right now":          [frozenset({"west", "third"})],
+    "scent of":           [frozenset({"liu", "jo"})],
+    "blue oud":           [frozenset({"ajwaa"})],
+    "peace love":         [frozenset({"juicy", "couture"})],
+    # RES-AMB2
+    "so you":             [frozenset({"alia", "touch"})],
+    "you are":            [frozenset({"geparlys"})],
+    "en route":           [frozenset({"botanicae"})],
+    "fragrance of summer":[frozenset({"asam"})],
+    "one only":           [frozenset({"swiss", "arabian"})],
+    "one and only":       [frozenset({"swiss", "arabian"})],
+    "good vibes":         [frozenset({"ricarda"})],
 }
 
 

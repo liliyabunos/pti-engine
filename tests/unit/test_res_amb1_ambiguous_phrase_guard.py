@@ -1,6 +1,6 @@
-"""RES-AMB1 — Ambiguous Perfume Phrase Guard Unit Tests.
+"""RES-AMB1 / RES-AMB2 — Ambiguous Perfume Phrase Guard Unit Tests.
 
-Tests:
+RES-AMB1 Tests:
   N1   "two" blocked as single-word alias (Knize Two fix)
   N2   "i am obsessed with this" does NOT resolve to I Am / Juicy Couture
   N3   "right now this fragrance is trending" does NOT resolve to Right Now
@@ -25,6 +25,31 @@ Tests:
   G5   _check_brand_proximity returns False when no brand tokens present
   G6   _check_brand_proximity handles multiple brand_token_sets (OR logic)
   G7   "two" is present in _BLOCKED_SINGLE_WORD_ALIASES
+
+RES-AMB2 Tests (expansion batch — 2026-05-16):
+  A1   "so you" blocked without Alia Touch proximity
+  A1b  "TRYING THESE 6 ARABIAN PERFUMES SO YOU DON'T HAVE TO" blocked
+  A2   "so you" resolves when Alia Touch brand is nearby
+  A3   "you are" blocked without Geparlys proximity
+  A3b  "what are you wearing today" blocked
+  A4   "you are" resolves when Geparlys brand is nearby
+  A5   "en route" blocked without Botanicae proximity
+  A5b  "my Davidoff en route collection" blocked (Davidoff ≠ Botanicae)
+  A6   "en route" resolves when Botanicae brand is nearby
+  A7   "fragrance of summer" blocked without M. Asam proximity
+  A7b  "this will be the fragrance of summer 2026" blocked
+  A8   "fragrance of summer" resolves when asam brand is nearby
+  A9   "one only" (normalized form of "one & only") blocked without Swiss Arabian
+  A9b  "by the one only parfumer" blocked (creator tagline)
+  A10  "one and only" blocked without Swiss Arabian proximity
+  A10b "the one and only parfumer" variant blocked
+  A11  "one only" resolves when Swiss Arabian brand is nearby
+  A11b "one and only" resolves when Swiss Arabian brand is nearby
+  A12  "good vibes" blocked without Ricarda proximity
+  A12b "australia fragrance talk good vibes jeremyfragrance" blocked
+  A13  "good vibes" resolves when Ricarda brand is nearby
+  A14  RES-AMB2 guard phrases all present in _AMBIGUOUS_PHRASE_GUARD
+  A15  RES-AMB1 phrases unaffected by RES-AMB2 additions (regression)
 """
 
 from __future__ import annotations
@@ -68,7 +93,7 @@ def _make_entity(perfume_id: int, canonical_name: str) -> Dict[str, Any]:
 # Core alias_map covering the 6 ambiguous entities + a few legit ones.
 # Normalized forms used as keys (lowercase, stripped punctuation).
 _TEST_ALIASES: Dict[str, Dict[str, Any]] = {
-    # Ambiguous — require brand proximity
+    # Ambiguous — require brand proximity (RES-AMB1)
     "i am":              _make_entity(1001, "I Am"),
     "i am juicy couture": _make_entity(1001, "I Am"),
     "right now":         _make_entity(1002, "Right Now"),
@@ -78,6 +103,26 @@ _TEST_ALIASES: Dict[str, Dict[str, Any]] = {
     # Knize Two — only alias is single-word "two" (blocked via _BLOCKED list)
     "two":               _make_entity(1006, "Knize Two Eau de Toilette"),
     "knize two":         _make_entity(1006, "Knize Two Eau de Toilette"),
+    # Ambiguous — require brand proximity (RES-AMB2)
+    "so you":            _make_entity(2010, "So You"),
+    "you are":           _make_entity(2011, "You Are"),
+    "en route":          _make_entity(2012, "En Route"),
+    "fragrance of summer": _make_entity(2013, "Fragrance of Summer"),
+    "one only":          _make_entity(2014, "One & Only"),
+    "one and only":      _make_entity(2014, "One & Only"),
+    "good vibes":        _make_entity(2015, "Good Vibes"),
+    # Brand proximity triggers (RES-AMB2)
+    "alia touch":        _make_entity(3010, "Alia Touch Brand"),
+    "alia":              _make_entity(3010, "Alia Touch Brand"),
+    "touch":             _make_entity(3010, "Alia Touch Brand"),
+    "geparlys":          _make_entity(3011, "Geparlys Brand"),
+    "botanicae":         _make_entity(3012, "Botanicae Brand"),
+    "asam":              _make_entity(3013, "M. Asam Brand"),
+    "m asam":            _make_entity(3013, "M. Asam Brand"),
+    "swiss arabian":     _make_entity(3014, "Swiss Arabian Brand"),
+    "swiss":             _make_entity(3014, "Swiss Arabian Brand"),
+    "arabian":           _make_entity(3014, "Swiss Arabian Brand"),
+    "ricarda":           _make_entity(3015, "Ricarda M. Brand"),
     # Legitimate well-specific aliases
     "black orchid":      _make_entity(2001, "Black Orchid"),
     "tom ford black orchid": _make_entity(2001, "Black Orchid"),
@@ -334,3 +379,194 @@ class TestGuardStructure:
             assert isinstance(sets, list), f"Value for {phrase!r} must be a list"
             for s in sets:
                 assert isinstance(s, frozenset), f"Inner sets for {phrase!r} must be frozensets"
+
+
+# ---------------------------------------------------------------------------
+# A — RES-AMB2 Negative tests: ambiguous phrases BLOCKED without brand proximity
+# ---------------------------------------------------------------------------
+
+class TestNegativeCasesAMB2:
+    def test_A1_so_you_blocked_without_alia_touch(self):
+        """'so you' without Alia Touch context must NOT fire So You entity."""
+        r = _resolver()
+        results = r.resolve_text("so you think this fragrance is too expensive")
+        assert "So You" not in _names(results)
+
+    def test_A1b_so_you_blocked_in_youtube_title_phrase(self):
+        """'TRYING THESE 6 ARABIAN PERFUMES SO YOU DON'T HAVE TO' — blocked."""
+        r = _resolver()
+        results = r.resolve_text("trying these 6 arabian perfumes so you dont have to")
+        assert "So You" not in _names(results)
+
+    def test_A3_you_are_blocked_without_geparlys(self):
+        """'you are' without Geparlys context must NOT fire You Are entity."""
+        r = _resolver()
+        results = r.resolve_text("you are going to love this fragrance")
+        assert "You Are" not in _names(results)
+
+    def test_A3b_you_are_blocked_in_casual_context(self):
+        """'what are you wearing today' — blocked."""
+        r = _resolver()
+        results = r.resolve_text("what fragrance are you wearing today")
+        # "you are" won't even match here since "are you" is different order,
+        # but we also verify a direct "you are" phrase is blocked
+        results2 = r.resolve_text("you are wrong about this fragrance being weak")
+        assert "You Are" not in _names(results2)
+
+    def test_A5_en_route_blocked_without_botanicae(self):
+        """'en route' without Botanicae context must NOT fire En Route entity."""
+        r = _resolver()
+        results = r.resolve_text("i am en route to the mall to buy a new fragrance")
+        assert "En Route" not in _names(results)
+
+    def test_A5b_en_route_blocked_for_other_brands(self):
+        """'my Davidoff en route collection' — Davidoff ≠ Botanicae, still blocked."""
+        r = _resolver()
+        results = r.resolve_text("my davidoff en route to the store review")
+        assert "En Route" not in _names(results)
+
+    def test_A7_fragrance_of_summer_blocked_without_asam(self):
+        """'fragrance of summer' without M. Asam context must NOT fire entity."""
+        r = _resolver()
+        results = r.resolve_text("this will be the fragrance of summer 2026")
+        assert "Fragrance of Summer" not in _names(results)
+
+    def test_A7b_fragrance_of_summer_blocked_in_generic_review(self):
+        """'the fragrance of summer vibes' — generic phrase, blocked."""
+        r = _resolver()
+        results = r.resolve_text("i love the fragrance of summer vibes this gives")
+        assert "Fragrance of Summer" not in _names(results)
+
+    def test_A9_one_only_blocked_without_swiss_arabian(self):
+        """'one only' (normalized 'one & only') without Swiss Arabian must NOT fire."""
+        r = _resolver()
+        # "one & only" normalizes to "one only" (& → space, collapsed)
+        results = r.resolve_text("he is the one only parfumer i trust completely")
+        assert "One & Only" not in _names(results)
+
+    def test_A9b_one_only_blocked_in_creator_tagline(self):
+        """'by the one only parfumer' — creator tagline, blocked."""
+        r = _resolver()
+        results = r.resolve_text("by the one only parfumer in the game")
+        assert "One & Only" not in _names(results)
+
+    def test_A10_one_and_only_blocked_without_swiss_arabian(self):
+        """'one and only' without Swiss Arabian must NOT fire One & Only entity."""
+        r = _resolver()
+        results = r.resolve_text("creed aventus is the one and only king of fragrances")
+        assert "One & Only" not in _names(results)
+
+    def test_A10b_one_and_only_blocked_variant(self):
+        """'the one and only parfumer' — blocked without brand."""
+        r = _resolver()
+        results = r.resolve_text("the one and only fragrance channel worth watching")
+        assert "One & Only" not in _names(results)
+
+    def test_A12_good_vibes_blocked_without_ricarda(self):
+        """'good vibes' without Ricarda context must NOT fire Good Vibes entity."""
+        r = _resolver()
+        results = r.resolve_text("this fragrance gives nothing but good vibes all day")
+        assert "Good Vibes" not in _names(results)
+
+    def test_A12b_good_vibes_blocked_in_jeremy_fragrance_title(self):
+        """'australia fragrance talk good vibes jeremyfragrance' — blocked."""
+        r = _resolver()
+        results = r.resolve_text(
+            "australia fragrance talk good vibes jeremyfragrance"
+        )
+        assert "Good Vibes" not in _names(results)
+
+
+# ---------------------------------------------------------------------------
+# A — RES-AMB2 Positive tests: ambiguous phrases ALLOWED with brand proximity
+# ---------------------------------------------------------------------------
+
+class TestPositiveCasesAMB2:
+    def test_A2_so_you_resolves_with_alia_touch(self):
+        """'so you by alia touch review' MUST resolve when brand is nearby."""
+        r = _resolver()
+        results = r.resolve_text("so you by alia touch is an incredible oriental")
+        assert "So You" in _names(results)
+
+    def test_A4_you_are_resolves_with_geparlys(self):
+        """'you are geparlys fragrance review' MUST resolve."""
+        r = _resolver()
+        results = r.resolve_text("you are by geparlys is a great budget fragrance")
+        assert "You Are" in _names(results)
+
+    def test_A6_en_route_resolves_with_botanicae(self):
+        """'en route botanicae review' MUST resolve."""
+        r = _resolver()
+        results = r.resolve_text("en route by botanicae smells like a forest walk")
+        assert "En Route" in _names(results)
+
+    def test_A8_fragrance_of_summer_resolves_with_asam(self):
+        """'fragrance of summer m asam review' MUST resolve."""
+        r = _resolver()
+        results = r.resolve_text("fragrance of summer by asam is a hidden gem")
+        assert "Fragrance of Summer" in _names(results)
+
+    def test_A11_one_only_resolves_with_swiss_arabian(self):
+        """'one only swiss arabian' — normalized 'one & only', MUST resolve."""
+        r = _resolver()
+        # "Swiss Arabian One & Only" → normalizes: "swiss arabian one only"
+        results = r.resolve_text("swiss arabian one only is a powerhouse oud")
+        assert "One & Only" in _names(results)
+
+    def test_A11b_one_and_only_resolves_with_swiss_arabian(self):
+        """'one and only swiss arabian' MUST resolve."""
+        r = _resolver()
+        results = r.resolve_text("one and only from swiss arabian incredible sillage")
+        assert "One & Only" in _names(results)
+
+    def test_A13_good_vibes_resolves_with_ricarda(self):
+        """'good vibes ricarda review' MUST resolve."""
+        r = _resolver()
+        results = r.resolve_text("good vibes by ricarda m is a summer must have")
+        assert "Good Vibes" in _names(results)
+
+
+# ---------------------------------------------------------------------------
+# A14–A15 — RES-AMB2 guard seed presence + AMB1 regression
+# ---------------------------------------------------------------------------
+
+class TestGuardStructureAMB2:
+    def test_A14_amb2_phrases_present_in_guard(self):
+        """All RES-AMB2 guard phrases must be present in _AMBIGUOUS_PHRASE_GUARD."""
+        expected = {
+            "so you", "you are", "en route",
+            "fragrance of summer",
+            "one only", "one and only",
+            "good vibes",
+        }
+        for phrase in expected:
+            assert phrase in _AMBIGUOUS_PHRASE_GUARD, (
+                f"RES-AMB2 guard phrase missing: {phrase!r}"
+            )
+
+    def test_A15_amb1_phrases_unaffected_by_amb2(self):
+        """RES-AMB1 guard phrases must still be present after AMB2 additions."""
+        amb1_phrases = {"i am", "right now", "scent of", "blue oud", "peace love"}
+        for phrase in amb1_phrases:
+            assert phrase in _AMBIGUOUS_PHRASE_GUARD, (
+                f"RES-AMB1 guard phrase was removed: {phrase!r}"
+            )
+
+    def test_A15b_amb1_behavior_unchanged_i_am(self):
+        """Confirm RES-AMB1 'i am' still blocked after AMB2 additions."""
+        r = _resolver()
+        results = r.resolve_text("i am really impressed by this flanker")
+        assert "I Am" not in _names(results)
+
+    def test_A15c_amb1_behavior_unchanged_scent_of(self):
+        """Confirm RES-AMB1 'scent of' still blocked after AMB2 additions."""
+        r = _resolver()
+        results = r.resolve_text("the scent of oud is incredible")
+        assert "Scent of" not in _names(results)
+
+    def test_A15d_amb1_behavior_unchanged_peace_love(self):
+        """Confirm RES-AMB1 'peace love' still blocked after AMB2 additions."""
+        r = _resolver()
+        results = r.resolve_text("spreading peace love and good vibes everywhere")
+        assert "Peace, Love &" not in _names(results)
+        assert "Good Vibes" not in _names(results)
