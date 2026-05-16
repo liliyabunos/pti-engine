@@ -61,10 +61,67 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
     "moth",     # various — too generic
     "jack",     # various — too generic
     "man",      # various — too generic
+    "two",      # Knize Two Eau de Toilette — "I bought two frags", "these two scents"
     # Numeric short aliases (conflict with URLs, prices, ratings in titles)
     "11",       # Boris Bidjan Saberi 11
     "21",       # Costume National 21
 })
+
+# ---------------------------------------------------------------------------
+# Ambiguous multi-token phrase guard (RES-AMB1)
+# ---------------------------------------------------------------------------
+#
+# Some 2-token aliases are common English phrases that happen to match a
+# perfume name.  For these, a match is allowed ONLY when at least one brand
+# token from the corresponding brand_token_set appears within ±10 tokens of
+# the match position in the same text window.
+#
+# Structure:
+#   normalized_alias → [frozenset_of_brand_tokens, ...]
+#
+# A phrase is allowed if at least one brand token from ANY of the listed sets
+# appears in the surrounding context window.
+#
+# Seed list (RES-AMB1 — founder-confirmed false-positive entities):
+#   "i am"       → I Am Juicy Couture     (brand: Juicy Couture)
+#   "right now"  → Right Now West Third Brand (brand: West Third Brand)
+#   "scent of"   → Scent of Liu·Jo        (brand: Liu·Jo → "liu jo" normalized)
+#   "blue oud"   → Blue Oud Ajwaa Perfumes (brand: Ajwaa Perfumes)
+#   "peace love" → Peace, Love & Juicy Couture (brand: Juicy Couture)
+#
+# "knize two" is fixed via _BLOCKED_SINGLE_WORD_ALIASES ("two") above — its
+# only registered alias is the single token "two", not the phrase "knize two".
+#
+_AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
+    "i am":        [frozenset({"juicy", "couture"})],
+    "right now":   [frozenset({"west", "third"})],
+    "scent of":    [frozenset({"liu", "jo"})],
+    "blue oud":    [frozenset({"ajwaa"})],
+    "peace love":  [frozenset({"juicy", "couture"})],
+}
+
+
+def _check_brand_proximity(
+    tokens: List[str],
+    match_start: int,
+    match_end: int,
+    brand_token_sets: List[frozenset],
+    window: int = 10,
+) -> bool:
+    """Return True if a brand token from any brand_token_set is within
+    `window` tokens of the matched phrase [match_start:match_end].
+
+    Looks at tokens before the phrase start and after the phrase end,
+    but does not include the phrase tokens themselves in the context set
+    (to avoid false positives from brand tokens that are part of the phrase).
+    """
+    lo = max(0, match_start - window)
+    hi = min(len(tokens), match_end + window)
+    context: Set[str] = set(tokens[lo:match_start]) | set(tokens[match_end:hi])
+    for brand_tokens in brand_token_sets:
+        if context & brand_tokens:
+            return True
+    return False
 
 
 def make_resolver(db_path: str | None = None) -> "PerfumeResolver":
@@ -150,6 +207,19 @@ class PerfumeResolver:
 
                 result = self.store.get_perfume_by_alias(phrase)
                 if result:
+                    # Ambiguous phrase guard: common English phrases require
+                    # brand proximity before being accepted as a match.
+                    if phrase in _AMBIGUOUS_PHRASE_GUARD:
+                        brand_token_sets = _AMBIGUOUS_PHRASE_GUARD[phrase]
+                        if not _check_brand_proximity(
+                            tokens, i, i + size, brand_token_sets
+                        ):
+                            _log.debug(
+                                "[resolver] ambiguous phrase blocked (no brand proximity): %r → %r",
+                                phrase,
+                                result["canonical_name"],
+                            )
+                            continue
                     key = (result["perfume_id"], result["canonical_name"])
                     if key not in seen:
                         seen.add(key)
