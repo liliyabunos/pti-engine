@@ -1638,6 +1638,21 @@ The entity detail page already shows "As of {latest_date}" — after the fix, `l
 
 ---
 
+## OPS NOTE — Railway Cron "Running…" Ghost Record (2026-05-06)
+**Investigated: 2026-05-16**
+
+The pipeline-daily Cron Runs tab shows a 5/6/26 07:01 AM entry as "Running…" with ~10d duration. This is a **stale UI record only — no live process, no resource consumption, no operational impact**.
+
+Root cause: A code push at 07:07 AM on May 6 triggered a new Railway deploy that replaced the running cron container mid-execution ("Stopping Container" in deploy logs). Railway's cron execution tracker never received the close/termination event, so it displays the entry as perpetually running by computing `now - start_time`. The underlying deployment (`dcc09f27`) is status=REMOVED — confirmed via CLI (`Deployment not found`).
+
+Evidence: `railway deployment list` shows 0 active/non-terminal deployments. SSH PID 1 started `2026-05-16 11:04:53 UTC` (today's run). All subsequent runs (5/7 through 5/16) completed normally. No Railway billing impact.
+
+**Railway behavior pattern:** If a deploy replaces a running cron container mid-execution, the Cron Runs UI will show that execution as perpetually "Running" — this is cosmetic only. Railway provides no way to manually close/dismiss stale cron execution records.
+
+The May 6 partial pipeline run is already recorded in P3 Pipeline Health Check history: `05-06 collapse → PIPELINE_HEALTH_WARNING (reddit_items=0, mentions=64)`.
+
+---
+
 ## REL-1 — Staging & Production Release Gate Architecture
 **STATUS: APPROVED — DEFERRED (2026-05-15)**
 **Assessment completed: 2026-05-15 · Implementation deferred until KB-CAT1/FTG block is complete**
