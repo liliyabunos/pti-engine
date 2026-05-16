@@ -245,7 +245,7 @@ Hypothesis confirmed via production SQL (`railway ssh --service generous-prosper
 | **Phase / task** | DATA4-B — Brand promotion guard + ghost brand repair script |
 | **Related commits** | `48784ed` (implementation) |
 | **Implementation shipped** | 2026-05-16 |
-| **Current status** | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` |
+| **Current status** | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` |
 | **Immediate verification considered?** | Yes — repair script can be run immediately via Railway SSH. Guard verification requires running `aggregate_daily_market_metrics` after deploy. |
 | **Why deferred** | Requires Railway auto-deploy of `48784ed` to complete, then run repair script + aggregation rerun via Railway SSH. Cannot verify guard effectiveness until at least one pipeline run post-deploy. |
 | **Trigger event** | Railway deploy of `48784ed` completes (Railway auto-deploys on push to main) |
@@ -290,9 +290,18 @@ done
 - `brand_promotion_blocked` warnings appear in aggregation logs for any residual ghost brands
 - Dashboard and screener load correctly after aggregation rerun (no P0 regressions)
 
-**CLAUDE.md update after pass:**
-- Change DATA4-B status to `COMPLETE — PRODUCTION VERIFIED (YYYY-MM-DD)`
-- Close this ledger entry
+**Production verification evidence (2026-05-16):**
+- Ghost brands with ts_rows > 0 after repair: 5 (all DATA4-D encoding variants — correctly excluded) ✓
+- Known-deleted ghost entity_ids still in entity_market: 0 ✓
+- Upstream brand_name spot-check: Angels' Share → Kilian, Creed Green Irish Tweed → Creed, Molecule 01 + Ginger → Escentric Molecules, Vanilla | 28 → Kayali, Oud & Bergamot → Jo Malone, Musk | 12 → Kayali — all correct ✓
+- TOM FORD Private Blend (DATA4-C exclusion): INTACT ts=59 ✓
+- Total brand entities: 572 (down from 660 pre-repair) ✓
+- Total ghost brands remaining: 5 (exactly the DATA4-D encoding variants) ✓
+- Guard firing in aggregation reruns: `brand_promotion_blocked` warnings for structural fragments and non-canonical brands ✓
+- Aggregation rerun 7 days: 0 errors, brand_rollup_written counts normal ✓
+- Idempotency: second dry-run after apply shows Ghost brands found: 5 / entities deleted: 0 ✓
+
+**CLOSED — 2026-05-16**
 
 ---
 
@@ -303,4 +312,4 @@ done
 | PV-001 | P3.1 Health Log persistence | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tonight 23:00 UTC |
 | PV-002 | FTG-5 / SN1-A snapshots | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next healthy pipeline (signals > 10) |
 | PV-003 | May 16 incident root-cause | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
-| PV-004 | DATA4-B brand promotion guard + repair | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` | Railway deploy of 48784ed + repair script run |
+| PV-004 | DATA4-B brand promotion guard + repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |

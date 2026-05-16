@@ -1439,7 +1439,7 @@ FROM brand_profiles WHERE node_type != 'brand' ORDER BY brand_name_normalized;
 ```
 
 KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
-**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
 **Commit: 233f74e**
 - Brand entity detail page: show node_type badge ("COLLECTION" / "SUB-BRAND") instead of implied "BRAND" for non-root nodes
 - Brand entity detail page: show parent brand link/breadcrumb ("Part of Xerjoff →")
@@ -1447,7 +1447,7 @@ KB-CAT1-C — Xerjoff Pilot — Display Metadata Only
 - No URL changes. No rollup changes. Display layer only.
 
 KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context
-**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (2026-05-14)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
 **Commit: b834030 · P0 hotfix: cc7e712**
 **P0 regression fixed (commit cc7e712):** KB-CAT1-D added `brand_hierarchy_label=format_brand_hierarchy_label(cr.brand_name, hierarchy_map)` to the dashboard route's TopMoverRow loop, but forgot to initialize `hierarchy_map` in the dashboard route (only initialized in screener route). Every dashboard request raised `NameError: name 'hierarchy_map' is not defined` → HTTP 500 → frontend "TypeError: Failed to fetch". Fix: added `hierarchy_map = _safe(lambda: fetch_brand_hierarchy_map(db), {}, "fetch_brand_hierarchy_map")` in the dashboard route at the same location as screener.
 - `fetch_brand_hierarchy_map(db)` + `format_brand_hierarchy_label(brand_name, hierarchy_map)` in `brand_profile.py` — bulk-safe compact label (e.g. "Xerjoff · Join the Club"); ~4-row fetch per request, no N+1
@@ -1685,7 +1685,8 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 ---
 
 ## DATA4 — Brand Name Canonicalization & Ghost Brand Repair
-**STATUS: DATA4-A AUDIT COMPLETE (2026-05-16) · DATA4-B IMPLEMENTATION SHIPPED 48784ed — PRODUCTION VERIFICATION PENDING**
+**STATUS: DATA4-A AUDIT COMPLETE (2026-05-16) · DATA4-B COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
+
 
 **Trigger:** DATA3 production audit (2026-05-15) revealed that the brand_name mismatch and ghost brand problems are systemic — not a one-off Lattafa case.
 
@@ -1719,37 +1720,15 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 - TOM FORD Private Blend (DATA4-C — collection-as-brand architectural decision)
 - Encoding mismatches like "Comme des Garcons" vs "Comme des Garçons" (DATA4-D)
 
-**Production verification (run after Railway deploy picks up 48784ed):**
-```bash
-# Step 1: Dry-run repair script
-DATABASE_URL=<prod-url> python3 scripts/data4b_ghost_brand_repair.py
-
-# Step 2: Apply repair
-DATABASE_URL=<prod-url> python3 scripts/data4b_ghost_brand_repair.py --apply
-
-# Step 3: Verify ghost brands are gone
-# (via Railway SSH)
-SELECT em.canonical_name, COUNT(etd.id) AS ts_rows
-FROM entity_market em
-LEFT JOIN entity_timeseries_daily etd ON etd.entity_id = em.id
-WHERE em.entity_type = 'brand'
-  AND NOT EXISTS (
-    SELECT 1 FROM resolver_brands rb WHERE LOWER(rb.canonical_name) = LOWER(em.canonical_name)
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM brand_profiles bp WHERE LOWER(bp.brand_name_normalized) = LOWER(em.canonical_name)
-  )
-GROUP BY em.canonical_name
-HAVING COUNT(etd.id) > 0
-ORDER BY ts_rows DESC;
--- Expect: 0 rows (or only TOM FORD Private Blend and encoding-mismatch brands)
-
-# Step 4: Re-run aggregation for last 7 days to rebuild corrected brand timeseries
-for D in $(seq 0 6); do
-  DATE=$(date -u -d "-$D days" +%Y-%m-%d 2>/dev/null || date -u -v-${D}d +%Y-%m-%d)
-  python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date $DATE
-done
-```
+**Production verification (2026-05-16) — COMPLETE:**
+- Ghost brands with ts_rows > 0 after repair: 5 (all DATA4-D encoding variants — correctly excluded) ✓
+- Known-deleted ghost entity_ids (brand-angels, brand-rose, brand-oud, etc.) still in entity_market: 0 ✓
+- Upstream brand_name spot-check: Angels' Share → Kilian ✓ · Creed Green Irish Tweed → Creed ✓ · Molecule 01 + Ginger → Escentric Molecules ✓ · Vanilla | 28 → Kayali ✓ · Oud & Bergamot → Jo Malone ✓
+- TOM FORD Private Blend (DATA4-C exclusion): INTACT ts=59 ✓
+- Total brand entities: 572 (down from 660 pre-repair, 88 ghost brand entity_market rows deleted) ✓
+- Guard firing in aggregation: `brand_promotion_blocked` warnings for structural fragments ("Amber &") and non-canonical brands ("Hibiscus", "White") on reruns ✓
+- Aggregation rerun 7 days (2026-05-10 to 2026-05-16): 0 errors, brand_rollup_written counts normal ✓
+- Idempotency: second dry-run after apply shows Ghost brands: 5 / deleted: 0 ✓
 
 **DATA4 phase plan (remaining):**
 - DATA4-C — TOM FORD Private Blend: collection-as-brand architectural decision + brand_profiles hierarchy entry (KB-CAT1 integration)
@@ -2796,11 +2775,11 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-2 / RI1 — Relationship Intelligence Core | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA1 — Last Active Display Snapshot Contract | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| DATA3 — Duplicate Brand Catalog Display after Normalized Join (Layer 1 dedup) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
+| DATA3 — Duplicate Brand Catalog Display after Normalized Join (Layer 1 dedup) | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | DATA5 / SEARCH1 — Market-Readable Catalog Search (brand+name concat) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | DATA4-A — Ghost Brand Audit | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
-| DATA4-B — Brand Promotion Guard + Repair Script | IMPLEMENTATION SHIPPED — PRODUCTION VERIFICATION PENDING | 2026-05-16 |
-| FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
+| DATA4-B — Brand Promotion Guard + Repair Script | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1B — Lattafa Asad → Sauvage Elixir dupe_of gap fill | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
@@ -2811,8 +2790,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
-| KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
-| KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — P0 HOTFIX DEPLOYED — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
+| KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | REL-1 — Staging & Production Release Gate Architecture | APPROVED — DEFERRED (after KB-CAT1/FTG block) | 2026-05-15 |
 
 ---
