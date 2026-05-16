@@ -1524,6 +1524,45 @@ Note: All mismatched perfumes correctly appear on their parent brand's catalog p
 
 ---
 
+## RES-AMB1 — Ambiguous Perfume Phrase Guard v1
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
+**Commit: 84d31a1**
+**No migration required.**
+
+**Problem:** 6 false-positive perfume entities accumulated entity_mentions from ambiguous short aliases that matched common English phrases in YouTube/Reddit text with no brand context:
+- "two" (single-word) → Knize Two Eau de Toilette — fired on "I bought two fragrances"
+- "i am" → I Am (Juicy Couture) — fired on Reddit posts beginning "I am..."
+- "right now" → Right Now (West Third Brand) — fired on "right now this is trending"
+- "scent of" → Scent of (Liu·Jo) — fired on "scent of the day" posts
+- "blue oud" → Blue Oud (Ajwaa Perfumes) — fired on other "blue oud" product descriptions
+- "peace love" → Peace, Love & (Juicy Couture) — fired on generic phrase usage
+
+**Fix (Phase B-C):**
+- Added `"two"` to `_BLOCKED_SINGLE_WORD_ALIASES` in `perfume_resolver.py`
+- Added `_AMBIGUOUS_PHRASE_GUARD` dict: 5 common 2-token phrases mapped to required brand token sets
+- Added `_check_brand_proximity()`: ±10 token context window check
+- Applied guard in `resolve_text()`: phrase only resolves if a brand token appears in surrounding context
+
+**Repair (Phase D — `scripts/res_amb1_targeted_repair.py`):**
+- Stripped 6 entities from `resolved_signals.resolved_entities_json`: 862 rows updated
+- Deleted `entity_mentions` for 6 entity IDs: 850 rows
+- Deleted `entity_timeseries_daily` for 6 entity IDs: 201 rows
+- Deleted `signals` for 6 entity IDs: 151 rows
+- 0 `signal_intelligence_snapshots` deleted (FTG-5 had not run yet)
+- 6 entities remain in `entity_market` for audit trail — no auto-delete
+
+**Production verification (2026-05-16):**
+- entity_mentions for 6 entity_ids: 0 ✓
+- entity_timeseries_daily for 6 entity_ids: 0 ✓
+- signals for 6 entity_ids: 0 ✓
+- 917 Active Today entities — none of the 6 false positives ✓
+
+**Tests:** `tests/unit/test_res_amb1_ambiguous_phrase_guard.py` — 32/32 pass (N, P, R, G suites).
+
+**NEXT STEP (pipeline):** Re-run aggregation for recent dates to rebuild entity_timeseries_daily from the cleaned resolved_signals. Tonight's evening pipeline will handle this automatically for today's date.
+
+---
+
 ## DATA5 / SEARCH1 — Market-Readable Perfume Catalog Search
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-15)**
 **Commit: 39eb700**
@@ -2626,6 +2665,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1-A — Signal Intelligence Snapshots | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-16 |
+| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
