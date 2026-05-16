@@ -1557,15 +1557,31 @@ Note: All mismatched perfumes correctly appear on their parent brand's catalog p
 - signals for 6 entity_ids: 0 ✓
 - 917 Active Today entities — none of the 6 false positives ✓
 
-**FOLLOW-UP REQUIRED — brand-level stale state:**
-The repair deleted perfume-level rows only. Brand-level entity_timeseries_daily and signals were not touched.
-Three brands had the false-positive perfume as their ONLY tracked entity — their entire brand timeseries
-is derived from false data and must be deleted:
-- Knize brand (f1f04239...): 54 timeseries rows + brand signals — all from Knize Two
-- West Third Brand (bb1df91e...): 48 timeseries rows + brand signals — all from Right Now
-- Ajwaa Perfumes (4a785ba2...): 7 timeseries rows + brand signals — all from Blue Oud
-Juicy Couture brand timeseries is mixed (real Viva La Juicy Le Bubbly data + inflated I Am / Peace Love & data).
-These brand-level rows cause brand pages to display stale 68.4 BREAKOUT scores and dashboard Top Movers entries.
+**Brand-level repair (Phase E — 2026-05-16):**
+Post-repair diagnostic discovered 5 brand entities with brand timeseries derived entirely or partially from the false-positive perfumes. Note: Liu•Jo brand entity was missed in initial diagnostic (bullet character • vs middle dot ·) — found and repaired in the same session.
+
+| Brand | Brand entity_id | Before | Action | After |
+|-------|----------------|--------|--------|-------|
+| Knize | f1f04239-8782-41cf-afd1-4b142a68e6de | 54 timeseries, 30 signals (100% false) | DELETE ALL | 0 / 0 |
+| West Third Brand | bb1df91e-08c7-478d-a2c3-1233d96f13c3 | 48 timeseries, 43 signals (100% false) | DELETE ALL | 0 / 0 |
+| Ajwaa Perfumes | 4a785ba2-4353-492c-964c-637b69167e27 | 7 timeseries, 3 signals (100% false) | DELETE ALL | 0 / 0 |
+| Juicy Couture | 691cade5-6738-4c58-8ff0-ef717cfdf979 | 47 timeseries, 27 signals (44 false / 3 legit) | DELETE 44 unsupported + RECOMPUTE 3 legit dates + KEEP 1 legit signal | 3 timeseries (score ≈30.17, trend=rising), 1 signal |
+| Liu•Jo | c0d940b4-d328-4dd7-95a8-2d2fd66b1396 | 49 timeseries, 40 signals (100% false) | DELETE ALL | 0 / 0 |
+
+Juicy Couture 3 legitimate dates recomputed via `_rollup_brand_market_data()` (Viva La Juicy Le Bubbly, 1.0 mention each):
+- 2026-04-17: score=30.170, trend=rising ✓
+- 2026-04-25: score=30.167, trend=rising ✓
+- 2026-05-03: score=30.174, trend=rising ✓ (acceleration_spike signal preserved, strength=55.089)
+
+**Production UI verification (2026-05-16) — COMPLETE:**
+- Dashboard Top Movers: 0 false-positive brands present ✓
+- brand-knize: score=None, trend=None, timeseries=0 ✓
+- brand-west-third-brand: score=None, trend=None, timeseries=0 ✓
+- brand-ajwaa-perfumes: score=None, trend=None, timeseries=0 ✓
+- brand-juicy-couture: trend=rising (correct), timeseries=3 (Viva La Juicy Le Bubbly only) ✓
+- brand-liujo: score=None, trend=None, timeseries=0 ✓
+- signal_intelligence_snapshots: 0 rows for all 5 brand entities ✓ (no stale snapshot layer)
+- No additional stale serving layers found
 
 **Tests:** `tests/unit/test_res_amb1_ambiguous_phrase_guard.py` — 32/32 pass (N, P, R, G suites).
 
@@ -2673,7 +2689,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1-A — Signal Intelligence Snapshots | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-16 |
-| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | IMPLEMENTED — FOLLOW-UP REQUIRED: brand-level stale market state not yet repaired | 2026-05-16 |
+| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
