@@ -88,8 +88,9 @@ At the start of any new Claude session, before beginning new implementation work
 | **Current status** | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` |
 | **Immediate verification considered?** | No — `pipeline_health_log` is only written by the health check at the end of a pipeline run. Cannot be triggered safely outside the scheduled pipeline without running the full pipeline manually. |
 | **Why deferred** | Requires a successful evening or morning pipeline run to produce a row. Fix deployed before 23:00 UTC 2026-05-16. |
-| **Trigger event** | Tonight's 23:00 UTC evening pipeline (2026-05-16) |
+| **Trigger event** | Tomorrow 11:00 UTC morning pipeline (2026-05-17) |
 | **Blocking severity** | High — P3.1 has been marked COMPLETE — PRODUCTION VERIFIED in CLAUDE.md incorrectly since 2026-05-12. Cannot restore that status until persistence is confirmed. |
+| **2026-05-16 evening run outcome** | Pipeline started 23:00 UTC (Reddit 195 items, YouTube 497 items collected at 23:02). Code deploy `8a9c7ac` at ~23:09 UTC killed the cron container before Step 2 (aggregation). `updated_at` on entity_timeseries_daily never exceeded 22:57 UTC. pipeline_health_log still 0 rows. Same incident pattern as 2026-05-06 OPS NOTE. |
 
 **Exact verification SQL:**
 ```sql
@@ -309,7 +310,7 @@ done
 
 | ID | Phase | Status | Trigger |
 |----|-------|--------|---------|
-| PV-001 | P3.1 Health Log persistence | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tonight 23:00 UTC |
-| PV-002 | FTG-5 / SN1-A snapshots | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next healthy pipeline (signals > 10) |
+| PV-001 | P3.1 Health Log persistence | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tomorrow 11:00 UTC morning pipeline (2026-05-17) — 23:00 UTC run interrupted by code deploy |
+| PV-002 | FTG-5 / SN1-A snapshots | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tomorrow 11:00 UTC morning pipeline (2026-05-17) — 23:00 UTC run interrupted by code deploy |
 | PV-003 | May 16 incident root-cause | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
 | PV-004 | DATA4-B brand promotion guard + repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
