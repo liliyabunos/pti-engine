@@ -1658,6 +1658,54 @@ The pipeline-daily Cron Runs tab shows a 5/6/26 07:01 AM entry as "Running…" w
 
 ---
 
+## OPS INCIDENT — May 16, 2026 Morning Pipeline Collapse
+**Investigated: 2026-05-16 · Fix deployed: ffab2ac**
+
+**Symptoms observed:**
+- `entity_mentions=17` (CRITICAL threshold: 50) — pipeline_health_check fired CRITICAL
+- `reddit_items=0`, `reddit_mentions=0` — Reddit produced zero content
+- `signals=3` (down from ~150 baseline)
+- `pipeline_health_persist_failed` — health log did not write
+- `evaluate_temp_youtube_queries failed — continuing` — Step 4d failure
+
+**Root cause 1 — P3.1 SQL persistence bug (code regression):**
+`:issues::jsonb` in `_persist_result()` INSERT caused SQLAlchemy `text()` to fail to bind the `issues` parameter. Entire INSERT threw SQL syntax error caught silently. `pipeline_health_log` has had zero rows since migration 041 was applied (2026-05-12). Fix: `CAST(:issues AS JSONB)` in commit `ffab2ac`, deployed 2026-05-16 before evening pipeline.
+
+**Root cause 2 — entity_mentions=17 (first-poll backfill artifact, not code regression):**
+YouTube `collected_at` ≠ `occurred_at`. `occurred_at` = `published_at` (video publication date). Channel polling (Step 1a) polled newly added channels with 30-day first-poll lookback — producing 362 YouTube items, but most with `published_at` from May 1–15. Health check counts `entity_mentions WHERE DATE(occurred_at) = today` — only items published today count. No code changes between May 14–16 touched the ingestion or resolver paths. Confirmed by architecture analysis; DB verification queries provided in session.
+
+**Root cause 3 — Reddit=0 (source access failure, transient):**
+Reddit `collected_at` = ingestion timestamp (not published_at), so reddit_items=0 is a genuine zero-ingestion event — not a date-bucketing artifact. The Reddit step always executes (Step 1, `run_ingestion.py`). Reddit failure is architecturally non-fatal and documented as "Railway IP blocks are an expected transient condition" in `run_ingestion.py`. The specific failure subtype (rate-limit / IP block / bot-detection) is available only from Railway Step 1 stdout logs — no DB layer persists per-subreddit ingestion failure reasons. Evening pipeline run will confirm whether transient or persistent.
+
+**Root cause 4 — evaluate_temp_youtube_queries (pre-existing separate bug):**
+`last_seen` column in `youtube_query_experiments` is type TEXT, stores `'never'` instead of NULL. SQL comparison `text >= timestamptz` fails in Postgres. Step 4d has failed every run since ~May 5. Not causal for the May 16 collapse (runs after aggregation/signals). Fix pending as separate task.
+
+**Observability gap confirmed:**
+`pipeline_health_log.issues` was designed to persist Reddit outcome classification ("reddit=0, may be blocked"). It does NOT persist per-subreddit ingestion failure subtypes (rate-limit vs block vs bot-detection). Even if the SQL bug had not existed, the exact Reddit failure mode for May 16 morning is only available in Railway stdout logs, not in any DB table.
+
+**P3.1 status correction:**
+Previously marked COMPLETE — PRODUCTION VERIFIED (2026-05-12). This was incorrect — persistence was never confirmed with a row count query after the first scheduled pipeline. Corrected status: RE-VERIFICATION PENDING EVENING PIPELINE after fix deploy.
+
+**Evening pipeline verification checklist (23:00 UTC, 2026-05-16):**
+```sql
+-- Confirm P3.1 persistence now works:
+SELECT run_date, run_label, overall_level, reddit_items, reddit_mentions,
+       issues, pipeline_service, recorded_at
+FROM pipeline_health_log ORDER BY recorded_at DESC LIMIT 5;
+-- Expect: row for 2026-05-16 run_label='evening', issues JSONB non-null
+
+-- Confirm Reddit recovered (evening baseline should be ~200 items):
+SELECT COUNT(*) FROM canonical_content_items
+WHERE source_platform = 'reddit'
+  AND DATE(collected_at::timestamptz) = '2026-05-16';
+
+-- Confirm SN1-A snapshots (first write since migration 050):
+SELECT COUNT(*), MIN(detected_at), MAX(detected_at)
+FROM signal_intelligence_snapshots;
+```
+
+---
+
 ## REL-1 — Staging & Production Release Gate Architecture
 **STATUS: APPROVED — DEFERRED (2026-05-15)**
 **Assessment completed: 2026-05-15 · Implementation deferred until KB-CAT1/FTG block is complete**
@@ -1723,8 +1771,18 @@ Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (f
 - **SC1.3 Multi-field Resolver — COMPLETE — PRODUCTION VERIFIED (2026-05-08)** — commit ee1d8ba — `perfume_trend_sdk/resolvers/perfume_identity/multi_field_resolver.py`. Feature flag: `MULTI_FIELD_RESOLVER_ENABLED=true` (Railway generous-prosperity). Platform-specific field weights: YouTube title(1.0)/description(0.5)/hashtags(0.3); Reddit body(1.0)/title(0.7); TikTok derived referencing_context(1.0)/hashtags(0.5)/description(0.3)/title(0.2); TikTok direct user_context(1.0)/hashtags(0.6)/description(0.4)/title(0.5). Confidence threshold 0.3. TikTok generic title protection + YouTube title noise filter. 67/67 tests pass. **Replay (2026-05-04–07):** old=624, new=807, +183 resolved, 0 regressions. **Production pipeline (2026-05-08) verified:** PIPELINE_HEALTH_OK · entity_mentions=180 (baseline 183-189) · signals=142 (baseline 113-216) · resolved_signals 1.1-mf=558, 1.1=74 · content_items=1203 (yt=997, reddit=206) · public_safe views 2318/4976/9644 · dashboard 200 OK (2373 entities, 19 breakouts) · no new false positives (noise aliases pre-existing, within historical range).
 - **P3 Pipeline Health Check — COMPLETE (2026-05-08)** — commit 58ff5c6 — `perfume_trend_sdk/jobs/pipeline_health_check.py` runs at end of morning + evening pipelines. 4 checks: entity_mentions (CRITICAL<50/WARNING<100), Reddit entity_mentions (WARNING morning=0/CRITICAL evening=0), content items by platform, signals count. Markers: `PIPELINE_HEALTH_OK/WARNING/CRITICAL`. Exit always 0. Verified retroactively: 05-06 collapse correctly fires `PIPELINE_HEALTH_WARNING` (reddit_items=0, mentions=64). 21/21 tests pass.
 - **Phase 042 — Language & Region Metadata v1 — COMPLETE — PRODUCTION VERIFIED (2026-05-12)** — migration `alembic/versions/042_language_region_metadata.py` · implementation commit `3702a9c` · completion fix commit `436fd6c` · migration applied commit `afe232f`. Adds 5 nullable metadata fields to `source_intake_candidates` (`source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status`) and 3 new columns to `youtube_channels` (`source_region`, `audience_region`, `regional_policy_status`). Apply path carries all 5 into the YouTube source registry: `source_language` → `language`, `source_country` → `country` (existing columns, migration 023), plus 3 new columns. PATCH endpoint accepts and saves all 5. CandidateRow GET exposes all 5. Admin UI: Language & Region section in BatchReviewConsole per candidate (lang/country inputs, region/audience/policy dropdowns, Save Metadata button). No regional scoring. No regional leaderboard. No public filters. No canonical_content_items propagation (Phase 043). Creator Leaderboard behavior unchanged. 52/52 tests pass.
-- **P3.1 Pipeline Health Log — COMPLETE — PRODUCTION VERIFIED (2026-05-12)** — implementation commit `8b49fd2` · migration applied commit `afe232f`. `alembic/versions/041_pipeline_health_log.py` · `pipeline_health_log` table (13 columns). Upserts one row per `(run_date, run_label)` after each health check run. ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row without duplicating. Trims rows older than 90 days at persist time (no separate cron). `pipeline_service` captured from `PIPELINE_SERVICE` env var (operator-set Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in), NULL if neither set. run_label supports: morning | evening | manual | backfill | unknown — no CHECK constraint. Pipeline scripts already pass `--run-label morning` / `--run-label evening` — no script changes needed. Ad-hoc and backfill runs use `--run-label manual`. Persist errors are non-fatal (logged as WARNING, pipeline continues). Admin UI deferred. 30/30 tests pass.
-  **First row will appear after next scheduled pipeline run (11:00 UTC or 23:00 UTC).** Verify: `SELECT run_date, run_label, overall_level, pipeline_service FROM pipeline_health_log ORDER BY recorded_at DESC LIMIT 5;`
+- **P3.1 Pipeline Health Log — IMPLEMENTATION SHIPPED 2026-05-12 · PRODUCTION PERSISTENCE BUG DISCOVERED 2026-05-16 · FIXED IN ffab2ac · RE-VERIFICATION PENDING EVENING PIPELINE** — implementation commit `8b49fd2` · migration applied commit `afe232f` · persistence bug fix commit `ffab2ac` (2026-05-16). `alembic/versions/041_pipeline_health_log.py` · `pipeline_health_log` table (13 columns). Upserts one row per `(run_date, run_label)` after each health check run. ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row without duplicating. Trims rows older than 90 days at persist time (no separate cron). `pipeline_service` captured from `PIPELINE_SERVICE` env var (operator-set Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in), NULL if neither set. run_label supports: morning | evening | manual | backfill | unknown — no CHECK constraint. Pipeline scripts already pass `--run-label morning` / `--run-label evening` — no script changes needed. Ad-hoc and backfill runs use `--run-label manual`. Persist errors are non-fatal (logged as WARNING, pipeline continues). Admin UI deferred. 30/30 tests pass.
+  **PRODUCTION PERSISTENCE BUG (discovered 2026-05-16):** `:issues::jsonb` in the INSERT VALUES clause caused SQLAlchemy `text()` to fail to bind the `issues` parameter — entire INSERT threw a SQL syntax error, caught silently by the `except` block. Result: `pipeline_health_log` has zero rows for every run since migration 041 was applied (2026-05-12). The "COMPLETE — PRODUCTION VERIFIED" status was incorrect — persistence was never confirmed with an actual row count query after the first scheduled pipeline. **Fix:** `CAST(:issues AS JSONB)` in commit `ffab2ac`, pushed to main 2026-05-16, Railway auto-deploys before 23:00 UTC evening run.
+  **Re-verification (run after tonight's evening pipeline):**
+  ```sql
+  SELECT run_date, run_label, overall_level, reddit_items, reddit_mentions, issues, pipeline_service, recorded_at
+  FROM pipeline_health_log ORDER BY recorded_at DESC LIMIT 5;
+  -- Expect: ≥1 row for 2026-05-16 run_label='evening'
+  -- Confirm: issues JSONB is populated (not null, not empty array)
+  SELECT COUNT(*) FROM pipeline_health_log;
+  -- Expect: >0
+  ```
+  Only restore to COMPLETE — PRODUCTION VERIFIED after evening pipeline row is confirmed.
 - **Phase 043 — Content Language & Region Propagation v1 — COMPLETE — PRODUCTION VERIFIED (2026-05-12)** — implementation commit `71be8f4` · first-poll fix commit `32d2a25`. `normalizer.py`: added `_COUNTRY_TO_REGION` map + `_resolve_content_language()` / `_resolve_content_region()` helpers; `normalize_youtube_item()` accepts optional `channel_context` kwarg. `region` default changed from hardcoded `"US"` to `"UNKNOWN"` when no context. `ingest_youtube_channels.py`: `_load_channels()` now SELECTs `language, country, source_region`; `poll_channel()` passes `channel_context` to normalizer; `_first_poll_country or channel.get("country")` ensures first-poll channels get correct region immediately. Fallback: `source_region` → `country→region map` → `"UNKNOWN"`. `entity_mentions.region` deferred. TikTok/Reddit normalizers unchanged. Scoring unchanged. Public-safe views unchanged. 44/44 new + 117/117 existing tests pass. **Production verification 2026-05-12:** manual poll of 4 channels (Fragmental GB, School of Scent GB, Hardbody Fragrancez US, TLTG Reviews US) → 12 items: 9×US_CANADA + 3×UK_IRELAND, 0 NULL regions, 0 NULL language. Non-UNKNOWN region propagation confirmed. No errors.
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
@@ -2472,7 +2530,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC0.2 Creator filters v1 | PLANNED | — |
 | SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | P3 Pipeline Health Check | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
-| P3.1 Pipeline Health Log — DB-persisted health history | COMPLETE — PRODUCTION VERIFIED | 2026-05-12 |
+| P3.1 Pipeline Health Log — DB-persisted health history | IMPLEMENTATION SHIPPED — PERSISTENCE BUG FIXED ffab2ac — RE-VERIFICATION PENDING EVENING PIPELINE | 2026-05-16 |
 | SC1.2A TikTok — Schema + Registry Integration | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2B TikTok — Seed Import + Operator Workflow | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2C TikTok — Seeded Creator Monitoring Worker | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
