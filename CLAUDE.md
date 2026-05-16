@@ -1710,8 +1710,12 @@ The pipeline-daily Cron Runs tab shows a 5/6/26 07:01 AM entry as "Running…" w
 **Root cause 1 — P3.1 SQL persistence bug (code regression):**
 `:issues::jsonb` in `_persist_result()` INSERT caused SQLAlchemy `text()` to fail to bind the `issues` parameter. Entire INSERT threw SQL syntax error caught silently. `pipeline_health_log` has had zero rows since migration 041 was applied (2026-05-12). Fix: `CAST(:issues AS JSONB)` in commit `ffab2ac`, deployed 2026-05-16 before evening pipeline.
 
-**Root cause 2 — entity_mentions=17 (first-poll backfill artifact, not code regression):**
-YouTube `collected_at` ≠ `occurred_at`. `occurred_at` = `published_at` (video publication date). Channel polling (Step 1a) polled newly added channels with 30-day first-poll lookback — producing 362 YouTube items, but most with `published_at` from May 1–15. Health check counts `entity_mentions WHERE DATE(occurred_at) = today` — only items published today count. No code changes between May 14–16 touched the ingestion or resolver paths. Confirmed by architecture analysis; DB verification queries provided in session.
+**Root cause 2 — entity_mentions=17 (normal morning-window lag artifact, not code regression):**
+YouTube `collected_at` ≠ `occurred_at`. `occurred_at` = `published_at` (video publication date). Health check counts `entity_mentions WHERE DATE(occurred_at) = today` — only items published same-day count. **PRODUCTION SQL CONFIRMED (2026-05-16, PV-003):**
+- 362 YouTube items collected on May 16; only 41 (11%) had `published_at = 2026-05-16`
+- 321 (89%) had `published_at` from May 13–15 → entity_mentions dated those prior days → 17 mentions on May 16
+- This is the standard `--lookback-days 2` morning ingest window running at 11:00 UTC. NOT a first-poll 30-day backfill — the 3-day span (May 13–16) is consistent with normal lookback behavior.
+- **Structural conclusion:** `entity_mentions` health metric is inherently unreliable for YouTube-only morning runs. Reddit counts by `collected_at` (ingestion time), so reddit_items=0 is always a genuine failure. YouTube counts by `published_at`, so "low entity_mentions on morning" is structurally expected when Reddit is absent.
 
 **Root cause 3 — Reddit=0 (source access failure, transient):**
 Reddit `collected_at` = ingestion timestamp (not published_at), so reddit_items=0 is a genuine zero-ingestion event — not a date-bucketing artifact. The Reddit step always executes (Step 1, `run_ingestion.py`). Reddit failure is architecturally non-fatal and documented as "Railway IP blocks are an expected transient condition" in `run_ingestion.py`. The specific failure subtype (rate-limit / IP block / bot-detection) is available only from Railway Step 1 stdout logs — no DB layer persists per-subreddit ingestion failure reasons. Evening pipeline run will confirm whether transient or persistent.
