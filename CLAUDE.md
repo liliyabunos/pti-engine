@@ -1551,15 +1551,23 @@ Note: All mismatched perfumes correctly appear on their parent brand's catalog p
 - 0 `signal_intelligence_snapshots` deleted (FTG-5 had not run yet)
 - 6 entities remain in `entity_market` for audit trail — no auto-delete
 
-**Production verification (2026-05-16):**
+**Perfume-level repair verified (2026-05-16):**
 - entity_mentions for 6 entity_ids: 0 ✓
 - entity_timeseries_daily for 6 entity_ids: 0 ✓
 - signals for 6 entity_ids: 0 ✓
 - 917 Active Today entities — none of the 6 false positives ✓
 
-**Tests:** `tests/unit/test_res_amb1_ambiguous_phrase_guard.py` — 32/32 pass (N, P, R, G suites).
+**FOLLOW-UP REQUIRED — brand-level stale state:**
+The repair deleted perfume-level rows only. Brand-level entity_timeseries_daily and signals were not touched.
+Three brands had the false-positive perfume as their ONLY tracked entity — their entire brand timeseries
+is derived from false data and must be deleted:
+- Knize brand (f1f04239...): 54 timeseries rows + brand signals — all from Knize Two
+- West Third Brand (bb1df91e...): 48 timeseries rows + brand signals — all from Right Now
+- Ajwaa Perfumes (4a785ba2...): 7 timeseries rows + brand signals — all from Blue Oud
+Juicy Couture brand timeseries is mixed (real Viva La Juicy Le Bubbly data + inflated I Am / Peace Love & data).
+These brand-level rows cause brand pages to display stale 68.4 BREAKOUT scores and dashboard Top Movers entries.
 
-**NEXT STEP (pipeline):** Re-run aggregation for recent dates to rebuild entity_timeseries_daily from the cleaned resolved_signals. Tonight's evening pipeline will handle this automatically for today's date.
+**Tests:** `tests/unit/test_res_amb1_ambiguous_phrase_guard.py` — 32/32 pass (N, P, R, G suites).
 
 ---
 
@@ -2665,7 +2673,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1-A — Signal Intelligence Snapshots | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-16 |
-| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | IMPLEMENTED — FOLLOW-UP REQUIRED: brand-level stale market state not yet repaired | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
