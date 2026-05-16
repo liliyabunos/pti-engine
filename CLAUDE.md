@@ -1639,24 +1639,22 @@ The entity detail page already shows "As of {latest_date}" — after the fix, `l
 ---
 
 ## OPS NOTE — Railway Cron "Running…" Ghost Record (2026-05-06)
-**Investigated: 2026-05-16 — INVESTIGATION COMPLETE**
+**Investigated: 2026-05-16 — Railway deployment/control-plane investigation indicates stale orphaned Cron Runs UI record; Railway Support cleanup requested**
 
 The pipeline-daily Cron Runs tab shows a 5/6/26 07:01 AM entry as "Running…" with ~10d duration.
 
-**Finding: stale UI record — deployment is REMOVED — no live process exists.**
-
-**Concrete evidence (2026-05-16):**
+**Control-plane evidence (2026-05-16):**
 - `railway deployment list --limit 1000 --json` returned 443 deployments across the full history.
 - All 443 deployments are status `REMOVED` or `SUCCESS`. Zero are `DEPLOYING`, `BUILDING`, or any non-terminal state.
-- The specific May 6 deployment: `dcc09f27-4322-4c9d-b597-37eb12031fc5` — status **REMOVED** — created `2026-05-06T09:07:44.931Z` — this is the exact deployment that triggers the Cron Runs "Running" entry.
+- The specific May 6 deployment: `dcc09f27-4322-4c9d-b597-37eb12031fc5` — status **REMOVED** — created `2026-05-06T09:07:44.931Z` — this is the exact deployment that corresponds to the stuck Cron Runs entry.
 
-**Why termination is impossible:** Railway GraphQL mutations `deploymentCancel`, `deploymentStop`, `deploymentRemove` all operate on deployment IDs. The only deployment that could correspond to the stuck cron record is already REMOVED. There is no live container to stop. No API call can close a deployment that is already gone.
+**Why no self-service termination is possible:** Railway GraphQL mutations `deploymentCancel`, `deploymentStop`, `deploymentRemove` all operate on deployment IDs. The only candidate deployment is already REMOVED — there is no live container to stop. Railway provides no UI control or API to manually close/dismiss orphaned cron execution records.
 
 **Root cause:** A code push at 07:07 AM on May 6 triggered a new Railway deploy that replaced the running cron container mid-execution ("Stopping Container" in deploy logs). Railway's cron execution tracker never received the termination event, leaving the record stuck at "Running." Railway computes the displayed duration as `now - start_time` on the client — there is no server-side timeout or auto-close.
 
-**Railway behavior pattern:** When a deploy replaces a running cron container mid-execution, the Cron Runs UI record for that execution can get permanently stuck at "Running." Railway provides no UI control or API to manually close/dismiss stale cron execution records. The only recourse is a Railway Support ticket requesting manual cleanup of the orphaned execution record.
-
 **Operational impact: none.** All runs 5/7 through 5/16 completed normally. No billing impact. The May 6 partial pipeline run is recorded in P3 Pipeline Health Check history: `05-06 → PIPELINE_HEALTH_WARNING (reddit_items=0, mentions=64)`.
+
+**Next step:** Railway Support ticket submitted to (1) confirm non-billable status and (2) manually remove the orphaned Cron Runs UI record. Status pending Support response.
 
 ---
 
