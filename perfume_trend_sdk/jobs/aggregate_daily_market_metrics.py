@@ -55,6 +55,64 @@ from perfume_trend_sdk.db.market.source_intelligence import MentionSource, Sourc
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# DATA4-B — Canonical brand validation
+#
+# Ghost brand entities accumulate when _rollup_brand_market_data() promotes any
+# em.brand_name string verbatim into a brand entity_market row, and when
+# _upsert_brand_and_perfume_catalog_first() uses a last-word-split heuristic
+# that produces structural fragments ("Oud &", "Citrus &", etc.).
+#
+# Fix: pre-fetch canonical brand names from resolver_brands + brand_profiles into
+# a frozenset; validate every new brand entity candidate before creation.
+# ---------------------------------------------------------------------------
+
+
+def _fetch_canonical_brand_names(db: Session) -> frozenset:
+    """Return a lower-cased frozenset of all authoritative brand names.
+
+    Sources:
+    - resolver_brands.canonical_name  (Fragrantica resolver catalog)
+    - brand_profiles.brand_name_normalized  (operator-curated FTG-1 table)
+
+    Returns empty frozenset if both tables are unavailable (SQLite dev env).
+    """
+    names: set = set()
+    try:
+        rows = db.execute(
+            text("SELECT canonical_name FROM resolver_brands WHERE canonical_name IS NOT NULL")
+        ).fetchall()
+        names.update(r[0].lower().strip() for r in rows if r[0])
+    except Exception:
+        pass  # resolver tables unavailable in SQLite dev
+    try:
+        rows = db.execute(
+            text("SELECT brand_name_normalized FROM brand_profiles WHERE brand_name_normalized IS NOT NULL")
+        ).fetchall()
+        names.update(r[0].lower().strip() for r in rows if r[0])
+    except Exception:
+        pass  # brand_profiles may not exist in test env
+    return frozenset(names)
+
+
+def _is_structural_fragment(brand_name: str) -> bool:
+    """Return True if brand_name is obviously a truncated fragment.
+
+    Structural fragments are produced by the heuristic fallback when a perfume
+    canonical_name contains '&' or '|': rsplit(" ", 1)[0] yields the text
+    before the last word, which ends with the connector (e.g. "Oud &").
+    """
+    stripped = brand_name.strip()
+    if not stripped:
+        return True
+    return stripped.endswith(("&", "|", "&amp;"))
+
+
+def _is_canonical_brand(brand_name: str, canonical_brands: frozenset) -> bool:
+    """Return True if brand_name matches a known canonical brand."""
+    return brand_name.lower().strip() in canonical_brands
+
+
+# ---------------------------------------------------------------------------
 # DATA0 — Score formula version
 #
 # Increment this constant when the composite_market_score formula changes.
@@ -259,7 +317,7 @@ def _upsert_perfume(
         ))
 
 
-def _upsert_brand_and_perfume_catalog_first(
+def _upsert_brand_and_perfume_catalog_first(  # noqa: C901
     db: Session,
     canonical_name: str,
     ticker: str,
@@ -304,9 +362,31 @@ def _upsert_brand_and_perfume_catalog_first(
         pass  # resolver tables unavailable in SQLite dev — fall through
 
     # Step 3: Last-word-split heuristic as final fallback for truly unknown entities.
+    # DATA4-B: validate the heuristic result against canonical brand sources before
+    # writing it. A fragment like "Oud &" (from "Oud & Roses") must not become a
+    # brand entity — that is a structural pollution artifact.
     if not brand_name:
         parts = canonical_name.rsplit(" ", 1)
-        brand_name = parts[0] if len(parts) > 1 else canonical_name
+        candidate = parts[0].strip() if len(parts) > 1 else canonical_name.strip()
+
+        if _is_structural_fragment(candidate):
+            logger.warning(
+                "brand_heuristic_rejected canonical_name=%r candidate=%r reason=structural_fragment",
+                canonical_name, candidate,
+            )
+            _upsert_perfume(db, canonical_name, None, ticker)
+            return
+
+        canonical_brands = _fetch_canonical_brand_names(db)
+        if canonical_brands and not _is_canonical_brand(candidate, canonical_brands):
+            logger.warning(
+                "brand_heuristic_rejected canonical_name=%r candidate=%r reason=not_in_canonical_sources",
+                canonical_name, candidate,
+            )
+            _upsert_perfume(db, canonical_name, None, ticker)
+            return
+
+        brand_name = candidate
 
     brand = _upsert_brand(db, brand_name)
     _upsert_perfume(db, canonical_name, brand, ticker)
@@ -407,6 +487,13 @@ def _rollup_brand_market_data(db: Session, target_date: date) -> int:
     if not brand_rows:
         return 0
 
+    # DATA4-B — pre-fetch canonical brand names once for the full rollup pass.
+    # Any brand_name that is not in resolver_brands or brand_profiles is blocked
+    # from creating a new brand entity_market row. Existing brand rows are always
+    # updated (guard only blocks NEW entity creation, not timeseries writes to
+    # already-existing brand entities — those are handled by the UPDATE path).
+    canonical_brands = _fetch_canonical_brand_names(db)
+
     now = _now()
     upserted = 0
 
@@ -431,6 +518,23 @@ def _rollup_brand_market_data(db: Session, target_date: date) -> int:
             EntityMarket.canonical_name == brand_name,
         ).first()
         if em is None:
+            # DATA4-B — guard: only create a new brand entity if the brand_name
+            # is found in resolver_brands or brand_profiles. Structural fragments
+            # (e.g. "Oud &", "Citrus &") and unknown strings that don't match
+            # any authoritative source are blocked. This prevents ghost brand
+            # entity pollution from invalid brand_names in entity_market.perfume rows.
+            if _is_structural_fragment(brand_name):
+                logger.warning(
+                    "brand_promotion_blocked brand=%r reason=structural_fragment",
+                    brand_name,
+                )
+                continue
+            if canonical_brands and not _is_canonical_brand(brand_name, canonical_brands):
+                logger.warning(
+                    "brand_promotion_blocked brand=%r reason=not_in_canonical_sources",
+                    brand_name,
+                )
+                continue
             ticker = generate_ticker(brand_name)
             entity_slug = f"brand-{_slugify(brand_name)}"
             em = EntityMarket(
