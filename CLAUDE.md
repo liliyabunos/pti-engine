@@ -1685,7 +1685,7 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 ---
 
 ## DATA4 — Brand Name Canonicalization & Ghost Brand Repair
-**STATUS: PLANNED**
+**STATUS: DATA4-A AUDIT COMPLETE (2026-05-16) · DATA4-B IMPLEMENTATION SHIPPED 48784ed — PRODUCTION VERIFICATION PENDING**
 
 **Trigger:** DATA3 production audit (2026-05-15) revealed that the brand_name mismatch and ghost brand problems are systemic — not a one-off Lattafa case.
 
@@ -1698,13 +1698,63 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
   - **Collection/sub-brand identity:** `Xerjoff` → `Casamorati -` (KB-CAT1 scope), `Escentric Molecules` → `Molecule 01 +`
   - **Truncated brand_name at ingest** (ampersand/accent handling failures): `Cartier` → `Oud &` / `Baiser`, `Chanel` → `Allure Homme Sport Eau`, `Banana Republic` → `Tobacco & Tonka`, `Bath & Body Works` → `Citrus &`, `Clive Christian` → `Town &`, `Caron` → `Aimez-Moi Comme Je`
 
-**Scope of fix (to be designed in DATA4):**
-1. Identify ingest/aggregation path that writes malformed brand_names (accent stripping failures, ampersand truncation, multilingual variant leakage)
-2. Normalize at source (ingest-time brand_name canonicalization)
-3. Migration to correct existing entity_market rows
-4. Suppress or merge ghost brand entities with no resolver brand match
+**DATA4-B — Brand Promotion Guard + Repair Script (2026-05-16)**
+**STATUS: IMPLEMENTATION SHIPPED — PRODUCTION VERIFICATION PENDING**
+**Commit: 48784ed · No migration required.**
 
-**Do not start implementation yet.** DATA4 is a separate systemic canonicalization phase. Return to active FTG Relationship Intelligence roadmap first.
+**What was implemented:**
+- `_fetch_canonical_brand_names(db)` — pre-fetches `resolver_brands` + `brand_profiles` into lowercased frozenset once per rollup pass
+- `_is_structural_fragment(brand_name)` — blocks strings ending in `&` or `|` (ampersand/pipe truncation artifacts)
+- `_is_canonical_brand(brand_name, canonical_brands)` — validates candidate against frozenset
+- `_rollup_brand_market_data()` guard — new brand entity creation is blocked if brand_name is structural fragment or not in canonical sources; WARNING logged; existing brand entities always updated (guard only blocks NEW creation)
+- `_upsert_brand_and_perfume_catalog_first()` heuristic fix — rsplit candidate validated before use; structural fragment or non-canonical → perfume written with `brand=None`; WARNING logged
+- `scripts/data4b_ghost_brand_repair.py` — dry-run by default; `--apply` to execute; finds ghost brands, resolves correct brand_names via `resolver_fragrance_master`, fixes upstream `entity_market.perfume.brand_name`, deletes downstream ghost brand rows
+- `tests/unit/test_data4b_brand_promotion_guard.py` — 55/55 pass
+
+**Repair-Complete Rule applies:**
+1. Upstream fix (entity_market.perfume.brand_name) FIRST
+2. Then downstream ghost brand entity_market + timeseries/signals deletion
+
+**Explicit exclusions:**
+- TOM FORD Private Blend (DATA4-C — collection-as-brand architectural decision)
+- Encoding mismatches like "Comme des Garcons" vs "Comme des Garçons" (DATA4-D)
+
+**Production verification (run after Railway deploy picks up 48784ed):**
+```bash
+# Step 1: Dry-run repair script
+DATABASE_URL=<prod-url> python3 scripts/data4b_ghost_brand_repair.py
+
+# Step 2: Apply repair
+DATABASE_URL=<prod-url> python3 scripts/data4b_ghost_brand_repair.py --apply
+
+# Step 3: Verify ghost brands are gone
+# (via Railway SSH)
+SELECT em.canonical_name, COUNT(etd.id) AS ts_rows
+FROM entity_market em
+LEFT JOIN entity_timeseries_daily etd ON etd.entity_id = em.id
+WHERE em.entity_type = 'brand'
+  AND NOT EXISTS (
+    SELECT 1 FROM resolver_brands rb WHERE LOWER(rb.canonical_name) = LOWER(em.canonical_name)
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM brand_profiles bp WHERE LOWER(bp.brand_name_normalized) = LOWER(em.canonical_name)
+  )
+GROUP BY em.canonical_name
+HAVING COUNT(etd.id) > 0
+ORDER BY ts_rows DESC;
+-- Expect: 0 rows (or only TOM FORD Private Blend and encoding-mismatch brands)
+
+# Step 4: Re-run aggregation for last 7 days to rebuild corrected brand timeseries
+for D in $(seq 0 6); do
+  DATE=$(date -u -d "-$D days" +%Y-%m-%d 2>/dev/null || date -u -v-${D}d +%Y-%m-%d)
+  python3 -m perfume_trend_sdk.jobs.aggregate_daily_market_metrics --date $DATE
+done
+```
+
+**DATA4 phase plan (remaining):**
+- DATA4-C — TOM FORD Private Blend: collection-as-brand architectural decision + brand_profiles hierarchy entry (KB-CAT1 integration)
+- DATA4-D — Encoding mismatch repair: `Comme des Garcons` → `Comme des Garçons`, `Areej Le Dore` → `Areej Le Doré`, multilingual brand variants
+- DATA4-E — Systemic ingest-time canonicalization (prevent future brand_name pollution at aggregation ingest time)
 
 ---
 
@@ -2748,7 +2798,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | DATA2 — Brand Catalog Join Normalization | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | DATA3 — Duplicate Brand Catalog Display after Normalized Join (Layer 1 dedup) | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-15 |
 | DATA5 / SEARCH1 — Market-Readable Catalog Search (brand+name concat) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
-| DATA4 — Brand Name Canonicalization & Ghost Brand Repair | PLANNED | — |
+| DATA4-A — Ghost Brand Audit | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| DATA4-B — Brand Promotion Guard + Repair Script | IMPLEMENTATION SHIPPED — PRODUCTION VERIFICATION PENDING | 2026-05-16 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED (PENDING RAILWAY DEPLOY) | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
