@@ -1640,6 +1640,9 @@ Brand-level rows deleted: 59 entity_timeseries_daily + 38 signals ✓
 - signals for 6 FP perfumes: 0 ✓
 - entity_timeseries_daily for 3 orphaned brands: 0 ✓
 - signals for 3 orphaned brands: 0 ✓
+- resolved_signals stripped (226 rows updated, 110 now empty-after) ✓
+- resolved_signals spot-check (all 6 canonical names absent from last 90d `canonical_name` fields): 0 ✓
+  - 4 LIKE-match false positives inspected: all are `matched_from` video-title hits ("So You Don't Have To"), no `canonical_name` = "So You" in any remaining row ✓
 
 **Good Vibes dedup investigation (2026-05-16) — DEDUP1 NOT NEEDED:**
 The 4 Good Vibes entity_mentions came from 4 DIFFERENT Jeremy Fragrance YouTube videos, all titled "Australia Fragrance Talk Good Vibes: #jeremyfragrance". This is not a dedup bug — these are genuinely distinct content items. The root issue is the phrase "good vibes" matching without brand context. Fixed by the guard.
