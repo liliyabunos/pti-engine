@@ -1587,6 +1587,65 @@ Juicy Couture 3 legitimate dates recomputed via `_rollup_brand_market_data()` (V
 
 ---
 
+## RES-AMB2 — Ambiguous Perfume Phrase Guard Expansion + Targeted Repair
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
+**Commits: 937be8d (guard expansion + tests) · 5f86566 (repair script)**
+**No migration required.**
+
+**Problem:** Systematic audit of the ambiguous alias false-positive class revealed 6 additional perfume entities with confirmed false-positive accumulation:
+- "so you" → So You (Alia Touch) — fired on "so you don't have to" YouTube titles
+- "you are" → You Are (Geparlys) — fired on "you are going to love this" phrases
+- "en route" → En Route (Botanicae Expressions) — fired on travel-context "en route to the mall"
+- "fragrance of summer" → Fragrance of Summer (M. Asam) — fired on "fragrance of summer 2026" predictions
+- "one & only" → One & Only (Swiss Arabian) — fired on creator taglines ("the one and only parfumer")
+- "good vibes" → Good Vibes (Ricarda M.) — fired on Jeremy Fragrance's catchphrase ("Australia Fragrance Talk Good Vibes: #jeremyfragrance" ×4 videos)
+
+**Fix — guard expansion (`perfume_resolver.py`):**
+Extended `_AMBIGUOUS_PHRASE_GUARD` with 7 new entries (note: "one & only" normalizes to "one only" via `normalize_text`, so both "one only" and "one and only" are guarded):
+- `"so you"` → requires `{"alia", "touch"}` nearby
+- `"you are"` → requires `{"geparlys"}` nearby
+- `"en route"` → requires `{"botanicae"}` nearby
+- `"fragrance of summer"` → requires `{"asam"}` nearby
+- `"one only"` → requires `{"swiss", "arabian"}` nearby
+- `"one and only"` → requires `{"swiss", "arabian"}` nearby
+- `"good vibes"` → requires `{"ricarda"}` nearby
+
+**Tests: 58/58 pass** (26 new tests across `TestNegativeCasesAMB2`, `TestPositiveCasesAMB2`, `TestGuardStructureAMB2`; all prior RES-AMB1 tests clean).
+
+**Repair (`scripts/res_amb2_targeted_repair.py` — applied 2026-05-16):**
+
+*Perfume-level cleanup:*
+- entity_mentions deleted: 169 rows ✓
+- entity_timeseries_daily deleted: 120 rows ✓
+- signals deleted: 53 rows ✓
+- signal_intelligence_snapshots deleted: 0 (FTG-5 not yet run when these accumulated) ✓
+
+*Brand-level orphan cleanup (3 brands where the false-positive was the ONLY tracked entity):*
+
+| Brand | Brand entity_id | ts_rows | signals | Action |
+|-------|----------------|---------|---------|--------|
+| One & (ghost brand — DATA4 ampersand truncation) | 1b05603d-8332-4088-8745-c557d2c25ae2 | 9 | ? | DELETE ALL |
+| Geparlys | dd61464f-3f27-445b-85f0-ddfce675cf2e | 49 | ? | DELETE ALL |
+| Botanicae Expressions | c260a6fa-281d-4fe3-a414-c9f9bab0b088 | 1 | ? | DELETE ALL |
+
+Brand-level rows deleted: 59 entity_timeseries_daily + 38 signals ✓
+
+*NOT orphaned — brands with other real tracked perfumes (no brand-level deletion):*
+- Alia Touch (4 perfumes total — So You was 1 of 4)
+- M. Asam (6 perfumes total — Fragrance of Summer was 1 of 6)
+
+**Production verification (2026-05-16):**
+- entity_mentions for 6 FP perfumes: 0 ✓
+- entity_timeseries_daily for 6 FP perfumes: 0 ✓
+- signals for 6 FP perfumes: 0 ✓
+- entity_timeseries_daily for 3 orphaned brands: 0 ✓
+- signals for 3 orphaned brands: 0 ✓
+
+**Good Vibes dedup investigation (2026-05-16) — DEDUP1 NOT NEEDED:**
+The 4 Good Vibes entity_mentions came from 4 DIFFERENT Jeremy Fragrance YouTube videos, all titled "Australia Fragrance Talk Good Vibes: #jeremyfragrance". This is not a dedup bug — these are genuinely distinct content items. The root issue is the phrase "good vibes" matching without brand context. Fixed by the guard.
+
+---
+
 ## DATA5 / SEARCH1 — Market-Readable Perfume Catalog Search
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-15)**
 **Commit: 39eb700**
@@ -2690,6 +2749,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1-A — Signal Intelligence Snapshots | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-16 |
 | RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
