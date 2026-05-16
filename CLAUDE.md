@@ -1152,32 +1152,70 @@ Lattafa Asad has stronger direct-clone community consensus than Khamrah → Ange
 
 ---
 
-#### FTG-5 / SN1 — Historical Intelligence Snapshot Layer
-**Status: PLANNED**
+#### FTG-5 / SN1-A — Signal Intelligence Snapshots
+**Status: IMPLEMENTED — PENDING PIPELINE VERIFICATION (2026-05-16)**
+**Migration: 050 · Commit: 79d72c8**
 
-**Purpose:** Store assembled intelligence outputs over time — not only raw topic distributions. Required for the 6-month trend report commercial product.
+**Purpose:** Persist an immutable historical record of market intelligence at the moment a market signal is first detected by the pipeline. Answers: which entity, what signal type, what metrics supported it, which pipeline version.
 
-**Gap today:** `entity_topic_snapshots` (DATA0, migration 043) stores raw topic distributions. The assembled output — narrative text, opportunity tags, differentiators, intents — is computed at request time and discarded. There is no historical record of *why* we said a perfume was trending in March vs May.
+**Snapshot semantics (Option A — first-capture immutable):**
+ON CONFLICT (entity_id, entity_type, signal_type, detected_at) DO NOTHING. The pipeline deletes/recreates signal rows on reruns, but `signal_intelligence_snapshots` rows are never overwritten. The snapshot captures the detection-time state permanently.
 
-**Expected new table:**
+Rationale: the founder's preference is "preserve the detection-time intelligence state as a historical record." The first pipeline run for a given (entity, signal_type, date) captures the market metrics at that moment. Subsequent reruns — even if they produce different signal strength — leave the historical record intact.
+
+**Table: `signal_intelligence_snapshots`**
 ```
-entity_intelligence_snapshots
-  snapshot_date       DATE
-  entity_id           UUID FK → entity_market
-  narrative           TEXT
-  opportunity_tags    JSONB  — ["alternative_demand", "high_intent"]
-  differentiators     JSONB  — ["dupe / alternative", "compliment getter"]
-  intents             JSONB  — ["review", "comparison"]
-  entity_role         VARCHAR(64)
-  trend_state         VARCHAR(32)
-  score               NUMERIC(8,2)
-  formula_version     INTEGER DEFAULT 1
-  UNIQUE (snapshot_date, entity_id)
+id                         UUID PK
+entity_id                  UUID (no FK — resilience)
+entity_type                VARCHAR(32)
+entity_canonical_name      TEXT  — denormalized at capture time
+entity_brand_name          TEXT NULL — denormalized at capture time
+signal_type                VARCHAR(64)
+detected_at                TIMESTAMPTZ  — matches signals.detected_at
+pipeline_run_date          DATE  — = detected_at::date
+market_score_at_detection  NUMERIC(10,4) NULL — composite_market_score
+growth_rate_at_detection   NUMERIC(10,4) NULL — growth_rate
+momentum_at_detection      NUMERIC(10,4) NULL — momentum
+acceleration_at_detection  NUMERIC(10,4) NULL — acceleration
+mention_count_at_detection NUMERIC(10,2) NULL — mention_count
+signal_strength            FLOAT NOT NULL
+signal_metadata            JSONB NULL — sanitized metadata_json from signal
+signal_threshold_version   INTEGER NOT NULL DEFAULT 1 — DATA0 lineage
+snapshot_schema_version    INTEGER NOT NULL DEFAULT 1
+first_captured_at          TIMESTAMPTZ NOT NULL DEFAULT now()
+UNIQUE (entity_id, entity_type, signal_type, detected_at)
 ```
 
-**Storage estimate:** ~2,400 entities × 1 row/day × 365 = ~876K rows/year, ~500B/row → ~440MB/year. Manageable. Retain 24 months; trim to monthly aggregates beyond that.
+**Integration point:** `detect_breakout_signals.run()` — after signal loop, calls `write_signal_snapshot()` for every detected signal. Bulk entity_market cache (canonical_name, brand_name) fetched once per run. run() summary now includes `snapshots_written` count. Non-fatal: snapshot failure never blocks signal generation.
 
-**Commercial reason:** "How did the market narrative around Baccarat Rouge 540 change between January and June 2026?" becomes a queryable question. This is what brands and commercial clients will pay for.
+**No FK to signals table** — signals are deleted/recreated on reruns; natural composite key is more stable.
+**No FK to entity_market** — resilience against entity deletion.
+
+**Tests:** `tests/unit/test_sn1a_signal_intelligence_snapshots.py` — 39/39 pass.
+
+**Production verification (pending next pipeline run):**
+```sql
+SELECT COUNT(*), MIN(detected_at), MAX(detected_at)
+FROM signal_intelligence_snapshots;
+
+-- Verify metrics populated (not all NULL):
+SELECT entity_canonical_name, signal_type, market_score_at_detection,
+       growth_rate_at_detection, mention_count_at_detection, first_captured_at
+FROM signal_intelligence_snapshots
+ORDER BY first_captured_at DESC LIMIT 10;
+
+-- Verify idempotency (rerun detect_breakout_signals for same date → count stays same):
+SELECT COUNT(*) FROM signal_intelligence_snapshots WHERE pipeline_run_date = CURRENT_DATE;
+```
+
+**No backfill performed** — SN1-A is forward-correct only. Snapshots accumulate from the next pipeline run onward.
+
+**SN1-B follow-ups (deferred):**
+- Add narrative / explanation text field once an explanation layer exists in the pipeline (currently no such field is generated anywhere)
+- Add entity_intelligence_snapshots table for broader assembled intelligence (narrative, opportunity_tags, differentiators, intents, entity_role, trend_state) — the original SN1 planned table; deferred until IL1 computes these fields reliably
+- Retention policy: consider trimming rows older than 24 months at persist time (same pattern as pipeline_health_log)
+
+**Storage estimate:** ~167 signals/day (observed baseline) × 1 row = ~61K rows/year. Negligible. Grow with signal count.
 
 ---
 
@@ -2465,7 +2503,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E1B — Lattafa Asad → Sauvage Elixir dupe_of gap fill | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
-| FTG-5 / SN1 — Historical Intelligence Snapshot Layer | PLANNED | — |
+| FTG-5 / SN1-A — Signal Intelligence Snapshots | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PENDING PRODUCTION VERIFICATION | 2026-05-14 |
@@ -2618,6 +2656,7 @@ Current production: **migration 048** (KB-CAT1-B — node_type + parent_brand_no
 | 047 | FTG-3 / RI1-QA — Data-only migration: promotes all 7 seeded relationship rows to `is_public=TRUE` where `operator_reviewed=TRUE AND confidence_score >= 0.700`. No schema changes. Option A controlled seed promotion. |
 | 048 | KB-CAT1-B — `node_type VARCHAR(32) NOT NULL DEFAULT 'brand' CHECK (node_type IN ('brand','collection','sub_brand'))` + `parent_brand_normalized TEXT NULL` (no FK) on `brand_profiles`; seeds 4 hierarchy rows (Xerjoff × 3 + Filippo Sorcinelli SAUF). |
 | 049 | FTG-4 / RI1-E1B — Data-only: 1 relationship row (Lattafa Asad → dupe_of → Sauvage Elixir, confidence=0.850, is_public=TRUE, operator_reviewed=TRUE) + 1 dupe_map_seed evidence row. No schema changes. |
+| 050 | FTG-5 / SN1-A — `signal_intelligence_snapshots` table: immutable first-capture intelligence snapshot per (entity_id, entity_type, signal_type, detected_at); market metrics NUMERIC(10,4), signal_metadata JSONB, signal_threshold_version + snapshot_schema_version=1, first_captured_at TIMESTAMPTZ; 5 indexes + UNIQUE constraint. |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
