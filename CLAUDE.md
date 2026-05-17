@@ -2068,12 +2068,15 @@ RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it 
 
 The following confirmed-unsupported entities from SIG-QA1 need immediate data repair (same pattern as RES-AMB4). Schedule as SIG-QA1-REPAIR before SIG-QA2 implementation:
 
-**Confirmed for guard addition + repair:**
-- Pure Luxury (Wolken Parfums) — Type D
-- Enjoy the Day (Wolken Parfums) — Type D
-- On the Rocks (Wolken Parfums) — Type F (partial-name collision; requires smarter fix than proximity guard — see SIG-QA2)
-- Orange Blossom (Angela Flanders) — Type B
-- Men's Cologne (Coty) — Type G
+**Confirmed for guard addition + repair — SIG-QA1-REPAIR approved 2026-05-17:**
+- Pure Luxury (Wolken Parfums) — entity_id: c08867ea — Type D
+- On the Rocks (Wolken Parfums) — entity_id: d22eea5f — Type F (sources are about Kilian Apple Brandy on the Rocks)
+- Enjoy the Day (Wolken Parfums) — entity_id: 411ebef2 — Type D
+- Orange Blossom (Angela Flanders) — entity_id: 7277f176 — Type B
+- Cire Trudon Revolution (Cire Trudon) — entity_id: 0c5f5215 — Type C (founder-confirmed ordinary prose)
+
+**Deferred pending corrected RS inspection:**
+- Men's Cologne (Coty) — RS evidence unconfirmed (unicode apostrophe mismatch in canonical name query); excluded from SIG-QA1-REPAIR
 - Feel Good (Esprit) — Type D
 - Come Together (Vintner's Reserve) — Type D
 - Bride To Be (Primark) — Type D (same wedding-context pattern as RES-AMB)
