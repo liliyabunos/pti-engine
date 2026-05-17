@@ -153,6 +153,8 @@ _TEST_ALIASES: Dict[str, Dict[str, Any]] = {
     "true icon":         _make_entity(3104, "True Icon"),
     "first class":       _make_entity(3105, "First Class"),
     "so so":             _make_entity(3106, "So...? So...?"),
+    "i am so so":        _make_entity(3107, "I Am So...? So...?"),
+    "so i am so so":     _make_entity(3107, "I Am So...? So...?"),
     # Brand proximity triggers (RES-AMB3)
     "berdoues":          _make_entity(4101, "Berdoues Brand"),
     "flormar":           _make_entity(4102, "Flormar Brand"),
@@ -767,3 +769,22 @@ class TestGuardStructureAMB3:
         r = _resolver()
         results = r.resolve_text("this fragrance gives nothing but good vibes all day")
         assert "Good Vibes" not in _names(results)
+
+    def test_B15_i_am_so_so_in_blocked_multi_token(self):
+        """'i am so so' (I Am So...? So...? alias) must be in _BLOCKED_MULTI_TOKEN_PHRASES."""
+        assert "i am so so" in _BLOCKED_MULTI_TOKEN_PHRASES, (
+            "'i am so so' (I Am So...? So...? alias) missing from _BLOCKED_MULTI_TOKEN_PHRASES"
+        )
+
+    def test_B16_i_am_so_so_blocked_in_wedding_context(self):
+        """'i am so so' as intensifier phrase — must NOT fire I Am So...? So...?"""
+        r = _resolver()
+        # Simulating the Reddit post that caused the false positive
+        results = r.resolve_text("am i being too intense i am so so happy with my choices")
+        assert "I Am So...? So...?" not in _names(results)
+
+    def test_B17_so_i_am_so_so_blocked(self):
+        """'so i am so so' variant alias also blocked."""
+        r = _resolver()
+        results = r.resolve_text("so i am so so excited about this fragrance haul")
+        assert "I Am So...? So...?" not in _names(results)

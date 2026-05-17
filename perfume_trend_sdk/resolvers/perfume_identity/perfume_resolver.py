@@ -87,7 +87,9 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
 #              Fired on generic evaluative usage: "it was so so disappointing".
 #
 _BLOCKED_MULTI_TOKEN_PHRASES: frozenset[str] = frozenset({
-    "so so",    # So...? So...? (brand=So...?) — "so so" = common evaluative phrase; brand "so" too generic
+    "so so",        # So...? So...? (brand=So...?) — "so so" = common evaluative phrase; brand "so" too generic
+    "i am so so",   # I Am So...? So...? (brand=So...?) — "i am so so" = common intensifier phrase
+    "so i am so so",  # variant alias for same entity
 })
 
 # ---------------------------------------------------------------------------
