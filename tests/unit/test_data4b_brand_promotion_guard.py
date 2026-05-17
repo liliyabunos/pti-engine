@@ -384,3 +384,169 @@ class TestGuardDisabledWhenEmptyFrozenset:
             not self.EMPTY or _is_canonical_brand(brand_name, self.EMPTY)
         )
         assert result is True
+
+
+# ---------------------------------------------------------------------------
+# K — DATA4-D Audit cases: orphan fragment brand_names confirmed in production
+# ---------------------------------------------------------------------------
+
+class TestData4DAuditCasesStructuralFragment:
+    """Structural fragment brand_names discovered in the DATA4-D production audit
+    (2026-05-16). These are cases where the rsplit heuristic + ampersand truncation
+    produced a malformed brand_name on a perfume entity_market row.
+
+    The guard blocks NEW brand entity creation for these names, but the upstream
+    perfume row must be repaired by data4d_encoding_repair.py.
+    """
+
+    def test_amber_and_fragment_blocked(self):
+        # "Amber & Coconut" → heuristic: "Amber &" — structural fragment
+        assert _is_structural_fragment("Amber &") is True
+
+    def test_orange_blossom_and_fragment_blocked(self):
+        # "Orange Blossom & Neroli" → heuristic: "Orange Blossom &"
+        assert _is_structural_fragment("Orange Blossom &") is True
+
+    def test_lemon_and_lime_fragment_blocked(self):
+        # "Lemon & Lime" → heuristic: "Lemon &"
+        assert _is_structural_fragment("Lemon &") is True
+
+    def test_white_fragment_not_blocked_by_structural(self):
+        # "White T-Shirt" → heuristic: "White" — not a structural fragment,
+        # blocked by canonical check instead (not in resolver_brands)
+        assert _is_structural_fragment("White") is False
+
+    def test_hibiscus_fragment_not_blocked_by_structural(self):
+        # "Hibiscus MahaJád" → heuristic: "Hibiscus" — not structural fragment
+        assert _is_structural_fragment("Hibiscus") is False
+
+    def test_blanche_not_structural_fragment(self):
+        # "Blanche Bête" → heuristic: "Blanche" — not structural fragment
+        assert _is_structural_fragment("Blanche") is False
+
+    def test_creme_not_structural_fragment(self):
+        # "Crème de la Crème" → rsplit → "Crème de la" — not structural fragment
+        assert _is_structural_fragment("Crème de la") is False
+
+    def test_replica_sailing_not_structural_fragment(self):
+        # "Replica - Sailing Day" → heuristic: "Replica - Sailing" — not structural fragment
+        assert _is_structural_fragment("Replica - Sailing") is False
+
+    def test_terre_hermes_not_structural_fragment(self):
+        # "Terre d'Hermès Eau Givrée" → heuristic: "Terre d'Hermès Eau" — not structural
+        assert _is_structural_fragment("Terre d'Hermès Eau") is False
+
+
+class TestData4DAuditCasesCanonicalCheck:
+    """Canonical check cases for DATA4-D audit — non-structural fragment brand_names
+    that are still non-canonical (not in resolver_brands or brand_profiles).
+
+    These require the canonical guard to block them, not the structural fragment guard.
+    """
+
+    CANONICAL = frozenset([
+        "creed", "lattafa", "dior", "armaf", "maison margiela",
+        "haus of gloi", "hollister", "w.dressroom", "liquides imaginaires",
+        "m. micallef", "maison crivelli", "hermès", "bath & body works",
+    ])
+
+    def test_white_blocked_by_canonical_check(self):
+        # "White" is not a canonical brand — blocked
+        assert _is_canonical_brand("White", self.CANONICAL) is False
+        assert _is_structural_fragment("White") is False
+
+    def test_hibiscus_blocked_by_canonical_check(self):
+        assert _is_canonical_brand("Hibiscus", self.CANONICAL) is False
+
+    def test_blanche_blocked_by_canonical_check(self):
+        assert _is_canonical_brand("Blanche", self.CANONICAL) is False
+
+    def test_replica_sailing_blocked_by_canonical_check(self):
+        # "Replica - Sailing" is not a canonical brand (Maison Margiela is)
+        assert _is_canonical_brand("Replica - Sailing", self.CANONICAL) is False
+
+    def test_creme_de_la_blocked_by_canonical_check(self):
+        assert _is_canonical_brand("Crème de la", self.CANONICAL) is False
+
+    def test_terre_hermes_eau_blocked_by_canonical_check(self):
+        assert _is_canonical_brand("Terre d'Hermès Eau", self.CANONICAL) is False
+
+    def test_haus_of_gloi_passes_if_in_canonical(self):
+        # Correct brand "Haus of Gloi" — if in canonical set, passes guard
+        assert _is_canonical_brand("Haus of Gloi", self.CANONICAL) is True
+        assert _is_structural_fragment("Haus of Gloi") is False
+
+    def test_maison_margiela_passes(self):
+        assert _is_canonical_brand("Maison Margiela", self.CANONICAL) is True
+        assert _is_structural_fragment("Maison Margiela") is False
+
+    def test_bath_and_body_works_passes_full_name(self):
+        assert _is_canonical_brand("Bath & Body Works", self.CANONICAL) is True
+        assert _is_structural_fragment("Bath & Body Works") is False
+
+
+# ---------------------------------------------------------------------------
+# L — DATA4-D Encoding mismatch cases: non-canonical encoding variants
+# ---------------------------------------------------------------------------
+
+class TestData4DEncodingVariants:
+    """DATA4-D encoding variants — accented or multilingual brand names that
+    accumulated ghost brand entities. These are NOT structural fragments
+    (they are real brand names, just wrong form vs resolver_brands canonical).
+
+    The canonical check blocks NEW entity creation for the wrong form
+    (if that form is not in the frozenset built from resolver_brands).
+    The data4d_encoding_repair.py script fixes existing upstream rows.
+    """
+
+    # Frozenset representing what resolver_brands has (correct canonical forms)
+    CANONICAL_WITH_CORRECT_FORMS = frozenset([
+        "comme des garcons",      # ASCII form — in resolver_brands
+        "areej le dore",          # ASCII form — in resolver_brands
+        "ramon monegal",          # ASCII form — in resolver_brands
+        "khadlaj / خدلج",         # Multilingual form — in resolver_brands
+        "al haramain / الحرمين",  # Multilingual form — in resolver_brands
+        "lattafa",                # Simple form — in resolver_brands
+    ])
+
+    def test_accented_comme_des_garcons_blocked(self):
+        # 'Comme des Garçons' (accented) is NOT in resolver_brands (resolver has ASCII)
+        assert _is_canonical_brand("Comme des Garçons", self.CANONICAL_WITH_CORRECT_FORMS) is False
+        assert _is_structural_fragment("Comme des Garçons") is False
+
+    def test_ascii_comme_des_garcons_passes(self):
+        # 'Comme des Garcons' (ASCII) IS the correct canonical form
+        assert _is_canonical_brand("Comme des Garcons", self.CANONICAL_WITH_CORRECT_FORMS) is True
+
+    def test_accented_areej_le_dore_blocked(self):
+        assert _is_canonical_brand("Areej Le Doré", self.CANONICAL_WITH_CORRECT_FORMS) is False
+        assert _is_structural_fragment("Areej Le Doré") is False
+
+    def test_ascii_areej_le_dore_passes(self):
+        assert _is_canonical_brand("Areej Le Dore", self.CANONICAL_WITH_CORRECT_FORMS) is True
+
+    def test_accented_ramon_monegal_blocked(self):
+        assert _is_canonical_brand("Ramón Monegal", self.CANONICAL_WITH_CORRECT_FORMS) is False
+
+    def test_ascii_ramon_monegal_passes(self):
+        assert _is_canonical_brand("Ramon Monegal", self.CANONICAL_WITH_CORRECT_FORMS) is True
+
+    def test_simplified_khadlaj_blocked(self):
+        # 'Khadlaj' (simplified) is NOT in resolver_brands (resolver has multilingual form)
+        assert _is_canonical_brand("Khadlaj", self.CANONICAL_WITH_CORRECT_FORMS) is False
+
+    def test_multilingual_khadlaj_passes(self):
+        assert _is_canonical_brand("Khadlaj / خدلج", self.CANONICAL_WITH_CORRECT_FORMS) is True
+
+    def test_simplified_al_haramain_blocked(self):
+        assert _is_canonical_brand("Al Haramain", self.CANONICAL_WITH_CORRECT_FORMS) is False
+
+    def test_multilingual_al_haramain_passes(self):
+        assert _is_canonical_brand("Al Haramain / الحرمين", self.CANONICAL_WITH_CORRECT_FORMS) is True
+
+    def test_multilingual_lattafa_blocked_when_resolver_has_simple(self):
+        # 'Lattafa / لطافة' is NOT canonical — resolver_brands has plain 'Lattafa'
+        assert _is_canonical_brand("Lattafa / لطافة", self.CANONICAL_WITH_CORRECT_FORMS) is False
+
+    def test_simple_lattafa_passes(self):
+        assert _is_canonical_brand("Lattafa", self.CANONICAL_WITH_CORRECT_FORMS) is True
