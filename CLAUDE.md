@@ -2711,6 +2711,36 @@ Weight changes logged in `weight_calibration_log` — human-reviewed, never sile
 - Production verification required before COMPLETE — PRODUCTION VERIFIED.
 - If auth blocks git push, report clearly and do not pretend deploy happened.
 
+## Engineering Execution Efficiency Rule
+
+**OPS-EE1 — established 2026-05-17 (motivated by RES-AMB3 incident)**
+
+When choosing an implementation, repair, or recompute path, Claude must balance:
+1. Correctness and production safety
+2. Completeness of the repair
+3. Efficient use of time and infrastructure
+
+**Trigger condition:** If the technically correct path Claude is about to choose is materially expensive in runtime — expected to take more than ~15–20 minutes, involves a broad multi-date recompute, runs through a slower remote/public DB proxy, or has a plausible faster alternative (Railway in-service SSH execution, a scoped one-off job, a narrower targeted repair) — Claude must do one of:
+
+**A.** Choose the more efficient path himself, if it preserves the same quality and safety.
+
+**B.** Pause before execution and explicitly raise the tradeoff:
+- What path he was about to take
+- Expected runtime / resource cost
+- Faster alternative(s) and why they are safe
+- Which option he recommends and why
+
+**Do not default to a multi-hour path silently when a faster equally reliable path exists.**
+
+**Balance:** Founder/tasking defines the goal, outcome, safety constraints, and verification requirements. Claude, as the engineer, selects the execution path — and that judgment includes protecting time, not only protecting correctness.
+
+**Motivating incident — RES-AMB3 (2026-05-17):**
+- Task required brand timeseries repair for Berdoues and Flormar after false-positive cleanup
+- Claude chose a 30-date full aggregation recompute through the public Railway DB proxy
+- ~3 hours of a ~5-hour session were consumed by aggregation replay
+- Railway in-service SSH execution or a scoped Railway one-off job would likely have been 5–10× faster with identical results
+- The task requirements did not prescribe this path; Claude selected it without raising the tradeoff
+
 ## Documentation Map
 - **Pending production verifications (read at session start): docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md**
 - Full phase history: docs/history/PHASE_LOG.md
