@@ -65,6 +65,11 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
     # Numeric short aliases (conflict with URLs, prices, ratings in titles)
     "11",       # Boris Bidjan Saberi 11
     "21",       # Costume National 21
+    # SIG-QA1-REPAIR (2026-05-17) — ordinary-word single-token alias
+    "revolution",  # Cire Trudon Revolution Eau de Parfum — "revolution" = ordinary English word;
+                   # Type C ordinary-word collision; RS evidence: "Fresh Cucumber Revolution?" title,
+                   # Alkemia prose. Branded aliases ("cire trudon revolution", "cire trudon
+                   # revolution eau de parfum") remain active and resolve correctly.
 })
 
 # ---------------------------------------------------------------------------
@@ -132,6 +137,31 @@ _BLOCKED_MULTI_TOKEN_PHRASES: frozenset[str] = frozenset({
 #   "true icon"   → True Icon (Aigner) — superlative description; 1 false mention confirmed
 #   "first class" → First Class (Aigner) — quality descriptor; 1 false mention confirmed
 #
+# SIG-QA1-REPAIR expansion (2026-05-17 — confirmed source-evidence unsupported entities):
+#
+#   "pure luxury"     → Pure Luxury (Wolken Parfums) — Type D generic descriptor; "smells like
+#                        pure luxury" / "pure luxury floral" used as adjective phrase; 0% brand hit.
+#                        Guard choice: proximity (wolken is distinctive).
+#
+#   "on the rocks"    → On the Rocks (Wolken Parfums) — Type F partial-name collision; RS sources
+#                        are about Kilian Apple Brandy on the Rocks (different entity whose full
+#                        name contains the substring). Guard choice: proximity (wolken).
+#
+#   "enjoy the day"   → Enjoy the Day (Wolken Parfums) — Type D ordinary phrase; single RS row
+#                        from r/weddingplanning "enjoy the day" in prose. Guard choice: proximity.
+#
+#   "orange blossom"  → Orange Blossom (Angela Flanders) — Type B note/ingredient collision;
+#                        "orange blossom" is an extremely common fragrance note; RS sources are
+#                        note-preference posts, Le Labo collection reviews, ingredient descriptions.
+#                        Guard choice: proximity (angela + flanders are distinctive; the branded
+#                        alias "angela flanders orange blossom" remains unguarded and works correctly).
+#
+#   "revolution perfume"         → Cire Trudon Revolution Eau de Parfum — Type C ordinary-word
+#   "revolution eau de parfum"   → collision; bare "revolution" alias blocked via _BLOCKED_SINGLE_WORD_ALIASES;
+#                        these multi-token aliases also require cire+trudon proximity.
+#                        RS evidence: "Fresh Cucumber Revolution?" title (rhetorical question about
+#                        Lattafa Khamrah Waha quality, not Cire Trudon product); Alkemia prose.
+#                        Founder-confirmed ordinary prose usage.
 # RES-AMB4 expansion (2026-05-17 — audit-driven batch from RES-AMB-GLOBAL confirmed FPs):
 #   "i will"          → I Will (Femascu) — future-tense sentence construction; 140 false mentions
 #                        over 33 dates; breakout+acceleration_spike signals fired on Dashboard.
@@ -207,6 +237,13 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     "jasmine rose":       [frozenset({"primark"})],           # normalize_text("Jasmine & Rose")
     "jasmine and rose":   [frozenset({"primark"})],           # alias variant
     "cedar wood":         [frozenset({"monotheme"})],
+    # SIG-QA1-REPAIR — source-evidence unsupported entities (2026-05-17)
+    "pure luxury":               [frozenset({"wolken"})],
+    "on the rocks":              [frozenset({"wolken"})],
+    "enjoy the day":             [frozenset({"wolken"})],
+    "orange blossom":            [frozenset({"angela", "flanders"})],
+    "revolution perfume":        [frozenset({"cire", "trudon"})],
+    "revolution eau de parfum":  [frozenset({"cire", "trudon"})],
 }
 
 
