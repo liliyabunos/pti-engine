@@ -1755,13 +1755,14 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 ## RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
 **Script: `scripts/audit_ambiguous_entity_risk.py`**
+**Scoring bug fix commit: 737dcdb**
 **No migration required.**
 
 **Purpose:** Reusable production-grade audit that scores all market-relevant perfume entities for false-positive/ambiguity risk across 5 explainable dimensions. Identifies entities that look like they resolved from generic English phrases rather than genuine brand-specific product mentions.
 
 **Risk dimensions (each 0.0–1.0):**
 - D1 Name Language — is the canonical_name a common English phrase?
-- D2 Mention Shape — are total mentions suspiciously thin / concentrated?
+- D2 Mention Shape — are total mentions suspiciously thin / concentrated? (floor=0.15 — see Bug 2 note)
 - D3 RS Integrity — does the RS matched_from text contain brand context?
 - D4 Topic Coherence — do entity_topic_links look like genuine fragrance discourse?
 - D5 Brand Obscurity — is the brand rarely mentioned in the fragrance corpus?
@@ -1770,14 +1771,32 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 
 **Action thresholds:** A (≥0.72 investigate) / B (≥0.52 add to guard) / C (≥0.32 monitor) / D (<0.32 clean)
 
-**Calibration:** 18/18 known FP + known-good cases pass. Run with `--calibrate` (no DB required).
+**Calibration:** 19/19 known FP + known-good cases pass (commit 737dcdb). Run with `--calibrate` (no DB required).
 
-**Production run (2026-05-17) — active-today (203 entities):**
+**Scoring bug fixes (commit 737dcdb — 2026-05-17):**
+
+*Bug 1 — Missing auxiliary verbs in `_COMMON_ENGLISH_WORDS`:*
+- "will", "can", "would", "could", "should", "might", "may", "shall", "have", "has", "had", "be", "do", "did", "it", "we", "they", "them", "who", "what", "when", "where", "how", "some", "all" were absent
+- Effect: "I will" (Femascu) scored D1=0.57 instead of 0.85 ("will" not recognized as common word)
+- After fix: D1=0.85 (both "i" and "will" flagged as common)
+
+*Bug 2 — D2 had no floor (mature false positive suppression):*
+- D2 (mention shape) could reach near 0.0 for entities with high accumulated volume (e.g., 140 mentions / 33 dates → D2=0.06)
+- A false positive that evades detection for weeks accumulates volume → lower D2 → composite pulled BELOW threshold
+- Fix: `score = max(score, 0.15)` floor in `score_d2_mention_shape()`. Volume alone cannot offset D3 (RS integrity).
+
+*Combined effect on "I will" / Femascu (Dashboard BREAKOUT, score=72.78, breakout+acceleration_spike signals):*
+- Before fix: D1=0.57, D2=0.06 → composite=0.480 → action C (missed — not surfaced in delivery)
+- After fix: D1=0.85, D2=0.15 → composite=0.622 → action B (correctly flagged)
+- "I will" was IN the active-today scan universe in the first run (scored C=0.480 at line 145 of raw output) but fell just below the B=0.52 threshold. It was NOT highlighted in the delivery summary — the omission was caused by these two bugs, not a scope exclusion.
+
+**Production run (2026-05-17, pre-fix) — active-today (203 entities):**
 - Action A (6): Cedar Wood/Monotheme, So Sexy!/Fiorucci, Very Pretty/Michael Kors, Day One/Smell Bent, Leather Musk/Crabtree & Evelyn, Black Rose/A Beautiful Life
 - Action B (45): many 2-token short-volume entities; highest risk confirmed via RS inspection
 - Action D (51): correctly clean — Creed Aventus=0.291, Dior Sauvage=0.296, MFK BR540=0.268
+- Note: "I will" scored C=0.480 (pre-fix); post-fix it scores B=0.622
 
-**Production run (2026-05-17) — recent-movers (796 entities):**
+**Production run (2026-05-17, pre-fix) — recent-movers (796 entities):**
 - Action A (46): includes all active-today A-tier plus new single-mention entities
 - Additional confirmed FPs via RS inspection: Best Man/Helena Rubinstein, You & You/Puig, Jasmine & Rose/Primark
 
@@ -1792,13 +1811,15 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 | You & You | Puig | Reddit conversational phrases + same wedding post artifact |
 | Jasmine & Rose | Primark | Note/ingredient description — not brand context |
 | Cedar Wood | Monotheme | Matched from Heretic Rhubarb review — "cedar wood" as note |
+| I will | Femascu | Generic "I will" sentence construction — 0% RS brand hit, 140 mentions accumulated over 33 days |
 
 **Known false alarm in model:** Cool Water (Davidoff) scored B (0.499) because it has 0% RS brand hit rate — the content IS legitimately about Davidoff Cool Water but "davidoff" rarely appears in matched_from text (the perfume name stands alone). Well-known fragrance names that stand alone in discourse will tend to have low D3 scores. This is expected and acceptable for established fragrances with many mentions.
 
-**Prevention policy recommendation:**
-1. Run `--scope active-today` monthly post-pipeline as a standing hygiene check
-2. Any entity scoring A or B for 2+ consecutive runs without growing mention volume should be investigated via RS inspection before carrying forward
-3. Guard expansion (RES-AMB4) should be implemented for the 7 confirmed FPs above
+**Hygiene cadence (binding):**
+1. `--scope active-today` after EVERY evening pipeline run — mandatory pre-report; any B+ entity must be RS-inspected before the report publishes
+2. `--scope recent-movers` weekly (Monday morning)
+3. `--scope tracked-market` monthly
+4. Any entity scoring B+ for 2+ consecutive runs without growing organic mention volume → RES-AMB investigation + guard expansion
 
 **Usage:**
 ```bash
