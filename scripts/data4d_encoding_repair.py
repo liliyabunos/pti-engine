@@ -344,7 +344,8 @@ def _print_recompute_plan(recompute_ranges: List[Dict]) -> None:
 
     all_dates: set = set()
     for r in recompute_ranges:
-        print(f"\n    # {r[\"reason\"]}")
+        reason = r["reason"]
+        print(f"\n    # {reason}")
         if r["first_date"] and r["last_date"]:
             d = r["first_date"]
             while d <= r["last_date"]:
