@@ -341,6 +341,84 @@ WHERE resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('can
 
 ---
 
+---
+
+### PV-006 — SIG-QA1-REPAIR Production UI/API Verification
+
+| Field | Value |
+|-------|-------|
+| **Verification ID** | PV-006 |
+| **Phase / task** | SIG-QA1-REPAIR — 5 confirmed unsupported entities; guard + RS strip + downstream cleanup + brand rollup repair |
+| **Related commits** | `b765377` (guards + tests + repair script) |
+| **Repair applied** | 2026-05-17 (direct DB via public proxy) |
+| **Current status** | `IMPLEMENTED — AWAITING UI VERIFICATION` |
+| **Blocking severity** | High — RS strip + downstream cleanup verified at DB layer; UI/API smoke test required to confirm no stale signals or entity scores are served to users. |
+
+**Repair summary (applied 2026-05-17):**
+
+| Layer | Count |
+|-------|-------|
+| RS rows updated (resolved_entities_json stripped) | 80 total (PL=9, OTR=19, ETD=1, OB=49, CTR=2) |
+| entity_mentions deleted | 80 |
+| entity_timeseries_daily deleted (perfume) | 131 |
+| signals deleted (perfume) | 26 |
+| signal_intelligence_snapshots deleted | 2 |
+| Brand ts deleted (Wolken=46, AF=49, CT=8) | 103 |
+| Brand signals deleted (Wolken=5, AF=19, CT=1) | 25 |
+| Angela Flanders brand recomputed | 1 row (2026-04-16, score=30.1682, mentions=1.0, from Precious One) |
+
+**DB-layer verification evidence (2026-05-17 — ALL PASS):**
+- Pure Luxury (c08867ea): mentions=0, ts=0, signals=0, snaps=0 ✓
+- On the Rocks (d22eea5f): mentions=0, ts=0, signals=0, snaps=0 ✓
+- Enjoy the Day (411ebef2): mentions=0, ts=0, signals=0, snaps=0 ✓
+- Orange Blossom (7277f176): mentions=0, ts=0, signals=0, snaps=0 ✓
+- Cire Trudon Revolution (0c5f5215): mentions=0, ts=0, signals=0, snaps=0 ✓
+- RS residual (exact jsonb canonical_name check): ALL 5 = 0 ✓
+- Wolken Parfums brand: ts=0, signals=0 ✓
+- Angela Flanders brand: ts=1 (2026-04-16, score=30.1682, mentions=1.0) ✓
+- Cire Trudon brand: ts=0, signals=0 ✓
+
+**Trigger event:** Railway deploy of `b765377` completes + UI/API smoke test run by operator.
+
+**UI/API verification checklist (operator runs after Railway deploy):**
+
+```
+[ ] Wolken Parfums brand page (/entities/brand/brand-wolken-parfums):
+    - Pure Luxury NOT in top movers or active entities
+    - On the Rocks NOT in top movers or active entities
+    - Enjoy the Day NOT in top movers or active entities
+    - Brand score = None or 0 (no tracked perfumes remaining)
+
+[ ] Angela Flanders brand page (/entities/brand/brand-angela-flanders):
+    - Orange Blossom: entity score removed or shows Precious One contribution only
+    - Brand shows only Precious One as tracked perfume
+
+[ ] Cire Trudon Revolution entity page (/entities/perfume/cire-trudon-revolution):
+    - score = None (no data) OR entity not in active search results
+    - No active signals visible
+
+[ ] Dashboard Top Movers:
+    - None of the 5 FP entity names appear (Pure Luxury, On the Rocks, Enjoy the Day,
+      Orange Blossom [Angela Flanders], Cire Trudon Revolution)
+
+[ ] Positive regression — Jaguar Vision:
+    - /entities/perfume/jaguar-vision still shows score (SIG-QA1 verdict: CONFIRMED SUPPORTED)
+
+[ ] Positive regression — Kilian Apple Brandy on the Rocks:
+    - Resolver smoke test: "kilian apple brandy on the rocks" resolves correctly
+    - "On the Rocks" (Wolken) is NOT attributed in that content
+
+[ ] Guard smoke test (resolver):
+    - resolve_text("apple brandy on the rocks is incredible") → On the Rocks NOT in results
+    - resolve_text("wolken on the rocks is great") → On the Rocks IN results
+```
+
+**Pass criteria:** All 7 checklist items pass.
+
+**On pass:** Update SIG-QA1-REPAIR status in CLAUDE.md to `COMPLETE — PRODUCTION VERIFIED`. Close this entry.
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -350,3 +428,4 @@ WHERE resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('can
 | PV-003 | May 16 incident root-cause | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
 | PV-004 | DATA4-B brand promotion guard + repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
+| PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |

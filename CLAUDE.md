@@ -2087,6 +2087,70 @@ Entities requiring further RS inspection before decision:
 
 ---
 
+## SIG-QA1-REPAIR — Source-Evidence Pollution Cleanup (5 Confirmed Unsupported Entities)
+**STATUS: IMPLEMENTED — AWAITING UI VERIFICATION (see PV-006)**
+**Commit: b765377 (guards + tests + repair script)**
+**No migration required.**
+
+**5 confirmed unsupported entities — guards added + full-history RS strip + downstream cleanup applied 2026-05-17:**
+
+| Entity | Brand | entity_id (prefix) | Type | Guard mechanism |
+|--------|-------|-------------------|------|----------------|
+| Pure Luxury | Wolken Parfums | c08867ea | D — generic descriptor | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"wolken"}` in ±10 token window |
+| On the Rocks | Wolken Parfums | d22eea5f | F — partial-name collision (Kilian Apple Brandy on the Rocks) | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"wolken"}` in ±10 token window |
+| Enjoy the Day | Wolken Parfums | 411ebef2 | D — generic descriptor | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"wolken"}` in ±10 token window |
+| Orange Blossom | Angela Flanders | 7277f176 | B — note/ingredient collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"angela", "flanders"}` in ±10 token window |
+| Cire Trudon Revolution | Cire Trudon | 0c5f5215 | C — ordinary word collision | `_BLOCKED_SINGLE_WORD_ALIASES`: "revolution" unconditionally blocked; "revolution perfume" / "revolution eau de parfum" in `_AMBIGUOUS_PHRASE_GUARD` requiring `{"cire", "trudon"}` |
+
+**Branded aliases remain active (not guarded):**
+- "cire trudon revolution" → resolves correctly (branded full-name alias)
+- "cire trudon revolution eau de parfum" → resolves correctly
+- "wolken parfums pure luxury" / "wolken parfums on the rocks" / "wolken parfums enjoy the day" → resolve correctly
+- "angela flanders orange blossom" → resolves correctly
+- "kilian apple brandy on the rocks" → resolves to Apple Brandy on the Rocks (Kilian), NOT On the Rocks (Wolken)
+
+**Cire Trudon Revolution RS dual-name issue (documented):**
+`entity_market` stores "Cire Trudon Revolution" (suffix-stripped by `_base_name()`), but `resolved_signals.resolved_entities_json` stored "Cire Trudon Revolution Eau de Parfum" (resolver canonical_name). Both names were stripped from RS. `rs_canonical_names` field in repair script handles this explicitly.
+
+**Repair counts (applied 2026-05-17 via direct DB — public proxy):**
+
+| Layer | Rows affected |
+|-------|--------------|
+| RS rows updated (resolved_entities_json stripped) | 80 (PL=9, OTR=19, ETD=1, OB=49, CTR=2) |
+| entity_mentions deleted | 80 |
+| entity_timeseries_daily deleted (perfume) | 131 |
+| signals deleted (perfume) | 26 |
+| signal_intelligence_snapshots deleted | 2 |
+| Brand ts deleted (Wolken=46, AF=49, CT=8) | 103 |
+| Brand signals deleted (Wolken=5, AF=19, CT=1) | 25 |
+| Angela Flanders brand recomputed (Precious One) | 1 row (2026-04-16, score=30.1682, mentions=1.0) |
+
+**Brand rollup repair:**
+- **Wolken Parfums** → DELETE ALL brand ts/signals (no other tracked perfumes)
+- **Angela Flanders** → DELETE ALL brand ts/signals, recompute from Precious One entity_id=03ab1d60 (OPS-EE1: direct SQL INSERT — only 1 real mention date)
+- **Cire Trudon** → DELETE ALL brand ts/signals (no other tracked perfumes)
+
+**DB-layer verification evidence (2026-05-17 — ALL PASS):**
+- Pure Luxury: mentions=0, ts=0, signals=0, snaps=0 ✓
+- On the Rocks: mentions=0, ts=0, signals=0, snaps=0 ✓
+- Enjoy the Day: mentions=0, ts=0, signals=0, snaps=0 ✓
+- Orange Blossom: mentions=0, ts=0, signals=0, snaps=0 ✓
+- Cire Trudon Revolution: mentions=0, ts=0, signals=0, snaps=0 ✓
+- RS residual (exact jsonb canonical_name check): ALL 5 = 0 ✓
+- Wolken Parfums brand: ts=0, signals=0 ✓
+- Angela Flanders brand: ts=1 (2026-04-16) ✓
+- Cire Trudon brand: ts=0, signals=0 ✓
+
+**Tests:** `tests/unit/test_sig_qa1_repair_guards.py` — 35/35 pass (N1-N5e negative, P1-P6 positive, R1-R4 regression, G1-G7 guard structure).
+
+**Excluded from SIG-QA1-REPAIR (deferred pending corrected RS inspection):**
+- Men's Cologne (Coty) — unicode apostrophe mismatch in canonical name query; RS evidence unconfirmed
+- Feel Good (Esprit), Come Together (Vintner's Reserve), Bride To Be (Primark), Day to Day (Primark) — Type D; pending dedicated repair batch
+
+**Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-006**
+
+---
+
 ## DATA5 / SEARCH1 — Market-Readable Perfume Catalog Search
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-15)**
 **Commit: 39eb700**
@@ -3274,6 +3338,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | CORE FALSE-POSITIVE REPAIR VERIFIED · BRAND RECOMPUTE PENDING (PV-005) | 2026-05-17 |
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
+| SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
