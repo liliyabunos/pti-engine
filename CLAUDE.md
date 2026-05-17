@@ -1197,7 +1197,7 @@ Lattafa Asad has stronger direct-clone community consensus than Khamrah → Ange
 ---
 
 #### FTG-5 / SN1-A — Signal Intelligence Snapshots
-**Status: IMPLEMENTED — PENDING PIPELINE VERIFICATION (2026-05-16)**
+**Status: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
 **Migration: 050 · Commit: 79d72c8**
 
 **Purpose:** Persist an immutable historical record of market intelligence at the moment a market signal is first detected by the pipeline. Answers: which entity, what signal type, what metrics supported it, which pipeline version.
@@ -1237,20 +1237,12 @@ UNIQUE (entity_id, entity_type, signal_type, detected_at)
 
 **Tests:** `tests/unit/test_sn1a_signal_intelligence_snapshots.py` — 39/39 pass.
 
-**Production verification (pending next pipeline run):**
-```sql
-SELECT COUNT(*), MIN(detected_at), MAX(detected_at)
-FROM signal_intelligence_snapshots;
-
--- Verify metrics populated (not all NULL):
-SELECT entity_canonical_name, signal_type, market_score_at_detection,
-       growth_rate_at_detection, mention_count_at_detection, first_captured_at
-FROM signal_intelligence_snapshots
-ORDER BY first_captured_at DESC LIMIT 10;
-
--- Verify idempotency (rerun detect_breakout_signals for same date → count stays same):
-SELECT COUNT(*) FROM signal_intelligence_snapshots WHERE pipeline_run_date = CURRENT_DATE;
-```
+**Production verification (2026-05-16) — COMPLETE:**
+- COUNT(*)=134, pipeline_run_date=2026-05-16 on all rows ✓
+- market_score_at_detection IS NOT NULL ✓ (Creed Aventus reversal: score=24.9041, mentions=3.40)
+- snapshot_schema_version=1 on all rows ✓
+- Sample entities: Creed Aventus (reversal), Diptyque L'eau (acceleration_spike), Very Well (breakout + acceleration_spike), MFK Baccarat Rouge 540 (reversal)
+- Manual recovery via `railway ssh --service generous-prosperity` — signals=134 >> 10 threshold; PV-002 CLOSED
 
 **No backfill performed** — SN1-A is forward-correct only. Snapshots accumulate from the next pipeline run onward.
 
@@ -1685,7 +1677,7 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 ---
 
 ## DATA4 — Brand Name Canonicalization & Ghost Brand Repair
-**STATUS: DATA4-A AUDIT COMPLETE (2026-05-16) · DATA4-B COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
+**STATUS: DATA4-A AUDIT COMPLETE (2026-05-16) · DATA4-B COMPLETE — PRODUCTION VERIFIED (2026-05-16) · DATA4-D COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
 
 
 **Trigger:** DATA3 production audit (2026-05-15) revealed that the brand_name mismatch and ghost brand problems are systemic — not a one-off Lattafa case.
@@ -1710,7 +1702,7 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 - `_rollup_brand_market_data()` guard — new brand entity creation is blocked if brand_name is structural fragment or not in canonical sources; WARNING logged; existing brand entities always updated (guard only blocks NEW creation)
 - `_upsert_brand_and_perfume_catalog_first()` heuristic fix — rsplit candidate validated before use; structural fragment or non-canonical → perfume written with `brand=None`; WARNING logged
 - `scripts/data4b_ghost_brand_repair.py` — dry-run by default; `--apply` to execute; finds ghost brands, resolves correct brand_names via `resolver_fragrance_master`, fixes upstream `entity_market.perfume.brand_name`, deletes downstream ghost brand rows
-- `tests/unit/test_data4b_brand_promotion_guard.py` — 55/55 pass
+- `tests/unit/test_data4b_brand_promotion_guard.py` — 85/85 pass (30 new tests added for DATA4-D audit cases)
 
 **Repair-Complete Rule applies:**
 1. Upstream fix (entity_market.perfume.brand_name) FIRST
@@ -1721,7 +1713,7 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 - Encoding mismatches like "Comme des Garcons" vs "Comme des Garçons" (DATA4-D)
 
 **Production verification (2026-05-16) — COMPLETE:**
-- Ghost brands with ts_rows > 0 after repair: 5 (all DATA4-D encoding variants — correctly excluded) ✓
+- Ghost brands with ts_rows > 0 after DATA4-B repair: 5 (all DATA4-D encoding variants — correctly excluded, repaired in DATA4-D) ✓
 - Known-deleted ghost entity_ids (brand-angels, brand-rose, brand-oud, etc.) still in entity_market: 0 ✓
 - Upstream brand_name spot-check: Angels' Share → Kilian ✓ · Creed Green Irish Tweed → Creed ✓ · Molecule 01 + Ginger → Escentric Molecules ✓ · Vanilla | 28 → Kayali ✓ · Oud & Bergamot → Jo Malone ✓
 - TOM FORD Private Blend (DATA4-C exclusion): INTACT ts=59 ✓
@@ -1730,9 +1722,37 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 - Aggregation rerun 7 days (2026-05-10 to 2026-05-16): 0 errors, brand_rollup_written counts normal ✓
 - Idempotency: second dry-run after apply shows Ghost brands: 5 / deleted: 0 ✓
 
+**DATA4-D — Encoding Mismatch Repair (2026-05-17)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
+**Commits: 18ce00e (script + tests) · 22846a5 (f-string fix) · No migration required.**
+
+**What was implemented:**
+- `scripts/data4d_encoding_repair.py` — two-phase repair script (dry-run by default, `--apply` to execute):
+  - Phase 1: dynamic discovery of perfume entity_market rows where brand_name is a structural fragment (ends in & or |); resolves correct brand via `resolver_fragrance_master`; fixes 10 orphan cases in total (Amber & Coconut → Haus of Gloi; Orange Blossom & Neroli → Hollister; Lemon & Lime → W.Dressroom; 5× Jo Malone perfumes; Oud & Spice → Acqua di Parma)
+  - Phase 2: hardcoded DATA4-D encoding correction registry (6 pairs); finds and fixes perfume rows with wrong brand_name variant; deletes ghost brand entity + downstream; outputs aggregation recompute date range
+- `tests/unit/test_data4b_brand_promotion_guard.py` — 30 new tests (85 total) covering DATA4-D audit cases and encoding variant pairs
+
+**Encoding corrections applied:**
+| Wrong form (on perfume rows) | Correct form | Ghost entity deleted | Ghost ts/signals |
+|---|---|---|---|
+| Comme des Garçons (accented) | Comme des Garcons | YES (uuid=312fca33) | ts=5, sc=2 |
+| Areej Le Doré (accented) | Areej Le Dore | YES (uuid=1781aad2) | ts=13, sc=1 |
+| Ramón Monegal (accented) | Ramon Monegal | YES (uuid=b5810cac) | ts=8, sc=1 |
+| Khadlaj (simplified) | Khadlaj / خدلج | YES (uuid=a00db879) | ts=31, sc=13 |
+| Al Haramain (simplified) | Al Haramain / الحرمين | YES (uuid=7eb011a3) | ts=35, sc=2 |
+| Lattafa / لطافة (multilingual) | Lattafa | YES (uuid=e6cdb4b2) | ts=2, sc=1 |
+
+**Aggregation recompute:** 43 dates (2026-04-04 → 2026-05-16) recomputed after ghost deletions to rebuild brand market data under correct canonical brand names. 0 errors.
+
+**Production verification (2026-05-17) — COMPLETE:**
+- Structural fragment orphan perfume rows: 0 ✓
+- All 6 ghost encoding variant brand entities: ABSENT ✓
+- Khadlaj / خدلج brand: ts=40 ✓ · Al Haramain / الحرمين: ts=48 ✓ · Comme des Garcons: ts=64 ✓ · Areej Le Dore: ts=12 ✓ · Ramon Monegal: ts=10 ✓
+- Jo Malone: ts=47 ✓ · Acqua di Parma: ts=39 ✓ · Haus of Gloi: ts=12 ✓ · W.Dressroom: ts=41 ✓ · Hollister: ts=13 ✓
+- Guard correctly blocking 'Comme des Garçons' (accented) from re-creation in subsequent pipeline runs ✓
+
 **DATA4 phase plan (remaining):**
 - DATA4-C — TOM FORD Private Blend: collection-as-brand architectural decision + brand_profiles hierarchy entry (KB-CAT1 integration)
-- DATA4-D — Encoding mismatch repair: `Comme des Garcons` → `Comme des Garçons`, `Areej Le Dore` → `Areej Le Doré`, multilingual brand variants
 - DATA4-E — Systemic ingest-time canonicalization (prevent future brand_name pollution at aggregation ingest time)
 
 ---
@@ -1973,18 +1993,8 @@ Phases defined: 042 ✓ → 043 ✓ → 044 (regional creator policy) → 045 (f
 - **SC1.3 Multi-field Resolver — COMPLETE — PRODUCTION VERIFIED (2026-05-08)** — commit ee1d8ba — `perfume_trend_sdk/resolvers/perfume_identity/multi_field_resolver.py`. Feature flag: `MULTI_FIELD_RESOLVER_ENABLED=true` (Railway generous-prosperity). Platform-specific field weights: YouTube title(1.0)/description(0.5)/hashtags(0.3); Reddit body(1.0)/title(0.7); TikTok derived referencing_context(1.0)/hashtags(0.5)/description(0.3)/title(0.2); TikTok direct user_context(1.0)/hashtags(0.6)/description(0.4)/title(0.5). Confidence threshold 0.3. TikTok generic title protection + YouTube title noise filter. 67/67 tests pass. **Replay (2026-05-04–07):** old=624, new=807, +183 resolved, 0 regressions. **Production pipeline (2026-05-08) verified:** PIPELINE_HEALTH_OK · entity_mentions=180 (baseline 183-189) · signals=142 (baseline 113-216) · resolved_signals 1.1-mf=558, 1.1=74 · content_items=1203 (yt=997, reddit=206) · public_safe views 2318/4976/9644 · dashboard 200 OK (2373 entities, 19 breakouts) · no new false positives (noise aliases pre-existing, within historical range).
 - **P3 Pipeline Health Check — COMPLETE (2026-05-08)** — commit 58ff5c6 — `perfume_trend_sdk/jobs/pipeline_health_check.py` runs at end of morning + evening pipelines. 4 checks: entity_mentions (CRITICAL<50/WARNING<100), Reddit entity_mentions (WARNING morning=0/CRITICAL evening=0), content items by platform, signals count. Markers: `PIPELINE_HEALTH_OK/WARNING/CRITICAL`. Exit always 0. Verified retroactively: 05-06 collapse correctly fires `PIPELINE_HEALTH_WARNING` (reddit_items=0, mentions=64). 21/21 tests pass.
 - **Phase 042 — Language & Region Metadata v1 — COMPLETE — PRODUCTION VERIFIED (2026-05-12)** — migration `alembic/versions/042_language_region_metadata.py` · implementation commit `3702a9c` · completion fix commit `436fd6c` · migration applied commit `afe232f`. Adds 5 nullable metadata fields to `source_intake_candidates` (`source_language`, `source_country`, `source_region`, `audience_region`, `regional_policy_status`) and 3 new columns to `youtube_channels` (`source_region`, `audience_region`, `regional_policy_status`). Apply path carries all 5 into the YouTube source registry: `source_language` → `language`, `source_country` → `country` (existing columns, migration 023), plus 3 new columns. PATCH endpoint accepts and saves all 5. CandidateRow GET exposes all 5. Admin UI: Language & Region section in BatchReviewConsole per candidate (lang/country inputs, region/audience/policy dropdowns, Save Metadata button). No regional scoring. No regional leaderboard. No public filters. No canonical_content_items propagation (Phase 043). Creator Leaderboard behavior unchanged. 52/52 tests pass.
-- **P3.1 Pipeline Health Log — IMPLEMENTATION SHIPPED 2026-05-12 · PRODUCTION PERSISTENCE BUG DISCOVERED 2026-05-16 · FIXED IN ffab2ac · RE-VERIFICATION PENDING EVENING PIPELINE** — implementation commit `8b49fd2` · migration applied commit `afe232f` · persistence bug fix commit `ffab2ac` (2026-05-16). `alembic/versions/041_pipeline_health_log.py` · `pipeline_health_log` table (13 columns). Upserts one row per `(run_date, run_label)` after each health check run. ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row without duplicating. Trims rows older than 90 days at persist time (no separate cron). `pipeline_service` captured from `PIPELINE_SERVICE` env var (operator-set Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in), NULL if neither set. run_label supports: morning | evening | manual | backfill | unknown — no CHECK constraint. Pipeline scripts already pass `--run-label morning` / `--run-label evening` — no script changes needed. Ad-hoc and backfill runs use `--run-label manual`. Persist errors are non-fatal (logged as WARNING, pipeline continues). Admin UI deferred. 30/30 tests pass.
-  **PRODUCTION PERSISTENCE BUG (discovered 2026-05-16):** `:issues::jsonb` in the INSERT VALUES clause caused SQLAlchemy `text()` to fail to bind the `issues` parameter — entire INSERT threw a SQL syntax error, caught silently by the `except` block. Result: `pipeline_health_log` has zero rows for every run since migration 041 was applied (2026-05-12). The "COMPLETE — PRODUCTION VERIFIED" status was incorrect — persistence was never confirmed with an actual row count query after the first scheduled pipeline. **Fix:** `CAST(:issues AS JSONB)` in commit `ffab2ac`, pushed to main 2026-05-16, Railway auto-deploys before 23:00 UTC evening run.
-  **Re-verification (run after tonight's evening pipeline):**
-  ```sql
-  SELECT run_date, run_label, overall_level, reddit_items, reddit_mentions, issues, pipeline_service, recorded_at
-  FROM pipeline_health_log ORDER BY recorded_at DESC LIMIT 5;
-  -- Expect: ≥1 row for 2026-05-16 run_label='evening'
-  -- Confirm: issues JSONB is populated (not null, not empty array)
-  SELECT COUNT(*) FROM pipeline_health_log;
-  -- Expect: >0
-  ```
-  Only restore to COMPLETE — PRODUCTION VERIFIED after evening pipeline row is confirmed.
+- **P3.1 Pipeline Health Log — COMPLETE — PRODUCTION VERIFIED (2026-05-16)** — implementation commit `8b49fd2` · migration applied commit `afe232f` · persistence bug fix commit `ffab2ac` (2026-05-16). `alembic/versions/041_pipeline_health_log.py` · `pipeline_health_log` table (13 columns). Upserts one row per `(run_date, run_label)` after each health check run. ON CONFLICT (run_date, run_label) DO UPDATE — idempotent re-runs overwrite the row without duplicating. Trims rows older than 90 days at persist time (no separate cron). `pipeline_service` captured from `PIPELINE_SERVICE` env var (operator-set Railway override) or `RAILWAY_SERVICE_NAME` (Railway built-in), NULL if neither set. run_label supports: morning | evening | manual | backfill | unknown — no CHECK constraint. Pipeline scripts already pass `--run-label morning` / `--run-label evening` — no script changes needed. Ad-hoc and backfill runs use `--run-label manual`. Persist errors are non-fatal (logged as WARNING, pipeline continues). Admin UI deferred. 30/30 tests pass.
+  **PRODUCTION PERSISTENCE BUG (discovered + fixed 2026-05-16):** `:issues::jsonb` in the INSERT VALUES clause caused SQLAlchemy `text()` to fail to bind the `issues` parameter. Fix: `CAST(:issues AS JSONB)` in commit `ffab2ac`. Verified in manual same-night recovery: run_date=2026-05-16, run_label='evening', overall_level='OK', pipeline_service='generous-prosperity', COUNT(*)=1. PV-001 CLOSED.
 - **Phase 043 — Content Language & Region Propagation v1 — COMPLETE — PRODUCTION VERIFIED (2026-05-12)** — implementation commit `71be8f4` · first-poll fix commit `32d2a25`. `normalizer.py`: added `_COUNTRY_TO_REGION` map + `_resolve_content_language()` / `_resolve_content_region()` helpers; `normalize_youtube_item()` accepts optional `channel_context` kwarg. `region` default changed from hardcoded `"US"` to `"UNKNOWN"` when no context. `ingest_youtube_channels.py`: `_load_channels()` now SELECTs `language, country, source_region`; `poll_channel()` passes `channel_context` to normalizer; `_first_poll_country or channel.get("country")` ensures first-poll channels get correct region immediately. Fallback: `source_region` → `country→region map` → `"UNKNOWN"`. `entity_mentions.region` deferred. TikTok/Reddit normalizers unchanged. Scoring unchanged. Public-safe views unchanged. 44/44 new + 117/117 existing tests pass. **Production verification 2026-05-12:** manual poll of 4 channels (Fragmental GB, School of Scent GB, Hardbody Fragrancez US, TLTG Reviews US) → 12 items: 9×US_CANADA + 3×UK_IRELAND, 0 NULL regions, 0 NULL language. Non-UNKNOWN region propagation confirmed. No errors.
 - **Suggest a Source MVP — production polish (2026-05-06)** — commit 16ec68f (backend) + pending frontend
   - Route: `/submit-source` under `(terminal)` — logged-in only, redirects to /login if not
@@ -2733,7 +2743,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SC0.2 Creator filters v1 | PLANNED | — |
 | SC1.1 TikTok Layer 1 — URL / embed / mention | COMPLETE — PRODUCTION VERIFIED | 2026-05-07 |
 | P3 Pipeline Health Check | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
-| P3.1 Pipeline Health Log — DB-persisted health history | IMPLEMENTATION SHIPPED — PERSISTENCE BUG FIXED ffab2ac — RE-VERIFICATION PENDING EVENING PIPELINE | 2026-05-16 |
+| P3.1 Pipeline Health Log — DB-persisted health history | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | SC1.2A TikTok — Schema + Registry Integration | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2B TikTok — Seed Import + Operator Workflow | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
 | SC1.2C TikTok — Seeded Creator Monitoring Worker | COMPLETE — PRODUCTION VERIFIED | 2026-05-08 |
@@ -2779,13 +2789,14 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | DATA5 / SEARCH1 — Market-Readable Catalog Search (brand+name concat) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | DATA4-A — Ghost Brand Audit | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | DATA4-B — Brand Promotion Guard + Repair Script | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| DATA4-D — Encoding Mismatch Repair (6 ghost entities, 10 orphan brand_name fixes) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | FTG-3 / RI1-QA — Operator Review Gate for Relationships | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | FTG-4 / RI1-E (admin console repair) | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1 — Existing Canonical Relationship Evidence Attachment | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1B — Lattafa Asad → Sauvage Elixir dupe_of gap fill | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
-| FTG-5 / SN1-A — Signal Intelligence Snapshots | IMPLEMENTED — PENDING PIPELINE VERIFICATION | 2026-05-16 |
+| FTG-5 / SN1-A — Signal Intelligence Snapshots | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |

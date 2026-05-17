@@ -85,44 +85,22 @@ At the start of any new Claude session, before beginning new implementation work
 | **Related commits** | `8b49fd2` (implementation) · `ffab2ac` (SQL bug fix) |
 | **Implementation shipped** | 2026-05-12 (migration 041) |
 | **Fix shipped** | 2026-05-16 (`ffab2ac` pushed to main, Railway auto-deploy) |
-| **Current status** | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` |
+| **Current status** | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` |
 | **Immediate verification considered?** | No — `pipeline_health_log` is only written by the health check at the end of a pipeline run. Cannot be triggered safely outside the scheduled pipeline without running the full pipeline manually. |
 | **Why deferred** | Requires a successful evening or morning pipeline run to produce a row. Fix deployed before 23:00 UTC 2026-05-16. |
-| **Trigger event** | Tomorrow 11:00 UTC morning pipeline (2026-05-17) |
+| **Trigger event** | Tonight's 23:00 UTC evening pipeline (2026-05-16) — recovered manually same night after cron interruption |
 | **Blocking severity** | High — P3.1 has been marked COMPLETE — PRODUCTION VERIFIED in CLAUDE.md incorrectly since 2026-05-12. Cannot restore that status until persistence is confirmed. |
-| **2026-05-16 evening run outcome** | Pipeline started 23:00 UTC (Reddit 195 items, YouTube 497 items collected at 23:02). Code deploy `8a9c7ac` at ~23:09 UTC killed the cron container before Step 2 (aggregation). `updated_at` on entity_timeseries_daily never exceeded 22:57 UTC. pipeline_health_log still 0 rows. Same incident pattern as 2026-05-06 OPS NOTE. |
+| **2026-05-16 evening run outcome** | Pipeline started 23:00 UTC (Reddit 195 items, YouTube 497 items collected at 23:02). Code deploy `8a9c7ac` at ~23:09 UTC killed the cron container before Step 2 (aggregation). `updated_at` on entity_timeseries_daily never exceeded 22:57 UTC. pipeline_health_log still 0 rows. Same incident pattern as 2026-05-06 OPS NOTE. Recovered manually same night via `railway ssh --service generous-prosperity` — all remaining steps executed with `--date 2026-05-16`. |
+| **Production verification evidence (2026-05-16)** | `pipeline_health_log`: run_date=2026-05-16, run_label='evening', overall_level='OK', reddit_items=195, reddit_mentions=217, issue_count=0, pipeline_service='generous-prosperity', recorded_at=2026-05-17T00:11:51Z ✓ · COUNT(*)=1 ✓ |
 
-**Exact verification SQL:**
-```sql
--- Confirm at least one row was written by tonight's run
-SELECT run_date, run_label, overall_level, entity_mentions,
-       reddit_items, reddit_mentions, signals_count,
-       issues, pipeline_service, recorded_at
-FROM pipeline_health_log
-ORDER BY recorded_at DESC
-LIMIT 5;
+**Pass criteria — ALL MET:**
+- `COUNT(*) > 0` ✓ (1 row)
+- Row exists for `run_date = '2026-05-16'` and `run_label = 'evening'` ✓
+- `overall_level = 'OK'` ✓
+- `issues` is a valid non-null JSONB array (issue_count=0) ✓
+- `pipeline_service = 'generous-prosperity'` ✓
 
--- Confirm issues JSONB is populated (not null)
-SELECT run_date, run_label, jsonb_array_length(issues) AS issue_count, issues
-FROM pipeline_health_log
-ORDER BY recorded_at DESC
-LIMIT 3;
-
--- Confirm table is no longer empty
-SELECT COUNT(*) FROM pipeline_health_log;
-```
-
-**Pass criteria:**
-- `COUNT(*) > 0`
-- Row exists for `run_date = '2026-05-16'` and `run_label = 'evening'`
-- `overall_level` is one of: OK / WARNING / CRITICAL (not null)
-- `issues` column is a valid non-null JSONB array
-- `pipeline_service` reflects the Railway service name (or NULL if env var not set)
-
-**CLAUDE.md update after pass:**
-- Change P3.1 active roadmap status back to `COMPLETE — PRODUCTION VERIFIED (2026-05-16)`
-- Update the phase status table row
-- Close this ledger entry
+**CLOSED — 2026-05-16**
 
 ---
 
@@ -134,53 +112,20 @@ SELECT COUNT(*) FROM pipeline_health_log;
 | **Phase / task** | FTG-5 / SN1-A — Signal Intelligence Snapshots |
 | **Related commits** | `79d72c8` (implementation) · migration 050 |
 | **Implementation shipped** | 2026-05-16 |
-| **Current status** | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` |
+| **Current status** | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` |
 | **Immediate verification considered?** | Partial — migration 050 can be verified immediately (table exists, alembic version). But snapshot rows require a healthy pipeline run that produces signals. May 16 morning was anomalous (signals=3); not acceptable evidence. |
 | **Why deferred** | Row-level verification requires a healthy pipeline run with normal signal volume. May 16 morning run had only 3 signals — insufficient to confirm the snapshot write path. Verify against the next run where `signals_detected > 10`. |
-| **Trigger event** | Next pipeline run where `signals_detected > 10` (expected: tonight's 23:00 UTC or tomorrow morning) |
+| **Trigger event** | Tonight's 23:00 UTC evening pipeline (2026-05-16) — recovered manually same night after cron interruption; signals=134 >> 10 threshold |
 | **Blocking severity** | Medium — SN1-A is not in a user-facing path. But CLAUDE.md must not show COMPLETE — PRODUCTION VERIFIED until rows are confirmed. |
+| **Production verification evidence (2026-05-16)** | COUNT(*)=134 ✓ · earliest=2026-05-16, latest=2026-05-16 ✓ · market_score_at_detection IS NOT NULL ✓ (e.g. Creed Aventus reversal: score=24.9041, mentions=3.40) · snapshot_schema_version=1 on all rows ✓ · pipeline_run_date=2026-05-16 on all rows ✓ · Sample: Creed Aventus reversal, Diptyque L'eau acceleration_spike, Very Well breakout + acceleration_spike, MFK Baccarat Rouge 540 reversal |
 
-**Exact verification SQL:**
-```sql
--- Step 1: Confirm migration 050 applied
-SELECT version_num FROM alembic_version;
--- Expect: 050
+**Pass criteria — ALL MET:**
+- `signal_intelligence_snapshots COUNT(*) = 134` ✓
+- `pipeline_run_date = 2026-05-16` on all rows ✓
+- `market_score_at_detection IS NOT NULL` ✓
+- `snapshot_schema_version = 1` ✓
 
--- Step 2: Confirm table exists and received rows
-SELECT COUNT(*),
-       MIN(detected_at)::date AS earliest_date,
-       MAX(detected_at)::date AS latest_date,
-       MIN(first_captured_at) AS first_written,
-       MAX(first_captured_at) AS last_written
-FROM signal_intelligence_snapshots;
-
--- Step 3: Confirm metrics are populated (not all NULL)
-SELECT entity_canonical_name, signal_type,
-       market_score_at_detection, growth_rate_at_detection,
-       mention_count_at_detection, signal_strength, snapshot_schema_version,
-       pipeline_run_date, first_captured_at
-FROM signal_intelligence_snapshots
-ORDER BY first_captured_at DESC
-LIMIT 10;
-
--- Step 4: Confirm idempotency — rerunning detect_breakout_signals for same date
--- should not increase row count (ON CONFLICT DO NOTHING)
-SELECT pipeline_run_date, COUNT(*) AS snapshots
-FROM signal_intelligence_snapshots
-GROUP BY pipeline_run_date
-ORDER BY pipeline_run_date DESC;
-```
-
-**Pass criteria:**
-- `alembic_version = '050'`
-- `signal_intelligence_snapshots COUNT(*) > 0`
-- At least one row has `market_score_at_detection IS NOT NULL` (metrics populated)
-- `snapshot_schema_version = 1` on all rows
-- `pipeline_run_date` matches `detected_at::date` on all rows
-
-**CLAUDE.md update after pass:**
-- Change FTG-5 / SN1-A status to `COMPLETE — PRODUCTION VERIFIED (YYYY-MM-DD)`
-- Close this ledger entry
+**CLOSED — 2026-05-16**
 
 ---
 
@@ -230,6 +175,12 @@ The `occurred_at = published_at` artifact is confirmed: 362 YouTube items collec
 ---
 
 ## Closed Entries
+
+### PV-001 — CLOSED 2026-05-16
+`pipeline_health_log` persistence confirmed after manual recovery of interrupted evening pipeline. Fix `ffab2ac` (`CAST(:issues AS JSONB)`) verified working: run_date=2026-05-16, run_label='evening', overall_level='OK', pipeline_service='generous-prosperity', COUNT(*)=1. Recovery via `railway ssh --service generous-prosperity` — all remaining steps executed with `--date 2026-05-16` after cron was killed by code deploy `8a9c7ac` at 23:09 UTC.
+
+### PV-002 — CLOSED 2026-05-16
+Signal intelligence snapshots confirmed after manual recovery of interrupted evening pipeline. 134 snapshots written for pipeline_run_date=2026-05-16. All pass criteria met: metrics populated (market_score_at_detection IS NOT NULL), snapshot_schema_version=1, pipeline_run_date matches detected_at::date. Recovery via `railway ssh --service generous-prosperity` — signals=134 far exceeded the >10 threshold.
 
 ### PV-003 — CLOSED 2026-05-16
 Hypothesis confirmed via production SQL (`railway ssh --service generous-prosperity`). Root cause: `occurred_at = published_at` means morning YouTube ingest always produces entity_mentions dated prior days. Reddit=0 confirmed as independent failure. See entry above for full evidence.
@@ -310,7 +261,7 @@ done
 
 | ID | Phase | Status | Trigger |
 |----|-------|--------|---------|
-| PV-001 | P3.1 Health Log persistence | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tomorrow 11:00 UTC morning pipeline (2026-05-17) — 23:00 UTC run interrupted by code deploy |
-| PV-002 | FTG-5 / SN1-A snapshots | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Tomorrow 11:00 UTC morning pipeline (2026-05-17) — 23:00 UTC run interrupted by code deploy |
+| PV-001 | P3.1 Health Log persistence | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED — manually recovered same night |
+| PV-002 | FTG-5 / SN1-A snapshots | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED — 134 snapshots written in manual recovery |
 | PV-003 | May 16 incident root-cause | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
 | PV-004 | DATA4-B brand promotion guard + repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
