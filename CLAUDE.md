@@ -1752,6 +1752,71 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 
 ---
 
+## RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
+**Script: `scripts/audit_ambiguous_entity_risk.py`**
+**No migration required.**
+
+**Purpose:** Reusable production-grade audit that scores all market-relevant perfume entities for false-positive/ambiguity risk across 5 explainable dimensions. Identifies entities that look like they resolved from generic English phrases rather than genuine brand-specific product mentions.
+
+**Risk dimensions (each 0.0–1.0):**
+- D1 Name Language — is the canonical_name a common English phrase?
+- D2 Mention Shape — are total mentions suspiciously thin / concentrated?
+- D3 RS Integrity — does the RS matched_from text contain brand context?
+- D4 Topic Coherence — do entity_topic_links look like genuine fragrance discourse?
+- D5 Brand Obscurity — is the brand rarely mentioned in the fragrance corpus?
+
+**Composite = D1×0.35 + D2×0.25 + D3×0.25 + D4×0.10 + D5×0.05**
+
+**Action thresholds:** A (≥0.72 investigate) / B (≥0.52 add to guard) / C (≥0.32 monitor) / D (<0.32 clean)
+
+**Calibration:** 18/18 known FP + known-good cases pass. Run with `--calibrate` (no DB required).
+
+**Production run (2026-05-17) — active-today (203 entities):**
+- Action A (6): Cedar Wood/Monotheme, So Sexy!/Fiorucci, Very Pretty/Michael Kors, Day One/Smell Bent, Leather Musk/Crabtree & Evelyn, Black Rose/A Beautiful Life
+- Action B (45): many 2-token short-volume entities; highest risk confirmed via RS inspection
+- Action D (51): correctly clean — Creed Aventus=0.291, Dior Sauvage=0.296, MFK BR540=0.268
+
+**Production run (2026-05-17) — recent-movers (796 entities):**
+- Action A (46): includes all active-today A-tier plus new single-mention entities
+- Additional confirmed FPs via RS inspection: Best Man/Helena Rubinstein, You & You/Puig, Jasmine & Rose/Primark
+
+**RS inspection confirmed FPs (all require RES-AMB4 guard expansion):**
+
+| Entity | Brand | Confirmed FP source |
+|--------|-------|---------------------|
+| Very Pretty | Michael Kors | Reddit review posts — "very pretty" as descriptor; no MK context |
+| So Sexy! | Fiorucci | YouTube fragrance posts — "so sexy" as exclamation; no Fiorucci context |
+| Day One | Smell Bent | Wedding planning Reddit + YouTube "day one" temporal phrase |
+| Best Man | Helena Rubinstein | Wedding speech Reddit + Jeremy Fragrance "best man fragrance" phrase |
+| You & You | Puig | Reddit conversational phrases + same wedding post artifact |
+| Jasmine & Rose | Primark | Note/ingredient description — not brand context |
+| Cedar Wood | Monotheme | Matched from Heretic Rhubarb review — "cedar wood" as note |
+
+**Known false alarm in model:** Cool Water (Davidoff) scored B (0.499) because it has 0% RS brand hit rate — the content IS legitimately about Davidoff Cool Water but "davidoff" rarely appears in matched_from text (the perfume name stands alone). Well-known fragrance names that stand alone in discourse will tend to have low D3 scores. This is expected and acceptable for established fragrances with many mentions.
+
+**Prevention policy recommendation:**
+1. Run `--scope active-today` monthly post-pipeline as a standing hygiene check
+2. Any entity scoring A or B for 2+ consecutive runs without growing mention volume should be investigated via RS inspection before carrying forward
+3. Guard expansion (RES-AMB4) should be implemented for the 7 confirmed FPs above
+
+**Usage:**
+```bash
+# Calibration (no DB required)
+python3 scripts/audit_ambiguous_entity_risk.py --calibrate
+
+# Production audit
+DATABASE_URL=<prod-url> python3 scripts/audit_ambiguous_entity_risk.py --scope active-today
+DATABASE_URL=<prod-url> python3 scripts/audit_ambiguous_entity_risk.py --scope recent-movers --min-risk 0.52
+
+# Save outputs
+DATABASE_URL=<prod-url> python3 scripts/audit_ambiguous_entity_risk.py --scope active-today --csv audit_$(date +%Y%m%d).csv
+```
+
+**Production verification mode: IMMEDIATE — VERIFIED**
+
+---
+
 ## DATA5 / SEARCH1 — Market-Readable Perfume Catalog Search
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-15)**
 **Commit: 39eb700**
@@ -2936,6 +3001,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED (Phase 2 repair applied 2026-05-17) | 2026-05-17 |
 | RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | RES-AMB3 — Ambiguous Phrase Guard v3 (6 entities: Berdoues/Flormar/Aigner×3/So...?) + Musc K repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
+| RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
