@@ -68,7 +68,30 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
 })
 
 # ---------------------------------------------------------------------------
-# Ambiguous multi-token phrase guard (RES-AMB1 / RES-AMB2)
+# Blocked multi-token phrases (RES-AMB3)
+# ---------------------------------------------------------------------------
+#
+# Phrases of 2+ tokens that are unconditionally blocked because:
+#  (a) the phrase is a common evaluative/conversational expression, AND
+#  (b) the brand token(s) are too short/generic to be usable as proximity
+#      anchors in _AMBIGUOUS_PHRASE_GUARD.
+#
+# Unlike _AMBIGUOUS_PHRASE_GUARD (which requires brand proximity), these
+# phrases are blocked regardless of surrounding context.  Use this set only
+# when the brand name itself is a common word (e.g. "so", "first") that would
+# generate false positives if used as a proximity anchor.
+#
+# RES-AMB3 (2026-05-17):
+#   "so so"  → So...? So...? (brand: So...?) — normalize_text("So...? So...?")
+#              → "so so"; "so" is a common adverb; no usable brand anchor.
+#              Fired on generic evaluative usage: "it was so so disappointing".
+#
+_BLOCKED_MULTI_TOKEN_PHRASES: frozenset[str] = frozenset({
+    "so so",    # So...? So...? (brand=So...?) — "so so" = common evaluative phrase; brand "so" too generic
+})
+
+# ---------------------------------------------------------------------------
+# Ambiguous multi-token phrase guard (RES-AMB1 / RES-AMB2 / RES-AMB3)
 # ---------------------------------------------------------------------------
 #
 # Some 2–3-token aliases are common English phrases that happen to match a
@@ -100,6 +123,15 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
 #   "good vibes"          → Good Vibes (Ricarda M.) — Jeremy Fragrance channel catchphrase
 #                            ("Australia Fragrance Talk Good Vibes: #jeremyfragrance" ×4 videos)
 #
+# RES-AMB3 expansion (2026-05-17 — production audit of dashboard false positives):
+#   "very well"   → Very Well (Berdoues) — generic approval phrase; 23 false mentions confirmed
+#   "so happy"    → So Happy (Flormar) — conversational emotion; 12 false mentions confirmed
+#   "too feminine"→ Too Feminine (Aigner) — common opinion phrase; 8 false mentions confirmed
+#   "true icon"   → True Icon (Aigner) — superlative description; 1 false mention confirmed
+#   "first class" → First Class (Aigner) — quality descriptor; 1 false mention confirmed
+#
+# "so so" (So...? So...?) is in _BLOCKED_MULTI_TOKEN_PHRASES — brand token "so" is too generic.
+#
 # "knize two" is fixed via _BLOCKED_SINGLE_WORD_ALIASES ("two") above — its
 # only registered alias is the single token "two", not the phrase "knize two".
 #
@@ -118,6 +150,12 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     "one only":           [frozenset({"swiss", "arabian"})],
     "one and only":       [frozenset({"swiss", "arabian"})],
     "good vibes":         [frozenset({"ricarda"})],
+    # RES-AMB3
+    "very well":          [frozenset({"berdoues"})],
+    "so happy":           [frozenset({"flormar"})],
+    "too feminine":       [frozenset({"aigner"})],
+    "true icon":          [frozenset({"aigner"})],
+    "first class":        [frozenset({"aigner"})],
 }
 
 
@@ -224,6 +262,12 @@ class PerfumeResolver:
                     # too common to be matched safely in free-form social text.
                     if phrase in _BLOCKED_SINGLE_WORD_ALIASES:
                         continue
+
+                # --- Multi-token unconditional block (RES-AMB3) ---
+                # Common evaluative/conversational phrases where the brand
+                # name is too generic to use as a proximity anchor.
+                if phrase in _BLOCKED_MULTI_TOKEN_PHRASES:
+                    continue
 
                 result = self.store.get_perfume_by_alias(phrase)
                 if result:

@@ -1,4 +1,4 @@
-"""RES-AMB1 / RES-AMB2 — Ambiguous Perfume Phrase Guard Unit Tests.
+"""RES-AMB1 / RES-AMB2 / RES-AMB3 — Ambiguous Perfume Phrase Guard Unit Tests.
 
 RES-AMB1 Tests:
   N1   "two" blocked as single-word alias (Knize Two fix)
@@ -50,6 +50,28 @@ RES-AMB2 Tests (expansion batch — 2026-05-16):
   A13  "good vibes" resolves when Ricarda brand is nearby
   A14  RES-AMB2 guard phrases all present in _AMBIGUOUS_PHRASE_GUARD
   A15  RES-AMB1 phrases unaffected by RES-AMB2 additions (regression)
+
+RES-AMB3 Tests (expansion batch — 2026-05-17):
+  B1   "very well" blocked without Berdoues proximity
+  B1b  "works very well with oud notes" blocked
+  B2   "very well" resolves when Berdoues brand is nearby
+  B3   "so happy" blocked without Flormar proximity
+  B3b  "i am so happy with this purchase" blocked
+  B4   "so happy" resolves when Flormar brand is nearby
+  B5   "too feminine" blocked without Aigner proximity
+  B5b  "this scent is too feminine for me" blocked
+  B6   "too feminine" resolves when Aigner brand is nearby
+  B7   "true icon" blocked without Aigner proximity
+  B7b  "baccarat rouge is a true icon of perfumery" blocked
+  B8   "true icon" resolves when Aigner brand is nearby
+  B9   "first class" blocked without Aigner proximity
+  B9b  "creed aventus is first class all the way" blocked
+  B10  "first class" resolves when Aigner brand is nearby
+  B11  "so so" blocked unconditionally (in _BLOCKED_MULTI_TOKEN_PHRASES)
+  B11b "it was so so disappointing" blocked (evaluative phrase)
+  B12  _BLOCKED_MULTI_TOKEN_PHRASES includes "so so"
+  B13  RES-AMB3 guard phrases all present in _AMBIGUOUS_PHRASE_GUARD
+  B14  RES-AMB1 + RES-AMB2 phrases unaffected by RES-AMB3 (regression)
 """
 
 from __future__ import annotations
@@ -65,6 +87,7 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.par
 from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import (
     PerfumeResolver,
     _AMBIGUOUS_PHRASE_GUARD,
+    _BLOCKED_MULTI_TOKEN_PHRASES,
     _BLOCKED_SINGLE_WORD_ALIASES,
     _check_brand_proximity,
 )
@@ -123,6 +146,17 @@ _TEST_ALIASES: Dict[str, Dict[str, Any]] = {
     "swiss":             _make_entity(3014, "Swiss Arabian Brand"),
     "arabian":           _make_entity(3014, "Swiss Arabian Brand"),
     "ricarda":           _make_entity(3015, "Ricarda M. Brand"),
+    # Ambiguous — require brand proximity (RES-AMB3)
+    "very well":         _make_entity(3101, "Very Well"),
+    "so happy":          _make_entity(3102, "So Happy"),
+    "too feminine":      _make_entity(3103, "Too Feminine"),
+    "true icon":         _make_entity(3104, "True Icon"),
+    "first class":       _make_entity(3105, "First Class"),
+    "so so":             _make_entity(3106, "So...? So...?"),
+    # Brand proximity triggers (RES-AMB3)
+    "berdoues":          _make_entity(4101, "Berdoues Brand"),
+    "flormar":           _make_entity(4102, "Flormar Brand"),
+    "aigner":            _make_entity(4103, "Aigner Brand"),
     # Legitimate well-specific aliases
     "black orchid":      _make_entity(2001, "Black Orchid"),
     "tom ford black orchid": _make_entity(2001, "Black Orchid"),
@@ -569,4 +603,167 @@ class TestGuardStructureAMB2:
         r = _resolver()
         results = r.resolve_text("spreading peace love and good vibes everywhere")
         assert "Peace, Love &" not in _names(results)
+        assert "Good Vibes" not in _names(results)
+
+
+# ---------------------------------------------------------------------------
+# B — RES-AMB3 Negative tests: phrases BLOCKED without brand proximity
+# ---------------------------------------------------------------------------
+
+class TestNegativeCasesAMB3:
+    def test_B1_very_well_blocked_without_berdoues(self):
+        """'very well' without Berdoues context must NOT fire Very Well entity."""
+        r = _resolver()
+        results = r.resolve_text("this longevity works very well on my skin type")
+        assert "Very Well" not in _names(results)
+
+    def test_B1b_very_well_blocked_in_review_phrase(self):
+        """'very well' as common review phrase — blocked."""
+        r = _resolver()
+        results = r.resolve_text("the sillage projects very well throughout the day")
+        assert "Very Well" not in _names(results)
+
+    def test_B3_so_happy_blocked_without_flormar(self):
+        """'so happy' without Flormar context must NOT fire So Happy entity."""
+        r = _resolver()
+        results = r.resolve_text("i am so happy with this fragrance purchase")
+        assert "So Happy" not in _names(results)
+
+    def test_B3b_so_happy_blocked_in_conversational_context(self):
+        """'so happy i found this blind buy' — blocked."""
+        r = _resolver()
+        results = r.resolve_text("so happy i found this blind buy at the mall")
+        assert "So Happy" not in _names(results)
+
+    def test_B5_too_feminine_blocked_without_aigner(self):
+        """'too feminine' without Aigner context must NOT fire Too Feminine entity."""
+        r = _resolver()
+        results = r.resolve_text("this scent is too feminine for everyday male wear")
+        assert "Too Feminine" not in _names(results)
+
+    def test_B5b_too_feminine_blocked_in_opinion_phrase(self):
+        """'found it too feminine for my taste' — blocked."""
+        r = _resolver()
+        results = r.resolve_text("i found it too feminine for my taste honestly")
+        assert "Too Feminine" not in _names(results)
+
+    def test_B7_true_icon_blocked_without_aigner(self):
+        """'true icon' without Aigner context must NOT fire True Icon entity."""
+        r = _resolver()
+        results = r.resolve_text("baccarat rouge 540 is a true icon of modern perfumery")
+        assert "True Icon" not in _names(results)
+
+    def test_B7b_true_icon_blocked_in_superlative_context(self):
+        """'creed aventus remains a true icon' — blocked."""
+        r = _resolver()
+        results = r.resolve_text("creed aventus remains a true icon of masculine fragrance")
+        assert "True Icon" not in _names(results)
+
+    def test_B9_first_class_blocked_without_aigner(self):
+        """'first class' without Aigner context must NOT fire First Class entity."""
+        r = _resolver()
+        results = r.resolve_text("creed aventus is simply first class all the way")
+        assert "First Class" not in _names(results)
+
+    def test_B9b_first_class_blocked_in_quality_descriptor(self):
+        """'this is first class longevity' — blocked."""
+        r = _resolver()
+        results = r.resolve_text("the performance of this fragrance is first class")
+        assert "First Class" not in _names(results)
+
+    def test_B11_so_so_blocked_unconditionally(self):
+        """'so so' (normalized So...? So...?) must NEVER fire — in _BLOCKED_MULTI_TOKEN_PHRASES."""
+        r = _resolver()
+        results = r.resolve_text("the longevity was so so disappointing on my skin")
+        assert "So...? So...?" not in _names(results)
+
+    def test_B11b_so_so_blocked_even_with_brand_context(self):
+        """'so so' is unconditionally blocked even if some brand token appeared nearby."""
+        r = _resolver()
+        # Even with aigner nearby, "so so" should remain blocked
+        results = r.resolve_text("this aigner flanker is so so compared to the original")
+        assert "So...? So...?" not in _names(results)
+
+
+# ---------------------------------------------------------------------------
+# B — RES-AMB3 Positive tests: phrases ALLOWED with brand proximity
+# ---------------------------------------------------------------------------
+
+class TestPositiveCasesAMB3:
+    def test_B2_very_well_resolves_with_berdoues(self):
+        """'very well berdoues review' MUST resolve when brand is nearby."""
+        r = _resolver()
+        results = r.resolve_text("very well by berdoues is a hidden gem oriental")
+        assert "Very Well" in _names(results)
+
+    def test_B4_so_happy_resolves_with_flormar(self):
+        """'so happy flormar review' MUST resolve when brand is nearby."""
+        r = _resolver()
+        results = r.resolve_text("so happy by flormar is surprisingly well blended")
+        assert "So Happy" in _names(results)
+
+    def test_B6_too_feminine_resolves_with_aigner(self):
+        """'too feminine aigner review' MUST resolve when brand is nearby."""
+        r = _resolver()
+        results = r.resolve_text("aigner too feminine is a classic floral from the 90s")
+        assert "Too Feminine" in _names(results)
+
+    def test_B8_true_icon_resolves_with_aigner(self):
+        """'true icon aigner review' MUST resolve when brand is nearby."""
+        r = _resolver()
+        results = r.resolve_text("aigner true icon smells like a timeless fougere")
+        assert "True Icon" in _names(results)
+
+    def test_B10_first_class_resolves_with_aigner(self):
+        """'first class aigner review' MUST resolve when brand is nearby."""
+        r = _resolver()
+        results = r.resolve_text("aigner first class is the best budget option")
+        assert "First Class" in _names(results)
+
+
+# ---------------------------------------------------------------------------
+# B12–B14 — RES-AMB3 structure checks + regression
+# ---------------------------------------------------------------------------
+
+class TestGuardStructureAMB3:
+    def test_B12_blocked_multi_token_phrases_has_so_so(self):
+        """'so so' must be in _BLOCKED_MULTI_TOKEN_PHRASES."""
+        assert "so so" in _BLOCKED_MULTI_TOKEN_PHRASES, (
+            "'so so' (normalized So...? So...?) missing from _BLOCKED_MULTI_TOKEN_PHRASES"
+        )
+
+    def test_B13_amb3_phrases_present_in_guard(self):
+        """All RES-AMB3 guard phrases must be present in _AMBIGUOUS_PHRASE_GUARD."""
+        expected = {
+            "very well", "so happy", "too feminine", "true icon", "first class",
+        }
+        for phrase in expected:
+            assert phrase in _AMBIGUOUS_PHRASE_GUARD, (
+                f"RES-AMB3 guard phrase missing: {phrase!r}"
+            )
+
+    def test_B14_amb1_amb2_phrases_unaffected_by_amb3(self):
+        """RES-AMB1 + RES-AMB2 guard phrases must still be present after AMB3."""
+        prior_phrases = {
+            # RES-AMB1
+            "i am", "right now", "scent of", "blue oud", "peace love",
+            # RES-AMB2
+            "so you", "you are", "en route", "fragrance of summer",
+            "one only", "one and only", "good vibes",
+        }
+        for phrase in prior_phrases:
+            assert phrase in _AMBIGUOUS_PHRASE_GUARD, (
+                f"Prior guard phrase was removed: {phrase!r}"
+            )
+
+    def test_B14b_amb1_behavior_unchanged_i_am(self):
+        """RES-AMB1 'i am' still blocked after AMB3 additions."""
+        r = _resolver()
+        results = r.resolve_text("i am really happy with this flanker")
+        assert "I Am" not in _names(results)
+
+    def test_B14c_amb2_behavior_unchanged_good_vibes(self):
+        """RES-AMB2 'good vibes' still blocked after AMB3 additions."""
+        r = _resolver()
+        results = r.resolve_text("this fragrance gives nothing but good vibes all day")
         assert "Good Vibes" not in _names(results)

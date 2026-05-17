@@ -49,6 +49,19 @@ Specifically: if downstream rows (`entity_mentions`, `entity_timeseries_daily`, 
 IMPLEMENTED — FINAL SOURCE STRIP PENDING
 ```
 
+### Repair Scope Compatibility Rule
+
+**The RS strip window (date cutoff) must cover the full date range of any aggregation recompute that runs after the repair — including retroactive recomputes triggered by unrelated data corrections.**
+
+Root cause documented (RES-AMB1 Phase 2 regression, 2026-05-17):
+- `res_amb1_targeted_repair.py` stripped RS with `--days 30` (cutoff: 2026-04-17)
+- DATA4-D later ran aggregation recompute for 43 dates starting 2026-04-04
+- `_load_resolved_signals()` reads ALL resolved_signals with no date filter
+- 17 RS rows from 2026-04-11/13 (before the 30-day cutoff) were never stripped
+- The recompute found those unstripped RS rows and recreated false entity_mentions
+
+**Rule:** Any RS strip for an ambiguous false-positive entity must strip ALL historical RS rows for that entity — no `--days` window. Use `LIKE '%canonical_name%'` without a date condition to catch pre-cutoff accumulations.
+
 ### Required Delivery Line
 
 Every task report that includes deferred verification must end with one of:
