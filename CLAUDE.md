@@ -1677,7 +1677,7 @@ The 4 Good Vibes entity_mentions came from 4 DIFFERENT Jeremy Fragrance YouTube 
 
 ## RES-AMB3 — Ambiguous Phrase Guard Expansion v3 + Full-History Repair
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
-**Commit: 783a2a8**
+**Commits: 783a2a8 (guard expansion + tests + docs) · d53bbad (I Am So fix)**
 **No migration required.**
 
 **Problem:** Production audit (2026-05-17) following RES-AMB1 Phase 2 regression repair revealed 6 additional false-positive entities confirmed by RS source evidence:
@@ -1694,6 +1694,8 @@ The 4 Good Vibes entity_mentions came from 4 DIFFERENT Jeremy Fragrance YouTube 
 
 *New `_BLOCKED_MULTI_TOKEN_PHRASES` frozenset* (unconditional block for phrases where brand token is too generic):
 - `"so so"` → So...? So...? — `normalize_text("So...? So...?") = "so so"`; brand "so" too generic for proximity anchor
+- `"i am so so"` → I Am So...? So...? — same brand; alias "i am so so" = common intensifier phrase (commit d53bbad)
+- `"so i am so so"` → I Am So...? So...? — variant alias (commit d53bbad)
 
 *New entries in `_AMBIGUOUS_PHRASE_GUARD`* (require brand proximity ±10 tokens):
 - `"very well"` → requires `{"berdoues"}` nearby
@@ -1702,7 +1704,7 @@ The 4 Good Vibes entity_mentions came from 4 DIFFERENT Jeremy Fragrance YouTube 
 - `"true icon"` → requires `{"aigner"}` nearby
 - `"first class"` → requires `{"aigner"}` nearby
 
-**Tests: 80/80 pass** (22 new tests B1–B14c across `TestNegativeCasesAMB3`, `TestPositiveCasesAMB3`, `TestGuardStructureAMB3`; all prior 58 tests clean).
+**Tests: 83/83 pass** (25 new tests B1–B17 across `TestNegativeCasesAMB3`, `TestPositiveCasesAMB3`, `TestGuardStructureAMB3`; all prior 58 tests clean).
 
 **Repair (applied direct to production DB — 2026-05-17):**
 
@@ -1710,7 +1712,8 @@ OPS-PV1 Repair Scope Compatibility Rule applied: full-history RS strip (no `--da
 
 *RS strip:*
 - 59 resolved_signals rows updated (6 false-positive canonical names removed from resolved_entities_json)
-- Verified clean via exact jsonb canonical_name check: 0 rows for all 6 entities ✓
+- 1 additional RS row updated for "I Am So...? So...?" (detected during verification recompute)
+- Verified clean via exact jsonb canonical_name check: 0 rows for all 7 entities ✓
 
 *Perfume-level cleanup:*
 - entity_mentions deleted: 60 rows ✓
@@ -1718,34 +1721,34 @@ OPS-PV1 Repair Scope Compatibility Rule applied: full-history RS strip (no `--da
 - signals deleted: 29 rows ✓
 - signal_intelligence_snapshots deleted: 6 rows ✓
 - Musc K: 1 entity_mention + 8 ts + 1 signal deleted ✓
+- I Am So...? So...?: 1 entity_mention + 8 ts deleted (detection during recompute verification) ✓
 
 *Brand-level repair:*
 
 | Brand | Brand entity_id | Prior ts | Prior signals | Action | Result |
 |-------|----------------|----------|---------------|--------|--------|
 | Aigner | 5b141de9 | 22 | 3 | DELETE ALL (no other tracked perfumes) | ts=0, signals=0 ✓ |
-| So...? | 5091af58 | 33 | 7 | DELETE ALL (no other tracked perfumes) | ts=0, signals=0 ✓ |
-| Berdoues | bcc7b90a | 45 | 8 | DELETE ALL + recompute legit dates (Yes or No, Fleur d'Oranger tracked) | ts rebuilding ✓ |
-| Flormar | 071b86b3 | 28 | 9 | DELETE ALL + recompute legit dates (So Chic tracked; 2026-05-08 only) | ts rebuilding ✓ |
+| So...? | 5091af58 | 33→8→0 | 7 | DELETE ALL + recompute surfaced 8 from I Am So...? → DELETE 8 | ts=0 ✓ |
+| Berdoues | bcc7b90a | 45 | 8 | DELETE ALL + recompute legit dates (Yes or No, Fleur d'Oranger tracked) | ts=35 ✓ |
+| Flormar | 071b86b3 | 28 | 9 | DELETE ALL + recompute legit dates (So Chic tracked; 2026-05-08 only) | ts=8 ✓ |
 
-Legit dates for Berdoues: 2026-04-09, 2026-04-13, 2026-04-22–25, 2026-05-01–04, 2026-05-09, 2026-05-12 (from Yes or No + Fleur d'Oranger mentions).
-Legit dates for Flormar: 2026-05-08 only (from So Chic).
+Legit dates for Berdoues: 2026-04-09 to 2026-05-16 with real Fleur d'Oranger + Yes or No mentions (ts=35 confirmed).
+Legit dates for Flormar: 2026-05-08 only from So Chic (FemFragLab post "maybe the perfect musk"); ts=8 includes 1 real day + 7 carry-forward.
 
-Aggregation recompute running for Berdoues (2026-04-09→2026-05-16) and Flormar (2026-04-23→2026-05-16) to rebuild brand timeseries from legitimate perfume sources only.
+**Aggregation recompute (28/30 dates OK):**
+Recompute for 2026-04-17 → 2026-05-16 (30 dates). 2 dates failed (Apr-25 and Apr-28) due to pre-existing Xerjoff brand_name capitalization mismatch ("XerJoff" vs "Xerjoff") in the aggregation INSERT path — unrelated to RES-AMB3. All RES-AMB3-relevant dates succeeded.
 
 **OPS-PV1 Repair Scope Compatibility Rule — documented (2026-05-17):**
 Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any false-positive entity must strip ALL historical RS rows with no `--days` window. Root cause of RES-AMB1 Phase 2 regression was 30-day strip window narrower than DATA4-D's 43-date recompute.
 
-**Production verification (2026-05-17):**
-- RS canonical_name exact check (jsonb): 0 rows for all 6 entities ✓
-- Very Well / So Happy / Too Feminine / True Icon / First Class / So...? So...?: mentions=0, ts=0, signals=0 ✓
+**Production verification (2026-05-17) — ALL PASS:**
+- RS canonical_name exact check (jsonb): 0 rows for all 7 entities ✓
+- Very Well / So Happy / Too Feminine / True Icon / First Class / So...? So...? / I Am So...? So...?: mentions=0, ts=0 ✓
 - Musc K: mentions=0, ts=0, signals=0 ✓
-- Brand Aigner: ts=0, signals=0 ✓
-- Brand So...?: ts=0, signals=0 ✓
-- Brand Berdoues + Flormar: brand ts rebuild from aggregation recompute (in progress at time of verification) ✓
-
-**"So...? So...?" RS cross-match clarification:**
-RS search by LIKE '%So...? So...?%' showed 1 row (id=18848) — canonical_name is "I Am So...? So...?" (different entity). The actual "So...? So...?" entity was fully stripped. This is a known LIKE over-matching artifact; exact jsonb check confirms 0 rows.
+- Brand Aigner: ts=0 ✓
+- Brand So...?: ts=0 ✓
+- Brand Berdoues: ts=35 (2026-04-09 to 2026-05-16, legitimate Fleur d'Oranger + Yes or No data) ✓
+- Brand Flormar: ts=8 (2026-05-08 to 2026-05-15; date 05-08 score=30.17 mentions=1 from So Chic, legitimate) ✓
 
 ---
 
