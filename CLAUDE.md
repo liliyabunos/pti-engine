@@ -1752,6 +1752,57 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 
 ---
 
+## RES-AMB4 — Audit-Driven False Positive Guard Expansion + Production Repair
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
+**Commits: 1f63429 (guard expansion + tests + repair script)**
+**No migration required.**
+
+**Trigger:** RES-AMB-GLOBAL scoring bug fix (D1 missing auxiliary verbs + D2 no floor) caused "I will" (Femascu) to be omitted from the audit delivery. Bug fixed; "I will" correctly scored B=0.622. 7 additional B+ entities confirmed via RS inspection. All 8 guarded in this batch.
+
+**8 confirmed false-positive entities (all 0% RS brand hit rate):**
+| Entity | Brand | RS rows | Mentions | TS | Signals | Snapshots |
+|--------|-------|---------|----------|----|---------|-----------|
+| I will | Femascu | 133 | 133 | 44 | 22 | 2 |
+| Very Pretty | Michael Kors | 3 | 3 | 6 | 1 | 0 |
+| So Sexy! | Fiorucci | 4 | 4 | 13 | 3 | 2 |
+| Day One | Smell Bent | 6 | 6 | 20 | 1 | 0 |
+| Best Man | Helena Rubinstein | 8 | 8 | 12 | 2 | 0 |
+| You & You | Puig | 7 | 7 | 28 | 1 | 0 |
+| Jasmine & Rose | Primark | 4 | 4 | 18 | 1 | 0 |
+| Cedar Wood | Monotheme | 1 | 1 | 1 | 1 | 1 |
+
+**Guard expansion (`perfume_resolver.py` `_AMBIGUOUS_PHRASE_GUARD`):**
+- `"i will"` → requires `femascu` nearby
+- `"very pretty"` → requires `michael` or `kors` nearby
+- `"so sexy"` → requires `fiorucci` nearby
+- `"day one"` → requires `smell` or `bent` nearby
+- `"best man"` → requires `helena` or `rubinstein` nearby
+- `"you you"` / `"you and you"` → requires `puig` nearby (normalize_text("You & You") = "you you")
+- `"jasmine rose"` / `"jasmine and rose"` → requires `primark` nearby
+- `"cedar wood"` → requires `monotheme` nearby
+
+All use proximity check (not unconditional block) — brand tokens are distinctive enough as anchors.
+
+**RS strip bug fixed:** Added `COALESCE(..., '[]')` to handle case where FP entity was the only one in the RS array (prevents NOT NULL constraint violation).
+
+**Repair applied (2026-05-17):**
+- 166 RS rows stripped (full-history, per OPS-PV1 rule)
+- 166 entity_mentions deleted
+- 142 entity_timeseries_daily deleted
+- 32 signals deleted
+- 5 signal_intelligence_snapshots deleted
+- Brand cleanup: 256 brand ts + 37 brand signals deleted (OPS-EE1: let pipeline recompute)
+
+**Production verification (2026-05-17):**
+- All 8 FP entities: RS=0, mentions=0, ts=0, signals=0 ✓
+- All 8 brand entities: ts=0, signals=0 (pipeline will recompute) ✓
+
+**Tests:** `tests/unit/test_res_amb4_guard.py` — 47/47 pass (C, P, R, G suites).
+
+**Production verification mode: IMMEDIATE — VERIFIED**
+
+---
+
 ## RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
 **Script: `scripts/audit_ambiguous_entity_risk.py`**
@@ -3022,6 +3073,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED (Phase 2 repair applied 2026-05-17) | 2026-05-17 |
 | RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | RES-AMB3 — Ambiguous Phrase Guard v3 (6 entities: Berdoues/Flormar/Aigner×3/So...?) + Musc K repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
+| RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
