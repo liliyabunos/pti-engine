@@ -132,6 +132,44 @@ _BLOCKED_MULTI_TOKEN_PHRASES: frozenset[str] = frozenset({
 #   "true icon"   → True Icon (Aigner) — superlative description; 1 false mention confirmed
 #   "first class" → First Class (Aigner) — quality descriptor; 1 false mention confirmed
 #
+# RES-AMB4 expansion (2026-05-17 — audit-driven batch from RES-AMB-GLOBAL confirmed FPs):
+#   "i will"          → I Will (Femascu) — future-tense sentence construction; 140 false mentions
+#                        over 33 dates; breakout+acceleration_spike signals fired on Dashboard.
+#                        RS evidence: "In this video, I will be reviewing..."; 0% brand hit.
+#                        Guard choice: proximity (femascu is distinctive and usable as anchor).
+#
+#   "very pretty"     → Very Pretty (Michael Kors) — descriptor phrase in review prose; 3 false
+#                        mentions. RS: Nui Cobalt / Maison Des Animaux posts; 0% brand hit.
+#                        Guard choice: proximity (michael + kors are good anchors).
+#
+#   "so sexy"         → So Sexy! (Fiorucci) — exclamation/descriptor; 4 false mentions.
+#                        normalize_text("So Sexy!") = "so sexy" (! stripped).
+#                        RS: "omg this is not a fancy review... smells so sexy"; 0% brand hit.
+#                        Guard choice: proximity (fiorucci is distinctive).
+#
+#   "day one"         → Day One (Smell Bent) — temporal phrase ("day one reviewing my collection");
+#                        6 false mentions; wedding planning Reddit + review-journal temporal use.
+#                        Guard choice: proximity (smell + bent together are distinctive).
+#
+#   "best man"        → Best Man (Helena Rubinstein) — Jeremy Fragrance "Best MAN Fragrance"
+#                        video title descriptor (4×); wedding context; 8 false mentions.
+#                        Guard choice: proximity (helena + rubinstein are distinctive).
+#
+#   "you you"         → You & You (Puig) — normalize_text("You & You") = "you you";
+#                        conversational pronoun sequence; 7 false mentions.
+#   "you and you"     → same entity, alias variant form.
+#                        Guard choice: proximity (puig is distinctive).
+#
+#   "jasmine rose"    → Jasmine & Rose (Primark) — normalize_text("Jasmine & Rose") = "jasmine rose";
+#                        ingredient/note pair in preference/recommendation posts; 4 false mentions.
+#   "jasmine and rose"→ same entity, alias variant form.
+#                        Guard choice: proximity (primark is distinctive; note pair alone is ambiguous).
+#
+#   "cedar wood"      → Cedar Wood (Monotheme) — note name used in Heretic Rhubarb Thief review;
+#                        1 false mention; 1 signal + 1 snapshot fired on a FP event.
+#                        Guard choice: proximity (monotheme is distinctive; "cedar wood" as a
+#                        standalone 2-token phrase is always a note reference without brand context).
+#
 # "so so" (So...? So...?) is in _BLOCKED_MULTI_TOKEN_PHRASES — brand token "so" is too generic.
 #
 # "knize two" is fixed via _BLOCKED_SINGLE_WORD_ALIASES ("two") above — its
@@ -158,6 +196,17 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     "too feminine":       [frozenset({"aigner"})],
     "true icon":          [frozenset({"aigner"})],
     "first class":        [frozenset({"aigner"})],
+    # RES-AMB4 — audit-driven batch (2026-05-17)
+    "i will":             [frozenset({"femascu"})],
+    "very pretty":        [frozenset({"michael", "kors"})],
+    "so sexy":            [frozenset({"fiorucci"})],
+    "day one":            [frozenset({"smell", "bent"})],
+    "best man":           [frozenset({"helena", "rubinstein"})],
+    "you you":            [frozenset({"puig"})],              # normalize_text("You & You")
+    "you and you":        [frozenset({"puig"})],              # alias variant
+    "jasmine rose":       [frozenset({"primark"})],           # normalize_text("Jasmine & Rose")
+    "jasmine and rose":   [frozenset({"primark"})],           # alias variant
+    "cedar wood":         [frozenset({"monotheme"})],
 }
 
 
