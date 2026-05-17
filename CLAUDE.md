@@ -1753,7 +1753,7 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 ---
 
 ## RES-AMB4 — Audit-Driven False Positive Guard Expansion + Production Repair
-**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
+**STATUS: CORE FALSE-POSITIVE REPAIR VERIFIED · BRAND RECOMPUTE PENDING (see PV-005)**
 **Commits: 1f63429 (guard expansion + tests + repair script)**
 **No migration required.**
 
@@ -3073,7 +3073,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED (Phase 2 repair applied 2026-05-17) | 2026-05-17 |
 | RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | RES-AMB3 — Ambiguous Phrase Guard v3 (6 entities: Berdoues/Flormar/Aigner×3/So...?) + Musc K repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
-| RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
+| RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | CORE FALSE-POSITIVE REPAIR VERIFIED · BRAND RECOMPUTE PENDING (PV-005) | 2026-05-17 |
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |

@@ -270,6 +270,77 @@ done
 
 ---
 
+---
+
+### PV-005 — RES-AMB4 Brand Recompute Verification (5 Mixed Brands)
+
+| Field | Value |
+|-------|-------|
+| **Verification ID** | PV-005 |
+| **Phase / task** | RES-AMB4 — brand-level timeseries/signals restoration for 5 mixed brands |
+| **Related commits** | `1f63429` (repair script) |
+| **Repair applied** | 2026-05-17 |
+| **Current status** | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` |
+| **Blocking severity** | Medium — UI/API currently shows no score/trend for 5 brands that have legitimate tracked perfumes. Product gap, not data integrity issue. RS source is clean. |
+
+**Context:**
+
+The RES-AMB4 brand cleanup deleted brand-level `entity_timeseries_daily` + `signals` for all 8 affected brands using OPS-EE1 (delete all → let pipeline recompute). Post-deletion analysis confirmed:
+
+**3 brands were 100% false-positive-derived (deletion was fully correct):**
+- **Femascu** — "I will" was the only tracked perfume. All ts=48, sig=22 were FP-derived.
+- **Smell Bent** — "Day One" was the only tracked perfume. All ts=23, sig=1 were FP-derived.
+- **Puig** — "You & You" was the only tracked perfume. All ts=26, sig=0 were FP-derived.
+
+**5 brands were mixed — legitimate brand state was also deleted:**
+- **Michael Kors** — brand ts=35 deleted; "Very Pretty" had ts=6. ~29 rows likely from other MK tracked perfumes.
+- **Fiorucci** — brand ts=30 deleted; "So Sexy!" had ts=13. ~17 rows likely from other Fiorucci tracked perfumes.
+- **Helena Rubinstein** — brand ts=39 deleted; "Best Man" had ts=12. ~27 rows likely from other HR tracked perfumes.
+- **Primark** — brand ts=41 deleted; "Jasmine & Rose" had ts=18. ~23 rows likely from other Primark tracked perfumes.
+- **Monotheme** — brand ts=14 deleted; "Cedar Wood" had ts=1. ~13 rows likely from other Monotheme tracked perfumes.
+
+The RS strip was correctly applied full-history for all 8 FP perfume entities. The pipeline's next aggregation recompute will re-derive legitimate brand state from the now-clean RS rows. No FP canonical names will be recreated because the guard is live in `perfume_resolver.py`.
+
+**Trigger event:** Next scheduled morning pipeline (11:00 UTC 2026-05-18) or evening pipeline (23:00 UTC 2026-05-17).
+
+**Verification SQL (run after pipeline):**
+
+```sql
+-- Check all 5 mixed brands have non-zero ts rows restored
+SELECT em.canonical_name, COUNT(etd.id) AS ts_rows, MAX(etd.date) AS latest_date
+FROM entity_market em
+LEFT JOIN entity_timeseries_daily etd ON etd.entity_id = em.id
+WHERE em.entity_type = 'brand'
+  AND em.canonical_name IN ('Michael Kors', 'Fiorucci', 'Helena Rubinstein', 'Primark', 'Monotheme')
+GROUP BY em.canonical_name
+ORDER BY em.canonical_name;
+-- Expect: ts_rows > 0 for all 5 brands (exact counts depend on which perfumes they have tracked)
+
+-- Confirm no FP canonical names re-appear in RS rows
+SELECT COUNT(*) FROM resolved_signals
+WHERE resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('canonical_name', 'Very Pretty'))
+   OR resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('canonical_name', 'So Sexy!'))
+   OR resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('canonical_name', 'Best Man'))
+   OR resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('canonical_name', 'You & You'))
+   OR resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('canonical_name', 'Jasmine & Rose'))
+   OR resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('canonical_name', 'Cedar Wood'));
+-- Expect: 0 (all newly ingested RS rows pass through the updated guard)
+```
+
+**Pass criteria (ALL must pass):**
+- Michael Kors: `ts_rows > 0` ✓
+- Fiorucci: `ts_rows > 0` ✓
+- Helena Rubinstein: `ts_rows > 0` ✓
+- Primark: `ts_rows > 0` ✓
+- Monotheme: `ts_rows > 0` ✓
+- FP re-appearance check: `COUNT(*) = 0` ✓
+
+**On pass:** Update RES-AMB4 status in CLAUDE.md to `COMPLETE — PRODUCTION VERIFIED`. Close this entry.
+
+**Important note:** If any of the 5 brands shows `ts_rows = 0` after the pipeline runs, this means they have no other tracked perfumes generating mentions in the current pipeline window. That would still be a legitimate state (not a failure of the repair) — but confirm by checking `entity_market` for other tracked perfumes under that brand.
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -278,3 +349,4 @@ done
 | PV-002 | FTG-5 / SN1-A snapshots | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED — 134 snapshots written in manual recovery |
 | PV-003 | May 16 incident root-cause | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
 | PV-004 | DATA4-B brand promotion guard + repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
+| PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
