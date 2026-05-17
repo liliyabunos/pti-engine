@@ -1889,6 +1889,201 @@ DATABASE_URL=<prod-url> python3 scripts/audit_ambiguous_entity_risk.py --scope a
 
 ---
 
+## SIG-QA1 — Signal Evidence Integrity Audit & Policy Design
+**STATUS: COMPLETE — AUDIT / POLICY DESIGN VERIFIED (2026-05-17)**
+**No migration required. No deploy required.**
+
+### Why This Phase Exists
+
+RES-AMB1/2/3/4 addressed false-positive entities caused by *ambiguous perfume names* — common phrases used as entity aliases. SIG-QA1 addresses a broader and more fundamental problem: **a market signal can be created even when the source does not actually reference the specific perfume product at all**, regardless of whether the perfume name is ambiguous.
+
+Failure modes include:
+- note/ingredient terms that are also perfume names ("Orange Blossom", "Black Pepper")
+- generic descriptor phrases used as marketing language ("Pure Luxury", "Enjoy the Day")
+- ordinary nouns used in prose ("Revolution", "Vision")
+- product-category terms becoming entities ("Men's Cologne", "Hair Perfume")
+- partial-name matches from a *different product's* name ("On the Rocks" from "Apple Brandy on the Rocks")
+- multi-entity spray from note-heavy sources (single note-preference post generating 19+ entity mentions)
+
+### Seed Case Verdicts
+
+| Entity | Brand | Verdict | Failure Mode |
+|--------|-------|---------|--------------|
+| Pure Luxury | Wolken Parfums | **CONFIRMED UNSUPPORTED** | D — Generic descriptor. All 4 RS rows: "smell like pure luxury", "pure luxury floral" as adjective phrase. Zero brand mention. |
+| On the Rocks | Wolken Parfums | **CONFIRMED UNSUPPORTED** | F — Partial-name collision. All 4 RS rows discuss *Kilian Apple Brandy on the Rocks* — a different product whose name contains the substring. |
+| Enjoy the Day | Wolken Parfums | **CONFIRMED UNSUPPORTED** | D — Generic phrase. Single RS row from r/weddingplanning "enjoy the day" in prose about wedding stress. |
+| Orange Blossom | Angela Flanders | **CONFIRMED UNSUPPORTED** | B — Note/ingredient collision. RS matched from note-preferences post ("I like woods, incense, orange blossom"), YSL Libre note-list ("lavender, vanilla, and orange blossom"), indie perfume descriptions. One Reddit post (1teymt5) resolved **19 entities** from a single note-discussion post. |
+| Revolution | Cire Trudon | **PROBABLE UNSUPPORTED** | C — Ordinary word collision. Matched from Alkemia indie review post alongside 11 other entities. Founder-confirmed: "revolution" used in prose, not product reference. |
+| Vision | Jaguar | **CONFIRMED SUPPORTED** | A — Product-confirmed. Both RS rows: "Jaguar Vision X Creed Aventus" — Indonesian fragrance mixing content explicitly naming the product. |
+
+### Evidence Integrity Failure Taxonomy (SIG-QA1 v1)
+
+| Code | Name | Definition | Examples |
+|------|------|------------|---------|
+| **A** | PRODUCT-CONFIRMED MENTION | Source supports the specific perfume entity. Brand+name explicit, or strong product context. | "Jaguar Vision X Creed Aventus", "My Creed Aventus review" |
+| **B** | NOTE / INGREDIENT COLLISION | Entity name is also a fragrance note/material; source uses it as a note/ingredient, not a product. | "Orange Blossom", "Black Pepper", "White Musk", "Vetiver", "Vanilla" |
+| **C** | ORDINARY WORD COLLISION | Entity name is a common noun used in ordinary prose without product context. | "Revolution", "Vision", "Imagination", "Follow Me" |
+| **D** | GENERIC DESCRIPTOR / MARKETING PHRASE | Entity name is an everyday marketing phrase or lifestyle descriptor. | "Pure Luxury", "Enjoy the Day", "Feel Good", "Be Cool", "Come Together" |
+| **E** | AMBIGUOUS PHRASE ENTITY | Already partially handled by RES-AMB. Common English phrase as a perfume name. | "I Will", "So Happy", "Day One" — overlap with SIG-QA on entity mentions from unguarded RS rows. |
+| **F** | PARTIAL-NAME COLLISION | A different product's full name *contains* this entity's name as a substring; source is about the other product. | "On the Rocks" matched from "Apple Brandy on the Rocks" (Kilian) |
+| **G** | CATEGORY DESCRIPTOR COLLISION | Entity name describes a product *category* or *format*, not a specific product. | "Men's Cologne" (Coty), "Hair Perfume" (Balmain), "Bath & Body" (Marbert) |
+| **H** | MULTI-ENTITY SPRAY | A single source resolves ≥8 entities. When a source drives many attributions, per-entity evidence is diluted; note-list posts, collection-overview videos. | Reddit note-preference post (19 entities), YouTube "all my 10/10 fragrances" (40 entities) |
+
+### Production Exposure Audit (2026-05-17)
+
+**High-entity-count sources (Type H):**
+- 20 sources resolved ≥8 entities from a single content item
+- Top offender: 40 entities from 1 YouTube video; 34 from 1 YouTube; 32 from 2 sources
+- Note-heavy Reddit posts: 29 entities (indie haul review), 27 (Le Labo collection review), 25 (random reviews), 24×3
+- These are not all false — collection videos legitimately name many products — but note-list posts in this group generate systematic Type B collisions
+
+**Note/Ingredient collision candidates (Type B):** 40 tracked entities with note-term names, notable examples:
+- `Orange Blossom` (Angela Flanders) ts=43, score=47.9 — CONFIRMED FP above
+- `White Musk` (W.Dressroom) ts=35, score=38.8 — "white musk" appears in note lists constantly
+- `Black Pepper` (Demeter) ts=33, score=13.5 — 0% brand token in RS (active today)
+- `Green Tea` (Coty) ts=27, score=37.0 — tea flavor appears in countless descriptions
+- `Spicy Vanilla` (Rituals) ts=43 — probable note-collision
+- `Orange Blossoms` (A.A. Vantine) ts=29 — same note collision pattern as above
+
+**Category descriptor entities (Type G, from active-today 0%-brand-context list):**
+- `Men's Cologne` (Coty) rs_total=40, brand_context=0% — "men's cologne" appears everywhere as category language
+- `Hair Perfume` (Balmain) ts=41 — "hair perfume" used as product-type descriptor
+- `Bath & Body` (Marbert) rs_total=16, brand_context=0%
+
+**Generic phrase entities (Type D, active-today):**
+- `Feel Good` (Esprit) rs=6, brand_context=0%
+- `Be Cool` (Avon) rs=3, brand_context=0%
+- `Come Together` (Vintner's Reserve) rs=4, brand_context=0%
+- `Bride To Be` (Primark) rs=2, brand_context=0% — same wedding context as RES-AMB
+- `Day to Day` (Primark) rs=3, brand_context=0%
+- `Enjoy the Day` (Wolken) — already confirmed above
+
+**Ordinary word entities (Type C, active-today):**
+- `Black Jeans` (Versace) rs=3, brand_context=0% — clothing item description
+- `Black Suit` (Ramon Monegal) rs=5, brand_context=0% — suit description
+- `Earl Grey` / `Earl Grey Tea` (Demeter) — tea type, brand_context=0%
+- `Bitter Orange` (Zara) — note + Zara triggers many non-Zara mentions
+
+**Estimated exposure:** Of the 100 active-today entities sampled, **16 have 0% brand token context** in their RS evidence. Combined with the 40 note-term entities in market data and the 20 high-entity-count sources, the problem is systemic, not edge-case. Conservatively, **10–20% of active-today market entities may have weak or unsupported evidence**.
+
+### Current Attribution Path — Root Cause
+
+```
+content_item (text)
+    ↓ multi_field_resolver (alias/canonical name matching)
+    → confidence=1.0 means "exact phrase found in text field"
+    → NO context evaluation performed
+    ↓ resolved_signals.resolved_entities_json
+    → "Orange Blossom" found in text → confidence=1.0, match_type=exact
+    → NO check: is this a note mention or a product mention?
+    ↓ aggregate_daily_market_metrics reads resolved_signals
+    → entity_mentions row written
+    → timeseries / brand rollup written
+    ↓ signal detection
+    → signals written if threshold reached
+    ↓ Dashboard / public API
+    → entity appears in Top Movers with false score
+```
+
+**What the current system does catch:**
+- RES-AMB guards: block resolution for ~90 specific known-bad aliases (require brand proximity)
+- RES-AMB-GLOBAL audit: scores post-hoc risk of accumulated false mentions
+- DATA4-B brand promotion guard: blocks ghost brand creation from structural fragments
+
+**What it does NOT catch:**
+- Note/ingredient context at resolution time
+- Product-category language used as entity name
+- Partial-name substring matches from different products
+- Generic descriptors used as adjectives vs. product identifiers
+- High entity-count source dilution (no per-source entity-count penalty)
+
+### Architecture Recommendation
+
+**Chosen: Option 4 — Hybrid Evidence Promotion Gate**
+
+Reasoning:
+- Option 1 (resolver-level hard rejection) risks suppressing legitimate niche mentions where brand tokens don't appear in text but context is genuinely fragrance-product. Too aggressive.
+- Option 2 (post-resolver promotion gate) is the right primary mechanism — allows raw RS to preserve full evidence for audit while blocking weak attributions from becoming entity_mentions.
+- Option 3 (signal/report QA) is too late — entity_mentions write to timeseries which writes to brand rollups; suppressing at signal level still allows polluted timeseries.
+- Option 4 combines: hard block for clearly unsupported high-risk patterns at RS stage, evidence score for uncertain cases, operator audit queue for flagged cases.
+
+**Recommended gate location:** Between `resolved_signals` and `entity_mentions` write in `aggregate_daily_market_metrics.py`. The aggregation job reads RS rows and writes entity_mentions — this is the single right place to insert an evidence check.
+
+### Proposed v1 Evidence Features (SIG-QA2 Policy Inputs)
+
+Evidence scoring inputs (each 0.0–1.0, composited):
+
+1. **Brand Token Proximity** (weight: 0.35) — Is the brand name (any token) within ±15 tokens of the matched phrase in the source text? Currently used only in RES-AMB guards for blocked entities; must become a general positive signal.
+
+2. **Fragrance Context Signal** (weight: 0.25) — Are perfume-context keywords near the match? (`perfume`, `fragrance`, `scent`, `cologne`, `bottle`, `spray`, `edp`, `edt`, `dupe`, `clone`, `wear`, `longevity`, `sillage`, `projection`) → positive evidence.
+
+3. **Note Context Anti-Signal** (weight: 0.20, inverted) — Are note-list indicators near the match? (`notes:`, `top notes`, `heart notes`, `base notes`, `ingredient`, `accord`, `note profile`, `smells like`, `contains`) with the matched phrase immediately adjacent → probable note mention, not product.
+
+4. **Exact Full-Name Match** (weight: 0.10) — Does the matched phrase include the brand name? ("Angela Flanders Orange Blossom" vs. "orange blossom" alone) → full-name match requires less context. Single-word/note-term names require more.
+
+5. **Source Entity Density** (weight: 0.10, inverted) — If the source resolved >10 entities, apply a per-entity evidence penalty. A source naming 30 perfumes can legitimately mention all 30; a source mentioning 30 note terms likely contains note collisions. Combine with note-context anti-signal.
+
+**Proposed threshold:**
+- Evidence score ≥ 0.6 → promote to entity_mentions (A: supported)
+- Evidence score 0.3–0.6 → write entity_mention with `evidence_confidence = 'low'`; excluded from market metrics and signals; retained for audit
+- Evidence score < 0.3 → skip entity_mention; write to `weak_evidence_log` for operator review
+
+### Relationship to RES-AMB-GLOBAL
+
+RES-AMB-GLOBAL is a **post-hoc risk scoring tool** — it scores accumulated entities after mentions have already been written. SIG-QA2's evidence gate is a **prospective prevention layer** — it prevents weak mentions from being written in the first place.
+
+They are complementary and should both exist:
+
+| Layer | What it does | When it runs |
+|-------|-------------|--------------|
+| **RES-AMB guard** | Blocks resolution of specific known-bad aliases at resolver time | Per content item, at resolver |
+| **SIG-QA2 evidence gate** | Scores evidence quality before writing entity_mentions | Per entity resolution, at aggregation |
+| **RES-AMB-GLOBAL audit** | Post-hoc risk assessment of accumulated entities | Scheduled audit (daily/weekly) |
+
+RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it would become overloaded. Keep RES-AMB-GLOBAL as the "flag accumulated false entities for investigation" tool. SIG-QA2 is the prevention gate.
+
+### Next Build Phase — SIG-QA2
+
+**SIG-QA2 — Evidence-Aware Mention Promotion Gate v1**
+
+**What it builds:**
+- `evidence_confidence` column on `entity_mentions` (VARCHAR: `high` / `low` / `pending`) with server_default `'high'` for backwards compatibility
+- `EvidenceScorer` class in `perfume_trend_sdk/analysis/evidence_scorer.py` — computes 5-feature evidence score from matched_from + source context
+- Integration in `aggregate_daily_market_metrics._build_entity_mentions()` — scorer runs after resolution, before INSERT
+- `weak_evidence_log` table — captures skipped/low-confidence attributions for operator review
+- Aggregation, signal, and timeseries queries filter on `evidence_confidence != 'low'` (or include `'high'` only by default, with `--include-low-confidence` flag for debugging)
+- `scripts/sig_qa2_evidence_audit.py` — ad-hoc audit: show low-confidence entity_mentions for a given date range
+
+**Where it sits:** `aggregate_daily_market_metrics.py` → entity_mention write path
+
+**What existing data it uses:** `resolved_signals.resolved_entities_json` (contains `matched_from`), `canonical_content_items` (title, text_content, caption for context scan), entity_market brand_name
+
+**What UI/report behavior it protects:** Dashboard Top Movers, entity pages, signals, brand rollups — all currently accept any entity_mention regardless of evidence quality
+
+**Alembic migration required:** Yes — `evidence_confidence` column on `entity_mentions` + `weak_evidence_log` table
+
+**Status:** APPROVED — NEXT PHASE AFTER SIG-QA1
+
+### Seed Cases Requiring Repair
+
+The following confirmed-unsupported entities from SIG-QA1 need immediate data repair (same pattern as RES-AMB4). Schedule as SIG-QA1-REPAIR before SIG-QA2 implementation:
+
+**Confirmed for guard addition + repair:**
+- Pure Luxury (Wolken Parfums) — Type D
+- Enjoy the Day (Wolken Parfums) — Type D
+- On the Rocks (Wolken Parfums) — Type F (partial-name collision; requires smarter fix than proximity guard — see SIG-QA2)
+- Orange Blossom (Angela Flanders) — Type B
+- Men's Cologne (Coty) — Type G
+- Feel Good (Esprit) — Type D
+- Come Together (Vintner's Reserve) — Type D
+- Bride To Be (Primark) — Type D (same wedding-context pattern as RES-AMB)
+- Day to Day (Primark) — Type D
+
+Entities requiring further RS inspection before decision:
+- Black Pepper (Demeter), White Musk (W.Dressroom), Green Tea (Coty), Hair Perfume (Balmain), Bath & Body (Marbert), Black Jeans (Versace), Black Suit (Ramon Monegal), Earl Grey / Earl Grey Tea (Demeter), Be Cool (Avon), Bitter Orange (Zara), After the Rain, Apple Blossom (Auric Blends)
+
+---
+
 ## DATA5 / SEARCH1 — Market-Readable Perfume Catalog Search
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-15)**
 **Commit: 39eb700**
@@ -3075,6 +3270,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB3 — Ambiguous Phrase Guard v3 (6 entities: Berdoues/Flormar/Aigner×3/So...?) + Musc K repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | CORE FALSE-POSITIVE REPAIR VERIFIED · BRAND RECOMPUTE PENDING (PV-005) | 2026-05-17 |
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
+| SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
+| SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
