@@ -1522,7 +1522,7 @@ Note: All mismatched perfumes correctly appear on their parent brand's catalog p
 ---
 
 ## RES-AMB1 — Ambiguous Perfume Phrase Guard v1
-**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
 **Commit: 84d31a1**
 **No migration required.**
 
@@ -1582,10 +1582,36 @@ Juicy Couture 3 legitimate dates recomputed via `_rollup_brand_market_data()` (V
 
 **Tests:** `tests/unit/test_res_amb1_ambiguous_phrase_guard.py` — 32/32 pass (N, P, R, G suites).
 
+**Phase 2 Repair — Pre-Cutoff RS Row Regression (2026-05-17):**
+
+**Root cause of regression:** The original repair script (`scripts/res_amb1_targeted_repair.py`) used `--days 30` (default) to filter resolved_signals: `WHERE cci.collected_at >= cutoff`. Content collected before 2026-04-17 was excluded from the strip. 9 RS rows for "I Am", 5 for "Knize Two", 3 for "Scent of" — all collected 2026-04-11 to 2026-04-13 — were never stripped.
+
+**Recreation mechanism:** DATA4-D ran a 43-date aggregation recompute (2026-04-04 → 2026-05-16). The aggregation job reads ALL resolved_signals (no date filter in `_load_resolved_signals()`). For dates Apr 11-13, it found the unstripped RS rows and wrote new entity_mentions and brand timeseries for "I Am", "Knize Two", "Scent of", and Juicy Couture/Knize brands.
+
+**Phase 2 repair applied (2026-05-17) — direct DB via public proxy:**
+- `I Am` (cac757a0): 9 RS rows updated, 9 entity_mentions deleted, 10 ts deleted
+- `Knize Two Eau de Toilette` (f7a40d06): 5 RS rows updated, 5 entity_mentions deleted, 9 ts deleted
+- `Scent of` (96bd827c): 3 RS rows updated, 3 entity_mentions deleted, 8 ts deleted
+- `Knize` brand (f1f04239): 9 ts deleted (100% false — from Knize Two perfume)
+- `Juicy Couture` brand (691cade5): 6 false ts rows deleted (Apr 11-16, from I Am); 23 legitimate rows retained (Apr 17-May 10, from Viva La Juicy Le Bubbly); acceleration_spike signal at 2026-05-03 intact ✓
+
+**Post-repair verification (2026-05-17):**
+- I Am: mentions=0, ts=0, RS_remaining=0 ✓
+- Knize Two: mentions=0, ts=0, RS_remaining=0 ✓
+- Scent of: mentions=0, ts=0, RS_remaining=0 ✓
+- Knize brand: ts=0 ✓
+- Juicy Couture brand: ts=23 (legitimate carry-forward from 3 real dates), signals=1 ✓
+- All other RES-AMB2 false positives: CLEAN (You Are, So You, En Route, Fragrance of Summer, One & Only, Good Vibes, Right Now, Blue Oud, Peace Love &)
+- No remaining resolved_signals rows for any false-positive canonical names ✓
+
+**Repair-Complete Rule status:** Upstream (RS) stripped + downstream (mentions, ts, brand ts) deleted. No aggregation recompute needed — dates affected are pre-guard and carry-forward zeros will not persist without active RS rows.
+
+**"So...? So...?" flagged as suspicious:** 14 entity_mentions, 30 ts rows (2026-04-17 to 2026-05-16). RS spans Apr-May with Reddit content that doesn't clearly reference the "So...?" brand perfume. Investigation deferred — not in RES-AMB1/2 scope. Requires separate RES-AMB3 investigation if confirmed false positive.
+
 ---
 
 ## RES-AMB2 — Ambiguous Perfume Phrase Guard Expansion + Targeted Repair
-**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-16)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-17)**
 **Commits: 937be8d (guard expansion + tests) · 5f86566 (repair script)**
 **No migration required.**
 
@@ -2797,8 +2823,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | FTG-4 / RI1-E1B-DISPLAY — Market-readable relationship object display labels | COMPLETE — PRODUCTION VERIFIED | 2026-05-15 |
 | FTG-4 / RI1-E2 — Machine Candidate Discovery (new pair-level source required) | PLANNED — BLOCKED ON PAIR-LEVEL SIGNAL SOURCE | — |
 | FTG-5 / SN1-A — Signal Intelligence Snapshots | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
-| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
-| RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED (Phase 2 repair applied 2026-05-17) | 2026-05-17 |
+| RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
