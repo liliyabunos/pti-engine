@@ -58,6 +58,15 @@ _COMMON_ENGLISH_WORDS: frozenset = frozenset({
     "first", "class", "i", "am", "right", "now", "scent", "of",
     "blue", "peace", "love", "you", "are", "en", "route", "good",
     "vibes", "one", "only", "and", "the", "a", "an",
+    # Auxiliary / modal verbs — common in everyday speech, NOT product-name anchors
+    # Bug fix: "will" was missing, causing "I will" to score D1=0.57 instead of 0.85
+    "will", "can", "would", "could", "should", "might", "may", "shall",
+    "have", "has", "had", "be", "been", "being", "do", "did", "does",
+    "is", "was", "were", "get", "got", "let", "make", "made",
+    # Common pronouns / determiners
+    "it", "its", "we", "us", "they", "them", "their", "those", "these",
+    "who", "what", "when", "where", "how", "which", "then", "here", "there",
+    "some", "all", "each", "any", "both", "few", "many", "much",
     # Adjectives / descriptors that appear in product names AND common speech
     "light", "dark", "pure", "deep", "rich", "soft", "warm", "cool",
     "fresh", "green", "white", "black", "red", "pink", "gold", "silver",
@@ -66,7 +75,7 @@ _COMMON_ENGLISH_WORDS: frozenset = frozenset({
     "day", "summer", "winter", "spring", "forever", "always", "never",
     "still", "natural", "pure", "rare", "unique", "intense", "extreme",
     "hot", "sexy", "men", "woman", "women", "man", "girl", "boy",
-    "by", "for", "in", "my", "our", "your", "her", "his", "its",
+    "by", "for", "in", "my", "our", "your", "her", "his",
     "this", "that", "not", "no", "yes", "just", "more", "less",
     "best", "great", "perfect", "amazing", "beautiful", "lovely",
     "classic", "modern", "original", "special", "limited", "exclusive",
@@ -74,7 +83,7 @@ _COMMON_ENGLISH_WORDS: frozenset = frozenset({
     "star", "sun", "moon", "rose", "iris", "lily", "violet", "jasmine",
     "musk", "oud", "amber", "cedar", "wood", "smoke", "earth",
     # Evaluative
-    "well", "nice", "fine", "ok", "okay", "pretty", "quite", "very",
+    "nice", "fine", "ok", "okay", "pretty", "quite",
     "super", "ultra", "mega", "mini", "micro",
 })
 
@@ -244,6 +253,13 @@ def score_d2_mention_shape(
         max_risk = max(0.05, 0.50 - (max_daily_mentions - 3) / 20)
 
     score = total_risk * 0.45 + date_risk * 0.35 + max_risk * 0.20
+
+    # Floor: D2 never goes below 0.15.
+    # Rationale: a mature false positive that accumulates volume over many dates
+    # would otherwise drive D2 near 0.0, suppressing D3's high-risk signal.
+    # D2=0.15 floor means volume alone cannot offset D3 (RS integrity) evidence.
+    score = max(score, 0.15)
+
     note = f"total={total_mentions:.1f}, dates={active_dates}, max_daily={max_daily_mentions:.1f}"
     return round(score, 3), note
 
@@ -630,6 +646,12 @@ def run_calibration():
           8,  2, 1.0,   2.0, 0.00, 4,  0, 1),
         ("En Route",    "Botanicae Expressions","B","RES-AMB2 FP",
           2,  2, 1.0,   1.0, 0.00, 2,  0, 0),
+        # RES-AMB-GLOBAL confirmed FP — "I will" / Femascu
+        # Exposed Bug 1 (missing "will" in common words) and Bug 2 (D2 floor)
+        # 140 mentions / 33 active dates — mature accumulation hid the false positive
+        # Expected B: D1=0.85 (both tokens common), D3=1.0 (0% RS brand hit)
+        ("I will",      "Femascu",            "B", "RES-AMB-GLOBAL FP — 140 mentions, 33 dates, 0% RS brand hit",
+         140, 33, 13.6, 140.0, 0.00, 30, 3, 8),
         # Known-good entities — distinctive names, high volume, known brands
         ("Creed Aventus", "Creed", "D", "Iconic niche — high volume",
          3200, 90, 45.0, 3000.0, 0.90, 200, 30, 35),
