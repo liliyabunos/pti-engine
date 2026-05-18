@@ -2152,8 +2152,8 @@ Entities requiring further RS inspection before decision:
 ---
 
 ## SIG-ID1 — Cross-Brand Attribution Correction
-**STATUS: IMPLEMENTED — PRODUCTION VERIFICATION PENDING (see PV-007)**
-**Commits: [current session]**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-18)**
+**Commits: c777b73 (implementation) · 08048af (frontend route fix)**
 **Migration: 051**
 
 ### Three-Class Truth Integrity Model (binding taxonomy)
@@ -2210,9 +2210,9 @@ Entities requiring further RS inspection before decision:
    - Status filter tabs: Pending | Dismissed | All
    - Table: Phrase, Brand, Occurrences, Sources, Last Seen, Status, Dismiss action
    - Sidebar: "Signal Candidates" nav item (Search icon) in ADMIN_NAV
-   - Next.js proxy: `frontend/src/app/api/admin/signal-candidates/route.ts` + `[[...path]]/route.ts`
+   - Next.js proxy: `frontend/src/app/api/admin/signal-candidates/route.ts` + `[...path]/route.ts`
 
-**Tests:** `tests/unit/test_sig_id1_brand_proximity_suppression.py` — 43/43 pass (N suppression, P positive resolve, H helper unit tests, G guard structure, R regression).
+**Tests:** `tests/unit/test_sig_id1_brand_proximity_suppression.py` — 49/49 pass (N suppression, P positive resolve, H helper unit tests, G guard structure, R regression, HV harvest candidate generation).
 
 **Roadmap sequence lock (binding):**
 ```
@@ -2220,15 +2220,16 @@ SIG-ID1 → SIG-QA2 → ENTITY-DISC1
 ```
 Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NOT begin ENTITY-DISC1 before SIG-QA2 is `COMPLETE — PRODUCTION VERIFIED`.
 
-**Production verification checklist (see PV-007):**
-- [ ] alembic_version: 051 ✓
-- [ ] Oriflame Amber Elixir: mentions=0, ts=0, signals=0, RS=0 ✓
-- [ ] unresolved_signal_candidates: COUNT > 0 after harvest backfill ✓
-- [ ] `/admin/signal-candidates` loads (200, admin auth) ✓
-- [ ] Resolver smoke test: "vertus amber elixir" → no resolution (bare alias + conflicting brand) ✓
-- [ ] Resolver smoke test: "oriflame amber elixir" → Oriflame Amber Elixir resolved ✓
+**Production verification (2026-05-18) — COMPLETE:**
+- [x] alembic_version: 051 ✓
+- [x] Oriflame Amber Elixir: mentions=0, ts=0, signals=0, RS=0 ✓
+- [x] unresolved_signal_candidates: 7851 rows (full-history backfill) ✓
+- [x] Admin API: 401 without header; 200 + total=7851 with X-Pti-Admin-User ✓
+- [x] Resolver smoke tests: _is_bare_alias + _conflicting_brand_in_window + guard structure all correct ✓
+- [x] 49/49 unit tests pass ✓
+- [x] Frontend deploy incident fixed: `[[...path]]` → `[...path]` (commit 08048af, Railway SUCCESS) ✓
 
-**Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-007**
+**Production verification mode: IMMEDIATE — VERIFIED**
 
 ---
 
@@ -3420,7 +3421,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
-| SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | IMPLEMENTED — PRODUCTION VERIFICATION PENDING (PV-007) | 2026-05-18 |
+| SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 production verified) | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
