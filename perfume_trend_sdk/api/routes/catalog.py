@@ -132,11 +132,23 @@ _PERFUME_ELIGIBILITY_CLAUSES = [
 ]
 
 # Brand eligibility:
-#   Brand catalog (1,608 entries) is already clean — no blanket filter applied.
-#   Numeric-named brands like "4711" are legitimate and must remain visible.
-#   Only apply the minimal guard: canonical_name must be non-empty (DB constraint
-#   handles this already, but kept for consistency).
-_BRAND_ELIGIBILITY_CLAUSES: list[str] = []  # no filter for brands in Phase E1
+#   Only brands with at least 1 entry in resolver_perfumes are shown in the public
+#   catalog.  This separates "resolver seed brands" — brands added to resolver_brands
+#   purely for internal tooling (e.g. harvest_unresolved_brand_signals.py uses
+#   resolver_brands to build its brand_token_map) — from "catalog brands" that have
+#   actual perfume listings.
+#
+#   Resolver seed brands (like Dossier, added for unresolved-candidate harvesting
+#   before its perfumes are catalogued via ENTITY-DISC1) have 0 resolver_perfumes rows
+#   and are therefore invisible in the Screener / Brand Catalog UI.  They remain fully
+#   accessible to any internal query that reads resolver_brands directly.
+#
+#   When ENTITY-DISC1 adds resolver_perfumes rows for a resolver seed brand, it
+#   automatically becomes visible in the public catalog.
+#
+#   Rule: rp.id IS NOT NULL — applied before aggregation in both count and rows queries;
+#   equivalent to requiring COUNT(rp.id) > 0 per brand.
+_BRAND_ELIGIBILITY_CLAUSES: list[str] = ["rp.id IS NOT NULL"]
 
 
 # ---------------------------------------------------------------------------
