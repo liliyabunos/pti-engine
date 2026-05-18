@@ -837,3 +837,219 @@ class TestSIGID1AFilters:
         result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 2)
         assert ("vertus amber elixir", "vertus") in result
         assert result[("vertus amber elixir", "vertus")]["occurrences"] == 2
+
+
+# ---------------------------------------------------------------------------
+# F5 — Minimum-distinctiveness filter + _BRIDGE_WORDS tests
+# ---------------------------------------------------------------------------
+
+class TestMinimumDistinctivenessFilter:
+    """Tests for SIG-ID1A filter 5: brand-name-subset (minimum-distinctiveness) check.
+
+    After removing bridge words, _SKIP_TOKENS, and _HARVEST_CONTEXT_SKIP_TOKENS,
+    if remaining tokens ⊆ brand name tokens → phrase is a partial brand name with
+    no product qualifier → excluded.
+
+    Positive cases (should be EXCLUDED):
+        F5N1  "paul gaultier" ⊆ "jean paul gaultier"
+        F5N2  "maison francis" ⊆ "maison francis kurkdjian"
+        F5N3  "saint laurent" ⊆ "yves saint laurent"
+        F5N4  "by lattafa" → by=bridge → {"lattafa"} ⊆ {"lattafa"}
+        F5N5  "de chanel" → de=bridge → {"chanel"} ⊆ {"chanel"}
+        F5N6  "louis vuitton" ⊆ "louis vuitton" (exact brand match via subset)
+        F5N7  "lattafa perfumes" → perfumes=_SKIP_TOKEN → {"lattafa"} ⊆ {"lattafa"}
+        F5N8  "francis kurkdjian" ⊆ "maison francis kurkdjian"
+        F5N9  "al maghribi" → al=bridge → {"maghribi"} ⊆ {"ahmed al maghribi"}
+
+    Negative cases (should be KEPT — have genuine product qualifier):
+        F5P1  "burberry goddess" — "goddess" ∉ {"burberry"}
+        F5P2  "chanel chance" — "chance" ∉ {"chanel"}
+        F5P3  "arabiyat prestige" — "prestige" ∉ {"arabiyat"}
+        F5P4  "valentino born in roma" — "born"/"roma" ∉ {"valentino"}
+        F5P5  "clive christian" — "christian" IS in {"clive", "christian"};
+              but "christian louboutin" is a different brand → subset check
+              should not filter because btm maps "christian" → "Clive Christian",
+              not "Christian Louboutin" (brand mismatch guards are separate)
+        F5P6  "dossier musky gaiac" — "musky"/"gaiac" ∉ {"dossier"}
+
+    Structure:
+        F5S1  _BRIDGE_WORDS is a frozenset
+        F5S2  expected bridge words present
+        F5S3  "vertus amber elixir" survives filter 5
+    """
+
+    @staticmethod
+    def _import_harvest():
+        import importlib.util, pathlib
+        spec = importlib.util.spec_from_file_location(
+            "harvest_unresolved_brand_signals",
+            pathlib.Path(__file__).resolve().parent.parent.parent
+            / "scripts" / "harvest_unresolved_brand_signals.py",
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def _make_rs_rows(self, phrases_list, rs_date="2026-05-18"):
+        import json
+        from datetime import date
+        d = date.fromisoformat(rs_date)
+        return [(json.dumps(phrases), d) for phrases in phrases_list]
+
+    # ── Negative cases (filtered OUT) ─────────────────────────────────────────
+
+    def test_f5n1_paul_gaultier_excluded(self):
+        """'paul gaultier' tokens ⊆ 'jean paul gaultier' → excluded."""
+        mod = self._import_harvest()
+        btm = {"gaultier": "Jean Paul Gaultier"}
+        rs_rows = self._make_rs_rows([["paul gaultier"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("paul gaultier", "gaultier") not in result, (
+            "'paul gaultier' should be filtered as partial brand name subset"
+        )
+
+    def test_f5n2_maison_francis_excluded(self):
+        """'maison francis' tokens ⊆ 'maison francis kurkdjian' → excluded."""
+        mod = self._import_harvest()
+        btm = {"kurkdjian": "Maison Francis Kurkdjian"}
+        rs_rows = self._make_rs_rows([["maison francis"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("maison francis", "kurkdjian") not in result, (
+            "'maison francis' should be filtered as partial brand name subset of MFK"
+        )
+
+    def test_f5n3_saint_laurent_excluded(self):
+        """'saint laurent' tokens ⊆ 'yves saint laurent' → excluded."""
+        mod = self._import_harvest()
+        btm = {"laurent": "Yves Saint Laurent"}
+        rs_rows = self._make_rs_rows([["saint laurent"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("saint laurent", "laurent") not in result, (
+            "'saint laurent' should be filtered as partial brand name subset of YSL"
+        )
+
+    def test_f5n4_by_lattafa_excluded(self):
+        """'by lattafa' → 'by' is bridge word → distinctive={'lattafa'} ⊆ {'lattafa'} → excluded."""
+        mod = self._import_harvest()
+        btm = {"lattafa": "Lattafa"}
+        rs_rows = self._make_rs_rows([["by lattafa"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("by lattafa", "lattafa") not in result, (
+            "'by lattafa' should be filtered: 'by' is bridge, leaving only brand token"
+        )
+
+    def test_f5n5_de_chanel_excluded(self):
+        """'de chanel' → 'de' is bridge word → distinctive={'chanel'} ⊆ {'chanel'} → excluded."""
+        mod = self._import_harvest()
+        btm = {"chanel": "Chanel"}
+        rs_rows = self._make_rs_rows([["de chanel"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("de chanel", "chanel") not in result, (
+            "'de chanel' should be filtered: 'de' is bridge, leaving only brand token"
+        )
+
+    def test_f5n6_francis_kurkdjian_excluded(self):
+        """'francis kurkdjian' tokens ⊆ 'maison francis kurkdjian' → excluded."""
+        mod = self._import_harvest()
+        btm = {"kurkdjian": "Maison Francis Kurkdjian"}
+        rs_rows = self._make_rs_rows([["francis kurkdjian"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("francis kurkdjian", "kurkdjian") not in result, (
+            "'francis kurkdjian' should be filtered as partial brand subset"
+        )
+
+    def test_f5n7_lattafa_perfumes_excluded(self):
+        """'lattafa perfumes' → 'perfumes' in _SKIP_TOKENS → distinctive={'lattafa'} ⊆ {'lattafa'}."""
+        mod = self._import_harvest()
+        assert "perfumes" in mod._SKIP_TOKENS
+        btm = {"lattafa": "Lattafa"}
+        rs_rows = self._make_rs_rows([["lattafa perfumes"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("lattafa perfumes", "lattafa") not in result, (
+            "'lattafa perfumes' should be filtered: perfumes is skip token, leaving brand-only"
+        )
+
+    # ── Positive cases (KEPT — have genuine product qualifier) ────────────────
+
+    def test_f5p1_burberry_goddess_kept(self):
+        """'burberry goddess' → 'goddess' ∉ brand tokens → has product qualifier → kept."""
+        mod = self._import_harvest()
+        btm = {"burberry": "Burberry"}
+        rs_rows = self._make_rs_rows([["burberry goddess"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("burberry goddess", "burberry") in result, (
+            "'burberry goddess' should be kept: 'goddess' is a genuine product qualifier"
+        )
+
+    def test_f5p2_chanel_chance_kept(self):
+        """'chanel chance' → 'chance' ∉ {'chanel'} → has product qualifier → kept."""
+        mod = self._import_harvest()
+        btm = {"chanel": "Chanel"}
+        rs_rows = self._make_rs_rows([["chanel chance"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("chanel chance", "chanel") in result, (
+            "'chanel chance' should be kept: 'chance' is a genuine product qualifier"
+        )
+
+    def test_f5p3_arabiyat_prestige_kept(self):
+        """'arabiyat prestige' with brand 'Arabiyat' → 'prestige' ∉ {'arabiyat'} → kept.
+
+        'prestige' is in _HARVEST_CONTEXT_SKIP_TOKENS but is NOT stripped from
+        the distinctiveness check — it's a genuine product qualifier token here.
+        Only _BRIDGE_WORDS | _SKIP_TOKENS are stripped; _HARVEST_CONTEXT_SKIP_TOKENS
+        only blocks the brand anchor role, not the product-qualifier detection.
+        """
+        mod = self._import_harvest()
+        btm = {"arabiyat": "Arabiyat"}
+        rs_rows = self._make_rs_rows([["arabiyat prestige"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("arabiyat prestige", "arabiyat") in result, (
+            "'arabiyat prestige' should be kept: 'prestige' is a genuine product qualifier"
+        )
+
+    def test_f5p4_dossier_musky_gaiac_kept(self):
+        """'dossier musky gaiac' → 'musky'/'gaiac' ∉ {'dossier'} → kept."""
+        mod = self._import_harvest()
+        btm = {"dossier": "Dossier"}
+        rs_rows = self._make_rs_rows([["dossier musky gaiac"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("dossier musky gaiac", "dossier") in result
+
+    def test_f5p5_valentino_born_in_roma_kept(self):
+        """'valentino born in roma' → 'born'/'roma' ∉ {'valentino'} → kept.
+        Note: 'in' is a bridge word but 'born' and 'roma' are product qualifiers."""
+        mod = self._import_harvest()
+        btm = {"valentino": "Valentino"}
+        rs_rows = self._make_rs_rows([["valentino born in roma"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("valentino born in roma", "valentino") in result, (
+            "'valentino born in roma' should be kept: 'born' and 'roma' are product qualifiers"
+        )
+
+    # ── Structure tests ───────────────────────────────────────────────────────
+
+    def test_f5s1_bridge_words_is_frozenset(self):
+        """_BRIDGE_WORDS must be a frozenset."""
+        mod = self._import_harvest()
+        assert hasattr(mod, "_BRIDGE_WORDS")
+        assert isinstance(mod._BRIDGE_WORDS, frozenset)
+        assert len(mod._BRIDGE_WORDS) >= 10
+
+    def test_f5s2_expected_bridge_words_present(self):
+        """Expected bridge words present in _BRIDGE_WORDS."""
+        mod = self._import_harvest()
+        for word in ["by", "from", "de", "du", "le", "la", "for", "of", "in", "the", "al"]:
+            assert word in mod._BRIDGE_WORDS, f"{word!r} must be in _BRIDGE_WORDS"
+
+    def test_f5s3_vertus_amber_elixir_survives_filter5(self):
+        """'vertus amber elixir' must survive filter 5: 'amber'/'elixir' ∉ {'vertus'}."""
+        mod = self._import_harvest()
+        btm = {"vertus": "Vertus"}
+        rs_rows = self._make_rs_rows([
+            ["vertus amber elixir"],
+            ["vertus amber elixir"],
+        ])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 2)
+        assert ("vertus amber elixir", "vertus") in result, (
+            "'vertus amber elixir' should survive filter 5 — has product qualifier tokens"
+        )

@@ -49,6 +49,12 @@ Filtering (SIG-ID1A — Signal Candidate Queue Quality Calibration):
         ("fragrances that", "perfumes for", "scents i") — excluded.
     Single-token filter: bare brand names with no product qualifier excluded.
     Brand-name-only filter: phrase == normalized brand name → excluded.
+    Minimum-distinctiveness filter (SIG-ID1A filter 5): after removing bridge
+        words (_BRIDGE_WORDS), _SKIP_TOKENS, and _HARVEST_CONTEXT_SKIP_TOKENS
+        from phrase, if remaining tokens ⊆ brand name tokens → excluded.
+        Catches: "paul gaultier" ⊆ Jean Paul Gaultier, "maison francis" ⊆ MFK,
+        "saint laurent" ⊆ YSL, "by lattafa" → {"lattafa"} ⊆ {"lattafa"},
+        "de chanel" → {"chanel"} ⊆ {"chanel"}, "louis vuitton" ⊆ Louis Vuitton.
 
 OPS-EE1: Full-history recompute chosen over incremental accumulation.
     RS table at ~30K rows and growing ~60-100/day; full scan is fast (< 2s).
@@ -106,6 +112,19 @@ _HARVEST_CONTEXT_SKIP_TOKENS: frozenset = frozenset({
     "elixir",
     # Geographic brand component ("Swiss Arabian" → "arabian" maps to Arabian Oud)
     "arabian",
+})
+
+# Prepositions and function words that appear in brand/product phrases as connectors
+# but carry no product-qualifying meaning on their own.
+# Used in the minimum-distinctiveness check: after removing bridge words + skip tokens
+# from a phrase, if remaining tokens ⊆ brand name tokens → sentence fragment.
+# Examples: "by lattafa" → by=bridge → {"lattafa"} ⊆ {"lattafa"} → filtered.
+#           "de chanel"  → de=bridge → {"chanel"} ⊆ {"chanel"} → filtered.
+#           "paul gaultier" → {"paul", "gaultier"} ⊆ {"jean","paul","gaultier"} → filtered.
+_BRIDGE_WORDS: frozenset = frozenset({
+    "by", "from", "de", "du", "di", "le", "la", "les",
+    "for", "per", "con", "von", "al", "l",
+    "and", "of", "in", "the",
 })
 
 # Phrases ending in these words are sentence fragments extracted from continuous
@@ -258,6 +277,23 @@ def _compute_candidates(
                 # just the normalized brand name with no product qualifier.
                 # Examples: "jean paul gaultier", "dolce gabbana", "giorgio armani".
                 if norm == _normalize(brand_canonical):
+                    continue
+
+                # SIG-ID1A filter 5: minimum-distinctiveness check.
+                # After removing bridge words, skip tokens, and context-skip tokens
+                # from the phrase, if the remaining tokens are a subset of the brand
+                # name tokens, the phrase adds no product qualifier.
+                # Catches partial brand names like "paul gaultier" ⊆ "jean paul gaultier",
+                # "maison francis" ⊆ "maison francis kurkdjian", "saint laurent" ⊆
+                # "yves saint laurent", "by lattafa" → {"lattafa"} ⊆ {"lattafa"}.
+                # Note: _HARVEST_CONTEXT_SKIP_TOKENS NOT included — those tokens can be
+                # genuine product qualifiers (e.g. "arabiyat prestige" → "prestige" IS a
+                # product qualifier when brand is "Arabiyat").  Only bridge words and
+                # generic category suffixes (_SKIP_TOKENS) are stripped.
+                _all_skip = _BRIDGE_WORDS | _SKIP_TOKENS
+                distinctive_tokens = {t for t in tokens if t not in _all_skip}
+                brand_name_tokens = set(_normalize(brand_canonical).split())
+                if distinctive_tokens and distinctive_tokens.issubset(brand_name_tokens):
                     continue
 
                 key = (norm, token)

@@ -75,6 +75,7 @@ def list_signal_candidates(
     status: Optional[str] = Query(None, description="Filter by candidate_status (pending|dismissed|added_to_catalog|all)"),
     min_occurrences: int = Query(1, ge=1, description="Minimum occurrence count"),
     brand: Optional[str] = Query(None, description="Filter by brand_canonical_name (case-insensitive partial match)"),
+    phrase: Optional[str] = Query(None, description="Filter by phrase text (case-insensitive partial match)"),
     limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
     _admin: str = Depends(_get_admin_user),
@@ -94,6 +95,10 @@ def list_signal_candidates(
     if brand:
         filters.append("LOWER(brand_canonical_name) LIKE :brand")
         params["brand"] = f"%{brand.lower()}%"
+
+    if phrase:
+        filters.append("LOWER(phrase) LIKE :phrase")
+        params["phrase"] = f"%{phrase.lower()}%"
 
     where = "WHERE " + " AND ".join(filters)
 
