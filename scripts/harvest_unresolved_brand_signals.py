@@ -34,11 +34,21 @@ Pipeline integration:
     Called from start_pipeline.sh and start_pipeline_evening.sh with --apply only.
     No --days flag in production — always recomputes from full history.
 
-Filtering:
+Filtering (SIG-ID1A — Signal Candidate Queue Quality Calibration):
     --min-occurrences N (default 2): suppress single-occurrence noise
     Phrases already in resolver_aliases (already resolved) are excluded.
     Phrases in _BLOCKED_SINGLE_WORD_ALIASES, _BLOCKED_MULTI_TOKEN_PHRASES,
     or _AMBIGUOUS_PHRASE_GUARD are excluded (already guarded).
+    _SKIP_TOKENS (extended): generic plural brand tokens (fragrances, perfumes,
+        scents, colognes) excluded from brand_token_map — eliminates top-400
+        garbage candidates (Alexandria Fragrances, Rook Perfumes, Arts&Scents).
+    _HARVEST_CONTEXT_SKIP_TOKENS: brand tokens that are generic English words
+        (people, little, curious, luxury, floral, elixir…) — skipped as brand
+        anchors within _compute_candidates even if present in brand_token_map.
+    _TRAILING_STOP_WORDS: phrases ending in a stop word are sentence fragments
+        ("fragrances that", "perfumes for", "scents i") — excluded.
+    Single-token filter: bare brand names with no product qualifier excluded.
+    Brand-name-only filter: phrase == normalized brand name → excluded.
 
 OPS-EE1: Full-history recompute chosen over incremental accumulation.
     RS table at ~30K rows and growing ~60-100/day; full scan is fast (< 2s).
@@ -64,9 +74,49 @@ _log = logging.getLogger(__name__)
 
 # Brand token minimum length — matches pg_resolver_store.get_brand_token_map()
 _MIN_TOKEN_LEN = 6
+
+# Tokens excluded when building brand_token_map from resolver_brands.
+# Extended in SIG-ID1A to include plural forms that dominated the queue
+# (Alexandria Fragrances → "fragrances", Rook Perfumes → "perfumes", etc.)
 _SKIP_TOKENS: frozenset = frozenset({
     "parfum", "perfume", "cologne", "scent", "fragrance",
     "extrait", "parfums", "maison", "collection", "edition",
+    # SIG-ID1A additions — plural forms excluded (same rationale as singular)
+    "fragrances", "perfumes", "scents", "colognes",
+})
+
+# Brand tokens too generic to serve as meaningful brand anchors in the harvest.
+# These tokens ARE valid brand identifiers (e.g. "signature" → Signature Royale,
+# "little" → Little and Grim) but produce enormous noise because they are common
+# English words that appear constantly in fragrance discourse.
+# Applied within _compute_candidates — skips (phrase, token) pairs where the
+# anchor token is in this set, even if the token is in brand_token_map.
+_HARVEST_CONTEXT_SKIP_TOKENS: frozenset = frozenset({
+    # Generic common words that happen to be brand names
+    "people", "little", "curious", "sample", "luxury", "create", "different",
+    "signature", "select", "unique", "classic", "divine", "beautiful",
+    # Geographic / language / nationality words
+    "avenue", "french", "london", "grande",
+    # Fragrance category / olfactory descriptors
+    "floral", "incense", "gourmand", "orange", "natural",
+    # Retail / commercial descriptors
+    "beauty", "fashion", "purchase", "sephora", "prestige",
+    # Note/ingredient term (also a brand: Elixir Attar) — produces "le male elixir",
+    # "male elixir", "nocturno elixir" attributed to Elixir Attar instead of JPG
+    "elixir",
+    # Geographic brand component ("Swiss Arabian" → "arabian" maps to Arabian Oud)
+    "arabian",
+})
+
+# Phrases ending in these words are sentence fragments extracted from continuous
+# text, not product names.  Examples: "fragrances that", "perfumes for", "scents i".
+_TRAILING_STOP_WORDS: frozenset = frozenset({
+    "that", "for", "are", "in", "from", "and", "or", "but", "with",
+    "of", "to", "i", "a", "at", "on", "you", "they", "we", "it",
+    "by", "he", "she", "is", "this", "these", "my", "our", "your",
+    "if", "the", "que", "de", "la", "le", "les", "un", "una", "los", "las",
+    "also", "some", "all", "an", "into", "about", "after", "before",
+    "has", "have", "had", "be", "do", "did",
 })
 
 # Exported for tests — verifies SET semantics are intact
@@ -182,13 +232,38 @@ def _compute_candidates(
                 continue
 
             tokens = norm.split()
+
+            # SIG-ID1A filter 1: single-token phrases are bare brand names with no
+            # product qualifier — not actionable for catalog expansion or Class 3 repair.
+            if len(tokens) < 2:
+                continue
+
+            # SIG-ID1A filter 2: sentence fragment — phrase ends in a stop word,
+            # meaning it was extracted from continuous prose ("fragrances that").
+            if tokens[-1] in _TRAILING_STOP_WORDS:
+                continue
+
             for token in tokens:
                 if token not in brand_token_map:
                     continue
+
+                # SIG-ID1A filter 3: skip generic-word brand anchors — tokens that
+                # are common English words even though a brand happens to use them.
+                if token in _HARVEST_CONTEXT_SKIP_TOKENS:
+                    continue
+
+                brand_canonical = brand_token_map[token]
+
+                # SIG-ID1A filter 4: brand-name-only phrase — the entire phrase is
+                # just the normalized brand name with no product qualifier.
+                # Examples: "jean paul gaultier", "dolce gabbana", "giorgio armani".
+                if norm == _normalize(brand_canonical):
+                    continue
+
                 key = (norm, token)
                 rec = candidates[key]
                 rec["occurrences"] += 1
-                rec["brand_canonical"] = brand_token_map[token]
+                rec["brand_canonical"] = brand_canonical
                 if rs_date and (rec["first_date"] is None or rs_date < rec["first_date"]):
                     rec["first_date"] = rs_date
                 if rs_date and (rec["last_date"] is None or rs_date > rec["last_date"]):
@@ -197,6 +272,7 @@ def _compute_candidates(
                 if key not in seen_in_source:
                     seen_in_source.add(key)
                     rec["sources"] += 1
+
 
     return {k: v for k, v in candidates.items() if v["occurrences"] >= min_occurrences}
 

@@ -597,3 +597,243 @@ class TestHarvestCandidateGeneration:
         assert "GREATEST" not in upsert.split("last_seen")[0].split("first_seen")[0], (
             "_UPSERT_SQL must not use GREATEST on occurrence_count"
         )
+
+
+# ---------------------------------------------------------------------------
+# SIG-ID1A — Signal Candidate Queue Quality Calibration tests
+# ---------------------------------------------------------------------------
+
+class TestSIGID1AFilters:
+    """Tests for SIG-ID1A filtering rules added to _compute_candidates().
+
+    F1 = single-token filter (bare brand names excluded)
+    F2 = trailing stop-word filter (sentence fragments excluded)
+    F3 = _HARVEST_CONTEXT_SKIP_TOKENS (generic-word brand anchors excluded)
+    F4 = brand-name-only filter (phrase == normalized brand name excluded)
+    SK = _SKIP_TOKENS extension (plural generic tokens excluded from brand_token_map)
+    DS = Dossier seed (dossier brand_token produces product candidates)
+    """
+
+    @staticmethod
+    def _import_harvest():
+        import importlib.util, pathlib
+        spec = importlib.util.spec_from_file_location(
+            "harvest_unresolved_brand_signals",
+            pathlib.Path(__file__).resolve().parent.parent.parent
+            / "scripts" / "harvest_unresolved_brand_signals.py",
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def _make_rs_rows(self, phrases_list, rs_date="2026-05-18"):
+        import json
+        from datetime import date
+        d = date.fromisoformat(rs_date)
+        return [(json.dumps(phrases), d) for phrases in phrases_list]
+
+    # ── F1: single-token filter ──────────────────────────────────────────────
+
+    def test_f1_single_token_byredo_excluded(self):
+        """Bare brand name 'byredo' (1 token) must be excluded."""
+        mod = self._import_harvest()
+        btm = {"byredo": "Byredo"}
+        rs_rows = self._make_rs_rows([["byredo"] * 5])  # 5 occurrences but 1 token
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("byredo", "byredo") not in result
+
+    def test_f1_single_token_kilian_excluded(self):
+        """Bare brand name 'kilian' (1 token) must be excluded."""
+        mod = self._import_harvest()
+        btm = {"kilian": "Kilian"}
+        rs_rows = self._make_rs_rows([["kilian"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("kilian", "kilian") not in result
+
+    def test_f1_two_token_phrase_not_excluded(self):
+        """2-token phrase like 'kilian angels' passes single-token filter."""
+        mod = self._import_harvest()
+        btm = {"kilian": "Kilian"}
+        rs_rows = self._make_rs_rows([["kilian angels"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("kilian angels", "kilian") in result
+
+    # ── F2: trailing stop-word filter ─────────────────────────────────────────
+
+    def test_f2_fragrances_that_excluded(self):
+        """'fragrances that' ends in stop word 'that' → sentence fragment, excluded.
+        Note: 'fragrances' is now in _SKIP_TOKENS so has no brand_token — this tests
+        a phrase with a valid brand token but a stop-word tail."""
+        mod = self._import_harvest()
+        btm = {"kilian": "Kilian"}
+        rs_rows = self._make_rs_rows([["kilian that"] * 5])  # "that" is trailing stop
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("kilian that", "kilian") not in result
+
+    def test_f2_phrase_ending_in_for_excluded(self):
+        """Phrase ending in 'for' is a sentence fragment → excluded."""
+        mod = self._import_harvest()
+        btm = {"kilian": "Kilian"}
+        rs_rows = self._make_rs_rows([["kilian for"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("kilian for", "kilian") not in result
+
+    def test_f2_phrase_not_ending_in_stop_word_passes(self):
+        """'kilian angels share' ends in 'share' (not a stop word) → passes."""
+        mod = self._import_harvest()
+        btm = {"kilian": "Kilian"}
+        rs_rows = self._make_rs_rows([["kilian angels share"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("kilian angels share", "kilian") in result
+
+    # ── F3: _HARVEST_CONTEXT_SKIP_TOKENS ──────────────────────────────────────
+
+    def test_f3_signature_scent_excluded_by_context_skip(self):
+        """'signature' in _HARVEST_CONTEXT_SKIP_TOKENS → (phrase, 'signature') excluded."""
+        mod = self._import_harvest()
+        assert "signature" in mod._HARVEST_CONTEXT_SKIP_TOKENS
+        btm = {"signature": "Signature Royale"}
+        rs_rows = self._make_rs_rows([["signature scent"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("signature scent", "signature") not in result
+
+    def test_f3_little_bit_excluded(self):
+        """'little' in _HARVEST_CONTEXT_SKIP_TOKENS → (phrase, 'little') excluded."""
+        mod = self._import_harvest()
+        btm = {"little": "Little and Grim"}
+        rs_rows = self._make_rs_rows([["little bit"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("little bit", "little") not in result
+
+    def test_f3_elixir_le_male_elixir_excluded(self):
+        """'le male elixir' → 'elixir' in _HARVEST_CONTEXT_SKIP_TOKENS → excluded.
+        This removes false attribution to Elixir Attar when phrase is about JPG Le Male Elixir."""
+        mod = self._import_harvest()
+        assert "elixir" in mod._HARVEST_CONTEXT_SKIP_TOKENS
+        btm = {"elixir": "Elixir Attar"}
+        rs_rows = self._make_rs_rows([["le male elixir"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("le male elixir", "elixir") not in result
+
+    def test_f3_floral_phrase_excluded(self):
+        """'floral' in _HARVEST_CONTEXT_SKIP_TOKENS → (phrase, 'floral') excluded."""
+        mod = self._import_harvest()
+        btm = {"floral": "Floral 4 Seasons"}
+        rs_rows = self._make_rs_rows([["white floral"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("white floral", "floral") not in result
+
+    def test_f3_non_skip_token_dossier_passes(self):
+        """'dossier' is NOT in _HARVEST_CONTEXT_SKIP_TOKENS → passes."""
+        mod = self._import_harvest()
+        assert "dossier" not in mod._HARVEST_CONTEXT_SKIP_TOKENS
+        btm = {"dossier": "Dossier"}
+        rs_rows = self._make_rs_rows([["dossier floral marshmallow"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("dossier floral marshmallow", "dossier") in result
+
+    # ── F4: brand-name-only filter ────────────────────────────────────────────
+
+    def test_f4_jean_paul_gaultier_excluded(self):
+        """'jean paul gaultier' == normalize('Jean Paul Gaultier') → brand-name-only, excluded."""
+        mod = self._import_harvest()
+        btm = {"gaultier": "Jean Paul Gaultier"}
+        rs_rows = self._make_rs_rows([["jean paul gaultier"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("jean paul gaultier", "gaultier") not in result
+
+    def test_f4_dolce_gabbana_excluded(self):
+        """'dolce gabbana' == normalize('Dolce & Gabbana') → brand-name-only, excluded."""
+        mod = self._import_harvest()
+        btm = {"gabbana": "Dolce & Gabbana"}
+        rs_rows = self._make_rs_rows([["dolce gabbana"] * 5])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("dolce gabbana", "gabbana") not in result
+
+    def test_f4_brand_plus_product_passes(self):
+        """'gaultier le male' has product qualifier beyond brand name → passes."""
+        mod = self._import_harvest()
+        btm = {"gaultier": "Jean Paul Gaultier"}
+        rs_rows = self._make_rs_rows([["gaultier le male"] * 3])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 1)
+        assert ("gaultier le male", "gaultier") in result
+
+    # ── SK: _SKIP_TOKENS plural extensions ────────────────────────────────────
+
+    def test_sk_fragrances_in_skip_tokens(self):
+        """'fragrances' must be in _SKIP_TOKENS (not usable as brand token)."""
+        mod = self._import_harvest()
+        assert "fragrances" in mod._SKIP_TOKENS
+
+    def test_sk_perfumes_in_skip_tokens(self):
+        """'perfumes' must be in _SKIP_TOKENS."""
+        mod = self._import_harvest()
+        assert "perfumes" in mod._SKIP_TOKENS
+
+    def test_sk_scents_in_skip_tokens(self):
+        """'scents' must be in _SKIP_TOKENS."""
+        mod = self._import_harvest()
+        assert "scents" in mod._SKIP_TOKENS
+
+    def test_sk_colognes_in_skip_tokens(self):
+        """'colognes' must be in _SKIP_TOKENS."""
+        mod = self._import_harvest()
+        assert "colognes" in mod._SKIP_TOKENS
+
+    # ── DS: Dossier brand produces product candidates ─────────────────────────
+
+    def test_ds_dossier_floral_marshmallow_candidate(self):
+        """After Dossier is in brand_token_map, 'dossier floral marshmallow' surfaces."""
+        mod = self._import_harvest()
+        # Simulate brand_token_map after Dossier added to resolver_brands
+        btm = {"dossier": "Dossier", "floral": "Floral 4 Seasons"}
+        rs_rows = self._make_rs_rows([
+            ["dossier floral marshmallow", "smelling dossier floral marshmallow"],
+            ["dossier floral marshmallow"],
+        ])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 2)
+        # dossier token: passes all filters, brand_canonical="Dossier"
+        assert ("dossier floral marshmallow", "dossier") in result
+        # floral token: in _HARVEST_CONTEXT_SKIP_TOKENS → filtered out
+        assert ("dossier floral marshmallow", "floral") not in result
+
+    def test_ds_dossier_musky_gaiac_candidate(self):
+        """'dossier musky gaiac' surfaces with brand_token='dossier'."""
+        mod = self._import_harvest()
+        btm = {"dossier": "Dossier"}
+        rs_rows = self._make_rs_rows([["dossier musky gaiac"] * 2])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 2)
+        assert ("dossier musky gaiac", "dossier") in result
+
+    # ── Structure tests ───────────────────────────────────────────────────────
+
+    def test_structure_harvest_context_skip_tokens_are_frozenset(self):
+        """_HARVEST_CONTEXT_SKIP_TOKENS must be a frozenset and non-empty."""
+        mod = self._import_harvest()
+        assert isinstance(mod._HARVEST_CONTEXT_SKIP_TOKENS, frozenset)
+        assert len(mod._HARVEST_CONTEXT_SKIP_TOKENS) >= 20
+
+    def test_structure_trailing_stop_words_are_frozenset(self):
+        """_TRAILING_STOP_WORDS must be a frozenset and include key stop words."""
+        mod = self._import_harvest()
+        assert isinstance(mod._TRAILING_STOP_WORDS, frozenset)
+        for word in ["that", "for", "and", "or", "in", "i", "the", "de"]:
+            assert word in mod._TRAILING_STOP_WORDS, f"{word!r} must be in _TRAILING_STOP_WORDS"
+
+    def test_structure_vertus_amber_elixir_survives_all_filters(self):
+        """'vertus amber elixir' must survive all SIG-ID1A filters unchanged."""
+        mod = self._import_harvest()
+        assert "vertus" not in mod._SKIP_TOKENS
+        assert "vertus" not in mod._HARVEST_CONTEXT_SKIP_TOKENS
+        btm = {"vertus": "Vertus"}
+        # 2 tokens → passes single-token filter
+        # last token 'elixir' not in _TRAILING_STOP_WORDS
+        # 'vertus' not in _HARVEST_CONTEXT_SKIP_TOKENS
+        # 'vertus amber elixir' != normalize('Vertus') = 'vertus'
+        rs_rows = self._make_rs_rows([
+            ["vertus amber elixir", "other phrase"],
+            ["vertus amber elixir"],
+        ])
+        result = mod._compute_candidates(rs_rows, btm, frozenset(), frozenset(), 2)
+        assert ("vertus amber elixir", "vertus") in result
+        assert result[("vertus amber elixir", "vertus")]["occurrences"] == 2
