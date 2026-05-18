@@ -2234,15 +2234,20 @@ Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NO
 ---
 
 ## SIG-ID1A — Signal Candidate Queue Quality Calibration
-**STATUS: IMPLEMENTED — QUEUE REBUILD + UI VERIFICATION PENDING (REOPENED 2026-05-18)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-18)**
 **Commits: 49954d1 (filters + Dossier + Vertus) · 360fada (filter 5 + pagination + phrase search)**
 
 **Reopening reasons (production UI review 2026-05-18):**
 1. **FIXED** — Dossier leaked into public brand catalog (deleted from resolver_brands id=6412)
 2. **FIXED** — Admin signal-candidates page unusable at 2417 rows (now: phrase + brand search, 50/page pagination, "Showing X–Y of N" footer)
-3. **FIXED (code)** — Queue quality: "de chanel", "by lattafa", "paul gaultier", "maison francis", "francis kurkdjian", "saint laurent" still in queue — minimum-distinctiveness filter (filter 5) added; PENDING production queue rebuild via Railway SSH
+3. **FIXED** — Queue quality: minimum-distinctiveness filter (filter 5) added; table truncated + clean rebuild executed 2026-05-18; all fragment patterns confirmed 0.
 
-**Closure criteria:** Queue rebuild must run, top-100 re-audit, fragment patterns confirmed absent. Run: `railway ssh --service generous-prosperity -- python3 scripts/harvest_unresolved_brand_signals.py --apply`
+**Closure resolution (2026-05-18):**
+- Dossier re-inserted into `resolver_brands` (id=6414) — internal harvest seed only
+- `catalog.py` `_BRAND_ELIGIBILITY_CLAUSES = ["rp.id IS NOT NULL"]` — resolver seeds with 0 perfumes invisible in public Screener
+- Table truncated (all 2417 old rows were pending) + clean rebuild: 2108 rows
+- Fragment patterns verified absent: de chanel=0, by lattafa=0, paul gaultier=0, maison francis=0, francis kurkdjian=0, saint laurent=0, from lattafa=0, lattafa perfumes=0 ✓
+- Dossier candidates present: dossier floral (4), dossier floral marshmallow (3), dossier musky (2), dossier citrus ginger (2) ✓
 
 **Problem:** Initial unresolved_signal_candidates queue (7851 rows) was dominated by garbage: Alexandria Fragrances "fragrances" token alone generated 1605 candidates ("fragrances that", "fragrances for", etc.), Rook Perfumes "perfumes" 948, Arts&Scents "scents" 352. Top entries were all generic sentence fragments, not catalog candidates.
 
@@ -3528,7 +3533,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
-| SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | IMPLEMENTED — QUEUE REBUILD PENDING (REOPENED) | 2026-05-18 |
+| SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 production verified) | — |
 | ENTITY-DISC1 — Assisted Catalog Capture | DESIGN REQUIREMENT DOCUMENTED — after SIG-QA2 | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |

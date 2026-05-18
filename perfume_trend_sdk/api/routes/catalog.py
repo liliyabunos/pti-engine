@@ -362,7 +362,11 @@ def _build_counts(db: Session) -> CatalogCounts:
                    AND rp.canonical_name ~ '^[a-zA-Z0-9]'
                    AND LOWER(rp.canonical_name) NOT IN
                        ('cologne','fragrance','perfume','scent','mist','spray'))       AS known_perfumes,
-                (SELECT COUNT(*) FROM resolver_brands)                                   AS known_brands,
+                (SELECT COUNT(DISTINCT rb.id)
+                 FROM   resolver_brands rb
+                 WHERE  EXISTS (
+                     SELECT 1 FROM resolver_perfumes rp WHERE rp.brand_id = rb.id
+                 ))                                                                   AS known_brands,
                 (
                     SELECT COUNT(DISTINCT etd.entity_id)
                     FROM   entity_timeseries_daily etd
