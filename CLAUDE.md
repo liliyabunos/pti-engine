@@ -2234,8 +2234,15 @@ Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NO
 ---
 
 ## SIG-ID1A — Signal Candidate Queue Quality Calibration
-**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-18)**
-**Commit: 49954d1**
+**STATUS: IMPLEMENTED — QUEUE REBUILD + UI VERIFICATION PENDING (REOPENED 2026-05-18)**
+**Commits: 49954d1 (filters + Dossier + Vertus) · 360fada (filter 5 + pagination + phrase search)**
+
+**Reopening reasons (production UI review 2026-05-18):**
+1. **FIXED** — Dossier leaked into public brand catalog (deleted from resolver_brands id=6412)
+2. **FIXED** — Admin signal-candidates page unusable at 2417 rows (now: phrase + brand search, 50/page pagination, "Showing X–Y of N" footer)
+3. **FIXED (code)** — Queue quality: "de chanel", "by lattafa", "paul gaultier", "maison francis", "francis kurkdjian", "saint laurent" still in queue — minimum-distinctiveness filter (filter 5) added; PENDING production queue rebuild via Railway SSH
+
+**Closure criteria:** Queue rebuild must run, top-100 re-audit, fragment patterns confirmed absent. Run: `railway ssh --service generous-prosperity -- python3 scripts/harvest_unresolved_brand_signals.py --apply`
 
 **Problem:** Initial unresolved_signal_candidates queue (7851 rows) was dominated by garbage: Alexandria Fragrances "fragrances" token alone generated 1605 candidates ("fragrances that", "fragrances for", etc.), Rook Perfumes "perfumes" 948, Arts&Scents "scents" 352. Top entries were all generic sentence fragments, not catalog candidates.
 
@@ -2246,7 +2253,7 @@ Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NO
 - Bare brand names (single-token phrases)
 - Brand-name-only phrases (phrase == normalized brand name)
 
-**Four filtering layers added to `_compute_candidates()`:**
+**Five filtering layers in `_compute_candidates()`:**
 
 1. **`_SKIP_TOKENS` expanded** — plural forms added: `fragrances`, `perfumes`, `scents`, `colognes`. Prevents these token types from ever entering the brand_token_map.
 
@@ -2263,6 +2270,8 @@ Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NO
 4. **Trailing stop-word filter** (`_TRAILING_STOP_WORDS`, 43 entries) — phrases ending in that/for/i/are/in/from/and/or/etc. are sentence fragments, excluded
 
 5. **Brand-name-only filter** — phrase == `_normalize(brand_canonical_name)` excluded (catches "jean paul gaultier", "dolce gabbana", "yves saint laurent")
+
+6. **Minimum-distinctiveness filter** (`_BRIDGE_WORDS` + `_SKIP_TOKENS`) — after stripping bridge words (by, from, de, du, di, le, la, les, for, per, con, von, al, l, and, of, in, the) and `_SKIP_TOKENS` from phrase tokens, if remaining `distinctive_tokens ⊆ brand_name_tokens` → excluded. Note: `_HARVEST_CONTEXT_SKIP_TOKENS` NOT stripped (those can be genuine product qualifiers). Catches: "paul gaultier" ⊆ Jean Paul Gaultier, "maison francis" ⊆ MFK, "saint laurent" ⊆ YSL, "francis kurkdjian" ⊆ MFK, "by lattafa" → {lattafa} ⊆ {lattafa}, "de chanel" → {chanel} ⊆ {chanel}, "lattafa perfumes" (perfumes=skip → {lattafa} ⊆ {lattafa}).
 
 **Also applied:**
 - Added Dossier to `resolver_brands` (id=6412) — surfaces Dossier product candidates in harvest
@@ -2282,9 +2291,9 @@ Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NO
 
 **Dossier candidates in queue (10 rows):** "dossier floral" (4), "dossier floral marshmallow" (3), "dossier ambery vanilla" (2), "dossier citrus ginger" (2), "dossier musky" (2), "dossier citrus" (2)
 
-**Tests:** 72/72 pass (23 new TestSIGID1AFilters cases: F1-F4 filters, SK skip tokens, DS Dossier, structure guards)
+**Tests:** 87/87 pass (23 new TestSIGID1AFilters cases: F1-F4 filters, SK skip tokens, DS Dossier, structure guards; + 15 new TestMinimumDistinctivenessFilter cases: F5 negative/positive/structure)
 
-**Production verification mode: IMMEDIATE — VERIFIED**
+**Production verification mode: DEFERRED — queue rebuild pending (LEDGER ENTRY: see reopening note above)**
 
 ---
 
@@ -3519,7 +3528,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
-| SIG-ID1A — Signal Candidate Queue Quality Calibration (4 harvest filters + Dossier seed + Vertus INSERT + top-100 audit) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
+| SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | IMPLEMENTED — QUEUE REBUILD PENDING (REOPENED) | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 production verified) | — |
 | ENTITY-DISC1 — Assisted Catalog Capture | DESIGN REQUIREMENT DOCUMENTED — after SIG-QA2 | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
