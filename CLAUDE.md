@@ -2062,7 +2062,7 @@ RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it 
 
 **Alembic migration required:** Yes — `evidence_confidence` column on `entity_mentions` + `weak_evidence_log` table
 
-**Status:** APPROVED — NEXT PHASE AFTER SIG-QA1
+**Status:** APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 is COMPLETE — PRODUCTION VERIFIED)
 
 ### Seed Cases Requiring Repair
 
@@ -2148,6 +2148,87 @@ Entities requiring further RS inspection before decision:
 - Feel Good (Esprit), Come Together (Vintner's Reserve), Bride To Be (Primark), Day to Day (Primark) — Type D; pending dedicated repair batch
 
 **Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-006**
+
+---
+
+## SIG-ID1 — Cross-Brand Attribution Correction
+**STATUS: IMPLEMENTED — PRODUCTION VERIFICATION PENDING (see PV-007)**
+**Commits: [current session]**
+**Migration: 051**
+
+### Three-Class Truth Integrity Model (binding taxonomy)
+
+| Class | Name | Description | Program |
+|-------|------|-------------|---------|
+| **1** | False Identity | Alias resolves to an entity that doesn't exist in the content (common English phrase, note term, generic descriptor) | RES-AMB, SIG-QA |
+| **2** | Wrong Identity | Alias resolves to the WRONG entity — a different brand's product gets attributed because a bare alias appears in content about a different brand | SIG-ID1 |
+| **3** | Missing Identity | Real brand references go unresolved — content about a product that IS in the resolver, but no mention is created (coverage gap) | ENTITY-DISC1 |
+
+**Root cause (Class 2):** When a perfume has an alias that doesn't include its own brand name ("bare alias"), that alias can fire on any content mentioning the phrase — including content about a different brand's product. Example: "Amber Elixir" is a bare alias for Oriflame Amber Elixir. If a YouTube video discusses Vertus Amber Elixir and says "amber elixir" in the title, the resolver attributed it to Oriflame — wrong brand, wrong entity.
+
+**Suppression mechanism:**
+- `_is_bare_alias(alias_text, entity_brand_name)` — returns True when brand tokens are absent from the alias text (expects pre-normalized alias_text)
+- `_conflicting_brand_in_window(tokens, match_start, match_end, entity_brand_name, brand_token_map, window=10)` — returns conflicting brand name if a different brand token appears within ±10 tokens of the match
+- Suppression condition: bare alias AND conflicting brand in window → skip resolution
+- `get_brand_token_map()` on `PgResolverStore` — builds dict of normalized brand token (≥6 chars) → canonical brand name; empty dict on SQLite (graceful degradation)
+
+**What was implemented:**
+
+1. **Resolver bare-alias suppression** (`perfume_resolver.py`)
+   - `_is_bare_alias()` and `_conflicting_brand_in_window()` helpers
+   - `resolve_text()` now suppresses bare-alias matches when a different brand token appears in ±10 token window
+   - `_brand_token_map` populated once at resolver init from `PgResolverStore.get_brand_token_map()`
+
+2. **Amber Elixir guard** (`perfume_resolver.py`)
+   - Added `"amber elixir"` → `{"oriflame"}` to `_AMBIGUOUS_PHRASE_GUARD`
+   - Requires "oriflame" in ±10 token context before resolving (prevents resolution in Vertus/any-other-brand content)
+
+3. **Amber Elixir data repair** (`scripts/sig_id1_amber_elixir_repair.py`)
+   - Full-history RS strip (per OPS-PV1 Repair Scope Compatibility Rule — no `--days` window)
+   - Deletes entity_mentions, entity_timeseries_daily, signals, signal_intelligence_snapshots for Oriflame Amber Elixir entity
+   - Wolken Parfums brand ts/signals cleanup (if Amber Elixir was only tracked perfume)
+   - `--dry-run` by default; `--apply` to execute
+
+4. **`unresolved_signal_candidates` table** (migration 051)
+   - Surfaces brand-qualified unresolved phrases from `unresolved_mentions_json` (previously a dead data layer)
+   - Columns: `id, phrase TEXT, brand_token TEXT, brand_canonical_name TEXT, occurrence_count INT, source_count INT, first_seen DATE, last_seen DATE, candidate_status VARCHAR(32) DEFAULT 'pending', dismissed_at TIMESTAMPTZ, dismissed_by TEXT, updated_at TIMESTAMPTZ`
+   - Unique on `(phrase, brand_token)`; `candidate_status` no CHECK constraint — values: `pending | dismissed | added_to_catalog`
+   - Enables operator visibility into missed brand-specific resolutions
+
+5. **Harvest script** (`scripts/harvest_unresolved_brand_signals.py`)
+   - Reads `resolved_signals.unresolved_mentions_json`; finds phrases where ≥1 brand token appears within ±5 tokens
+   - Upserts into `unresolved_signal_candidates` (ON CONFLICT DO UPDATE occurrence counts)
+   - `--days 2 --apply` for daily pipeline cadence; `--days 90 --apply` for initial backfill
+   - Non-fatal in pipeline (exit 0 even on error)
+
+6. **Admin API** (`perfume_trend_sdk/api/routes/admin_signal_candidates.py`)
+   - `GET /api/v1/admin/signal-candidates` — list with status/min_occurrences/brand/limit/offset filters
+   - `POST /api/v1/admin/signal-candidates/{id}/dismiss` — operator dismissal
+   - All endpoints require `X-Pti-Admin-User` header (401 without)
+
+7. **Admin frontend** (`/admin/signal-candidates`)
+   - Status filter tabs: Pending | Dismissed | All
+   - Table: Phrase, Brand, Occurrences, Sources, Last Seen, Status, Dismiss action
+   - Sidebar: "Signal Candidates" nav item (Search icon) in ADMIN_NAV
+   - Next.js proxy: `frontend/src/app/api/admin/signal-candidates/route.ts` + `[[...path]]/route.ts`
+
+**Tests:** `tests/unit/test_sig_id1_brand_proximity_suppression.py` — 43/43 pass (N suppression, P positive resolve, H helper unit tests, G guard structure, R regression).
+
+**Roadmap sequence lock (binding):**
+```
+SIG-ID1 → SIG-QA2 → ENTITY-DISC1
+```
+Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NOT begin ENTITY-DISC1 before SIG-QA2 is `COMPLETE — PRODUCTION VERIFIED`.
+
+**Production verification checklist (see PV-007):**
+- [ ] alembic_version: 051 ✓
+- [ ] Oriflame Amber Elixir: mentions=0, ts=0, signals=0, RS=0 ✓
+- [ ] unresolved_signal_candidates: COUNT > 0 after harvest backfill ✓
+- [ ] `/admin/signal-candidates` loads (200, admin auth) ✓
+- [ ] Resolver smoke test: "vertus amber elixir" → no resolution (bare alias + conflicting brand) ✓
+- [ ] Resolver smoke test: "oriflame amber elixir" → Oriflame Amber Elixir resolved ✓
+
+**Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-007**
 
 ---
 
@@ -3339,7 +3420,8 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
-| SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE | — |
+| SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | IMPLEMENTED — PRODUCTION VERIFICATION PENDING (PV-007) | 2026-05-18 |
+| SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 production verified) | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
@@ -3462,7 +3544,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 048** (KB-CAT1-B — node_type + parent_brand_normalized on brand_profiles; applied 2026-05-14)
+Current production: **migration 050** (FTG-5 / SN1-A — signal_intelligence_snapshots; applied 2026-05-16) · **migration 051 PENDING** (SIG-ID1 — unresolved_signal_candidates; apply per PV-007)
 
 | Migration | What |
 |-----------|------|
@@ -3493,6 +3575,7 @@ Current production: **migration 048** (KB-CAT1-B — node_type + parent_brand_no
 | 048 | KB-CAT1-B — `node_type VARCHAR(32) NOT NULL DEFAULT 'brand' CHECK (node_type IN ('brand','collection','sub_brand'))` + `parent_brand_normalized TEXT NULL` (no FK) on `brand_profiles`; seeds 4 hierarchy rows (Xerjoff × 3 + Filippo Sorcinelli SAUF). |
 | 049 | FTG-4 / RI1-E1B — Data-only: 1 relationship row (Lattafa Asad → dupe_of → Sauvage Elixir, confidence=0.850, is_public=TRUE, operator_reviewed=TRUE) + 1 dupe_map_seed evidence row. No schema changes. |
 | 050 | FTG-5 / SN1-A — `signal_intelligence_snapshots` table: immutable first-capture intelligence snapshot per (entity_id, entity_type, signal_type, detected_at); market metrics NUMERIC(10,4), signal_metadata JSONB, signal_threshold_version + snapshot_schema_version=1, first_captured_at TIMESTAMPTZ; 5 indexes + UNIQUE constraint. |
+| 051 | SIG-ID1 — `unresolved_signal_candidates` table: surfaces brand-qualified unresolved phrases from `unresolved_mentions_json`; columns: id UUID PK, phrase TEXT, brand_token TEXT, brand_canonical_name TEXT, occurrence_count INT, source_count INT, first_seen DATE, last_seen DATE, candidate_status VARCHAR(32) DEFAULT 'pending' (no CHECK; values: pending/dismissed/added_to_catalog), dismissed_at TIMESTAMPTZ, dismissed_by TEXT, updated_at TIMESTAMPTZ; UNIQUE on (phrase, brand_token). |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 

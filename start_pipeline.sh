@@ -79,6 +79,11 @@ timeout 300 python3 scripts/compute_creator_scores.py --apply || \
 echo "[pipeline] Step 3 — Signal detection for date=$TODAY"
 timeout "$STEP_TIMEOUT" python3 -m perfume_trend_sdk.jobs.detect_breakout_signals --date "$TODAY"
 
+# Step 3c: Harvest unresolved brand-qualified signal candidates (SIG-ID1)
+echo "[pipeline] Step 3c — Harvest unresolved signal candidates (SIG-ID1)"
+timeout 300 python3 scripts/harvest_unresolved_brand_signals.py --apply || \
+  echo "[pipeline] WARNING: harvest_unresolved_brand_signals failed — continuing"
+
 # Step 4: Verify state (non-blocking — log failures but don't abort)
 echo "[pipeline] Step 4 — Market state verification"
 timeout 300 python3 -m perfume_trend_sdk.jobs.verify_market_state || \

@@ -70,14 +70,21 @@ class PgResolverStore:
 
         One query at startup replaces per-call DB lookups in resolve_text().
         With ~13k aliases this takes ~0.5s and uses ~3MB RAM.
+
+        brand_name is included in each cache entry to support bare-alias
+        suppression in the resolver (SIG-ID1): when a bare alias fires,
+        the resolver checks whether a conflicting brand token is present
+        in the surrounding context.
         """
         sql = text(
             """
-            SELECT a.normalized_alias_text, p.id, p.canonical_name
+            SELECT a.normalized_alias_text, p.id, p.canonical_name, b.canonical_name
             FROM   resolver_aliases  a
             JOIN   resolver_perfumes p
               ON   a.entity_type = 'perfume'
              AND   a.entity_id   = p.id
+            JOIN   resolver_brands b
+              ON   p.brand_id = b.id
             """
         )
         cache: Dict[str, dict] = {}
@@ -89,11 +96,42 @@ class PgResolverStore:
                 cache[norm_alias] = {
                     "perfume_id": int(row[1]),
                     "canonical_name": str(row[2]),
+                    "brand_name": str(row[3]),
                     "confidence": 1.0,
                     "match_type": "exact",
                 }
         self._alias_cache = cache
         _log.info("[resolver] alias cache loaded: %d entries", len(cache))
+
+    def get_brand_token_map(self) -> Dict[str, str]:
+        """Return mapping of normalized brand token → canonical brand name.
+
+        Used by PerfumeResolver for bare-alias conflicting-brand detection.
+        Only includes tokens that are ≥6 characters and not generic fragrance
+        words, to minimize false positives from note/ingredient terms.
+
+        Called once at PerfumeResolver init time.
+        """
+        sql = text("SELECT canonical_name FROM resolver_brands")
+        from perfume_trend_sdk.utils.alias_generator import normalize_text as _norm
+
+        _MIN_TOKEN_LEN = 6
+        _SKIP_TOKENS: frozenset = frozenset({
+            "parfum", "perfume", "cologne", "scent", "fragrance",
+            "extrait", "parfums", "maison", "collection", "edition",
+        })
+
+        token_map: Dict[str, str] = {}
+        with self._engine.connect() as conn:
+            rows = conn.execute(sql).fetchall()
+        for (canonical_name,) in rows:
+            normalized = _norm(canonical_name)
+            for token in normalized.split():
+                if len(token) >= _MIN_TOKEN_LEN and token not in _SKIP_TOKENS:
+                    if token not in token_map:
+                        token_map[token] = canonical_name
+        _log.debug("[resolver] brand token map: %d entries", len(token_map))
+        return token_map
 
     # ------------------------------------------------------------------
     # Schema — no-op: Alembic manages this

@@ -244,7 +244,85 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     "orange blossom":            [frozenset({"angela", "flanders"})],
     "revolution perfume":        [frozenset({"cire", "trudon"})],
     "revolution eau de parfum":  [frozenset({"cire", "trudon"})],
+    # SIG-ID1 — cross-brand collision guards (2026-05-18)
+    # Production-confirmed alias collisions where 2 brands share a bare perfume name.
+    # Each guard requires a brand-specific token from the CORRECT brand to be nearby.
+    # The complementary brand's guard is its own _AMBIGUOUS_PHRASE_GUARD entry or its
+    # brand-qualified alias ("oriflame amber elixir", "ormonde jayne champaca", etc.)
+    # which remains active and resolves correctly without a guard.
+    #
+    # amber elixir → Oriflame Amber Elixir (catalog) / Vertus Amber Elixir (absent from catalog)
+    #   Type I: catalog-gap collision. Vertus Amber Elixir not in resolver; bare alias
+    #   fires for Oriflame. "amber elixir" in prose requires oriflame context token.
+    #   Production evidence: video FcgstioOvp8 ("Vertus Amber Elixir" in description)
+    #   resolved to Oriflame — 2 false entity_mentions, ts rows created.
+    "amber elixir":              [frozenset({"oriflame"})],
+    #
+    # champaca → Comme des Garcons Luxe vs Ormonde Jayne (production collision pair)
+    "champaca":                  [frozenset({"garcons", "luxe"}), frozenset({"ormonde", "jayne"})],
+    #
+    # gardenia → Isabey vs M. Micallef (production collision pair; also a note name)
+    "gardenia":                  [frozenset({"isabey"}), frozenset({"micallef"})],
+    #
+    # hindu kush → La Via Del Profumo vs Mancera
+    "hindu kush":                [frozenset({"mancera"}), frozenset({"profumo"})],
+    #
+    # rose oud → Alexandre.J vs PARFUMS DE NICOLAI
+    "rose oud":                  [frozenset({"alexandre"}), frozenset({"nicolai"})],
+    #
+    # london → Gallivant vs Widian (both have a "London" perfume)
+    "london eau de parfum":      [frozenset({"gallivant"}), frozenset({"widian"})],
+    #
+    # new york intense → Fragrance du Bois vs PARFUMS DE NICOLAI
+    "new york intense":          [frozenset({"fragrance", "bois"}), frozenset({"nicolai"})],
 }
+
+
+def _is_bare_alias(alias_text: str, entity_brand_name: str) -> bool:
+    """Return True if the alias does not contain any token from the entity's brand name.
+
+    A "bare" alias is one seeded without the brand prefix — e.g. "amber elixir"
+    rather than "oriflame amber elixir". Bare aliases are more susceptible to
+    cross-brand collision because they cannot self-disambiguate by brand context.
+
+    Used by SIG-ID1 bare-alias suppression in resolve_text().
+    """
+    from perfume_trend_sdk.utils.alias_generator import normalize_text as _norm
+    brand_tokens = set(_norm(entity_brand_name).split())
+    alias_tokens = set(alias_text.split())
+    return not (brand_tokens & alias_tokens)
+
+
+def _conflicting_brand_in_window(
+    tokens: List[str],
+    match_start: int,
+    match_end: int,
+    entity_brand_name: str,
+    brand_token_map: Dict[str, str],
+    window: int = 10,
+) -> Optional[str]:
+    """Return the conflicting brand canonical name if a different brand's distinctive
+    token appears within `window` tokens of the matched phrase, or None.
+
+    Used for bare-alias suppression (SIG-ID1): when a bare alias fires but a token
+    belonging to a DIFFERENT brand is nearby, the match is likely a wrong-brand
+    attribution (Class 2 — Wrong Identity).
+
+    Only fires for tokens in brand_token_map that map to a brand different from
+    entity_brand_name, preventing false suppression when the correct brand is nearby.
+    """
+    from perfume_trend_sdk.utils.alias_generator import normalize_text as _norm
+    entity_brand_norm = _norm(entity_brand_name)
+    lo = max(0, match_start - window)
+    hi = min(len(tokens), match_end + window)
+    context_tokens = set(tokens[lo:match_start]) | set(tokens[match_end:hi])
+    for token in context_tokens:
+        if token not in brand_token_map:
+            continue
+        context_brand = brand_token_map[token]
+        if _norm(context_brand) != entity_brand_norm:
+            return context_brand
+    return None
 
 
 def _check_brand_proximity(
@@ -325,6 +403,14 @@ class PerfumeResolver:
         else:
             raise ValueError("Provide either db_path or store= to PerfumeResolver")
 
+        # Brand token map for bare-alias conflicting-brand suppression (SIG-ID1).
+        # Populated from PgResolverStore; empty dict for SQLite store (no suppression).
+        self._brand_token_map: Dict[str, str] = (
+            self.store.get_brand_token_map()
+            if hasattr(self.store, "get_brand_token_map")
+            else {}
+        )
+
     def resolve_text(self, text: str) -> List[Dict[str, Any]]:
         """Slide a token window (1–_MAX_WINDOW) over normalised text and return all alias hits."""
         normalized = normalize_text(text)
@@ -372,6 +458,34 @@ class PerfumeResolver:
                                 result["canonical_name"],
                             )
                             continue
+
+                    # SIG-ID1 bare-alias conflicting-brand suppression.
+                    # If the alias is bare (brand not in alias text) and a token
+                    # from a DIFFERENT brand appears in the ±10-token context
+                    # window, suppress this match to prevent wrong-brand
+                    # attribution (Class 2 — Wrong Identity).
+                    # Only runs when brand_name is available in the cache entry
+                    # and the brand token map has been loaded (Postgres store).
+                    entity_brand = result.get("brand_name", "")
+                    if (
+                        entity_brand
+                        and self._brand_token_map
+                        and _is_bare_alias(phrase, entity_brand)
+                    ):
+                        conflicting = _conflicting_brand_in_window(
+                            tokens, i, i + size, entity_brand, self._brand_token_map
+                        )
+                        if conflicting:
+                            _log.debug(
+                                "[resolver] bare-alias suppressed (conflicting brand %r nearby): "
+                                "%r → %r (brand=%r)",
+                                conflicting,
+                                phrase,
+                                result["canonical_name"],
+                                entity_brand,
+                            )
+                            continue
+
                     key = (result["perfume_id"], result["canonical_name"])
                     if key not in seen:
                         seen.add(key)

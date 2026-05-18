@@ -419,6 +419,71 @@ WHERE resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('can
 
 ---
 
+---
+
+### PV-007 — SIG-ID1 Production Deploy Verification
+
+| Field | Value |
+|-------|-------|
+| **Verification ID** | PV-007 |
+| **Phase / task** | SIG-ID1 — Cross-Brand Attribution Correction: migration 051 + Amber Elixir repair + harvest backfill |
+| **Related commits** | SIG-ID1 implementation (this session 2026-05-18) |
+| **Current status** | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` |
+| **Blocking severity** | High — Oriflame Amber Elixir still has 2 false entity_mentions + 8 ts rows in production until repair script runs. |
+
+**What was implemented (SIG-ID1):**
+- `perfume_resolver.py`: bare-alias conflicting-brand suppression + 7 new `_AMBIGUOUS_PHRASE_GUARD` entries for cross-brand collision pairs
+- `pg_resolver_store.py`: `brand_name` added to alias cache; `get_brand_token_map()` method
+- `alembic/versions/051_sig_id1_unresolved_signal_candidates.py`: new `unresolved_signal_candidates` table
+- `scripts/harvest_unresolved_brand_signals.py`: daily harvest of brand-qualified unresolved phrases
+- `scripts/sig_id1_amber_elixir_repair.py`: targeted repair for Oriflame Amber Elixir false attributions
+- Admin API: `GET /api/v1/admin/signal-candidates`, `POST /{id}/dismiss`
+- Admin UI: `/admin/signal-candidates` (Signal Candidates nav item in sidebar)
+- Pipeline: `harvest_unresolved_brand_signals.py --apply --days 2` added to morning + evening pipelines
+- Tests: `tests/unit/test_sig_id1_brand_proximity_suppression.py` — 43/43 pass
+
+**Production deploy steps (operator):**
+
+```bash
+# 1. Deploy commit to main → Railway auto-deploys
+
+# 2. Apply migration 051
+railway run --service generous-prosperity alembic upgrade head
+# Expect: alembic_version = 051
+
+# 3. Run Amber Elixir repair (dry-run first)
+DATABASE_URL=<prod-url> python3 scripts/sig_id1_amber_elixir_repair.py
+# Then apply:
+DATABASE_URL=<prod-url> python3 scripts/sig_id1_amber_elixir_repair.py --apply
+
+# 4. Run initial harvest backfill (--days 90 to surface historical unresolved phrases)
+DATABASE_URL=<prod-url> python3 scripts/harvest_unresolved_brand_signals.py --days 90 --apply
+```
+
+**Post-deploy verification checklist:**
+
+```
+[ ] alembic_version = 051
+[ ] unresolved_signal_candidates table exists
+[ ] Amber Elixir repair:
+    - Oriflame Amber Elixir entity_mentions = 0
+    - entity_timeseries_daily = 0 (was 8 rows)
+    - RS residual (exact jsonb canonical_name check) = 0
+[ ] Harvest backfill:
+    - unresolved_signal_candidates COUNT(*) > 0
+    - "vertus amber elixir" appears as a pending candidate
+[ ] /admin/signal-candidates loads (admin user, no 404)
+[ ] Resolver smoke test: "Vertus Amber Elixir is amazing" → Oriflame NOT attributed
+[ ] Resolver smoke test: "oriflame amber elixir review" → Oriflame IS attributed
+[ ] Dashboard Top Movers: Oriflame Amber Elixir absent (was score=41.1)
+```
+
+**Pass criteria:** All 8 checklist items pass.
+
+**On pass:** Update SIG-ID1 status in CLAUDE.md to `COMPLETE — PRODUCTION VERIFIED`. Close this entry.
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -429,3 +494,4 @@ WHERE resolved_entities_json::jsonb @> jsonb_build_array(jsonb_build_object('can
 | PV-004 | DATA4-B brand promotion guard + repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-16)` | CLOSED |
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
+| PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` | Deploy commits; apply migration; run repair + backfill; verify UI |

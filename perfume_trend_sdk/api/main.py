@@ -50,7 +50,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
-from perfume_trend_sdk.api.routes import admin_creator_claims, admin_instagram_review, admin_relationship_intelligence, admin_source_intake, alerts, auth, catalog, creator_claims, creators, dashboard, emerging, entities, notes, public_entities, signals, source_submissions, tiktok_oembed, tiktok_watchlist, watchlists
+from perfume_trend_sdk.api.routes import admin_creator_claims, admin_instagram_review, admin_relationship_intelligence, admin_signal_candidates, admin_source_intake, alerts, auth, catalog, creator_claims, creators, dashboard, emerging, entities, notes, public_entities, signals, source_submissions, tiktok_oembed, tiktok_watchlist, watchlists
 from perfume_trend_sdk.db.market.session import _make_engine, get_database_url
 
 logger = logging.getLogger(__name__)
@@ -142,6 +142,7 @@ app.include_router(admin_creator_claims.router, prefix="/api/v1/admin/creator-cl
 app.include_router(admin_source_intake.router, prefix="/api/v1/admin/source-intake", tags=["admin-source-intake"])
 app.include_router(admin_instagram_review.router, prefix="/api/v1/admin/instagram-review", tags=["admin-instagram-review"])
 app.include_router(admin_relationship_intelligence.router, prefix="/api/v1/admin/relationship-intelligence", tags=["admin-relationship-intelligence"])
+app.include_router(admin_signal_candidates.router, prefix="/api/v1/admin/signal-candidates", tags=["admin-signal-candidates"])
 app.include_router(public_entities.router, prefix="/api/v1/public", tags=["public"])
 
 

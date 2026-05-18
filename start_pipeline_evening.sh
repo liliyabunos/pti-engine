@@ -65,9 +65,14 @@ echo "[pipeline-evening] Step 3c — Emerging signals extraction (Phase E3-E)"
 timeout 300 python3 -m perfume_trend_sdk.jobs.extract_emerging_signals --days 7 || \
   echo "[pipeline-evening] WARNING: extract_emerging_signals failed or timed out — continuing"
 
-# Step 3d: Evaluate temp YouTube query experiments (Phase G4-E) — evening evaluation only
+# Step 3d: Harvest unresolved brand-qualified signal candidates (SIG-ID1)
+echo "[pipeline-evening] Step 3d — Harvest unresolved signal candidates (SIG-ID1)"
+timeout 300 python3 scripts/harvest_unresolved_brand_signals.py --apply || \
+  echo "[pipeline-evening] WARNING: harvest_unresolved_brand_signals failed — continuing"
+
+# Step 3e: Evaluate temp YouTube query experiments (Phase G4-E) — evening evaluation only
 # No temp query ingestion in evening (temp queries run morning-only to stay within quota)
-echo "[pipeline-evening] Step 3d — Evaluate temp query experiments (Phase G4-E)"
+echo "[pipeline-evening] Step 3e — Evaluate temp query experiments (Phase G4-E)"
 timeout 300 python3 scripts/evaluate_temp_youtube_queries.py --apply --bump-run-count || \
   echo "[pipeline-evening] WARNING: evaluate_temp_youtube_queries failed — continuing"
 
