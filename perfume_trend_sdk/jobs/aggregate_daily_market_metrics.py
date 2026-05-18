@@ -43,6 +43,7 @@ from perfume_trend_sdk.analysis.market_signals.aggregator import (
     generate_ticker,
 )
 from perfume_trend_sdk.analysis.market_signals.trend_state import compute_trend_state
+from perfume_trend_sdk.analysis.evidence_scorer import score_mention, SUPPRESS_THRESHOLD
 from perfume_trend_sdk.bridge.identity_resolver import IdentityResolver
 from perfume_trend_sdk.db.market.brand import Brand
 from perfume_trend_sdk.db.market.entity_mention import EntityMention
@@ -814,6 +815,95 @@ def _compute_weighted_signal_scores(db: Session, target_date: str) -> int:
     return result.rowcount
 
 
+# ---------------------------------------------------------------------------
+# SIG-QA2 — Evidence gate helpers
+# ---------------------------------------------------------------------------
+
+def _build_entity_brand_map(db: Session) -> Dict[str, str]:
+    """Build canonical_name → brand_name map for all tracked entities.
+
+    Used by the evidence gate to provide brand_name to score_mention()
+    without an N+1 query per entity. Non-fatal — returns empty dict on error.
+    """
+    try:
+        rows = db.execute(text(
+            "SELECT canonical_name, brand_name FROM entity_market "
+            "WHERE entity_type = 'perfume' AND brand_name IS NOT NULL"
+        )).fetchall()
+        return {r[0]: r[1] for r in rows}
+    except Exception as exc:
+        logger.warning("sig_qa2_brand_map_failed err=%s", exc)
+        return {}
+
+
+def _build_source_entity_counts(resolved_signals: List[Dict[str, Any]]) -> Dict[str, int]:
+    """Count distinct entities resolved per content_item_id.
+
+    Used for D5 source entity density scoring. Built once per run
+    from the full resolved_signals list, then looked up per item.
+    """
+    counts: Dict[str, int] = {}
+    for sig in resolved_signals:
+        cid = sig.get("content_item_id", "")
+        if not cid:
+            continue
+        try:
+            entities = json.loads(sig.get("resolved_entities_json") or "[]")
+        except (ValueError, TypeError):
+            continue
+        counts[str(cid)] = len(entities)
+    return counts
+
+
+def _upsert_weak_evidence_log(
+    db: Session,
+    content_item_id: str,
+    entity_canonical_name: str,
+    entity_brand_name: Optional[str],
+    pipeline_run_date: str,
+    ev,  # EvidenceResult
+    shadow_mode: bool,
+) -> None:
+    """Upsert one row into weak_evidence_log. Non-fatal on any error.
+
+    ON CONFLICT (content_item_id, entity_canonical_name, pipeline_run_date)
+    DO UPDATE — idempotent for pipeline reruns on the same date.
+    """
+    try:
+        import json as _json
+        db.execute(text("""
+            INSERT INTO weak_evidence_log
+                (content_item_id, entity_canonical_name, entity_brand_name,
+                 pipeline_run_date, score, would_suppress, features_json,
+                 shadow_mode, created_at, updated_at)
+            VALUES
+                (:cid, :canonical, :brand, :run_date,
+                 :score, :suppress, CAST(:features AS JSONB),
+                 :shadow, NOW(), NOW())
+            ON CONFLICT (content_item_id, entity_canonical_name, pipeline_run_date)
+            DO UPDATE SET
+                score         = EXCLUDED.score,
+                would_suppress = EXCLUDED.would_suppress,
+                features_json  = EXCLUDED.features_json,
+                shadow_mode    = EXCLUDED.shadow_mode,
+                updated_at     = NOW()
+        """), {
+            "cid":      str(content_item_id),
+            "canonical": entity_canonical_name,
+            "brand":    entity_brand_name,
+            "run_date": pipeline_run_date,
+            "score":    float(ev.score),
+            "suppress": bool(ev.would_suppress),
+            "features": _json.dumps(ev.features),
+            "shadow":   shadow_mode,
+        })
+    except Exception as exc:
+        logger.warning(
+            "sig_qa2_weak_log_upsert_failed canonical=%s err=%s",
+            entity_canonical_name, exc,
+        )
+
+
 def _write_mentions(
     db: Session,
     content_items: List[Dict[str, Any]],
@@ -838,6 +928,19 @@ def _write_mentions(
         for item in content_items
         if (item.get("published_at") or "")[:10] == target_date
     }
+
+    # SIG-QA2 — evidence gate setup (shadow mode by default)
+    # gate_active=False → score all mentions, write weak_evidence_log,
+    #                      but DO NOT suppress any EntityMention writes.
+    # gate_active=True  → set SIG_QA2_GATE_ACTIVE=true in Railway env
+    #                      (requires shadow observation review first).
+    gate_active = os.getenv("SIG_QA2_GATE_ACTIVE", "false").lower() == "true"
+    shadow_mode = not gate_active
+    entity_brand_map = _build_entity_brand_map(db)
+    source_entity_counts = _build_source_entity_counts(resolved_signals)
+    ev_scored = 0
+    ev_would_suppress = 0
+
     written = 0
     for sig in resolved_signals:
         cid = sig["content_item_id"]
@@ -908,6 +1011,40 @@ def _write_mentions(
             except ValueError:
                 occurred_at = _now()
 
+            # SIG-QA2 — evidence gate (shadow mode)
+            # Score every perfume entity mention for evidence quality.
+            # In shadow mode: always write EntityMention (never suppressed).
+            # In active mode: skip EntityMention when would_suppress=True.
+            # Brand-level entity_type='brand' mentions are not scored (gate
+            # targets false product attribution, not brand-level roll-ups).
+            if entity_type == "perfume":
+                brand_name_for_gate = entity_brand_map.get(_base_name(canonical), "")
+                ev = score_mention(
+                    matched_from=ent.get("matched_from", ""),
+                    brand_name=brand_name_for_gate,
+                    canonical_name=canonical,
+                    alias_used=ent.get("matched_from", canonical)[:120],
+                    source_entity_count=source_entity_counts.get(str(cid), 1),
+                )
+                ev_scored += 1
+                if ev.would_suppress:
+                    ev_would_suppress += 1
+                    logger.debug(
+                        "sig_qa2_would_suppress canonical=%s score=%.4f shadow=%s",
+                        canonical, ev.score, shadow_mode,
+                    )
+                _upsert_weak_evidence_log(
+                    db, cid, canonical, brand_name_for_gate or None,
+                    target_date, ev, shadow_mode,
+                )
+                evidence_confidence = "high" if not ev.would_suppress else "low"
+                # In active mode, suppress weak mentions
+                if gate_active and ev.would_suppress:
+                    continue
+            else:
+                # Brand roll-up mentions bypass gate; carry legacy_unscored default
+                evidence_confidence = "legacy_unscored"
+
             mention = EntityMention(
                 entity_id=entity_uuid,
                 entity_type=entity_type,
@@ -921,6 +1058,7 @@ def _write_mentions(
                 engagement=eng_total or None,
                 occurred_at=occurred_at,
                 created_at=_now(),
+                evidence_confidence=evidence_confidence,
             )
             db.add(mention)
             db.flush()  # get mention.id for MentionSource FK
@@ -975,6 +1113,13 @@ def _write_mentions(
                 created_at=_now(),
             ))
             written += 1
+
+    if ev_scored:
+        logger.info(
+            "sig_qa2_shadow_summary scored=%d would_suppress=%d gate_active=%s",
+            ev_scored, ev_would_suppress, gate_active,
+        )
+
     return written
 
 

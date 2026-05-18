@@ -38,4 +38,12 @@ class EntityMention(Base):
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     metadata_json: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
+    # SIG-QA2 — evidence gate confidence label.
+    # legacy_unscored: rows written before SIG-QA2 existed (migration 052 server_default).
+    # high: scored by gate, passed threshold (score >= 0.5).
+    # low: scored by gate, below threshold (score < 0.5); written in shadow mode only.
+    evidence_confidence: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="legacy_unscored"
+    )
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)

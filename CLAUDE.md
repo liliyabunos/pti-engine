@@ -2042,27 +2042,51 @@ They are complementary and should both exist:
 
 RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it would become overloaded. Keep RES-AMB-GLOBAL as the "flag accumulated false entities for investigation" tool. SIG-QA2 is the prevention gate.
 
-### Next Build Phase — SIG-QA2
+### SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (Shadow Mode)
+**STATUS: IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008)**
+**Migration: 052 · Commit: (2026-05-18)**
 
-**SIG-QA2 — Evidence-Aware Mention Promotion Gate v1**
+**Gate is shadow-only.** `SIG_QA2_GATE_ACTIVE=false` is the ONLY deployed mode. Gate scores every perfume entity mention, writes evidence scores to `weak_evidence_log`, and stamps `evidence_confidence` on each new `entity_mention` row. No suppression occurs until active mode is explicitly activated.
 
-**What it builds:**
-- `evidence_confidence` column on `entity_mentions` (VARCHAR: `high` / `low` / `pending`) with server_default `'high'` for backwards compatibility
-- `EvidenceScorer` class in `perfume_trend_sdk/analysis/evidence_scorer.py` — computes 5-feature evidence score from matched_from + source context
-- Integration in `aggregate_daily_market_metrics._build_entity_mentions()` — scorer runs after resolution, before INSERT
-- `weak_evidence_log` table — captures skipped/low-confidence attributions for operator review
-- Aggregation, signal, and timeseries queries filter on `evidence_confidence != 'low'` (or include `'high'` only by default, with `--include-low-confidence` flag for debugging)
-- `scripts/sig_qa2_evidence_audit.py` — ad-hoc audit: show low-confidence entity_mentions for a given date range
+**What was implemented:**
+- Migration 052: `evidence_confidence VARCHAR(32) NOT NULL DEFAULT 'legacy_unscored'` on `entity_mentions`; `weak_evidence_log` table (UNIQUE on `content_item_id, entity_canonical_name, pipeline_run_date`; ON CONFLICT DO UPDATE for idempotent reruns)
+- `perfume_trend_sdk/analysis/evidence_scorer.py` — `score_mention()` with 5 feature dimensions:
+  - D1 Brand Token Proximity (weight 0.35) — brand token in ±15 tokens=1.0, ±30=0.5, absent=0.0
+  - D2 Fragrance Context Signal (weight 0.25) — fragrance keywords in ±20 tokens (capped 5 hits=1.0)
+  - D3 Note Context Anti-Signal (weight 0.20, inverted) — note indicator phrases in ±8=0.9, ±20=0.5; ≥2 ingredient co-occurrence in ±8=0.8
+  - D4 Full-Name Match (weight 0.10) — alias includes brand token=1.0
+  - D5 Source Entity Density (weight 0.10, inverted) — >15 entities=1.0 penalty, ≤3=0.1 penalty
+- `aggregate_daily_market_metrics.py` — shadow gate integration in `_write_mentions()`:
+  - `gate_active = os.getenv("SIG_QA2_GATE_ACTIVE", "false").lower() == "true"`
+  - Brand mentions bypass gate (`evidence_confidence = "legacy_unscored"`)
+  - Per-entity score computed; `_upsert_weak_evidence_log()` called; `evidence_confidence = "high"/"low"` written
+  - In shadow mode: all mentions written regardless of score
+  - In active mode (not deployed): `would_suppress=True` → skip entity_mention write
+- `tests/unit/test_sig_qa2_evidence_gate.py` — 56/56 pass
 
-**Where it sits:** `aggregate_daily_market_metrics.py` → entity_mention write path
+**Threshold calibration (2026-05-18, production RS snippets):**
+```
+Entity                             Type  Score   Decision
+Orange Blossom (Angela Flanders)   B     ≈0.23   SUPPRESS ✓
+Pure Luxury (Wolken Parfums)       D     ≈0.45   SUPPRESS ✓
+On the Rocks (Wolken Parfums)      F     ≈0.43   SUPPRESS ✓
+Enjoy the Day (Wolken Parfums)     D     ≈0.29   SUPPRESS ✓
+Cire Trudon Revolution             C     ≈0.35   SUPPRESS ✓
+Men's Cologne (Coty)               G     ≈0.46   SUPPRESS ✓
+Vision (Jaguar)                    A     ≈0.94   PASS ✓
+Creed Aventus                      A     ≈0.91   PASS ✓
+```
+All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good entities score above.
 
-**What existing data it uses:** `resolved_signals.resolved_entities_json` (contains `matched_from`), `canonical_content_items` (title, text_content, caption for context scan), entity_market brand_name
+**Shadow watchlist (monitor during shadow observation):**
+- Cool Water (Davidoff) — standalone well-known fragrance. "davidoff" may not appear near "cool water" in all review content (reviewers often say just "Cool Water" without the brand). Must be monitored during shadow observation before active-mode activation. Risk: false suppression if brand absent in review text. Documented in WATCH suite of test_sig_qa2_evidence_gate.py.
 
-**What UI/report behavior it protects:** Dashboard Top Movers, entity pages, signals, brand rollups — all currently accept any entity_mention regardless of evidence quality
+**Prerequisites for active-mode activation (ALL required before `SIG_QA2_GATE_ACTIVE=true`):**
+1. **Men's Cologne guard + repair** (separate task — confirm Type G, add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`, strip all RS rows, delete entity_mentions/ts/signals for entity c6b0eee2)
+2. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
+3. **Founder review and explicit active-mode approval**
 
-**Alembic migration required:** Yes — `evidence_confidence` column on `entity_mentions` + `weak_evidence_log` table
-
-**Status:** APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 is COMPLETE — PRODUCTION VERIFIED)
+**Migration 052 status:** PENDING — apply to production: `railway run --service generous-prosperity alembic upgrade head`
 
 ### Seed Cases Requiring Repair
 
@@ -3534,7 +3558,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
-| SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 production verified) | — |
+| SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) | IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008) | 2026-05-18 |
 | ENTITY-DISC1 — Assisted Catalog Capture | DESIGN REQUIREMENT DOCUMENTED — after SIG-QA2 | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
@@ -3658,7 +3682,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 051** (SIG-ID1 — unresolved_signal_candidates; applied 2026-05-18)
+Current production: **migration 052** (SIG-QA2 — evidence_confidence + weak_evidence_log; applied 2026-05-18)
 
 | Migration | What |
 |-----------|------|
@@ -3690,6 +3714,7 @@ Current production: **migration 051** (SIG-ID1 — unresolved_signal_candidates;
 | 049 | FTG-4 / RI1-E1B — Data-only: 1 relationship row (Lattafa Asad → dupe_of → Sauvage Elixir, confidence=0.850, is_public=TRUE, operator_reviewed=TRUE) + 1 dupe_map_seed evidence row. No schema changes. |
 | 050 | FTG-5 / SN1-A — `signal_intelligence_snapshots` table: immutable first-capture intelligence snapshot per (entity_id, entity_type, signal_type, detected_at); market metrics NUMERIC(10,4), signal_metadata JSONB, signal_threshold_version + snapshot_schema_version=1, first_captured_at TIMESTAMPTZ; 5 indexes + UNIQUE constraint. |
 | 051 | SIG-ID1 — `unresolved_signal_candidates` table: surfaces brand-qualified unresolved phrases from `unresolved_mentions_json`; columns: id UUID PK, phrase TEXT, brand_token TEXT, brand_canonical_name TEXT, occurrence_count INT, source_count INT, first_seen DATE, last_seen DATE, candidate_status VARCHAR(32) DEFAULT 'pending' (no CHECK; values: pending/dismissed/added_to_catalog), dismissed_at TIMESTAMPTZ, dismissed_by TEXT, updated_at TIMESTAMPTZ; UNIQUE on (phrase, brand_token). |
+| 052 | SIG-QA2 — `evidence_confidence VARCHAR(32) NOT NULL DEFAULT 'legacy_unscored'` on `entity_mentions` (values: legacy_unscored / high / low); `weak_evidence_log` table (content_item_id UUID, entity_canonical_name TEXT, entity_brand_name TEXT, pipeline_run_date DATE, score NUMERIC(5,4), would_suppress BOOLEAN, features_json JSONB, shadow_mode BOOLEAN DEFAULT true; UNIQUE on (content_item_id, entity_canonical_name, pipeline_run_date); 3 indexes: run_date, canonical, would_suppress). |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 

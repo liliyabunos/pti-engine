@@ -494,6 +494,90 @@ This is correct behavior — the guard prevents future misattribution; historica
 
 ---
 
+---
+
+### PV-008 — SIG-QA2 Shadow Mode Observation
+
+| Field | Value |
+|-------|-------|
+| **Verification ID** | PV-008 |
+| **Phase / task** | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) |
+| **Related commits** | SIG-QA2 implementation (2026-05-18) |
+| **Migration** | 052 — `evidence_confidence` on `entity_mentions` + `weak_evidence_log` table |
+| **Implementation shipped** | 2026-05-18 |
+| **Current status** | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` |
+| **Gate active?** | NO — `SIG_QA2_GATE_ACTIVE=false` (Railway env default). Gate is shadow-only: scores every perfume entity mention, writes to `weak_evidence_log`, writes `evidence_confidence=high/low` on `entity_mentions`, never suppresses. |
+| **Blocking severity** | High — gate must not be activated without completing all three prerequisites below. |
+
+**Three prerequisites for active-mode activation (ALL must be complete first):**
+
+1. **Men's Cologne guard + repair** (separate task — RES-AMB5 / SIG-QA1-REPAIR-2):
+   - Entity: Men's Cologne (Coty) — entity_id prefix `c6b0eee2` — Type G category descriptor
+   - Confirmed: 17 mentions, 41 ts rows, 9 signals; 0% RS brand context
+   - Required: add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}` proximity; full-history RS strip; delete entity_mentions/ts/signals
+   - **Do NOT activate gate before this repair is complete.** The gate would write evidence_confidence=low for Men's Cologne mentions but they would still be written in shadow mode. Once active, they'd be suppressed — but Men's Cologne existing data in entity_mentions would remain until repair runs.
+
+2. **Shadow observation (≥7 pipeline runs)**:
+   - Monitor `weak_evidence_log` distribution: would_suppress rate by entity, brand, score band
+   - Specifically monitor: Cool Water (Davidoff) — standalone fragrance that may score below threshold if "davidoff" is absent in review text. Legitimate passes are expected; consistent fails require guard tuning.
+   - Check: no well-established entities (≥50 mentions, score ≥60 on dashboard) consistently scoring below 0.5 without brand context
+
+3. **Founder review and explicit active-mode approval**:
+   - Review shadow log report (to be produced by Claude after ≥7 runs)
+   - Confirm threshold calibration acceptable
+   - Explicit approval via session instruction
+
+**Shadow observation SQL (run after ≥7 pipeline runs):**
+
+```sql
+-- Overall shadow summary
+SELECT
+    would_suppress,
+    COUNT(*) AS count,
+    AVG(score::numeric) AS avg_score,
+    MIN(score::numeric) AS min_score,
+    MAX(score::numeric) AS max_score
+FROM weak_evidence_log
+GROUP BY would_suppress
+ORDER BY would_suppress;
+
+-- Top suppressed entities by count
+SELECT entity_canonical_name, entity_brand_name, COUNT(*) AS suppress_count, AVG(score::numeric) AS avg_score
+FROM weak_evidence_log
+WHERE would_suppress = true
+GROUP BY entity_canonical_name, entity_brand_name
+ORDER BY suppress_count DESC LIMIT 30;
+
+-- Cool Water / Davidoff watchlist (check score distribution)
+SELECT pipeline_run_date, score, would_suppress, features_json
+FROM weak_evidence_log
+WHERE entity_canonical_name = 'Cool Water'
+ORDER BY pipeline_run_date DESC;
+
+-- Score distribution bands
+SELECT
+    CASE
+        WHEN score < 0.3 THEN 'very_low'
+        WHEN score < 0.5 THEN 'low'
+        WHEN score < 0.7 THEN 'medium'
+        ELSE 'high'
+    END AS band,
+    COUNT(*) AS count
+FROM weak_evidence_log
+GROUP BY band ORDER BY band;
+```
+
+**Pass criteria for shadow review (ALL must hold before active-mode activation):**
+- `would_suppress=true` rate is within expected range (10–25% of perfume entity resolutions)
+- Cool Water / Davidoff: majority of rows have `would_suppress=false` OR score distribution is stable and not trending toward false suppression
+- No well-established entity (dashboard score ≥60, ts_rows ≥30) shows consistent `would_suppress=true` across multiple runs
+- Men's Cologne repair is complete (RS=0, entity_mentions=0, ts=0)
+- Founder review complete
+
+**On completion:** Update SIG-QA2 status in CLAUDE.md to `COMPLETE — PRODUCTION VERIFIED`. Close this entry.
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -505,3 +589,4 @@ This is correct behavior — the guard prevents future misattribution; historica
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
+| PV-008 | SIG-QA2 shadow mode observation — migration 052, evidence_scorer, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | ≥7 pipeline runs + shadow review + Men's Cologne repair + founder approval |
