@@ -57,7 +57,7 @@ async function getAdminIdentifier(): Promise<string | null> {
 
 async function handler(
   request: NextRequest,
-  context: { params: Promise<{ path?: string[] }> },
+  context: { params: Promise<{ path: string[] }> },
 ): Promise<NextResponse> {
   const supabase = await createClient();
   const {
