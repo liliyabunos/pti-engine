@@ -2212,7 +2212,7 @@ Entities requiring further RS inspection before decision:
    - Sidebar: "Signal Candidates" nav item (Search icon) in ADMIN_NAV
    - Next.js proxy: `frontend/src/app/api/admin/signal-candidates/route.ts` + `[...path]/route.ts`
 
-**Tests:** `tests/unit/test_sig_id1_brand_proximity_suppression.py` — 49/49 pass (N suppression, P positive resolve, H helper unit tests, G guard structure, R regression, HV harvest candidate generation).
+**Tests:** `tests/unit/test_sig_id1_brand_proximity_suppression.py` — 72/72 pass (includes 23 new TestSIGID1AFilters cases from SIG-ID1A).
 
 **Roadmap sequence lock (binding):**
 ```
@@ -2230,6 +2230,103 @@ Do NOT begin SIG-QA2 before SIG-ID1 is `COMPLETE — PRODUCTION VERIFIED`. Do NO
 - [x] Frontend deploy incident fixed: `[[...path]]` → `[...path]` (commit 08048af, Railway SUCCESS) ✓
 
 **Production verification mode: IMMEDIATE — VERIFIED**
+
+---
+
+## SIG-ID1A — Signal Candidate Queue Quality Calibration
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-18)**
+**Commit: 49954d1**
+
+**Problem:** Initial unresolved_signal_candidates queue (7851 rows) was dominated by garbage: Alexandria Fragrances "fragrances" token alone generated 1605 candidates ("fragrances that", "fragrances for", etc.), Rook Perfumes "perfumes" 948, Arts&Scents "scents" 352. Top entries were all generic sentence fragments, not catalog candidates.
+
+**Root cause:** `harvest_unresolved_brand_signals.py` had no filtering for:
+- Plural forms of `_SKIP_TOKENS` (fragrances, perfumes, scents, colognes)
+- Generic common-word brand anchors (signature, elixir, floral, arabian, etc.)
+- Sentence fragment patterns (phrases ending in that/for/i/are/etc.)
+- Bare brand names (single-token phrases)
+- Brand-name-only phrases (phrase == normalized brand name)
+
+**Four filtering layers added to `_compute_candidates()`:**
+
+1. **`_SKIP_TOKENS` expanded** — plural forms added: `fragrances`, `perfumes`, `scents`, `colognes`. Prevents these token types from ever entering the brand_token_map.
+
+2. **`_HARVEST_CONTEXT_SKIP_TOKENS` (new frozenset, 28 entries)** — brand tokens that are real brand names but too generic to use as phrase anchors:
+   - Common words: `people`, `little`, `curious`, `sample`, `luxury`, `create`, `different`, `signature`, `select`, `unique`, `classic`, `divine`, `beautiful`
+   - Geographic/language: `avenue`, `french`, `london`, `grande`
+   - Olfactory descriptors: `floral`, `incense`, `gourmand`, `orange`, `natural`
+   - Retail descriptors: `beauty`, `fashion`, `purchase`, `sephora`, `prestige`
+   - Note term: `elixir` (prevents "le male elixir" → Elixir Attar attribution)
+   - Geographic brand component: `arabian` (prevents "swiss arabian" fragments → Arabian Oud)
+
+3. **Single-token filter** — phrases with < 2 tokens excluded (bare brand names "kilian", "byredo" not useful as catalog candidates)
+
+4. **Trailing stop-word filter** (`_TRAILING_STOP_WORDS`, 43 entries) — phrases ending in that/for/i/are/in/from/and/or/etc. are sentence fragments, excluded
+
+5. **Brand-name-only filter** — phrase == `_normalize(brand_canonical_name)` excluded (catches "jean paul gaultier", "dolce gabbana", "yves saint laurent")
+
+**Also applied:**
+- Added Dossier to `resolver_brands` (id=6412) — surfaces Dossier product candidates in harvest
+- Full-history rebuild after filter deployment
+- "vertus amber elixir" direct INSERT (Option A) — 1 row, occ=1, first_seen=2026-05-01
+
+**Results:**
+- Before: 7851 rows, top entries were "fragrances that" (1605), "fragrances for" (948), "signature scent" (111)
+- After: 2417 rows (69% reduction)
+- Top-100 quality audit (2026-05-18): ~50% real product candidates, ~10% brand gaps, ~20% wrong attribution (correct phrase, wrong brand token match), ~20% fragment residue
+
+**Top-100 quality findings:**
+- Real product gaps confirmed: Chanel Chance, Valentino Born in Roma, Burberry Goddess/Hero/Her, Amouage Reflection, Byredo Mojave Ghost, Armani My Way/Stronger, D&G Light Blue, Nautica Voyage, Versace Pour Homme, Versace Dylan
+- Brand gaps (missing from resolver): Clive Christian (luxury house), Antonio Banderas fragrance line, Louis Vuitton fragrances, Frederic Malle
+- Known wrong-attribution patterns: "antonio banderas" → Antonio Visconti/Banderas; "paradise garden" → Universo Garden Angels; "profumi" → Viridis Profumi; "victoria secret" → What We Do Is Secret
+- Remaining fragment patterns: "by lattafa", "from lattafa", "de chanel", "by kilian", "by amouage" — attribution prepositions that pass because brand_token is correct; dismissible via admin UI
+
+**Dossier candidates in queue (10 rows):** "dossier floral" (4), "dossier floral marshmallow" (3), "dossier ambery vanilla" (2), "dossier citrus ginger" (2), "dossier musky" (2), "dossier citrus" (2)
+
+**Tests:** 72/72 pass (23 new TestSIGID1AFilters cases: F1-F4 filters, SK skip tokens, DS Dossier, structure guards)
+
+**Production verification mode: IMMEDIATE — VERIFIED**
+
+---
+
+## ENTITY-DISC1 — Assisted Catalog Capture (Design Requirement)
+**STATUS: DESIGN REQUIREMENT DOCUMENTED — NOT YET IMPLEMENTED**
+**Next in sequence after:** SIG-QA2 (do not begin before SIG-QA2 COMPLETE — PRODUCTION VERIFIED)
+
+**Purpose:** Address Class 3 truth integrity gaps — real brand references that go unresolved because the brand/perfume is not in the resolver at all. Complements SIG-ID1's Class 2 (wrong identity) and RES-AMB/SIG-QA's Class 1 (false identity).
+
+**Trigger input:** `unresolved_signal_candidates` table surfaced by SIG-ID1's harvest script. Operator sees "vertus amber elixir" with 25 occurrences → needs to add "Vertus Amber Elixir" to `resolver_perfumes` and add aliases.
+
+**Two cases:**
+
+**Case A — Known brand, missing perfume:**
+The brand exists in `resolver_brands` (e.g., Vertus id=350) but the specific perfume "Vertus Amber Elixir" is not in `resolver_perfumes`. Operator clicks a candidate in the admin Signal Candidates queue → triggers a lookup flow → confirms product → inserts into `resolver_perfumes` + `resolver_aliases`.
+
+**Case B — Missing brand:**
+Neither the brand nor any of its perfumes are in the resolver (e.g., Clive Christian, Antonio Banderas line). Operator must first add the brand to `resolver_brands`, then add perfumes.
+
+**Data sources (priority order):**
+1. Brand's official website — canonical perfume names, current lineup
+2. Parfumo — secondary source for product catalog and aliases
+3. Fragrantica — tertiary (already used as primary catalog source, but may lag indie/niche brands)
+
+**Design constraints:**
+- Never auto-insert into `resolver_perfumes` or `resolver_aliases` without operator review
+- All new resolver rows must carry a `match_type` tag indicating source (e.g., `entity_disc1_operator`)
+- Adding a new perfume to the resolver does NOT automatically create entity_mentions — requires next pipeline run to create entity_market row through normal aggregation
+- Operator workflow: Signal Candidates queue → candidate review → brand website lookup → confirm name + aliases → insert via admin action (not manual SQL)
+
+**Admin UI requirement (ENTITY-DISC1):**
+The existing `/admin/signal-candidates` page needs an "Add to Catalog" action alongside "Dismiss". This action should:
+- Pre-fill a form with the candidate phrase as the suggested canonical name
+- Show brand_canonical_name and brand_token for context
+- Allow operator to confirm/correct canonical name + add 2-3 aliases
+- On submit: INSERT into `resolver_perfumes` + `resolver_aliases` + update `candidate_status='added_to_catalog'`
+
+**What ENTITY-DISC1 does NOT do:**
+- Does not auto-scrape brand websites
+- Does not batch-import from Fragrantica
+- Does not create entity_market rows directly (pipeline creates these on next run)
+- Does not touch `entity_mentions`, `entity_timeseries_daily`, or `signals`
 
 ---
 
@@ -3422,7 +3519,9 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
+| SIG-ID1A — Signal Candidate Queue Quality Calibration (4 harvest filters + Dossier seed + Vertus INSERT + top-100 audit) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 | APPROVED — NEXT PHASE AFTER SIG-ID1 (do not begin before SIG-ID1 production verified) | — |
+| ENTITY-DISC1 — Assisted Catalog Capture | DESIGN REQUIREMENT DOCUMENTED — after SIG-QA2 | — |
 | KB-CAT1-A — Canonical Brand Hierarchy Production Audit | COMPLETE (12 candidates, 4 true hierarchy, 8 false positives) | 2026-05-14 |
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
@@ -3545,7 +3644,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 050** (FTG-5 / SN1-A — signal_intelligence_snapshots; applied 2026-05-16) · **migration 051 PENDING** (SIG-ID1 — unresolved_signal_candidates; apply per PV-007)
+Current production: **migration 051** (SIG-ID1 — unresolved_signal_candidates; applied 2026-05-18)
 
 | Migration | What |
 |-----------|------|
