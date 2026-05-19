@@ -1101,6 +1101,65 @@ Both forms were registered as bare aliases for Men's Cologne (Coty, entity_id `c
 
 ---
 
+---
+
+## PV-009 — DATA4-C TOM FORD Collection Hierarchy
+
+| Field | Value |
+|-------|-------|
+| **Verification ID** | PV-009 |
+| **Phase / task** | DATA4-C — TOM FORD Private Blend + TOM FORD Signature as collections under Tom Ford |
+| **Migration** | 054 |
+| **Commit** | (data-only migration + tests + CLAUDE.md, committed this session) |
+| **Applied to production** | 2026-05-19 (alembic upgrade 054 via public proxy) |
+| **Current status** | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` |
+
+**What was implemented:**
+
+Migration 054 seeds 2 collection rows into `brand_profiles` (data-only, no schema changes):
+
+| brand_name_normalized | brand_tier | node_type | parent_brand_normalized |
+|---|---|---|---|
+| tom ford private blend | designer | collection | tom ford |
+| tom ford signature | designer | collection | tom ford |
+
+Architecture decision: both TF entries are `node_type=collection` (not `sub_brand`) because neither is an acquisition. TOM FORD Private Blend (luxury niche tier — Oud Wood, Tobacco Vanille, etc.) and TOM FORD Signature (mainstream tier — Ombré Leather, etc.) were created by Tom Ford as internal themed tiers within his house — no independent brand identity, no separate legal entity.
+
+Parent row `tom ford` (brand_tier='designer', node_type='brand') was already seeded in migration 044. Migration 054 guards with `ON CONFLICT DO NOTHING` for the parent row defensively.
+
+**DB-layer verification (applied 2026-05-19 — ALL PASS):**
+- `alembic_version`: 054 ✓
+- `SELECT COUNT(*), node_type FROM brand_profiles GROUP BY node_type`: collection=5 (Xerjoff ×3 + Filippo Sorcinelli SAUF + TF ×2), sub_brand=1, brand=213 ✓
+- `SELECT brand_name_normalized, node_type, parent_brand_normalized FROM brand_profiles WHERE brand_name_normalized LIKE 'tom ford%' ORDER BY brand_name_normalized`:
+  - `tom ford` → brand, NULL ✓
+  - `tom ford private blend` → collection, tom ford ✓
+  - `tom ford signature` → collection, tom ford ✓
+
+**Tests:** `tests/unit/test_data4c_tom_ford_hierarchy.py` — 26/26 pass (A–H suites: Private Blend, Signature, Tom Ford parent, normalization, hierarchy map, label format, Xerjoff regression, other brands regression).
+
+**Display effect (KB-CAT1-C/D infrastructure already deployed — no code changes required):**
+- `/entities/brand/brand-tom-ford-private-blend` → "COLLECTION · Tom Ford" badge + parent brand link
+- `/entities/brand/brand-tom-ford-signature` → "COLLECTION · Tom Ford" badge + parent brand link
+- `/entities/brand/brand-tom-ford` → "Collections" section listing Private Blend + Signature
+
+**Deferred reason:** UI verification requires browser/operator check of brand entity pages. DB-layer confirmed correct; Railway deploy pending after git push.
+
+**Out of scope (DATA4-E):** Duplicate entity pairs — some perfumes (Ombré Leather, Oud Wood, Neroli Portofino) appear in entity_market under BOTH "Tom Ford" AND "TOM FORD Private Blend" brand_name values — each mapping to a separate Fragrantica resolver entry. This dedup issue is out of scope for DATA4-C. DATA4-E addresses systemic brand_name canonicalization.
+
+**Production verification checklist:**
+- [ ] `alembic_version = 054` on production DB ✓ (already confirmed above)
+- [ ] `/entities/brand/brand-tom-ford-private-blend` → shows "COLLECTION" badge + "Part of Tom Ford →" parent link
+- [ ] `/entities/brand/brand-tom-ford-signature` → shows "COLLECTION" badge + "Part of Tom Ford →" parent link
+- [ ] `/entities/brand/brand-tom-ford` → shows "Collections" section containing both Private Blend and Signature entries
+- [ ] Xerjoff hierarchy unaffected — `/entities/brand/brand-xerjoff---join-the-club` still shows "COLLECTION · Xerjoff" ✓ (regression)
+- [ ] Tom Ford parent brand (`/entities/brand/brand-tom-ford`) node_type='brand', parent=null (no false collection tagging)
+
+**Pass criteria:** All 3 TOM FORD brand pages show correct hierarchy display; Xerjoff regression clean.
+
+**Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-009**
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -1116,3 +1175,4 @@ Both forms were registered as bare aliases for Men's Cologne (Coty, entity_id `c
 | OPS-CRON-01 | Pipeline scheduling gap 2026-05-17 through 2026-05-19 | `COMPLETE — DATA RECOVERED (2026-05-19)` | Two root causes: (1) code deploys during cron windows killed running pipeline processes on May 17 evening + May 19 morning; (2) SIG-QA2 UUID crash (no SAVEPOINT, content_item_id UUID vs TEXT) killed May 18 evening aggregation. Backfill applied 2026-05-19: agg+signals for May 17, May 18, May 19. Tonight's evening pipeline (23:00 UTC) expected to run clean. Cron blackout policy added to CLAUDE.md. |
 | SCOPE-ATR1 | After the Rain (Declaration Grooming) out-of-scope repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — non-perfume grooming scent (shaving soap + aftershave). Guard added + RS stripped + downstream deleted. 12/12 tests. |
 | SIG-QA1-BATCH2 | 12 false-positive guards + repair (Type B×6, C×2, D×4) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — verified immediately via direct DB; ALL PASS. Commits: d6dde32 + e82a59b + d58eada. 49/49 tests pass. |
+| PV-009 | DATA4-C — TOM FORD collection hierarchy (migration 054) | `IMPLEMENTED — PRODUCTION VERIFICATION PENDING` | DB-layer verified (alembic=054, 5 collection rows, TF rows correct). UI verification deferred — browser check of brand entity pages required. |

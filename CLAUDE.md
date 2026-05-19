@@ -2698,8 +2698,36 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 - Jo Malone: ts=47 ✓ · Acqua di Parma: ts=39 ✓ · Haus of Gloi: ts=12 ✓ · W.Dressroom: ts=41 ✓ · Hollister: ts=13 ✓
 - Guard correctly blocking 'Comme des Garçons' (accented) from re-creation in subsequent pipeline runs ✓
 
+**DATA4-C — TOM FORD Private Blend + Signature Collection Hierarchy**
+**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (see PV-009)**
+**Migration: 054 · No code changes (KB-CAT1-C/D infrastructure handles display)**
+
+**Architecture decision:** TOM FORD Private Blend and TOM FORD Signature are themed collections within the Tom Ford house, not independent sub-brands. Neither is an acquisition or independently branded entity. Both classified as `node_type='collection'`, `parent_brand_normalized='tom ford'`.
+
+**brand_profiles seeds added (migration 054):**
+- `tom ford private blend` → node_type=collection, brand_tier=designer, parent=tom ford
+- `tom ford signature` → node_type=collection, brand_tier=designer, parent=tom ford
+
+**Display effect (via existing KB-CAT1-C/D infrastructure):**
+- `/entities/brand/brand-tom-ford-private-blend` → "COLLECTION · Tom Ford" badge + parent link
+- `/entities/brand/brand-tom-ford-signature` → "COLLECTION · Tom Ford" badge + parent link
+- `/entities/brand/brand-tom-ford` → "Collections" section listing Private Blend and Signature
+
+**Duplicate entity note (documented, out of scope for DATA4-C):**
+Some perfumes appear in entity_market under BOTH "Tom Ford" and "TOM FORD Private Blend" brand_name values (e.g. "Tom Ford Oud Wood" + "TOM FORD Private Blend Oud Wood", same score=42.0). These are separate Fragrantica resolver entries. Dedup is DATA4-E scope.
+
+**DB-layer verification (2026-05-19) — COMPLETE:**
+- alembic_version: 054 ✓
+- tom ford → brand, tier=designer, parent=None ✓
+- tom ford private blend → collection, tier=designer, parent=tom ford ✓
+- tom ford signature → collection, tier=designer, parent=tom ford ✓
+- brand_profiles node_type distribution: brand=213, collection=5, sub_brand=1 ✓
+
+**Tests:** `tests/unit/test_data4c_tom_ford_hierarchy.py` — 26/26 pass.
+
+**Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-009**
+
 **DATA4 phase plan (remaining):**
-- DATA4-C — TOM FORD Private Blend: collection-as-brand architectural decision + brand_profiles hierarchy entry (KB-CAT1 integration)
 - DATA4-E — Systemic ingest-time canonicalization (prevent future brand_name pollution at aggregation ingest time)
 
 ---
@@ -3845,6 +3873,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
+| DATA4-C — TOM FORD Private Blend + Signature collection hierarchy (migration 054) | IMPLEMENTED — PENDING PRODUCTION VERIFICATION (PV-009) | 2026-05-19 |
 | REL-1 — Staging & Production Release Gate Architecture | APPROVED — DEFERRED (after KB-CAT1/FTG block) | 2026-05-15 |
 
 ---
@@ -3997,6 +4026,7 @@ Current production: **migration 053** (SIG-QA2 fix — weak_evidence_log.content
 | 051 | SIG-ID1 — `unresolved_signal_candidates` table: surfaces brand-qualified unresolved phrases from `unresolved_mentions_json`; columns: id UUID PK, phrase TEXT, brand_token TEXT, brand_canonical_name TEXT, occurrence_count INT, source_count INT, first_seen DATE, last_seen DATE, candidate_status VARCHAR(32) DEFAULT 'pending' (no CHECK; values: pending/dismissed/added_to_catalog), dismissed_at TIMESTAMPTZ, dismissed_by TEXT, updated_at TIMESTAMPTZ; UNIQUE on (phrase, brand_token). |
 | 052 | SIG-QA2 — `evidence_confidence VARCHAR(32) NOT NULL DEFAULT 'legacy_unscored'` on `entity_mentions` (values: legacy_unscored / high / low); `weak_evidence_log` table (content_item_id UUID [BROKEN — see 053], entity_canonical_name TEXT, entity_brand_name TEXT, pipeline_run_date DATE, score NUMERIC(5,4), would_suppress BOOLEAN, features_json JSONB, shadow_mode BOOLEAN DEFAULT true; UNIQUE on (content_item_id, entity_canonical_name, pipeline_run_date); 3 indexes: run_date, canonical, would_suppress). |
 | 053 | SIG-QA2 fix — `ALTER weak_evidence_log.content_item_id UUID → TEXT`. Root cause: all `resolved_signals.content_item_id` values are YouTube video IDs (11-char strings like "kh8zbwoRHN0"), not UUIDs. Migration 052's UUID type caused every INSERT to fail. Migration drops/recreates unique constraint + indexes to allow ALTER TYPE. |
+| 054 | DATA4-C — TOM FORD hierarchy seed: INSERT 2 rows into brand_profiles — `tom ford private blend` (collection, parent=tom ford) + `tom ford signature` (collection, parent=tom ford). Data-only migration; no schema changes. Leverages existing KB-CAT1-C/D display infrastructure. |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 
