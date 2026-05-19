@@ -2697,6 +2697,59 @@ FROM signal_intelligence_snapshots;
 
 ---
 
+## OPS INCIDENT — Pipeline Scheduling Gap 2026-05-17 through 2026-05-19
+**Investigated: 2026-05-19 · Ledger entry: OPS-CRON-01**
+
+**Two root causes:**
+
+**Root cause 1 — Code deploys during cron windows (May 17 evening, May 19 morning):**
+Railway redeploys every service simultaneously on each `git push`. Any push that lands during an active cron execution window (11:00 UTC ±30 min, 23:00 UTC ±30 min) kills the running pipeline container. `set -e` in pipeline scripts propagates the kill as a script abort. Health check step never runs → no `pipeline_health_log` entry written.
+
+Evidence: deploy at 23:05 UTC on May 17 killed the evening pipeline 5 minutes in. Deploy at 11:17 UTC on May 19 killed the morning pipeline 17 minutes in.
+
+**Root cause 2 — SIG-QA2 UUID crash (May 18 evening):**
+`_upsert_weak_evidence_log()` attempted to INSERT a YouTube video ID (`kh8zbwoRHN0`) into `content_item_id UUID NOT NULL` (migration 052's wrong column type). Without SAVEPOINT, the error left the session in `InFailedSqlTransaction` state, aborting all subsequent EntityMention INSERTs. Pipeline crashed before health check. Fixed by migration 053 (UUID→TEXT) + commit `2203d61` (SAVEPOINT), both deployed 2026-05-19.
+
+**Affected dates and data gap:**
+
+| Date / Run | Ingestion | Aggregation | Timeseries | Signals | Root cause |
+|---|---|---|---|---|---|
+| 2026-05-17 morning | ✓ YT=429, RD=166 | ✗ | 0 | 0 | Unknown (no deploy found in window) |
+| 2026-05-17 evening | ✓ | ✗ KILLED | 0 | 0 | Deploy at 23:05 UTC |
+| 2026-05-18 morning | ✓ | ✓ CRITICAL | ✓ | ✓ | None |
+| 2026-05-18 evening | ✓ RD=194, YT=508 | ✗ CRASHED | partial | partial | SIG-QA2 UUID crash |
+| 2026-05-19 morning | ✓ YT=375 | ✗ KILLED (carry-fwd only) | carry-fwd only | 0 | Deploy at 11:17 UTC |
+
+**Recovery executed 2026-05-19:**
+- `aggregate_daily_market_metrics --date 2026-05-17`: 127 entities, 166 mentions, 72 brand rows ✓
+- `detect_breakout_signals --date 2026-05-17`: 85 signals ✓
+- `aggregate_daily_market_metrics --date 2026-05-18`: 142 entities, 16 incremental mentions added, 100 brand rows ✓
+- `detect_breakout_signals --date 2026-05-18`: 117 signals (cleared 4 stale, wrote 117 new) ✓
+- `aggregate_daily_market_metrics --date 2026-05-19`: partial (7 entities, 10 mentions from morning youtube only) ✓
+- `detect_breakout_signals --date 2026-05-19`: 1 signal ✓
+- Tonight's evening pipeline (23:00 UTC) will complete 2026-05-19 with full Reddit + YouTube data
+
+**Post-recovery verified state:**
+| Date | Timeseries | Mentions | Signals |
+|------|-----------|---------|---------|
+| 2026-05-16 | brand=120, perf=1156 | 260 | 111 |
+| 2026-05-17 | brand=72, perf=1103 | 166 | 85 |
+| 2026-05-18 | brand=100, perf=1157 | 199 | 117 |
+| 2026-05-19 | partial (eve run pending) | 10 | 1 |
+
+**PV-008 impact:** All backfill runs are manual (not scheduled) — they do NOT count toward the 7-run shadow observation counter. Counter remains 0/7. First qualifying scheduled run is tonight's evening pipeline (23:00 UTC) or 2026-05-20 morning pipeline.
+
+**Cron blackout policy (binding — added 2026-05-19):**
+Do NOT push to `main` during:
+- `10:30–11:30 UTC` (morning pipeline cron window)
+- `22:30–23:30 UTC` (evening pipeline cron window)
+
+A `git push` during these windows will kill the active pipeline process. No Railway-side protection exists (Railway kills all service containers on new deploy). This is the same risk that caused the May 16, 2026 collapse (see previous OPS INCIDENT entry).
+
+**Long-term fix:** REL-1 staging gate (see below) — pushes to staging never trigger production cron containers.
+
+---
+
 ## REL-1 — Staging & Production Release Gate Architecture
 **STATUS: APPROVED — DEFERRED (2026-05-15)**
 **Assessment completed: 2026-05-15 · Implementation deferred until KB-CAT1/FTG block is complete**
