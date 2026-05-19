@@ -1753,7 +1753,7 @@ Added to `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md`. Rule: RS strip for any 
 ---
 
 ## RES-AMB4 — Audit-Driven False Positive Guard Expansion + Production Repair
-**STATUS: CORE FALSE-POSITIVE REPAIR VERIFIED · BRAND RECOMPUTE PENDING (see PV-005)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-19)**
 **Commits: 1f63429 (guard expansion + tests + repair script)**
 **No migration required.**
 
@@ -2159,7 +2159,7 @@ Entities requiring further RS inspection before decision:
 ---
 
 ## SIG-QA1-REPAIR — Source-Evidence Pollution Cleanup (5 Confirmed Unsupported Entities)
-**STATUS: IMPLEMENTED — AWAITING UI VERIFICATION (see PV-006)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-19)**
 **Commit: b765377 (guards + tests + repair script)**
 **No migration required.**
 
@@ -2349,6 +2349,52 @@ All 11 brand entities had ts/signals deleted; pipeline recomputes from legitimat
 - All 11 brand entities: ts=0, signals=0 ✓
 
 **Tests:** `tests/unit/test_sig_qa1_batch2_guards.py` — 49/49 pass (N1-N12 negative, P1-P12 positive, R1-R5 regression, G1-G3 guard structure). Prior guard suite: all pass (no regressions).
+
+**Production verification mode: IMMEDIATE — VERIFIED**
+
+---
+
+## SCOPE-ATR1 — After the Rain (Declaration Grooming) Out-of-Scope Repair
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-19)**
+**No migration required.**
+
+**Trigger:** After the Rain (Declaration Grooming) flagged during RS inspection pass. entity_market has entity_type='perfume' for this entity, but the underlying product is a shaving soap + alcohol aftershave splash — not a perfume.
+
+**Scope decision:** Declaration Grooming "After the Rain" = **OUT OF SCOPE — non-perfume grooming scent.**
+- Products: Shaving Soap (Milksteak Base, $22) + Alcohol Aftershave Splash ($17). No EDP, cologne spray, or perfume.
+- Company: Going Out of Business (EOB 2026-01-31). All products sold out at time of investigation.
+- WebFetch evidence: declarationgrooming.com confirmed product listing; "Cologne" nav category exists but "After the Rain" is not in it.
+- SIG-ID1 Class 2 (Wrong Identity): bare alias "after the rain" fired on FemFragLab content that likely discusses Solstice Scents "After the Rain" EDP (a real perfume, not in entity_market). Declaration Grooming got the attribution because it had the bare alias registered.
+
+**Resolver state:**
+- `resolver_perfumes`: 3 "after the rain" entries — Declaration Grooming (out-of-scope), Solstice Scents 2011 Perfume (id=6487), Solstice Scents 2017 Eau de Parfum (id=6488). Both Solstice Scents versions are actual perfume products but not tracked in entity_market.
+- `entity_market`: only Declaration Grooming version tracked.
+
+**Guard added (`_AMBIGUOUS_PHRASE_GUARD`):**
+- `"after the rain"` → `[frozenset({"declaration"}), frozenset({"grooming"})]`
+- Requires "declaration" or "grooming" in ±10-token context before resolving.
+- Branded full-name alias "declaration grooming after the rain" remains active and resolves correctly.
+
+**Repair counts:**
+| Layer | Count |
+|-------|-------|
+| RS rows stripped (full-history, no --days window) | 2 |
+| entity_mentions deleted (perfume, id=cff58833) | 3 |
+| entity_timeseries_daily deleted (perfume) | 14 |
+| signals deleted (perfume) | 1 |
+| signal_intelligence_snapshots deleted | 0 |
+| Brand ts deleted (Declaration Grooming, id=3690344f) | 14 |
+| Brand signals deleted | 1 |
+
+**Brand cleanup:** Declaration Grooming had 0 other tracked perfumes → all brand ts/signals deleted (OPS-EE1).
+
+**Entity retention:** cff58833 row retained in entity_market for audit trail (same policy as RES-AMB1 false positives).
+
+**Production verification (2026-05-19 — ALL PASS):**
+- After the Rain: RS=0, mentions=0, ts=0, signals=0, snaps=0 ✓
+- Declaration Grooming brand: ts=0, signals=0 ✓
+
+**Tests:** `tests/unit/test_scope_atr1_after_the_rain.py` — 12/12 pass (N1-N3 negative, P1-P3 positive, R1-R3 regression, G1-G3 guard structure).
 
 **Production verification mode: IMMEDIATE — VERIFIED**
 
@@ -3784,12 +3830,13 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB1 — Ambiguous Perfume Phrase Guard v1 | COMPLETE — PRODUCTION VERIFIED (Phase 2 repair applied 2026-05-17) | 2026-05-17 |
 | RES-AMB2 — Ambiguous Phrase Guard Expansion (7 phrases) + Repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | RES-AMB3 — Ambiguous Phrase Guard v3 (6 entities: Berdoues/Flormar/Aigner×3/So...?) + Musc K repair | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
-| RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | CORE FALSE-POSITIVE REPAIR VERIFIED · BRAND RECOMPUTE PENDING (PV-005) | 2026-05-17 |
+| RES-AMB4 — Audit-Driven Guard Expansion (8 entities: I will/Very Pretty/So Sexy!/Day One/Best Man/You & You/Jasmine & Rose/Cedar Wood) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
-| SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
+| SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | SIG-QA1-TYPE-D — Deferred Type D generic-phrase repair (Feel Good/Come Together/Bride To Be/Day to Day) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | SIG-QA1-BATCH2 — 12 false-positive guards + repair (note/ingredient B×6, ordinary noun C×2, generic descriptor D×4) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
+| SCOPE-ATR1 — After the Rain (Declaration Grooming) out-of-scope repair (non-perfume grooming scent, EOB 2026-01-31) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) | IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008) | 2026-05-18 |

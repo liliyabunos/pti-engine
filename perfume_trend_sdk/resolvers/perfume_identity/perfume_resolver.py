@@ -354,6 +354,19 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     #   "be cool"      → Be Cool (Avon) — lifestyle/marketing phrase.
     #                     RS: motivational content, advice posts; 0% avon context.
     "be cool":                   [frozenset({"avon"})],
+    # SCOPE-ATR1 — After the Rain (Declaration Grooming) — Catalog Scope / Ontology Decision (2026-05-19)
+    # "after the rain" → After the Rain (Declaration Grooming) — SCOPE OUT: non-perfume grooming scent.
+    #   Declaration Grooming products: Shaving Soap + Alcohol Aftershave Splash (EOB company 2026-01-31).
+    #   NOT an EDP, cologne spray, or perfume product. Incorrectly classified as entity_type='perfume'.
+    #   RS evidence: 2 rows — FemFragLab likely references Solstice Scents "After the Rain" EDP (not DG).
+    #   SIG-ID1 Class 2 pattern: wrong brand attribution — DG had the bare alias, Solstice Scents EDP
+    #   is the actual perfume product users discuss. Solstice Scents versions in resolver (id=6487/6488)
+    #   but not in entity_market (not yet tracked).
+    #   Guard: require "declaration" or "grooming" in ±10-token context to resolve.
+    #   Branded alias "declaration grooming after the rain" remains active and resolves correctly.
+    #   DB repair: RS stripped; entity_mentions=3, ts=14, signals=1, snaps=0 deleted.
+    #   Declaration Grooming brand ts=14, signals=1 deleted (OPS-EE1; no other tracked perfumes).
+    "after the rain":            [frozenset({"declaration"}), frozenset({"grooming"})],
 }
 
 
