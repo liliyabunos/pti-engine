@@ -300,6 +300,60 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     "come together":             [frozenset({"vintner"})],
     "bride to be":               [frozenset({"primark"})],
     "day to day":                [frozenset({"primark"})],
+    # SIG-QA1-BATCH2 — 12 additional confirmed false positives (2026-05-19)
+    # All confirmed 0% brand context across all RS rows via full RS inspection.
+    #
+    # Type B — note/ingredient collision:
+    #   "white musk"   → White Musk (W.Dressroom) — "white musk" ubiquitous as note descriptor.
+    #                     RS: note-preference posts, product ingredient lists; 0% dressroom context.
+    #                     normalize_text("W.Dressroom") → "w dressroom" → "dressroom" is distinctive.
+    "white musk":                [frozenset({"dressroom"})],
+    #   "black pepper" → Black Pepper (Demeter) — note name in compositions, reviews, ingredient lists.
+    #                     RS: note descriptions in top-note breakdowns; 0% demeter context.
+    "black pepper":              [frozenset({"demeter"})],
+    #   "apple blossom"→ Apple Blossom (Auric Blends) — floral note; RS: note-preference posts.
+    #                     normalize_text("Auric Blends") → "auric blends" → "auric" is distinctive.
+    "apple blossom":             [frozenset({"auric"})],
+    #   "bitter orange"→ Bitter Orange (Zara) — citrus ingredient / fragrance note.
+    #                     RS: note descriptions ("bitter orange top note"), 0% zara context.
+    #                     NOTE: Zara is also a fashion brand — any fragrance content mentioning
+    #                     "zara" near "bitter orange" (e.g. "Zara Red Temptation") would correctly
+    #                     resolve. The guard prevents purely-ingredient mentions.
+    "bitter orange":             [frozenset({"zara"})],
+    #   "earl grey"    → Earl Grey (Teone Reinthal Natural Perfume) — tea ingredient / flavor descriptor.
+    #                     RS: "earl grey tea notes in gourmand frags"; 0% teone/reinthal context.
+    #                     normalize_text("Teone Reinthal Natural Perfume") → "teone" is distinctive.
+    "earl grey":                 [frozenset({"teone", "reinthal"})],
+    #   "earl grey tea"→ Earl Grey Tea (Demeter) — tea flavor used in note descriptions.
+    #                     RS: note/flavor mentions; 0% demeter context.
+    "earl grey tea":             [frozenset({"demeter"})],
+    #
+    # Type C — ordinary noun collision:
+    #   "black jeans"  → Black Jeans (Versace) — clothing item description.
+    #                     RS: "wearing black jeans and cologne", fashion context; 0% versace context.
+    "black jeans":               [frozenset({"versace"})],
+    #   "black suit"   → Black Suit (Ramon Monegal) — clothing item description.
+    #                     RS: "black suit cologne recommendations" posts; 0% monegal context.
+    #                     normalize_text("Ramon Monegal") → "ramon monegal" → "monegal" is distinctive.
+    "black suit":                [frozenset({"monegal"})],
+    #
+    # Type D — generic descriptor / marketing phrase:
+    #   "green tea"    → Green Tea (Coty) — beverage / wellness descriptor.
+    #                     RS: "green tea scent notes", wellness content; 0% coty context.
+    "green tea":                 [frozenset({"coty"})],
+    #   "hair perfume" → Hair Perfume (Balmain) — product-category descriptor.
+    #                     RS: "best hair perfume recommendations"; 0% balmain context.
+    "hair perfume":              [frozenset({"balmain"})],
+    #   "bath body"    → Bath & Body (Marbert) — normalize_text("Bath & Body") → "bath body".
+    #   "bath and body"→ alias variant form (text spelling out "and").
+    #                     RS: product-category descriptions, "Bath & Body Works" content; 0% marbert context.
+    #                     NOTE: Bath & Body Works content legitimately says "bath body" — the guard
+    #                     prevents Marbert attribution from that common retail context.
+    "bath body":                 [frozenset({"marbert"})],
+    "bath and body":             [frozenset({"marbert"})],
+    #   "be cool"      → Be Cool (Avon) — lifestyle/marketing phrase.
+    #                     RS: motivational content, advice posts; 0% avon context.
+    "be cool":                   [frozenset({"avon"})],
 }
 
 
