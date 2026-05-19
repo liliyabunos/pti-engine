@@ -736,10 +736,22 @@ The counter resets to 0 only if a scorer logic change is deployed that materiall
 
 **Owner: Claude.** Claude is responsible for tracking the counter, updating the ledger table below after each valid run, and notifying the Founder when 7/7 is reached.
 
-**Founder does not need to count or remember.** The procedure is:
-1. After each pipeline run (if Founder or pipeline output mentions it in session), Claude queries the run counter SQL and updates the table below.
-2. Claude proactively updates without being asked.
-3. When the count reaches 7/7, Claude immediately produces the Founder Review Packet in the same session and states: **"7 clean shadow runs complete. PV-008 review packet ready — please read and respond with approval or rejection."**
+**Proactivity model — no new infrastructure required:**
+
+There is no out-of-session notification mechanism. Claude cannot alert the Founder between sessions. The notification is delivered at the **start of the first session** after 7/7 is reached, using the existing OPS-PV1 Session Opening Rule:
+
+- OPS-PV1 requires Claude to read `PENDING_PRODUCTION_VERIFICATIONS.md` and surface any `READY TO VERIFY` entries at the start of every session.
+- When run 7 is confirmed, Claude updates the **Ledger Status Summary row for PV-008** to `READY FOR FOUNDER REVIEW — Activation Packet ready`. This status change is what triggers the session-opening rule.
+- The next time the Founder opens any session (regardless of topic), the session-opening check will surface the PV-008 status and Claude will produce the review packet immediately — without the Founder needing to ask about PV-008.
+
+**Procedure:**
+1. After each pipeline run mentioned in a session, Claude queries the counter SQL and updates the table below.
+2. When the count reaches 7/7:
+   - Claude updates the Ledger Status Summary row for PV-008 to `READY FOR FOUNDER REVIEW — Activation Packet ready`.
+   - Claude immediately produces the Founder Review Packet in the same session (if the Founder is present) and states: **"7 clean shadow runs complete. PV-008 review packet ready — please read and respond with approval or rejection."**
+   - If no session is active at the moment the 7th run is counted, the ledger status change ensures the packet is produced at the next session opening.
+
+**No cron job is needed.** The lag between 7/7 and Founder notification is bounded by time until the next session open — acceptable given active development cadence (~hours to a day).
 
 **Counter table (updated after each valid run):**
 
