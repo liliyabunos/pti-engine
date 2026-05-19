@@ -2119,9 +2119,11 @@ All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good 
 
 **Prerequisites for active-mode activation (ALL required before `SIG_QA2_GATE_ACTIVE=true`):**
 1. **PV-008-B1 resolved** ✓ — COMPLETE 2026-05-19 (commit f067364)
-2. **Men's Cologne guard + repair** ✓ — COMPLETE 2026-05-19 (commit 3fbf455). `"men cologne"` + `"men s cologne"` added to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`; bare alias id=70895 deleted; RS=17 stripped (residual=0); entity_mentions=17 + ts=41 + signals=9 deleted; Coty brand ts=50 + signals=13 deleted (OPS-EE1); 60/60 tests pass
-3. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
-4. **Founder review and explicit active-mode approval**
+2. **Men's Cologne guard + repair** ✓ — COMPLETE 2026-05-19 (commit 3fbf455)
+3. **Shadow observation ≥7 clean scheduled pipeline runs** — pending
+4. **Founder review of Claude-produced packet + explicit active-mode approval** — pending
+
+**Full activation procedure:** `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md` → PV-008 Activation Playbook. This is the binding operational reference covering: what counts as a clean run, counter ownership (Claude tracks proactively), Founder Review Packet format, pass criteria, Founder decision form, and post-approval activation sequence.
 
 **RES-AMB-FIVE — REPAIR-COMPLETE — PRODUCTION/UI VERIFIED (2026-05-19 · commit 1678158):**
 - Bruno Fazzolari Five bare alias `"five"` confirmed Class 1 False Identity / numeric single-token collision

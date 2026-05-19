@@ -691,64 +691,242 @@ Cool Water Parfum (1 row): score=0.64, would_suppress=False ✓ D1=1.0
    - Repair counts: RS=17 stripped (RS residual=0 by jsonb canonical_name exact match) · entity_mentions=17 · ts=41 · signals=9 · snaps=0 · Coty brand ts=50 + signals=13 (OPS-EE1; pipeline recomputes)
    - Tests: 60/60 pass (8 new MC1–MC8 in TestRESAMBMensCol)
 
-3. **Shadow observation (≥7 pipeline runs)**:
-   - Monitor `weak_evidence_log` distribution: would_suppress rate by entity, brand, score band
-   - Specifically monitor: Cool Water (Davidoff) — standalone fragrance that may score below threshold if "davidoff" is absent in review text. Legitimate passes are expected; consistent fails require guard tuning.
-   - Check: no well-established entities (≥50 mentions, score ≥60 on dashboard) consistently scoring below 0.5 without brand context
+3. **Shadow observation (≥7 clean pipeline runs)** — see PV-008 Activation Playbook below.
 
-4. **Founder review and explicit active-mode approval**:
-   - Review shadow log report (to be produced by Claude after ≥7 runs)
-   - Confirm threshold calibration acceptable
-   - Explicit approval via session instruction
+4. **Founder review and explicit active-mode approval** — see PV-008 Activation Playbook below.
 
-**Shadow observation SQL (run after ≥7 pipeline runs):**
+---
 
+### PV-008 Activation Playbook (binding operational procedure)
+
+This section is the authoritative reference for how PV-008 moves from current shadow state to active-mode. All parties (Founder and Claude) must follow this procedure exactly. No informal approvals.
+
+---
+
+#### Step 1 — Clean Shadow Run Counter
+
+**Definition of a clean shadow run:**
+
+A scheduled pipeline run counts as a clean shadow run if ALL of the following are true:
+
+| Condition | Requirement |
+|-----------|-------------|
+| Scorer version | Run uses the post-B1-FIX1 scorer (commit `f067364`, deployed 2026-05-19 08:09:50 UTC) — any run from this point forward |
+| Pipeline label | `run_label = 'morning'` OR `run_label = 'evening'` (scheduled runs only) |
+| `weak_evidence_log` populated | At least 1 new row written with `pipeline_run_date` = the run's date |
+| Pipeline did not fully collapse | `pipeline_health_log` shows any level other than a zero-mention total failure |
+
+**Explicit exclusions — these do NOT increment the counter:**
+
+- Manual aggregation reruns for historical dates (re-scoring already-processed data — does not test the live gate behavior)
+- `run_label = 'manual'` or `run_label = 'backfill'` runs
+- Runs that produced `weak_evidence_log` rows = 0 for their pipeline_run_date (gate did not execute)
+- Any run before `f067364` deploy (2026-05-19 08:09:50 UTC) — pre-B1-FIX1 scorer
+
+**Counter reset rule:**
+
+The counter resets to 0 only if a scorer logic change is deployed that materially alters scoring behavior (i.e. changes to feature weights, threshold, D1/D2/D3/D4/D5 calculation logic, or `_find_alias_position()`). It does NOT reset for:
+- Infrastructure fixes (SAVEPOINT, env changes, unrelated bug fixes)
+- Guard additions to `_AMBIGUOUS_PHRASE_GUARD` or `_BLOCKED_SINGLE_WORD_ALIASES` (these affect resolver, not scorer)
+- Documentation or migration changes
+
+---
+
+#### Step 2 — Counter Ownership and Visibility
+
+**Owner: Claude.** Claude is responsible for tracking the counter, updating the ledger table below after each valid run, and notifying the Founder when 7/7 is reached.
+
+**Founder does not need to count or remember.** The procedure is:
+1. After each pipeline run (if Founder or pipeline output mentions it in session), Claude queries the run counter SQL and updates the table below.
+2. Claude proactively updates without being asked.
+3. When the count reaches 7/7, Claude immediately produces the Founder Review Packet in the same session and states: **"7 clean shadow runs complete. PV-008 review packet ready — please read and respond with approval or rejection."**
+
+**Counter table (updated after each valid run):**
+
+| Run # | Date | Label | new_wel_rows | suppress_rate | Notes |
+|-------|------|-------|-------------|---------------|-------|
+| 1 | 2026-05-19 | rerun/fix-verification | 182 | 56.6% (post-fix rerun) | DIAGNOSTIC — pre-B1 fix; not counted |
+| — | — | — | — | — | First clean run = first scheduled pipeline after f067364 deploy |
+
+*This table is updated by Claude after each qualifying run. "suppress_rate" = would_suppress=true / total.*
+
+---
+
+#### Step 3 — Founder Review Packet
+
+When the counter reaches 7/7, Claude produces this packet using live SQL queries. The packet is delivered in a Claude session response — there is no existing admin UI for reviewing `weak_evidence_log`. A dedicated UI page has not been built and is not planned for the shadow-observation phase; the review surface is this structured Claude report.
+
+**Required sections:**
+
+**Section A — Aggregate metrics (all runs combined)**
 ```sql
--- Overall shadow summary
+-- All-runs summary
 SELECT
     would_suppress,
-    COUNT(*) AS count,
-    AVG(score::numeric) AS avg_score,
-    MIN(score::numeric) AS min_score,
-    MAX(score::numeric) AS max_score
+    COUNT(*) AS total_scored,
+    ROUND(AVG(score::numeric), 4) AS avg_score,
+    ROUND(MIN(score::numeric), 4) AS min_score,
+    ROUND(MAX(score::numeric), 4) AS max_score
 FROM weak_evidence_log
-GROUP BY would_suppress
-ORDER BY would_suppress;
+GROUP BY would_suppress ORDER BY would_suppress;
 
--- Top suppressed entities by count
-SELECT entity_canonical_name, entity_brand_name, COUNT(*) AS suppress_count, AVG(score::numeric) AS avg_score
+-- Per-run suppress rate
+SELECT pipeline_run_date, COUNT(*) AS total,
+    SUM(CASE WHEN would_suppress THEN 1 ELSE 0 END) AS suppressed,
+    ROUND(100.0 * SUM(CASE WHEN would_suppress THEN 1 ELSE 0 END) / COUNT(*), 1) AS suppress_pct
 FROM weak_evidence_log
-WHERE would_suppress = true
-GROUP BY entity_canonical_name, entity_brand_name
-ORDER BY suppress_count DESC LIMIT 30;
+GROUP BY pipeline_run_date ORDER BY pipeline_run_date;
 
--- Cool Water / Davidoff watchlist (check score distribution)
-SELECT pipeline_run_date, score, would_suppress, features_json
-FROM weak_evidence_log
-WHERE entity_canonical_name = 'Cool Water'
-ORDER BY pipeline_run_date DESC;
-
--- Score distribution bands
+-- Score distribution bands (all runs)
 SELECT
-    CASE
-        WHEN score < 0.3 THEN 'very_low'
-        WHEN score < 0.5 THEN 'low'
-        WHEN score < 0.7 THEN 'medium'
-        ELSE 'high'
-    END AS band,
-    COUNT(*) AS count
+    CASE WHEN score < 0.3 THEN '<0.30' WHEN score < 0.5 THEN '0.30-0.50'
+         WHEN score < 0.7 THEN '0.50-0.70' ELSE '>=0.70' END AS band,
+    COUNT(*) AS count,
+    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1) AS pct
 FROM weak_evidence_log
 GROUP BY band ORDER BY band;
 ```
 
-**Pass criteria for shadow review (ALL must hold before active-mode activation):**
-- `would_suppress=true` rate is within expected range (10–25% of perfume entity resolutions)
-- Cool Water / Davidoff: majority of rows have `would_suppress=false` OR score distribution is stable and not trending toward false suppression
-- No well-established entity (dashboard score ≥60, ts_rows ≥30) shows consistent `would_suppress=true` across multiple runs
-- Men's Cologne repair is complete (RS=0, entity_mentions=0, ts=0)
-- Founder review complete
+**Section B — Seeded FP watchlist** (known false positives — all should score ≤0.5 and would_suppress=true consistently)
 
-**On completion:** Update SIG-QA2 status in CLAUDE.md to `COMPLETE — PRODUCTION VERIFIED`. Close this entry.
+Entities to report: Orange Blossom (Angela Flanders), Pure Luxury (Wolken Parfums), On the Rocks (Wolken Parfums), Enjoy the Day (Wolken Parfums), Cire Trudon Revolution, Men's Cologne (Coty, post-repair — should appear 0 times since repair), Bruno Fazzolari Five (should appear 0 times since repair).
+```sql
+SELECT entity_canonical_name, pipeline_run_date, score, would_suppress
+FROM weak_evidence_log
+WHERE entity_canonical_name IN (
+    'Orange Blossom','Pure Luxury','On the Rocks','Enjoy the Day',
+    'Cire Trudon Revolution','Men''s Cologne','Bruno Fazzolari Five'
+)
+ORDER BY entity_canonical_name, pipeline_run_date;
+```
+Expected: 0 rows for Men's Cologne and Bruno Fazzolari Five (repairs complete). All others: would_suppress=true every run.
+
+**Section C — Known-good / false-suppression watchlist** (established entities — should score ≥0.5 and would_suppress=false consistently)
+
+Entities to report: Cool Water (Davidoff), Cool Water Parfum, Creed Aventus Eau de Parfum, Creed Aventus, Dior Sauvage, any entity with dashboard score ≥60 that appears in weak_evidence_log.
+```sql
+SELECT entity_canonical_name, pipeline_run_date, score, would_suppress,
+       features_json->>'d1' AS d1, features_json->>'d2' AS d2
+FROM weak_evidence_log
+WHERE entity_canonical_name IN (
+    'Cool Water','Cool Water Parfum','Creed Aventus Eau de Parfum',
+    'Creed Aventus','Dior Sauvage','Baccarat Rouge 540'
+)
+ORDER BY entity_canonical_name, pipeline_run_date;
+```
+Expected: all would_suppress=false. Any consistent would_suppress=true for a known-good entity is a blocker.
+
+**Section D — Risk review**
+
+Top 20 would_suppress=true entities by suppress count (suspect false suppression candidates):
+```sql
+SELECT entity_canonical_name, entity_brand_name,
+    COUNT(*) AS suppress_count, ROUND(AVG(score::numeric), 3) AS avg_score
+FROM weak_evidence_log WHERE would_suppress = true
+GROUP BY entity_canonical_name, entity_brand_name
+ORDER BY suppress_count DESC LIMIT 20;
+```
+
+Borderline entities (score 0.45–0.55 — near threshold):
+```sql
+SELECT entity_canonical_name, entity_brand_name, pipeline_run_date, score, would_suppress
+FROM weak_evidence_log WHERE score BETWEEN 0.45 AND 0.55
+ORDER BY entity_canonical_name, pipeline_run_date;
+```
+
+**Section E — Recommendation**
+
+Claude assesses the results against all pass criteria and ends the packet with exactly one of:
+
+> **RECOMMENDATION: ACTIVATE** — all pass criteria met; no blocking false suppressions detected; gate behavior is calibrated and safe to enable.
+
+or
+
+> **RECOMMENDATION: DO NOT ACTIVATE** — blocker(s) remain: [list specific failing criteria]. Required action before re-evaluation: [specific fix].
+
+---
+
+#### Pass criteria (ALL must hold for ACTIVATE recommendation)
+
+1. suppress_rate is stable across runs: no run has suppress_rate > 40% (would indicate threshold too aggressive)
+2. suppress_rate is not trivially low: no run has suppress_rate < 5% (would indicate gate is not functioning)
+3. Cool Water (Davidoff): ≥50% of rows have would_suppress=false, OR if all rows suppress → investigate and resolve before recommending activate
+4. Cool Water Parfum: all rows would_suppress=false (B1-FIX1 confirmed this; must hold across live runs)
+5. Creed Aventus Eau de Parfum: all rows would_suppress=false (B1-FIX1 confirmed this; must hold)
+6. No entity with dashboard score ≥60 AND ts_rows ≥30 shows consistent would_suppress=true (≥4 of 7 runs)
+7. Seeded FPs (Orange Blossom, Pure Luxury, etc.): would_suppress=true on every appearance
+8. Men's Cologne and Bruno Fazzolari Five: 0 rows in weak_evidence_log (repairs verified complete)
+
+---
+
+#### Step 4 — Founder Decision Point
+
+The Founder reads the review packet and responds with exactly one of:
+
+**Approval:**
+> "Approved — activate SIG_QA2_GATE_ACTIVE=true"
+
+**Rejection:**
+> "Not approved — [state the specific blocker or concern]"
+
+No informal or partial approval. Silence or ambiguity = not approved. The gate will not be activated without an explicit approval statement.
+
+---
+
+#### Step 5 — Post-Approval Activation Sequence (if Founder approves)
+
+**Owner: Claude guides; Founder executes the Railway env change.**
+
+1. **Railway env change (Founder action — ~2 min):**
+   - Railway dashboard → generous-prosperity service → Variables
+   - Add/update: `SIG_QA2_GATE_ACTIVE=true`
+   - Save → Railway triggers automatic redeploy
+
+2. **Confirm redeploy success:** Wait for Railway to show SUCCESS status on the new deployment.
+
+3. **Same-session production verification (Claude runs):**
+```sql
+-- Confirm gate is writing suppression-level entity_mention evidence_confidence values
+SELECT evidence_confidence, COUNT(*)
+FROM entity_mentions
+WHERE evidence_confidence IN ('high', 'low', 'legacy_unscored')
+GROUP BY evidence_confidence;
+-- Expect: 'high' and 'low' rows appearing alongside legacy_unscored historical rows.
+
+-- Confirm new entity_mentions are being written with evidence_confidence != legacy_unscored
+SELECT evidence_confidence, COUNT(*)
+FROM entity_mentions
+WHERE evidence_confidence != 'legacy_unscored'
+AND created_at > NOW() - INTERVAL '2 hours'
+GROUP BY evidence_confidence;
+-- Expect: rows after activation timestamp have evidence_confidence = 'high' or 'low'.
+
+-- Confirm weak_evidence_log continues to populate
+SELECT COUNT(*), MAX(pipeline_run_date) FROM weak_evidence_log;
+
+-- Spot-check: no known-good entity suppressed in the first active run
+-- (Run after the first morning/evening pipeline following activation)
+SELECT entity_canonical_name, score, would_suppress, evidence_confidence
+FROM weak_evidence_log
+JOIN entity_mentions ON ...  -- review manually
+WHERE pipeline_run_date = CURRENT_DATE
+AND entity_canonical_name IN ('Creed Aventus','Dior Sauvage','Cool Water Parfum')
+ORDER BY entity_canonical_name;
+```
+
+4. **After first post-activation pipeline run:** Claude queries entity_mention counts for one recent date and confirms the total is within expected range (not collapsed to near-zero, which would indicate over-suppression).
+
+5. **Close PV-008:** Update CLAUDE.md SIG-QA2 status to `COMPLETE — PRODUCTION VERIFIED`. Update PV-008 ledger row to `COMPLETE — PRODUCTION VERIFIED`. Record activation date and Railway deployment ID.
+
+---
+
+#### Step 6 — If Founder Rejects
+
+Claude records the rejection and the stated blocker in this ledger. The shadow run counter does NOT reset (unless the blocker requires a scorer change, in which case the counter resets per the counter-reset rule). The specific blocker is treated as a new prerequisite and resolved before re-evaluation.
+
+---
+
+**On completion:** Update SIG-QA2 status in CLAUDE.md to `COMPLETE — PRODUCTION VERIFIED`. Update PV-008 ledger row. Close this entry.
 
 ---
 
