@@ -215,7 +215,8 @@ def _count_fragrance_candidates(
                 normalized_text = %s
                 OR normalized_text LIKE %s
             )
-            AND last_seen >= %s
+            AND last_seen <> 'never'
+            AND last_seen::timestamptz >= %s
             """,
             (normalized, f"{normalized}%", activated_at)
         )
