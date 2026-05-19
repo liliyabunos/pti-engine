@@ -502,12 +502,22 @@ This is correct behavior — the guard prevents future misattribution; historica
 |-------|-------|
 | **Verification ID** | PV-008 |
 | **Phase / task** | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) |
-| **Related commits** | SIG-QA2 implementation (2026-05-18) |
+| **Related commits** | SIG-QA2 implementation `35120fa` (2026-05-18) · corrective patch `2181ff5` (2026-05-19) |
 | **Migration** | 052 — `evidence_confidence` on `entity_mentions` + `weak_evidence_log` table |
 | **Implementation shipped** | 2026-05-18 |
+| **Corrective patch deployed** | 2026-05-19 08:09:50 UTC — Railway SUCCESS |
 | **Current status** | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` |
 | **Gate active?** | NO — `SIG_QA2_GATE_ACTIVE=false` (Railway env default). Gate is shadow-only: scores every perfume entity mention, writes to `weak_evidence_log`, writes `evidence_confidence=high/low` on `entity_mentions`, never suppresses. |
 | **Blocking severity** | High — gate must not be activated without completing all three prerequisites below. |
+
+**Clean observation start: 2026-05-19 08:09:50 UTC (corrective patch deploy confirmed SUCCESS)**
+
+- `alias_used` corrective patch (`2181ff5`) deployed. Pre-corrective-patch behavior inflated D4 whenever
+  a brand token appeared anywhere in source text excerpt — invalid scoring.
+- `weak_evidence_log` row count confirmed 0 at 2026-05-19 (no pipeline ran between migration 052 deploy
+  and corrective patch deploy). No pre-patch rows to discard.
+- **All `weak_evidence_log` rows written AFTER 2026-05-19 08:09:50 UTC are valid for PV-008 evaluation.**
+- Any rows written BEFORE that timestamp would be pre-patch noise — none exist.
 
 **Three prerequisites for active-mode activation (ALL must be complete first):**
 

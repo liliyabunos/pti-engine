@@ -2044,7 +2044,7 @@ RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it 
 
 ### SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (Shadow Mode)
 **STATUS: IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008)**
-**Migration: 052 · Commit: (2026-05-18)**
+**Migration: 052 · Commit: 35120fa (2026-05-18) · Corrective patch: 2181ff5 (2026-05-19)**
 
 **Gate is shadow-only.** `SIG_QA2_GATE_ACTIVE=false` is the ONLY deployed mode. Gate scores every perfume entity mention, writes evidence scores to `weak_evidence_log`, and stamps `evidence_confidence` on each new `entity_mention` row. No suppression occurs until active mode is explicitly activated.
 
@@ -2054,15 +2054,20 @@ RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it 
   - D1 Brand Token Proximity (weight 0.35) — brand token in ±15 tokens=1.0, ±30=0.5, absent=0.0
   - D2 Fragrance Context Signal (weight 0.25) — fragrance keywords in ±20 tokens (capped 5 hits=1.0)
   - D3 Note Context Anti-Signal (weight 0.20, inverted) — note indicator phrases in ±8=0.9, ±20=0.5; ≥2 ingredient co-occurrence in ±8=0.8
-  - D4 Full-Name Match (weight 0.10) — alias includes brand token=1.0
+  - D4 Full-Name Match (weight 0.10) — alias includes brand token=1.0; empty alias_used → D4=0.0
   - D5 Source Entity Density (weight 0.10, inverted) — >15 entities=1.0 penalty, ≤3=0.1 penalty
+  - **Semantic boundary (corrective patch 2181ff5):** `alias_norm_for_d4 = _normalize(alias_used)` (strict, no fallback); `position_alias_norm = _normalize(alias_used or canonical_name)` (canonical fallback for D1/D2/D3 position finding only). RS JSON has no `alias_used` field → production always passes `""` → D4=0.0.
 - `aggregate_daily_market_metrics.py` — shadow gate integration in `_write_mentions()`:
   - `gate_active = os.getenv("SIG_QA2_GATE_ACTIVE", "false").lower() == "true"`
   - Brand mentions bypass gate (`evidence_confidence = "legacy_unscored"`)
   - Per-entity score computed; `_upsert_weak_evidence_log()` called; `evidence_confidence = "high"/"low"` written
   - In shadow mode: all mentions written regardless of score
   - In active mode (not deployed): `would_suppress=True` → skip entity_mention write
-- `tests/unit/test_sig_qa2_evidence_gate.py` — 56/56 pass
+- `tests/unit/test_sig_qa2_evidence_gate.py` — 63/63 pass (56 original + 7 alias integrity tests)
+
+**Clean shadow observation window starts: 2026-05-19 08:09:50 UTC (corrective patch deploy SUCCESS)**
+- `weak_evidence_log` was empty (0 rows) when corrective patch deployed — no pre-patch contamination.
+- All rows written after `2026-05-19 08:09:50 UTC` are valid for PV-008 evaluation.
 
 **Threshold calibration (2026-05-18, production RS snippets):**
 ```
@@ -2077,16 +2082,17 @@ Vision (Jaguar)                    A     ≈0.94   PASS ✓
 Creed Aventus                      A     ≈0.91   PASS ✓
 ```
 All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good entities score above.
+Calibration remains valid with alias_used="" (D4=0.0): confirmed by TestAliasUsedIntegrity suite.
 
 **Shadow watchlist (monitor during shadow observation):**
 - Cool Water (Davidoff) — standalone well-known fragrance. "davidoff" may not appear near "cool water" in all review content (reviewers often say just "Cool Water" without the brand). Must be monitored during shadow observation before active-mode activation. Risk: false suppression if brand absent in review text. Documented in WATCH suite of test_sig_qa2_evidence_gate.py.
 
 **Prerequisites for active-mode activation (ALL required before `SIG_QA2_GATE_ACTIVE=true`):**
 1. **Men's Cologne guard + repair** (separate task — confirm Type G, add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`, strip all RS rows, delete entity_mentions/ts/signals for entity c6b0eee2)
-2. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
+2. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL); only rows after 2026-05-19 08:09:50 UTC count
 3. **Founder review and explicit active-mode approval**
 
-**Migration 052 status:** PENDING — apply to production: `railway run --service generous-prosperity alembic upgrade head`
+**Migration 052 status:** APPLIED — production at migration 052 (applied 2026-05-18)
 
 ### Seed Cases Requiring Repair
 
