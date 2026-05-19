@@ -752,6 +752,48 @@ GROUP BY band ORDER BY band;
 
 ---
 
+### PV-008 Supplemental — RES-AMB-FIVE Shadow-Confirmed FP Catch (2026-05-19)
+
+**Bruno Fazzolari Five false breakout — founder-confirmed Class 1 False Identity.**
+
+**Classification:** PRE-GATE LEGACY POLLUTION. SIG-QA2 was NOT deployed when these 26 entity_mentions were written (all evidence_confidence=legacy_unscored). The gate would catch new resolutions today (score ≈0.29–0.35 < threshold=0.5 → would_suppress=True) — this is a shadow-confirmed FP catch. It is NOT a gate scoring failure.
+
+**Root cause:** Bare alias `'five'` (resolver_aliases id=12495, entity_id=2971, exact match) stored for "Bruno Fazzolari Five Eau de Parfum". Matched generic counting/ordinal language.
+
+**Confirmed RS evidence (26 rows, 0% brand context):**
+- "my stepfather came in when i was five years old" (wedding Reddit)
+- "Five summer colognes under 50$!" (counting fragrances)
+- "FIVE DOLLARS at 5 below" (price)
+- "five in the morning and five later in the day" (spray cadence — MFK content)
+- "it doesn't make me look like i'm five years older" (hair dye video — not fragrance)
+- "Five Star Fragrances" (star-rating expression)
+
+**Repair applied (2026-05-19) — COMPLETE:**
+
+| Layer | Count |
+|-------|-------|
+| RS rows stripped | 26 |
+| entity_mentions deleted | 26 |
+| entity_timeseries_daily (perfume) deleted | 41 |
+| signals (perfume) deleted | 12 |
+| signal_intelligence_snapshots deleted | 0 |
+| brand ts deleted | 49 |
+| brand signals deleted | 12 |
+
+- RS residual (`resolved_entities_json LIKE '%Bruno Fazzolari Five%'`): **0** ✓
+- Single brand entity: "Bruno Fazzolari" — only tracked perfume was "Five" → all brand rows were 100% false → deleted.
+- Bare alias deleted from `resolver_aliases` (id=12495) ✓
+- `"five"` added to `_BLOCKED_SINGLE_WORD_ALIASES` (commit `1678158`) ✓
+- 5 new tests (F1-F5) in `TestRESAMBFive` — 52/52 pass ✓
+
+**Resolver protection:** `"five"` is now in `_BLOCKED_SINGLE_WORD_ALIASES` — unconditional block. Branded multi-token alias `"bruno fazzolari five"` resolves correctly (multi-token, unaffected by blocklist).
+
+**OPS-PV1 Repair-Complete Rule status:** RS stripped (0 residual) + all downstream deleted. No aggregation recompute needed — dates affected have no RS rows and will produce no new mentions.
+
+**Production verification mode: IMMEDIATE — VERIFIED (2026-05-19)**
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -763,4 +805,4 @@ GROUP BY band ORDER BY band;
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
-| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364, 2026-05-19). Activation-evaluation window: ≥7 clean runs from next pipeline after B1-fix deploy. Remaining prerequisites: Men's Cologne guard+repair + shadow review + founder approval. Post-fix: pass=79, suppress=103, avg=0.4647. |
+| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364, 2026-05-19). RES-AMB-FIVE shadow-confirmed catch documented (legacy pollution, not gate failure). Activation-evaluation window: ≥7 clean runs from next pipeline after B1-fix deploy. Remaining prerequisites: Men's Cologne guard+repair + shadow review + founder approval. Post-fix: pass=79, suppress=103, avg=0.4647. |

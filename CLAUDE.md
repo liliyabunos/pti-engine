@@ -2123,6 +2123,13 @@ All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good 
 3. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
 4. **Founder review and explicit active-mode approval**
 
+**RES-AMB-FIVE — Shadow-Confirmed FP Catch (2026-05-19 · commit 1678158):**
+- Bruno Fazzolari Five bare alias `"five"` confirmed Class 1 False Identity / numeric single-token collision
+- All 26 entity_mentions were `evidence_confidence=legacy_unscored` (pre-gate legacy pollution — gate was not deployed when written)
+- Classification: PRE-GATE LEGACY POLLUTION. NOT a gate scoring failure. Gate would suppress new resolutions (score ≈0.29–0.35 < 0.5) ✓
+- **Repair COMPLETE (2026-05-19):** RS=0, mentions=0, ts=0, signals=0, brand_ts=0, brand_signals=0 ✓
+- `"five"` added to `_BLOCKED_SINGLE_WORD_ALIASES`; bare alias deleted from DB; 52/52 tests pass
+
 **Migration 052 + 053 status:** APPLIED — production at migration 053 (applied 2026-05-19)
 
 ### Seed Cases Requiring Repair
