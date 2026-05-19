@@ -719,6 +719,10 @@ Cool Water Parfum (1 row): score=0.64, would_suppress=False ✓ D1=1.0
    - Repair counts: RS=17 stripped (RS residual=0 by jsonb canonical_name exact match) · entity_mentions=17 · ts=41 · signals=9 · snaps=0 · Coty brand ts=50 + signals=13 (OPS-EE1; pipeline recomputes)
    - Tests: 60/60 pass (8 new MC1–MC8 in TestRESAMBMensCol)
 
+2b. **PV-008-B2 — Brandless high-fragrance-context false pass** ⚠️ **OPEN — blocks activation**:
+   - See PV-008-B2 section below. Score formula has no minimum brand-evidence requirement — D2=1.0 (fragrance keyword density) alone can push score above 0.5 even when D1=0, D4=0, brand context=0%.
+   - Repair path approved; scorer fix design pending founder selection from option menu.
+
 3. **Shadow observation (≥7 clean pipeline runs)** — see PV-008 Activation Playbook below.
 
 4. **Founder review and explicit active-mode approval** — see PV-008 Activation Playbook below.
@@ -1061,6 +1065,85 @@ Both forms were registered as bare aliases for Men's Cologne (Coty, entity_id `c
 
 ---
 
+### PV-008-B2 — Brandless High-Fragrance-Context False Pass (Ultimate Man)
+
+**Status: OPEN — Active-mode activation blocker**
+**Discovery date: 2026-05-19**
+**Entity:** Ultimate Man (Korloff) — entity_id `9e0970f5-a999-48e1-9cf2-758515548b0a`
+
+**Incident summary:**
+- All 5 RS rows for "Ultimate Man" were Jeremy Fragrance YouTube videos titled "Ultimate MAN Fragrance: #jeremyfragrance #fragrance #cologne #perfume #parfum"
+- Jeremy Fragrance has his own fragrance line "ULTIMATE" — those videos reference his product, not Korloff
+- Korloff brand context in source text: **0%** across all 5 RS rows
+- SIG-QA2 gate scored 0.540 → would_suppress=**False** (gate passed)
+- Entity accumulated: 5 entity_mentions, 2 ts rows (2026-05-18/19), 1 new_entry signal, 1 snapshot
+
+**Repair applied (2026-05-19):**
+- Guard: `"ultimate man"` added to `_AMBIGUOUS_PHRASE_GUARD` requiring `frozenset({"korloff"})` proximity
+- RS strip: 5 rows updated (full-history, no --days window, OPS-PV1 rule) — RS residual=0 ✓
+- Downstream: mentions=0, ts=0, signals=0, snaps=0 ✓
+- Tests: 12/12 pass (`test_sig_id1_ultimate_man_guard.py`)
+- No Korloff brand entity in entity_market → no brand cleanup needed
+
+**Root cause — scorer formula weakness:**
+
+Exact score math:
+```
+D1 (brand proximity)    = 0.0   (Korloff not in text, weight=0.35)
+D2 (fragrance context)  = 1.0   (≥5 fragrance tokens in title: fragrance, cologne, perfume, parfum × weight=0.25)
+D3_raw (note anti-sig)  = 0.0   (no note-list indicators, inverted: 1-0.0=1.0 × weight=0.20)
+D4 (full-name match)    = 0.0   (alias_used not passed from RS JSON, weight=0.10)
+D5_density (entity cnt) = 0.1   (low entity count penalty, inverted: 1-0.1=0.9 × weight=0.10)
+
+score = 0.35×0 + 0.25×1.0 + 0.20×1.0 + 0.10×0 + 0.10×0.9
+      = 0 + 0.250 + 0.200 + 0 + 0.090
+      = 0.540
+```
+
+**Why D1=0 + D4=0 + 0% brand context still passed:**
+The formula has **no minimum brand-evidence requirement**. When D2=1.0 (maximum fragrance keyword density) and D3_raw=0 (no note indicators), the fragrance-context + note-inverse contribution alone equals 0.45. D5_inverse adds another 0.09, totaling 0.540 — just above the 0.50 threshold. No brand evidence is required to pass.
+
+**Broader false-pass class:**
+Any entity with a generic or product-like name that appears in highly fragrance-heavy source content (hashtag-dense YouTube titles, "Top 10 fragrances" thumbnails) will reach this failure mode when:
+- The brand doesn't appear in the source text (D1=0, D4=0)
+- The source is a fragrance channel's content (D2→1.0)
+- There are no note-list indicators (D3_raw→0)
+
+This is structurally distinct from Type B (note/ingredient collision) and Type D (generic phrase) — it is a **Type W: wrong-brand high-context** failure. The source IS genuinely about fragrances; the entity IS named after a fragrance product; but the source is about a DIFFERENT fragrance from a DIFFERENT brand.
+
+**Repair options (design analysis — no code change implemented):**
+
+**Option A — Brand-evidence cap (recommended):**
+`if d1 == 0.0 and d4 == 0.0: score = min(score, 0.45)`
+- Zero brand token presence in text + zero full-name match → cap score at 0.45 (below 0.50 threshold)
+- Targeted to exact failure mode; no impact on correctly-identified entities where brand appears
+- Ultimate Man: capped at 0.45 → suppress=True ✓
+- Note collision entities (also D1=0, D4=0): benefit from additional suppression depth ✓
+- Well-known standalone fragrances (e.g. "Creed Aventus"): D4=1.0 (brand "creed" in alias) → cap not triggered ✓
+- Risk: legitimate entities where brand genuinely doesn't appear in source but context is correct — these are also D4=0 if alias_used is empty (RS JSON passes no alias_used to scorer currently)
+
+**Option B — Conditional threshold:**
+`suppress_threshold = 0.3 if (d1 == 0.0 and d4 == 0.0) else 0.5`
+- Lower effective threshold when no brand evidence present
+- More aggressive; may suppress some legitimate entities
+- Harder to reason about — two effective thresholds to maintain
+
+**Option C — Reduce D2 weight:**
+Change D2 weight from 0.25 to 0.15 (offset by increasing D1 to 0.45):
+`score = 0.45*D1 + 0.15*D2 + 0.20*(1-D3) + 0.10*D4 + 0.10*(1-D5)`
+- Ultimate Man: 0.45×0 + 0.15×1.0 + 0.20×1.0 + 0.10×0 + 0.10×0.90 = 0.44 → suppress ✓
+- Stronger brand-evidence weighting throughout; benefits all cases
+- Requires re-calibrating against all existing test cases
+
+**Recommendation: Option A** — minimal change, targeted to exact failure mode, preserves existing calibration for all entities with any brand token in source text, does not require re-calibrating 19+ test cases. Caveat: the `alias_used==""` production behavior (RS JSON has no alias_used field) means D4=0.0 for every production entity currently — Option A effectively caps ALL entities with D1=0.0 (no brand token in text). Need to verify this doesn't suppress legitimate entities that are commonly mentioned by name alone without brand context.
+
+**Founder decision required before implementing fix:**
+- [ ] Select fix direction (A, B, or C, or alternative)
+- [ ] Approve scorer code change
+- [ ] Shadow re-observation after fix deploy before restarting 7-run counter
+
+**PV-008 activation is blocked until this is resolved.**
+
 ---
 
 ### SCOPE-ATR1 — After the Rain (Declaration Grooming) Out-of-Scope Repair
@@ -1171,7 +1254,7 @@ Parent row `tom ford` (brand_tier='designer', node_type='brand') was already see
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — all 5 brands confirmed with other tracked perfumes; FP re-appearance=0; ts=0 is legitimate state per policy |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — DB layer re-verified 2026-05-19 (ALL PASS); guards live; repair durable across multiple pipeline runs |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
-| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364). RES-AMB-FIVE RESOLVED (1678158). RES-AMB-MENSCOL RESOLVED (3fbf455, 2026-05-19). **Counter: 0/7** — blocked by OPS-CRON-PIPELINE-GAP (all missed runs backfilled manually 2026-05-19; first qualifying scheduled run pending tonight evening pipeline or 2026-05-20 morning). |
+| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364). RES-AMB-FIVE RESOLVED (1678158). RES-AMB-MENSCOL RESOLVED (3fbf455). **PV-008-B2 OPEN** (Ultimate Man, 2026-05-19) — scorer formula fix design pending founder selection. **Counter: 0/7** — also blocked by PV-008-B2 (scorer fix + re-observation required before counter starts). |
 | OPS-CRON-01 | Pipeline scheduling gap 2026-05-17 through 2026-05-19 | `COMPLETE — DATA RECOVERED (2026-05-19)` | Two root causes: (1) code deploys during cron windows killed running pipeline processes on May 17 evening + May 19 morning; (2) SIG-QA2 UUID crash (no SAVEPOINT, content_item_id UUID vs TEXT) killed May 18 evening aggregation. Backfill applied 2026-05-19: agg+signals for May 17, May 18, May 19. Tonight's evening pipeline (23:00 UTC) expected to run clean. Cron blackout policy added to CLAUDE.md. |
 | SCOPE-ATR1 | After the Rain (Declaration Grooming) out-of-scope repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — non-perfume grooming scent (shaving soap + aftershave). Guard added + RS stripped + downstream deleted. 12/12 tests. |
 | SIG-QA1-BATCH2 | 12 false-positive guards + repair (Type B×6, C×2, D×4) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — verified immediately via direct DB; ALL PASS. Commits: d6dde32 + e82a59b + d58eada. 49/49 tests pass. |

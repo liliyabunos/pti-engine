@@ -367,6 +367,15 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     #   DB repair: RS stripped; entity_mentions=3, ts=14, signals=1, snaps=0 deleted.
     #   Declaration Grooming brand ts=14, signals=1 deleted (OPS-EE1; no other tracked perfumes).
     "after the rain":            [frozenset({"declaration"}), frozenset({"grooming"})],
+    # SIG-ID1 Class 2 — Ultimate Man (Korloff) — Wrong Identity (2026-05-19)
+    # "ultimate man" → Ultimate Man (Korloff) — all 5 RS rows are Jeremy Fragrance YouTube videos
+    #   titled "Ultimate MAN Fragrance: #jeremyfragrance #fragrance #cologne #perfume #parfum".
+    #   Jeremy Fragrance launched his own fragrance line "ULTIMATE" — those videos are about HIS
+    #   product, not Korloff's. Korloff brand context = 0% across all RS evidence.
+    #   SIG-QA2 gate false-pass: score=0.540 (D1=0, D4=0, D2=1.0 from heavy #fragrance hashtags)
+    #   — exposes PV-008-B2 failure mode: brandless entity in high-fragrance-context source.
+    #   Guard: require "korloff" in ±10-token context to resolve.
+    "ultimate man":              [frozenset({"korloff"})],
 }
 
 
