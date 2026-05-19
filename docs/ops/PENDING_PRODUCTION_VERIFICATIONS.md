@@ -790,7 +790,13 @@ GROUP BY band ORDER BY band;
 
 **OPS-PV1 Repair-Complete Rule status:** RS stripped (0 residual) + all downstream deleted. No aggregation recompute needed — dates affected have no RS rows and will produce no new mentions.
 
+**UI verification (2026-05-19):**
+- Bruno Fazzolari Five: absent from Dashboard Top Movers ✓
+- Bruno Fazzolari brand: absent as false breakout brand ✓
+- Dashboard movers count: 2769 → 2767 (2 polluted market entries removed, consistent with perfume + brand entity cleanup) ✓
+
 **Production verification mode: IMMEDIATE — VERIFIED (2026-05-19)**
+**Operational verdict: RES-AMB-FIVE — REPAIR-COMPLETE — PRODUCTION/UI VERIFIED**
 
 ---
 
