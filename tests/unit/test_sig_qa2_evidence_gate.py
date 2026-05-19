@@ -997,3 +997,224 @@ class TestB1Fix:
         )
         assert result.score >= 0.5
         assert result.features["d1"] > 0.0
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# B2FIX — PV-008-B2-FIX1: brand-prefix strip + no-brand cap
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestB2Fix:
+    """Tests for PV-008-B2-FIX1.
+
+    Cases:
+      P1 — Pass 3 rescues Chanel BdC EDP: "Bleu de Chanel" in source, brand found
+      P2 — Pass 3b (original alias, no suffix): brand-prefixed entity found in text
+      P3 — Pass 3a (suffix+brand strip): suffix stripped first, then brand stripped
+      N1 — Pass 3 rejected: stripped phrase found but brand ABSENT from source
+      N2 — Same-brand wrong-product: "Eau Sauvage" source → Dior Sauvage EDP
+           stripped to "sauvage" → "dior" absent → position rejected, D1=0
+      N3 — Brand not at front: alias without brand prefix; nothing stripped
+      CAP1 — Cap: D1=0, D4=0, D2=1.0 → score capped at 0.45 (< 0.5)
+      CAP2 — Cap not applied when D1>0: legitimate mention scores above threshold
+      CAP3 — Cap not applied when D4>0: branded alias scores above threshold
+      INT1 — Integration: Chanel BdC EDP full production scenario passes gate
+      INT2 — Integration: Dior Sauvage EDP from "Eau Sauvage" source is suppressed
+      INT3 — Integration: Xerjoff Jazz Club from Replica source is suppressed
+    """
+
+    # ── P1: pass 3a via suffix+brand strip rescues Chanel BdC EDP ──────────
+
+    def test_p1_chanel_bdc_edp_brand_strip_suffix_plus_brand(self):
+        """suffix+brand_strip: 'Chanel Bleu de Chanel Eau de Parfum' → strip EDP → strip chanel → 'bleu de chanel' found."""
+        tokens = _tokenize(
+            "My rotation was basically Bleu de Chanel, Armani Code, Tam Dao, "
+            "Azzaro Chrome, and YSL Y EDP."
+        )
+        brand_toks = _extract_brand_tokens("Chanel")
+        pos = _find_alias_position(
+            tokens,
+            "chanel bleu de chanel eau de parfum",
+            brand_toks,
+        )
+        assert pos is not None, "Pass 3 should find 'bleu de chanel' in source"
+
+    def test_p1_chanel_bdc_d1_is_one(self):
+        """D1=1.0 after brand-strip recovery: 'chanel' is inside 'bleu de chanel'."""
+        tokens = _tokenize(
+            "My rotation was basically Bleu de Chanel, Armani Code, Tam Dao."
+        )
+        brand_toks = _extract_brand_tokens("Chanel")
+        pos = _find_alias_position(tokens, "chanel bleu de chanel eau de parfum", brand_toks)
+        assert pos is not None
+        d1 = _score_d1_brand_proximity(tokens, pos, brand_toks)
+        assert d1 == 1.0, f"Expected D1=1.0, got {d1}"
+
+    # ── P2: pass 3b on original alias (no suffix) ──────────────────────────
+
+    def test_p2_brand_strip_no_suffix_fires(self):
+        """Brand token at front stripped; product phrase found with brand in window."""
+        tokens = _tokenize("picked up xerjoff jazz club at the duty free")
+        brand_toks = _extract_brand_tokens("Xerjoff")
+        pos = _find_alias_position(tokens, "xerjoff jazz club", brand_toks)
+        assert pos is not None, "Pass 3b should find 'jazz club' with 'xerjoff' nearby"
+
+    # ── P3: suffix+brand strip in one chain ────────────────────────────────
+
+    def test_p3_suffix_then_brand_strip_chain(self):
+        """Suffix stripped first, then brand stripped, with brand in proximity."""
+        tokens = _tokenize("wearing dior sauvage today best versatile perfume")
+        brand_toks = _extract_brand_tokens("Dior")
+        pos = _find_alias_position(tokens, "dior sauvage eau de parfum", brand_toks)
+        assert pos is not None, "Should find 'sauvage' with 'dior' in proximity"
+
+    # ── N1: stripped phrase found but brand absent ─────────────────────────
+
+    def test_n1_brand_absent_from_source_pass3_rejected(self):
+        """Pass 3: stripped phrase present but brand NOT in ±15 tokens → None."""
+        tokens = _tokenize("bleu de chanel is a classic clean scent for daily wear")
+        # brand "chanel" IS in the text here — but let's use a brand not in text
+        brand_toks = frozenset({"xerjoff"})  # wrong brand, absent from text
+        pos = _find_alias_position(tokens, "xerjoff bleu de chanel", brand_toks)
+        assert pos is None, "Pass 3 must reject when brand absent from source"
+
+    # ── N2: same-brand wrong-product guard ─────────────────────────────────
+
+    def test_n2_wrong_product_dior_eau_sauvage_source(self):
+        """Dior Sauvage EDP alias → strip 'dior' → 'sauvage' found in Eau Sauvage
+        source text, but 'dior' is absent → pass 3 rejects → D1=0."""
+        tokens = _tokenize(
+            "Need Eau Sauvage but stronger. Eau Sauvage is my signature fragrance. "
+            "It is the citrus fresh scent I always reach for."
+        )
+        brand_toks = _extract_brand_tokens("Dior")
+        # Note: "dior" is NOT present in this text
+        pos = _find_alias_position(tokens, "dior sauvage eau de parfum", brand_toks)
+        assert pos is None, (
+            "Pass 3 must not recover Dior Sauvage EDP from Eau Sauvage source "
+            "because 'dior' is absent from the text"
+        )
+
+    # ── N3: brand not at front → nothing stripped ──────────────────────────
+
+    def test_n3_brand_not_at_front_no_strip(self):
+        """Alias does not start with brand token; pass 3 produces nothing."""
+        tokens = _tokenize("bleu de chanel is the fragrance I reach for daily")
+        brand_toks = _extract_brand_tokens("Angela Flanders")  # not at front
+        # "angela" / "flanders" not at front of "bleu de chanel" → no strip
+        pos = _find_alias_position(tokens, "bleu de chanel", brand_toks)
+        # Pass 1 should find it directly (no brand issue here)
+        assert pos == 0
+
+    # ── CAP1: no-brand cap fires when D1=0 and D4=0 ───────────────────────
+
+    def test_cap1_d1_zero_d4_zero_score_capped(self):
+        """D1=0, D4=0, D2=1.0 → raw 0.540 → capped to 0.45 → would_suppress=True."""
+        result = score_mention(
+            matched_from=(
+                "This is the ultimate fragrance review for cologne perfume scent "
+                "edp blind buy dupe sillage projection longevity"
+            ),
+            brand_name="",          # empty → no brand tokens → D1 cannot recover
+            canonical_name="Ultimate Man",
+            alias_used="",          # empty → D4=0
+            source_entity_count=2,
+        )
+        assert result.would_suppress is True, (
+            f"D1=0+D4=0 with high D2 must be capped; score={result.score}"
+        )
+        assert result.score <= 0.45, f"Score must be ≤ 0.45; got {result.score}"
+
+    # ── CAP2: cap not applied when D1 > 0 ─────────────────────────────────
+
+    def test_cap2_cap_not_applied_when_d1_nonzero(self):
+        """When D1>0 (brand in proximity), cap does not apply."""
+        result = score_mention(
+            matched_from="korloff ultimate man review very elegant projection",
+            brand_name="Korloff",
+            canonical_name="Ultimate Man",
+            alias_used="",
+            source_entity_count=2,
+        )
+        assert result.features["d1"] > 0.0
+        assert result.would_suppress is False, (
+            f"Genuine brand-in-source must not be capped; score={result.score}"
+        )
+
+    # ── CAP3: cap not applied when D4 > 0 ─────────────────────────────────
+
+    def test_cap3_cap_not_applied_when_d4_nonzero(self):
+        """When alias_used contains brand token (D4>0), cap does not apply."""
+        result = score_mention(
+            matched_from="great fragrance perfume scent cologne edp",
+            brand_name="Korloff",
+            canonical_name="Ultimate Man",
+            alias_used="korloff ultimate man",  # D4=1.0
+            source_entity_count=2,
+        )
+        assert result.features["d4"] == 1.0
+        # Score without cap: 0.35*0 + 0.25*1.0 + 0.20*1.0 + 0.10*1.0 + 0.09 = 0.84
+        assert result.would_suppress is False
+
+    # ── INT1: integration — Chanel BdC EDP full production scenario ────────
+
+    def test_int1_chanel_bdc_edp_full_scenario_passes(self):
+        """Full production: 'Bleu de Chanel' in source → brand-strip → PASS."""
+        result = score_mention(
+            matched_from=(
+                "I finally understood why people call a fragrance addictive. "
+                "My rotation was basically Bleu de Chanel, Armani Code, Tam Dao, "
+                "Azzaro Chrome, and YSL Y EDP."
+            ),
+            brand_name="Chanel",
+            canonical_name="Chanel Bleu de Chanel Eau de Parfum",
+            alias_used="",
+            source_entity_count=5,
+        )
+        assert result.would_suppress is False, (
+            f"Chanel BdC EDP from rotation-list source must PASS; "
+            f"score={result.score}, d1={result.features['d1']}"
+        )
+        assert result.features["d1"] == 1.0
+        assert result.score >= 0.5
+
+    # ── INT2: integration — Dior Sauvage EDP from Eau Sauvage source ───────
+
+    def test_int2_dior_sauvage_edp_wrong_product_suppressed(self):
+        """Full production: 'Eau Sauvage' source → 'dior' absent → D1=0 → SUPPRESS."""
+        result = score_mention(
+            matched_from=(
+                "Need Eau Sauvage, but stronger. Recommendations for citrus fresh "
+                "with musk? Eau Sauvage is my signature fragrance. I love everything "
+                "about this scent. It just does not last long."
+            ),
+            brand_name="Dior",
+            canonical_name="Dior Sauvage Eau de Parfum",
+            alias_used="",
+            source_entity_count=2,
+        )
+        assert result.would_suppress is True, (
+            f"Dior Sauvage EDP from Eau Sauvage source must be suppressed; "
+            f"score={result.score}"
+        )
+        assert result.features["d1"] == 0.0
+        assert result.score <= 0.45
+
+    # ── INT3: integration — Xerjoff Jazz Club from Replica source ──────────
+
+    def test_int3_xerjoff_jazz_club_replica_source_suppressed(self):
+        """Xerjoff Jazz Club in MM Replica bottles source → xerjoff absent → SUPPRESS."""
+        result = score_mention(
+            matched_from=(
+                "Update on the 5 Hooded Anonymous Maison Margiela Replica bottles. "
+                "I have identified ONE of them as Jazz Club."
+            ),
+            brand_name="Xerjoff",
+            canonical_name="Xerjoff Jazz Club",
+            alias_used="",
+            source_entity_count=3,
+        )
+        assert result.would_suppress is True, (
+            f"Xerjoff Jazz Club from Replica source must be suppressed; "
+            f"score={result.score}"
+        )
+        assert result.features["d1"] == 0.0

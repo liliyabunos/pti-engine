@@ -14,6 +14,7 @@ Failure modes detected:
   D — Generic descriptor phrase ("Pure Luxury" as adjective)
   F — Partial-name collision ("On the Rocks" matched from "Apple Brandy on the Rocks")
   G — Category descriptor ("Men's Cologne" as category language)
+  W — Brandless high-context false pass (D1=0, D4=0, D2=1.0 → raw score 0.54)
 
 Usage:
     result = score_mention(
@@ -35,12 +36,44 @@ Threshold calibration (2026-05-18, production RS snippets):
   Vision (Jaguar)                    Type A  score≈0.94  PASS ✓
   Creed Aventus                      Type A  score≈0.91  PASS ✓
 
+PV-008-B2-FIX1 — Brand-prefix strip position recovery + no-brand cap (2026-05-19):
+  Problem: entities whose canonical name starts with a brand prefix
+  ("Chanel Bleu de Chanel") could have D1=0 because the exact alias
+  sequence is not found in source text (source says "Bleu de Chanel",
+  not "Chanel Bleu de Chanel").  This left legitimate high-confidence
+  mentions with D1=0+D4=0, producing raw score 0.540 — a false pass.
+
+  Fix part A — _find_alias_position() pass 3:
+    Strip brand tokens from the front of the alias sequence and search
+    for the remainder.  Accept the position only if a brand token appears
+    within ±15 tokens.  For suffix+brand strip: suffix stripping already
+    runs in pass 2; pass 3 also applies brand-strip to the suffix-stripped
+    variant.  Example: "Chanel Bleu de Chanel Eau de Parfum":
+      pass 1 fails (full phrase not in source)
+      pass 2 suffix-strips to "Chanel Bleu de Chanel", not found
+      pass 3 strips "chanel" → "bleu de chanel", FOUND, "chanel" in
+             proximity → D1=1.0 ✓
+
+  Fix part B — brand-evidence minimum cap in score_mention():
+    When D1=0 AND D4=0 (no brand evidence from any source-grounded path),
+    cap the composite score to 0.45 < SUPPRESS_THRESHOLD.  Any entity
+    with genuine brand context will have recovered D1 via pass 3 above,
+    so legitimate mentions are not affected by the cap.
+    Wrong-product test: "Need Dior Eau Sauvage but stronger" → alias
+    "Dior Sauvage EDP" → brand-strip finds "sauvage" but "dior" absent
+    from source → pass 3 rejects → D1=0 → cap applied → SUPPRESS ✓
+
 Shadow watchlist (open PV-008 items):
   Cool Water / Cool Water Parfum (Davidoff) — well-known standalone
   fragrance. "davidoff" may not appear near "cool water" in all review
   content. PV-008-B1-FIX1 recovers position for concentration variants
   when the base form is found; brand-sparse cases remain a separate
   open evaluation item.  Must be reviewed after ≥7 clean shadow runs.
+  Diptyque Tam Dao EDP — source mentions "Tam Dao" without "diptyque"
+  brand token; pass 3 correctly rejects due to absent brand context.
+  Conservative behavior; documented trade-off.
+  Heures d'Absence — brand_name=NULL in entity_market (data gap); D1=0
+  always regardless of source quality. Requires brand_name data repair.
 """
 
 from __future__ import annotations
@@ -194,7 +227,7 @@ def score_mention(
     # Falls back to canonical_name when alias_used is absent — canonical is a
     # reliable proxy for where the product name appears in the text.
     position_alias_norm = _normalize(alias_used or canonical_name)
-    match_pos = _find_alias_position(tokens, position_alias_norm)
+    match_pos = _find_alias_position(tokens, position_alias_norm, brand_tokens)
 
     d1 = _score_d1_brand_proximity(tokens, match_pos, brand_tokens)
     d2 = _score_d2_fragrance_context(tokens, match_pos)
@@ -213,6 +246,16 @@ def score_mention(
         + 0.10 * d4
         + d5_contribution
     )
+
+    # PV-008-B2-FIX1 — Brand-evidence minimum requirement cap.
+    # When D1=0 (brand absent / unanchored in source) AND D4=0 (alias carries
+    # no brand token), no source-grounded brand evidence exists.  Cap to 0.45
+    # so that high-fragrance-context sources cannot produce a false pass on
+    # brand-identity-less mentions.  Any entity with genuine brand presence in
+    # source would have recovered D1 via _find_alias_position() pass 3 above.
+    if d1 == 0.0 and d4 == 0.0:
+        score = min(score, 0.45)
+
     score = round(min(max(score, 0.0), 1.0), 4)
 
     return EvidenceResult(
@@ -397,14 +440,18 @@ def _extract_brand_tokens(brand_name: str) -> frozenset:
     )
 
 
-def _find_alias_position(tokens: List[str], alias_norm: str) -> Optional[int]:
+def _find_alias_position(
+    tokens: List[str],
+    alias_norm: str,
+    brand_tokens: Optional[frozenset] = None,
+) -> Optional[int]:
     """Return the start-token index of alias_norm in the token list.
 
     Searches for the first occurrence of the alias token sequence. Returns
     None if the alias is not found (e.g. matched_from is truncated or the
     alias was matched against title rather than body).
 
-    PV-008-B1-FIX1 — Concentration-suffix fallback:
+    PV-008-B1-FIX1 — Concentration-suffix fallback (pass 2):
     When the primary search fails AND alias_norm ends with a concentration
     suffix, strip the suffix and retry (up to 2 passes to handle double-
     suffixed names like "Baccarat Rouge 540 Extrait Extrait de Parfum").
@@ -412,10 +459,17 @@ def _find_alias_position(tokens: List[str], alias_norm: str) -> Optional[int]:
     carries a suffix ("Creed Aventus Eau de Parfum") while source text
     uses the bare base form ("creed aventus review").
 
-    Safety: the fallback fires ONLY when the full form is not found AND
-    stripping produces a shorter, strictly-different phrase.  Entities
-    without concentration suffixes (Orange Blossom, Pure Luxury, etc.)
-    are unaffected — _CONC_SUFFIX_RE will not match them.
+    PV-008-B2-FIX1 — Brand-prefix strip fallback (pass 3):
+    When the full canonical name starts with the brand name ("Chanel Bleu de
+    Chanel"), sources may mention only the product portion ("Bleu de Chanel").
+    Strip brand tokens from the front of the alias sequence and search for the
+    remainder.  ONLY accepted if a brand token is also found within
+    ±D1_BRAND_WINDOW_NEAR tokens of the match position — this ensures the
+    recovered position carries genuine brand identity evidence and prevents
+    wrong-product rescues (e.g. "Dior Eau Sauvage" source → alias stripped to
+    "Sauvage" → "dior" absent from text → position rejected).
+    Pass 3 is applied to both the original alias and any suffix-stripped
+    variant so "Chanel Bleu de Chanel Eau de Parfum" chains suffix+brand strip.
     """
     def _search(tok_seq: List[str]) -> Optional[int]:
         m = len(tok_seq)
@@ -426,22 +480,52 @@ def _find_alias_position(tokens: List[str], alias_norm: str) -> Optional[int]:
                 return i
         return None
 
-    # Primary search
+    def _brand_strip_search(candidate_norm: str) -> Optional[int]:
+        """Strip leading brand tokens from candidate_norm; return position only
+        if a brand token is confirmed within ±D1_BRAND_WINDOW_NEAR tokens."""
+        if not brand_tokens:
+            return None
+        parts = candidate_norm.split()
+        stripped = parts[:]
+        while stripped and stripped[0] in brand_tokens:
+            stripped.pop(0)
+        if not stripped or len(stripped) == len(parts):
+            return None  # nothing was actually stripped
+        pos = _search(stripped)
+        if pos is None:
+            return None
+        lo = max(0, pos - _D1_BRAND_WINDOW_NEAR)
+        hi = min(len(tokens), pos + len(stripped) + _D1_BRAND_WINDOW_NEAR)
+        if any(bt in tokens[lo:hi] for bt in brand_tokens):
+            return pos
+        return None  # phrase found but brand absent from proximity
+
+    # Pass 1 — exact
     alias_tokens = alias_norm.split()
     pos = _search(alias_tokens)
     if pos is not None:
         return pos
 
-    # Suffix-strip fallback (max 2 passes for double-suffixed names)
+    # Pass 2 — suffix-strip (max 2 rounds for double-suffixed names)
+    # Also attempts brand-strip on each suffix-stripped candidate.
     current = alias_norm
     for _ in range(2):
         stripped = _CONC_SUFFIX_RE.sub("", current).strip()
         if not stripped or stripped == current:
-            break  # no suffix matched or already minimal
-        stripped_tokens = stripped.split()
-        pos = _search(stripped_tokens)
+            break
+        pos = _search(stripped.split())
+        if pos is not None:
+            return pos
+        # Pass 3a — brand-strip applied to this suffix-stripped form
+        pos = _brand_strip_search(stripped)
         if pos is not None:
             return pos
         current = stripped
+
+    # Pass 3b — brand-strip applied to original alias (catches brand-prefixed
+    # aliases without a concentration suffix, e.g. "Xerjoff Jazz Club")
+    pos = _brand_strip_search(alias_norm)
+    if pos is not None:
+        return pos
 
     return None
