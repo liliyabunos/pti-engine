@@ -281,6 +281,19 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     #
     # new york intense → Fragrance du Bois vs PARFUMS DE NICOLAI
     "new york intense":          [frozenset({"fragrance", "bois"}), frozenset({"nicolai"})],
+    # RES-AMB-MENSCOL (2026-05-19) — Type G category descriptor collision
+    # Men's Cologne (Coty) — "men's cologne" is a product-category descriptor used throughout
+    # fragrance content ("the best men's cologne under $50", "men's cologne recommendations").
+    # normalize_text() produces two forms depending on apostrophe encoding:
+    #   ASCII apostrophe (U+0027): stripped → "men cologne" (2 tokens)
+    #   Unicode curly apostrophe (U+2019): becomes space → "men s cologne" (3 tokens)
+    # Both forms require "coty" in ±10-token context before resolving.
+    # Branded alias "coty men cologne" (id=70894) remains active and resolves correctly.
+    # Production evidence: 17 RS rows, 17 entity_mentions, ts=41, signals=9 — all false.
+    # DB repair: bare alias id=70895 deleted; RS stripped; downstream deleted; Coty brand
+    #   ts/signals deleted (OPS-EE1: 5 other legitimate tracked perfumes; pipeline recomputes).
+    "men cologne":               [frozenset({"coty"})],
+    "men s cologne":             [frozenset({"coty"})],
 }
 
 

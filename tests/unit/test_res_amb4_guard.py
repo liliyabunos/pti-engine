@@ -513,3 +513,104 @@ class TestRESAMBFive:
         assert "five" in _BLOCKED_SINGLE_WORD_ALIASES, (
             "'five' missing from _BLOCKED_SINGLE_WORD_ALIASES"
         )
+
+
+# ---------------------------------------------------------------------------
+# RES-AMB-MENSCOL — Men's Cologne (Coty) category-descriptor guard tests
+# ---------------------------------------------------------------------------
+
+# Extend _TEST_ALIASES to include Men's Cologne and Coty context token
+_TEST_ALIASES["men cologne"] = _make_entity(4010, "Men's Cologne")
+_TEST_ALIASES["men s cologne"] = _make_entity(4010, "Men's Cologne")
+_TEST_ALIASES["coty"] = _make_entity(5010, "Coty Brand")
+_TEST_ALIASES["coty men cologne"] = _make_entity(4010, "Men's Cologne")
+
+
+class TestRESAMBMensCol:
+    """RES-AMB-MENSCOL (2026-05-19) — Type G category descriptor collision.
+
+    Men's Cologne (Coty) — "men's cologne" is a product-category descriptor used
+    throughout fragrance content ("best men's cologne under $50", "men's cologne
+    recommendations"). normalize_text() produces two forms:
+      ASCII apostrophe (U+0027): stripped → "men cologne" (2 tokens)
+      Unicode curly apostrophe (U+2019): becomes space → "men s cologne" (3 tokens)
+
+    Both forms require "coty" in ±10-token context before resolving.
+    Branded alias "coty men cologne" resolves correctly without guard.
+
+    MC1  "men cologne" blocked in category-descriptor context
+    MC2  "men cologne" blocked in recommendation context
+    MC3  "men s cologne" (unicode form) blocked in generic context
+    MC4  Branded "coty men cologne" resolves correctly
+    MC5  "men cologne" with "coty" nearby resolves correctly
+    MC6  "men s cologne" with "coty" nearby resolves correctly
+    MC7  "men cologne" and "men s cologne" present in _AMBIGUOUS_PHRASE_GUARD
+    MC8  Guard entries use frozenset({"coty"})
+    """
+
+    def test_MC1_men_cologne_blocked_category_context(self):
+        """'men's cologne' as category language must NOT fire Men's Cologne (Coty)."""
+        r = _make_resolver_with_aliases(_TEST_ALIASES)
+        results = r.resolve_text(
+            "what is the best men cologne under fifty dollars for date night"
+        )
+        assert "Men's Cologne" not in _names(results)
+
+    def test_MC2_men_cologne_blocked_recommendation_context(self):
+        """Recommendation-style category usage must NOT fire."""
+        r = _make_resolver_with_aliases(_TEST_ALIASES)
+        results = r.resolve_text(
+            "top ten men cologne picks you should try this summer"
+        )
+        assert "Men's Cologne" not in _names(results)
+
+    def test_MC3_men_s_cologne_blocked_generic_context(self):
+        """Unicode apostrophe form 'men s cologne' must also be blocked."""
+        r = _make_resolver_with_aliases(_TEST_ALIASES)
+        results = r.resolve_text(
+            "men s cologne recommendations for office wear in 2026"
+        )
+        assert "Men's Cologne" not in _names(results)
+
+    def test_MC4_branded_coty_men_cologne_resolves(self):
+        """'coty men cologne' branded alias must resolve regardless of guard."""
+        r = _make_resolver_with_aliases(_TEST_ALIASES)
+        results = r.resolve_text(
+            "reviewing coty men cologne the classic drugstore pick"
+        )
+        assert "Men's Cologne" in _names(results)
+
+    def test_MC5_men_cologne_resolves_with_coty_nearby(self):
+        """'men cologne' with 'coty' in ±10-token window MUST resolve."""
+        r = _make_resolver_with_aliases(_TEST_ALIASES)
+        results = r.resolve_text(
+            "the coty men cologne is surprisingly pleasant for the price"
+        )
+        assert "Men's Cologne" in _names(results)
+
+    def test_MC6_men_s_cologne_resolves_with_coty_nearby(self):
+        """'men s cologne' with 'coty' nearby MUST resolve."""
+        r = _make_resolver_with_aliases(_TEST_ALIASES)
+        results = r.resolve_text(
+            "coty men s cologne has a classic soapy barbershop profile"
+        )
+        assert "Men's Cologne" in _names(results)
+
+    def test_MC7_guard_phrases_present_in_ambiguous_phrase_guard(self):
+        """Both normalized forms must be present in _AMBIGUOUS_PHRASE_GUARD."""
+        assert "men cologne" in _AMBIGUOUS_PHRASE_GUARD, (
+            "'men cologne' missing from _AMBIGUOUS_PHRASE_GUARD"
+        )
+        assert "men s cologne" in _AMBIGUOUS_PHRASE_GUARD, (
+            "'men s cologne' missing from _AMBIGUOUS_PHRASE_GUARD"
+        )
+
+    def test_MC8_guard_uses_coty_frozenset(self):
+        """Both guard entries must require frozenset({"coty"})."""
+        for phrase in ("men cologne", "men s cologne"):
+            assert phrase in _AMBIGUOUS_PHRASE_GUARD
+            token_sets = _AMBIGUOUS_PHRASE_GUARD[phrase]
+            assert len(token_sets) == 1
+            assert frozenset({"coty"}) in token_sets, (
+                f"Guard for {phrase!r} must require coty token"
+            )
