@@ -2119,7 +2119,7 @@ All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good 
 
 **Prerequisites for active-mode activation (ALL required before `SIG_QA2_GATE_ACTIVE=true`):**
 1. **PV-008-B1 resolved** ✓ — COMPLETE 2026-05-19 (commit f067364)
-2. **Men's Cologne guard + repair** (separate task — confirm Type G, add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`, strip all RS rows, delete entity_mentions/ts/signals for entity c6b0eee2)
+2. **Men's Cologne guard + repair** ✓ — COMPLETE 2026-05-19 (commit 3fbf455). `"men cologne"` + `"men s cologne"` added to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`; bare alias id=70895 deleted; RS=17 stripped (residual=0); entity_mentions=17 + ts=41 + signals=9 deleted; Coty brand ts=50 + signals=13 deleted (OPS-EE1); 60/60 tests pass
 3. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
 4. **Founder review and explicit active-mode approval**
 

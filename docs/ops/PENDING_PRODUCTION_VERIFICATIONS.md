@@ -685,11 +685,11 @@ Cool Water Parfum (1 row): score=0.64, would_suppress=False ✓ D1=1.0
    - Creed Aventus Eau de Parfum: would_suppress=False, score=0.64–0.69 ✓
    - Cool Water Parfum: would_suppress=False, score=0.64 ✓
 
-2. **Men's Cologne guard + repair** (separate task — RES-AMB5 / SIG-QA1-REPAIR-2):
-   - Entity: Men's Cologne (Coty) — entity_id prefix `c6b0eee2` — Type G category descriptor
-   - Confirmed: 17 mentions, 41 ts rows, 9 signals; 0% RS brand context
-   - Required: add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}` proximity; full-history RS strip; delete entity_mentions/ts/signals
-   - **Do NOT activate gate before this repair is complete.** The gate would write evidence_confidence=low for Men's Cologne mentions but they would still be written in shadow mode. Once active, they'd be suppressed — but Men's Cologne existing data in entity_mentions would remain until repair runs.
+2. **Men's Cologne guard + repair** ✓ **RESOLVED 2026-05-19 (commit 3fbf455)**:
+   - Entity: Men's Cologne (Coty) — entity_id `c6b0eee2` — Type G category descriptor
+   - Guard: `"men cologne"` + `"men s cologne"` added to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}` proximity; bare alias id=70895 deleted from resolver_aliases; branded alias `coty men cologne` (id=70894) intact
+   - Repair counts: RS=17 stripped (RS residual=0 by jsonb canonical_name exact match) · entity_mentions=17 · ts=41 · signals=9 · snaps=0 · Coty brand ts=50 + signals=13 (OPS-EE1; pipeline recomputes)
+   - Tests: 60/60 pass (8 new MC1–MC8 in TestRESAMBMensCol)
 
 3. **Shadow observation (≥7 pipeline runs)**:
    - Monitor `weak_evidence_log` distribution: would_suppress rate by entity, brand, score band
@@ -800,6 +800,49 @@ GROUP BY band ORDER BY band;
 
 ---
 
+### PV-008 Supplemental — RES-AMB-MENSCOL — Men's Cologne (Coty) Category-Descriptor Repair (2026-05-19)
+
+**Commit: `3fbf455`**
+
+**Classification:** Type G — Category Descriptor Collision. "men's cologne" is product-category language used across fragrance YouTube and Reddit content. normalize_text() two-form apostrophe behavior:
+- ASCII apostrophe (U+0027): stripped → `"men cologne"` (2 tokens)
+- Unicode curly apostrophe (U+2019): becomes space → `"men s cologne"` (3 tokens)
+
+Both forms were registered as bare aliases for Men's Cologne (Coty, entity_id `c6b0eee2`). Active bare alias in production: id=70895 `"men cologne"` (g3_safe_alias_seed). All 17 RS rows used `alias_used=''` (empty) with ASCII apostrophe canonical_name form.
+
+**Resolver protection:**
+- `"men cologne"` and `"men s cologne"` added to `_AMBIGUOUS_PHRASE_GUARD` requiring `frozenset({"coty"})` in ±10-token context
+- Bare alias id=70895 deleted from `resolver_aliases` — prevents new resolutions
+- Branded alias `coty men cologne` (id=70894) intact — resolves correctly
+
+**Production repair counts (applied 2026-05-19 before commit):**
+
+| Layer | Rows | Status |
+|-------|------|--------|
+| resolver_aliases id=70895 deleted | 1 | ✓ |
+| RS rows stripped (resolved_entities_json) | 17 | ✓ |
+| RS residual (jsonb canonical_name exact) | 0 | ✓ |
+| entity_mentions deleted | 17 | ✓ |
+| entity_timeseries_daily (perfume) deleted | 41 | ✓ |
+| signals (perfume) deleted | 9 | ✓ |
+| signal_intelligence_snapshots deleted | 0 | ✓ |
+| Coty brand ts deleted (OPS-EE1) | 50 | ✓ pipeline recomputes |
+| Coty brand signals deleted (OPS-EE1) | 13 | ✓ pipeline recomputes |
+| Coty brand snaps deleted | 0 | ✓ |
+
+**OPS-EE1 note:** Coty has 5 other legitimately tracked perfumes (Vanilla Musk, Green Tea, Wild Musk, Dark Vanilla, Men's Line). Deleted brand ts/signals entirely; next pipeline run recomputes from those legitimate sources without manual recompute overhead.
+
+**OPS-PV1 Repair Scope Compatibility Rule:** Full-history RS strip applied (no `--days` window).
+
+**Tests:** 60/60 pass (8 new MC1–MC8 in `TestRESAMBMensCol`).
+
+**PV-008 prerequisite 2 status:** ✓ **RESOLVED** — Men's Cologne repair complete. Remaining prerequisites: shadow observation (≥7 runs) + founder approval.
+
+**Production verification mode: IMMEDIATE — VERIFIED (2026-05-19)**
+**Operational verdict: RES-AMB-MENSCOL — REPAIR-COMPLETE — PRODUCTION VERIFIED**
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -811,4 +854,4 @@ GROUP BY band ORDER BY band;
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
-| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364, 2026-05-19). RES-AMB-FIVE shadow-confirmed catch documented (legacy pollution, not gate failure). Activation-evaluation window: ≥7 clean runs from next pipeline after B1-fix deploy. Remaining prerequisites: Men's Cologne guard+repair + shadow review + founder approval. Post-fix: pass=79, suppress=103, avg=0.4647. |
+| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364). RES-AMB-FIVE RESOLVED (1678158). RES-AMB-MENSCOL RESOLVED (3fbf455, 2026-05-19). Remaining prerequisites: shadow observation ≥7 clean runs + founder approval. Post-fix baseline: pass=79, suppress=103, avg=0.4647. |
