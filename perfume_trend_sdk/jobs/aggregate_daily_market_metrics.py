@@ -868,9 +868,16 @@ def _upsert_weak_evidence_log(
 
     ON CONFLICT (content_item_id, entity_canonical_name, pipeline_run_date)
     DO UPDATE — idempotent for pipeline reruns on the same date.
+
+    Uses a SAVEPOINT so that a failed upsert (e.g. non-UUID content_item_id
+    from legacy resolved_signals rows) does not abort the outer transaction.
+    Without the savepoint, psycopg2 leaves the transaction in an aborted state
+    after catching the exception, causing subsequent EntityMention INSERTs on
+    the same session to fail with InFailedSqlTransaction.
     """
     try:
         import json as _json
+        db.execute(text("SAVEPOINT weak_log_sp"))
         db.execute(text("""
             INSERT INTO weak_evidence_log
                 (content_item_id, entity_canonical_name, entity_brand_name,
@@ -897,7 +904,13 @@ def _upsert_weak_evidence_log(
             "features": _json.dumps(ev.features),
             "shadow":   shadow_mode,
         })
+        db.execute(text("RELEASE SAVEPOINT weak_log_sp"))
     except Exception as exc:
+        # Roll back only the savepoint — outer transaction remains alive.
+        try:
+            db.execute(text("ROLLBACK TO SAVEPOINT weak_log_sp"))
+        except Exception:
+            pass
         logger.warning(
             "sig_qa2_weak_log_upsert_failed canonical=%s err=%s",
             entity_canonical_name, exc,
