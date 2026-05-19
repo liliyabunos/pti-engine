@@ -148,7 +148,8 @@ def score_mention(
         brand_name:          entity_market.brand_name for this entity.
         canonical_name:      entity_market.canonical_name.
         alias_used:          The specific alias string that triggered resolution.
-                             Use canonical_name as fallback if alias_used is absent.
+                             Pass "" if the resolver did not expose an explicit alias.
+                             An empty string produces D4=0.0 (no brand-token boost).
         source_entity_count: How many distinct entities were resolved from the
                              same content item. High count = diluted evidence.
 
@@ -158,13 +159,20 @@ def score_mention(
     text = (matched_from or "").lower()
     tokens = _tokenize(text)
     brand_tokens = _extract_brand_tokens(brand_name)
-    alias_norm = _normalize(alias_used or canonical_name)
-    match_pos = _find_alias_position(tokens, alias_norm)
+    # alias_norm_for_d4: only the explicit alias string (no fallback).
+    # Empty → D4=0.0. Prevents source-text inflation of D4.
+    alias_norm_for_d4 = _normalize(alias_used)
+
+    # position_alias_norm: used to locate the match in the text for D1/D2/D3.
+    # Falls back to canonical_name when alias_used is absent — canonical is a
+    # reliable proxy for where the product name appears in the text.
+    position_alias_norm = _normalize(alias_used or canonical_name)
+    match_pos = _find_alias_position(tokens, position_alias_norm)
 
     d1 = _score_d1_brand_proximity(tokens, match_pos, brand_tokens)
     d2 = _score_d2_fragrance_context(tokens, match_pos)
     d3_raw = _score_d3_note_antisignal(text, tokens, match_pos)
-    d4 = _score_d4_full_name_match(alias_norm, brand_tokens)
+    d4 = _score_d4_full_name_match(alias_norm_for_d4, brand_tokens)
     d5_density = _score_d5_source_density(source_entity_count)
 
     # D3 and D5 are inverted: high raw score → low contribution

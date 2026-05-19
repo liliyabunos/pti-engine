@@ -395,6 +395,27 @@ class TestD4FullNameMatch:
     def test_d4_empty_brand_tokens_zero(self):
         assert _score_d4_full_name_match("orange blossom", frozenset()) == 0.0
 
+    def test_d4_empty_alias_string_zero(self):
+        """Empty alias_used string → D4 = 0.0 (no alias to match)."""
+        brand_tokens = _extract_brand_tokens("Creed")
+        assert _score_d4_full_name_match("", brand_tokens) == 0.0
+
+    def test_d4_source_text_cannot_inflate_score(self):
+        """Source text containing brand token must NOT produce D4=1.0 when alias is empty.
+
+        This guards against the corrected integration bug: passing matched_from[:120]
+        as alias_used would give D4=1.0 any time a brand token appeared in the excerpt,
+        regardless of whether the actual matched alias was brand-qualified.
+        """
+        brand_tokens = _extract_brand_tokens("Creed")
+        # Source text contains "creed" — but alias is "" (the correct behavior)
+        source_text_as_alias = _normalize("Creed Aventus is incredible longevity review")
+        empty_alias = ""
+        # Passing source text as alias gives wrong D4=1.0 (the old bug)
+        assert _score_d4_full_name_match(source_text_as_alias, brand_tokens) == 1.0
+        # Empty alias gives correct D4=0.0
+        assert _score_d4_full_name_match(empty_alias, brand_tokens) == 0.0
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # D5 — Source Entity Density (inverted)
@@ -653,6 +674,138 @@ class TestShadowWatchlist:
         assert "d3_raw" in result.features
         assert "d4" in result.features
         assert "d5_density" in result.features
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALIAS — alias_used integrity: source text must never be used as alias
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestAliasUsedIntegrity:
+    """
+    Guards the corrective fix: alias_used must come from the resolver's matched
+    alias field, never from matched_from (source text).
+
+    The original bug passed matched_from[:120] as alias_used, causing D4 to
+    fire whenever a brand token appeared anywhere in the source text excerpt —
+    not because the resolver matched a brand-qualified alias.
+
+    Fix: alias_used=ent.get("alias_used", "") — D4=0.0 when RS JSON has no
+    explicit alias_used field.
+    """
+
+    def test_alias1_missing_alias_produces_d4_zero(self):
+        """When alias_used is empty string, D4 must be 0.0."""
+        result = score_mention(
+            matched_from=(
+                "Creed Aventus review. This Creed fragrance is legendary. "
+                "Longevity and projection outstanding."
+            ),
+            brand_name="Creed",
+            canonical_name="Creed Aventus",
+            alias_used="",  # no alias_used in RS JSON
+            source_entity_count=2,
+        )
+        assert result.features["d4"] == 0.0, (
+            f"D4 must be 0.0 when alias_used is empty; got {result.features['d4']}"
+        )
+
+    def test_alias2_missing_alias_does_not_block_pass(self):
+        """Creed Aventus must still pass gate even with D4=0.0 (D1+D2 carry it)."""
+        result = score_mention(
+            matched_from=(
+                "Creed Aventus review. This Creed fragrance is legendary. "
+                "Longevity and projection outstanding."
+            ),
+            brand_name="Creed",
+            canonical_name="Creed Aventus",
+            alias_used="",
+            source_entity_count=2,
+        )
+        assert result.would_suppress is False, (
+            f"Creed Aventus should pass gate even with D4=0; score={result.score}"
+        )
+
+    def test_alias3_fp_entity_still_suppressed_with_empty_alias(self):
+        """FP entity is still suppressed correctly when alias_used=''.
+
+        D4 was 0.0 for bare-alias FP entities even with the old bug (no brand
+        token in matched_from text either), so behavior is unchanged for FPs.
+        """
+        result = score_mention(
+            matched_from=(
+                "enjoy the day at your wedding, everything will be perfect"
+            ),
+            brand_name="Wolken Parfums",
+            canonical_name="Enjoy the Day",
+            alias_used="",  # empty alias
+            source_entity_count=2,
+        )
+        assert result.would_suppress is True, (
+            f"Enjoy the Day (FP) must still be suppressed with empty alias; score={result.score}"
+        )
+        assert result.features["d4"] == 0.0
+
+    def test_alias4_real_alias_present_d4_works(self):
+        """When a real branded alias IS present in RS JSON, D4 fires correctly."""
+        result = score_mention(
+            matched_from="wolken parfums pure luxury review",
+            brand_name="Wolken Parfums",
+            canonical_name="Pure Luxury",
+            alias_used="wolken parfums pure luxury",  # explicit branded alias
+            source_entity_count=1,
+        )
+        assert result.features["d4"] == 1.0, (
+            f"Branded alias should produce D4=1.0; got {result.features['d4']}"
+        )
+
+    def test_alias5_calibration_scores_stable_with_empty_alias(self):
+        """All 6 FP calibration cases remain below threshold with alias_used=''.
+
+        Most calibration tests pass explicit bare aliases. This confirms that
+        even with alias_used='' (the integration default), FP suppression holds.
+        """
+        cases = [
+            # (matched_from, brand, canonical, count)
+            (
+                "I like woods, incense, orange blossom, sandalwood in my fragrances.",
+                "Angela Flanders", "Orange Blossom", 19,
+            ),
+            (
+                "5 affordable fragrances to smell like pure luxury in 2026.",
+                "Wolken Parfums", "Pure Luxury", 5,
+            ),
+            (
+                "Kilian Apple Brandy on the Rocks full review. By Kilian fragrance.",
+                "Wolken Parfums", "On the Rocks", 3,
+            ),
+            (
+                "I know it is stressful but you will enjoy the day when it comes.",
+                "Wolken Parfums", "Enjoy the Day", 2,
+            ),
+            (
+                "Etat Libre d Orange review. This is a revolution in fragrance.",
+                "Cire Trudon", "Cire Trudon Revolution", 12,
+            ),
+            (
+                "BellaVita CEO Man 2-pack Men cologne #menscologne #perfumetok",
+                "Coty", "Men's Cologne", 6,
+            ),
+        ]
+        for matched_from, brand, canonical, count in cases:
+            result = score_mention(
+                matched_from=matched_from,
+                brand_name=brand,
+                canonical_name=canonical,
+                alias_used="",  # empty — simulates no alias_used in RS JSON
+                source_entity_count=count,
+            )
+            assert result.would_suppress is True, (
+                f"{canonical} ({brand}) must be suppressed with empty alias; "
+                f"score={result.score}"
+            )
+            assert result.features["d4"] == 0.0, (
+                f"{canonical}: D4 must be 0.0 with empty alias; got {result.features['d4']}"
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

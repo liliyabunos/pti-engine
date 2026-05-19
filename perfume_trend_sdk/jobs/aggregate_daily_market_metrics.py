@@ -1023,7 +1023,7 @@ def _write_mentions(
                     matched_from=ent.get("matched_from", ""),
                     brand_name=brand_name_for_gate,
                     canonical_name=canonical,
-                    alias_used=ent.get("matched_from", canonical)[:120],
+                    alias_used=ent.get("alias_used", ""),
                     source_entity_count=source_entity_counts.get(str(cid), 1),
                 )
                 ev_scored += 1
