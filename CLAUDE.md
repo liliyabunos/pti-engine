@@ -2215,10 +2215,62 @@ Entities requiring further RS inspection before decision:
 **Tests:** `tests/unit/test_sig_qa1_repair_guards.py` — 35/35 pass (N1-N5e negative, P1-P6 positive, R1-R4 regression, G1-G7 guard structure).
 
 **Excluded from SIG-QA1-REPAIR (deferred pending corrected RS inspection):**
-- Men's Cologne (Coty) — unicode apostrophe mismatch in canonical name query; RS evidence unconfirmed
-- Feel Good (Esprit), Come Together (Vintner's Reserve), Bride To Be (Primark), Day to Day (Primark) — Type D; pending dedicated repair batch
+- Men's Cologne (Coty) — repaired separately as RES-AMB-MENSCOL (2026-05-19) ✓
+- Feel Good (Esprit), Come Together (Vintner's Reserve), Bride To Be (Primark), Day to Day (Primark) — repaired as SIG-QA1-TYPE-D (2026-05-19) ✓
 
 **Production verification mode: DEFERRED — LEDGER ENTRY CREATED: PV-006**
+
+---
+
+## SIG-QA1-TYPE-D — Deferred Type D Generic-Phrase False Positives (Feel Good / Come Together / Bride To Be / Day to Day)
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-19)**
+**Commit: b6abfb8**
+**No migration required.**
+
+**4 confirmed false-positive entities (all 0% RS brand context rate via full RS inspection 2026-05-19):**
+
+| Entity | Brand | entity_id (prefix) | Type | Guard mechanism |
+|--------|-------|-------------------|------|----------------|
+| Feel Good | Esprit | c2caa332 | D — generic emotion phrase | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"esprit"}` in ±10 token window |
+| Come Together | Vintner's Reserve | b13d928a | D — generic phrase / ingredient desc | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"vintner"}` in ±10 token window |
+| Bride To Be | Primark | a12020a5 | D — wedding-context noun (same pattern as RES-AMB) | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"primark"}` in ±10 token window |
+| Day to Day | Primark | a76e080a | D — temporal/routine descriptor | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"primark"}` in ±10 token window |
+
+**RS evidence (all 0% brand context):**
+- Feel Good: 6/6 RS rows — "smell feel good overall", "to feel good fashion and coach unboxing", emotional/lifestyle prose
+- Come Together: 5/5 RS rows — "notes come together to create...", wedding posts, GLP-1/fragrance addiction post
+- Bride To Be: 3/3 RS rows — wedding guest questions, "bride-to-be" as noun referring to an actual bride, YouTube gift guide
+- Day to Day: 4/4 RS rows — "my day to day go to fragrance", career post, collection discussion
+
+**Repair counts (applied 2026-05-19):**
+
+| Layer | Rows |
+|-------|------|
+| RS rows updated (resolved_entities_json stripped) | 18 |
+| entity_mentions deleted | 18 |
+| entity_timeseries_daily deleted (perfume) | 72 |
+| signals deleted (perfume) | 6 |
+| signal_intelligence_snapshots deleted | 0 |
+| Brand ts deleted (Esprit=24, Vintner's Reserve=19, Primark=3) | 46 |
+| Brand signals deleted | 4 |
+
+**Brand cleanup:**
+- **Esprit** (374bb03d): DELETE ALL — Feel Good was only tracked perfume
+- **Vintner's Reserve** (9a01b6f4): DELETE ALL — pipeline recomputes from Banana Pudding (1 mention) + Blackberry Wine (1 mention)
+- **Primark** brand (15f87cfa): DELETE ALL 3 ts rows — 12 other legitimate tracked perfumes; pipeline recomputes
+
+**Production verification (2026-05-19) — ALL PASS:**
+- Feel Good: RS=0, m=0, ts=0, sigs=0 ✓
+- Come Together: RS=0, m=0, ts=0, sigs=0 ✓
+- Bride To Be: RS=0, m=0, ts=0, sigs=0 ✓
+- Day to Day: RS=0, m=0, ts=0, sigs=0 ✓
+- Brand Esprit: ts=0, sigs=0 ✓
+- Brand Vintner's Reserve: ts=0, sigs=0 ✓
+- Brand Primark: ts=0, sigs=0 ✓
+
+**Tests:** `tests/unit/test_sig_qa1_type_d_guards.py` — 27/27 pass (N1-N4 negative ×12, P1-P4 positive ×4, R1-R5 regression ×5, G1-G6 structure ×6). Prior guard suite: 292/292 pass.
+
+**Production verification mode: IMMEDIATE — VERIFIED**
 
 ---
 
@@ -3656,6 +3708,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | RES-AMB-GLOBAL — Systemic Ambiguous Entity Risk Audit Framework (`scripts/audit_ambiguous_entity_risk.py`) | COMPLETE — PRODUCTION VERIFIED | 2026-05-17 |
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
+| SIG-QA1-TYPE-D — Deferred Type D generic-phrase repair (Feel Good/Come Together/Bride To Be/Day to Day) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) | IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008) | 2026-05-18 |
