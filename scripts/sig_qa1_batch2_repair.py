@@ -102,19 +102,39 @@ def _get_db_url() -> str:
 
 
 def _fetch_entity_id(cur, canonical_name: str, brand_name: str):
-    """Fetch entity_id from entity_market for a perfume by canonical_name + brand_name."""
+    """Fetch entity_id from entity_market for a perfume by canonical_name + brand_name.
+
+    Falls back to canonical_name-only lookup if the brand_name doesn't match exactly,
+    reporting all matching rows. Returns the first match if unique, None if ambiguous.
+    """
     cur.execute(
         """
-        SELECT id FROM entity_market
+        SELECT id, brand_name FROM entity_market
         WHERE canonical_name = %s
-          AND brand_name = %s
           AND entity_type = 'perfume'
-        LIMIT 1
+        ORDER BY brand_name
         """,
-        (canonical_name, brand_name),
+        (canonical_name,),
     )
-    row = cur.fetchone()
-    return str(row[0]) if row else None
+    rows = cur.fetchall()
+    if not rows:
+        return None
+    # Exact brand match first
+    for row in rows:
+        if row[1] == brand_name:
+            return str(row[0])
+    # Partial/fuzzy match (brand_name contains expected brand)
+    brand_lower = brand_name.lower()
+    for row in rows:
+        if brand_lower in row[1].lower() or row[1].lower() in brand_lower:
+            print(f"    [brand_name fallback] '{canonical_name}': expected '{brand_name}', found '{row[1]}'")
+            return str(row[0])
+    # Return first if only one result
+    if len(rows) == 1:
+        print(f"    [brand_name fallback] '{canonical_name}': expected '{brand_name}', using '{rows[0][1]}'")
+        return str(rows[0][0])
+    print(f"    [brand_name AMBIGUOUS] '{canonical_name}': expected '{brand_name}', found {[r[1] for r in rows]}")
+    return None
 
 
 def _fetch_brand_entity_id(cur, brand_name: str):
