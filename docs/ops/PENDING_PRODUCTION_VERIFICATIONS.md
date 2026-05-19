@@ -518,7 +518,7 @@ This is correct behavior — the guard prevents future misattribution; historica
 - Score-before-dedup reorder (`fa50e55`): evidence scoring and `_upsert_weak_evidence_log` now execute BEFORE the EntityMention dedup check (`if exists: continue`). This ensures `weak_evidence_log` is populated on every aggregation run, including idempotent reruns on dates with existing entity_mentions.
 - **All `weak_evidence_log` rows are valid for PV-008 evaluation** (0 rows existed before migration 053 was applied).
 
-**First clean PV-008 snapshot — 2026-05-19 (aggregation run for 2026-05-18 data):**
+**Observation run 1 — 2026-05-19 (aggregation run for 2026-05-18 data) — DIAGNOSTIC ONLY (pre-B1-fix scorer):**
 
 ```
 Total rows: 182
@@ -552,22 +552,14 @@ Top passing entities:
   Paco Rabanne 1 Million      score=0.70
 ```
 
-**Cool Water watchlist observation (run 1):**
-- `Cool Water Parfum` (not `Cool Water` the main entity) scored 0.29 → would_suppress=True
-- `Cool Water` (Davidoff main entity) not present in this run's data — no RS rows for that entity in 2026-05-18 content
-- Note: concentration variant "Cool Water Parfum" has empty alias_used + position lookup fails (canonical phrase not found in matched_from text) → D1=0, D2=0, score=0.29. Expected behavior for concentration variants without explicit alias.
+**Cool Water watchlist observation (run 1, pre-B1 fix):**
+- `Cool Water Parfum` scored 0.29 → would_suppress=True (false suppression — concentration-suffix failure, logged as PV-008-B1)
+- `Cool Water` (Davidoff main entity) not present in this run's data — no RS rows for 2026-05-18 content
 
-**False suppression pattern identified (document for shadow review):**
-
-Entities with concentration-suffix canonical names ("Creed Aventus Eau de Parfum", "Cool Water Parfum") where:
-- `alias_used` is empty in RS data (D4=0.0)
-- `position_alias_norm` = full canonical name with suffix
-- `_find_alias_position` fails because source text says "Creed Aventus" not "Creed Aventus Eau de Parfum"
-- With match_pos=None: D1=0.0, D2 scans whole text but scores 0 if no fragrance tokens present
-- Result: score=0.29 (baseline: D3=0 contribution + D5 minimal penalty only)
-
-This is a v1 known limitation. Active-mode activation should account for this — concentration variants require special handling or a minimum pass score.
-`Creed Aventus Eau de Parfum` appeared: score=0.29 (2 rows), 0.34 (2 rows). All would_suppress=True.
+**False suppression pattern (PV-008-B1 — documented, now RESOLVED):**
+- `Creed Aventus Eau de Parfum`: score=0.29 (2 rows), 0.34 (2 rows), all would_suppress=True → fixed in `f067364`
+- Root cause: full concentration-suffix phrase not found in source text → D1=0.0 → score≈0.29
+- Fixed by suffix-strip fallback in `_find_alias_position()`. See PV-008-B1 section below for full before/after.
 
 ---
 
@@ -611,7 +603,7 @@ This is a v1 known limitation. Active-mode activation should account for this �
 
 ### PV-008-B1 — Concentration-Suffix False Suppression Risk (Active-Mode Blocker)
 
-**Status: OPEN — blocks active-mode activation**
+**Status: RESOLVED — fix-verification confirmed 2026-05-19 (commit f067364)**
 
 **Problem:** Entities with a concentration suffix in their canonical name (e.g. "Creed Aventus Eau de Parfum", "Cool Water Parfum") are systematically false-suppressed by the evidence gate in shadow mode. If the gate were activated, these resolutions would be suppressed despite being legitimate product mentions.
 
@@ -653,14 +645,45 @@ When `_find_alias_position()` returns None and the canonical name contains a suf
 
 **Required before active-mode activation: Direction 1 must be implemented and verified in shadow mode.**
 
+**PV-008-B1-FIX1 IMPLEMENTED — fix-verification complete (2026-05-19):**
+- Commit: `f067364` — `fix: PV-008-B1-FIX1 — concentration-suffix fallback in _find_alias_position`
+- Tests: 74/74 pass (11 new `TestB1Fix` tests: S1–S5 unit, I1–I2 integration)
+- Fix-verification rerun: manual aggregation for 2026-05-18 after deploy
+
+**Pre-fix baseline (run 1, 2026-05-19, diagnostic only):**
+```
+total=182  pass=53   suppress=129  avg=0.4172  min=0.04  max=0.84
+bands: <0.3:67  0.3-0.5:62  0.5-0.6:9  0.6-0.8:43  >=0.8:1
+Creed Aventus Eau de Parfum (4 rows): score 0.29–0.34, all would_suppress=True, all D1=0.0
+Cool Water Parfum (1 row): score=0.29, would_suppress=True, D1=0.0
+```
+
+**Post-fix results (fix-verification rerun for 2026-05-18):**
+```
+total=182  pass=79   suppress=103  avg=0.4647  min=0.04  max=0.84
+bands: <0.3:58  0.3-0.5:45  0.5-0.6:5  0.6-0.8:73  >=0.8:1
+Creed Aventus Eau de Parfum (4 rows): score 0.64–0.69, all would_suppress=False ✓ D1=1.0
+Cool Water Parfum (1 row): score=0.64, would_suppress=False ✓ D1=1.0
+```
+
+- Creed Aventus EDP: "creed aventus" found via suffix-strip → D1=1.000 ("creed" within ±15 tokens) ✓
+- Cool Water Parfum: "cool water" found via suffix-strip → D1=1.000 ("davidoff" in source proximity for this content item) ✓
+- Net change: 26 fewer false suppressions; avg score +0.047; 0.6–0.8 band: 43 → 73 rows
+
+**Activation-evaluation window note:**
+- Observation run 1 (2026-05-19, 2026-05-18 data): diagnostic only — pre-B1-fix scorer
+- Fix-verification rerun (2026-05-19, 2026-05-18 date): post-fix correction, not a clean observation run
+- **First clean activation-evaluation run** = first normal pipeline run AFTER Railway deploy of `f067364` completes
+- Activation-evaluation window: ≥7 consecutive clean runs from that point
+
 ---
 
-**Three prerequisites for active-mode activation (ALL must be complete first):**
+**Four prerequisites for active-mode activation (ALL must be complete first):**
 
 1. **PV-008-B1 resolved — Concentration-Suffix False Suppression** (see above):
-   - Direction 1 (suffix-strip fallback) implemented and verified in shadow mode
-   - Creed Aventus Eau de Parfum and Cool Water Parfum must show `would_suppress=False` post-fix
-   - **Gate must not activate before this is resolved.**
+   - Direction 1 (suffix-strip fallback) implemented and verified in shadow mode ✓ **RESOLVED 2026-05-19**
+   - Creed Aventus Eau de Parfum: would_suppress=False, score=0.64–0.69 ✓
+   - Cool Water Parfum: would_suppress=False, score=0.64 ✓
 
 2. **Men's Cologne guard + repair** (separate task — RES-AMB5 / SIG-QA1-REPAIR-2):
    - Entity: Men's Cologne (Coty) — entity_id prefix `c6b0eee2` — Type G category descriptor
@@ -740,4 +763,4 @@ GROUP BY band ORDER BY band;
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
-| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | ≥7 pipeline runs + shadow review + PV-008-B1 (concentration-suffix fix) + Men's Cologne repair + founder approval. First snapshot: 182 rows, 70.9% suppress rate, 2026-05-19. 2026-05-18 pipeline failure: REPAIR-COMPLETE (manual rerun 2026-05-19). |
+| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | PV-008-B1 RESOLVED (f067364, 2026-05-19). Activation-evaluation window: ≥7 clean runs from next pipeline after B1-fix deploy. Remaining prerequisites: Men's Cologne guard+repair + shadow review + founder approval. Post-fix: pass=79, suppress=103, avg=0.4647. |

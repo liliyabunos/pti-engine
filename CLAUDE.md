@@ -2089,19 +2089,19 @@ Passing entities (correct):
   Rasasi Hawas (Rasasi)            score=0.74
 ```
 
-**Cool Water watchlist (run 1):** `Cool Water Parfum` scored 0.29 → would_suppress=True.
-`Cool Water` (main entity) not in 2026-05-18 content. `Cool Water Parfum` false suppression due to concentration-suffix position lookup failure — see below.
+**PV-008-B1 — Concentration-Suffix False Suppression Risk: RESOLVED (commit f067364, 2026-05-19)**
 
-**PV-008-B1 — Concentration-Suffix False Suppression Risk (Active-Mode Blocker):**
-**Active-mode activation is currently blocked by this pattern.** Full design note and repair directions: `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md` → PV-008-B1.
+Fix: suffix-strip fallback in `_find_alias_position()` — strips concentration suffix (up to 2 passes, `_CONC_SUFFIX_RE` local copy) and retries position search when full canonical phrase not found.
 
-Root cause: entities with concentration suffix in canonical name (e.g. "Creed Aventus Eau de Parfum") where `alias_used=""` in all RS rows:
-- `_find_alias_position` searches for full suffix phrase but source text says only "Creed Aventus" → `match_pos=None`
-- With match_pos=None: D1=0.0 (no brand-proximity window), D2 scans whole text from position 0 → often 0
-- Result: score=0.29 baseline → would_suppress=True — false suppression
-- Observed: `Creed Aventus Eau de Parfum` (4 rows, 0.29–0.34), `Cool Water Parfum` (1 row, 0.29)
+**Observation run 1 baseline (2026-05-19, pre-fix, diagnostic only):** pass=53, suppress=129, avg=0.4172
+- Creed Aventus Eau de Parfum (4 rows): score 0.29–0.34, all would_suppress=True, D1=0.0
+- Cool Water Parfum (1 row): score=0.29, would_suppress=True, D1=0.0
 
-**Repair required before activation (Direction 1):** Add suffix-strip fallback in `_find_alias_position()` — when primary lookup fails, retry with `_base_name(canonical_name)`. Low risk, no RS format change, no migration.
+**Fix-verification rerun (2026-05-19, 2026-05-18 date, post-fix):** pass=79, suppress=103, avg=0.4647
+- Creed Aventus Eau de Parfum (4 rows): score 0.64–0.69, all would_suppress=False ✓ D1=1.0
+- Cool Water Parfum (1 row): score=0.64, would_suppress=False ✓ D1=1.0
+
+**Activation-evaluation window:** ≥7 clean pipeline runs starting from first normal pipeline run after `f067364` deploys.
 
 **Threshold calibration (2026-05-18, production RS snippets):**
 ```
@@ -2118,7 +2118,7 @@ Creed Aventus                      A     ≈0.91   PASS ✓
 All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good entities score above.
 
 **Prerequisites for active-mode activation (ALL required before `SIG_QA2_GATE_ACTIVE=true`):**
-1. **PV-008-B1 resolved** — suffix-strip fallback Direction 1 implemented + verified in shadow mode; Creed Aventus Eau de Parfum and Cool Water Parfum must show `would_suppress=False` post-fix
+1. **PV-008-B1 resolved** ✓ — COMPLETE 2026-05-19 (commit f067364)
 2. **Men's Cologne guard + repair** (separate task — confirm Type G, add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`, strip all RS rows, delete entity_mentions/ts/signals for entity c6b0eee2)
 3. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
 4. **Founder review and explicit active-mode approval**
