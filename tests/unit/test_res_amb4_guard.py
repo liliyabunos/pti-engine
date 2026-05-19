@@ -1,5 +1,10 @@
 """RES-AMB4 — Audit-Driven Ambiguous Phrase Guard Expansion Tests (2026-05-17).
 
+RES-AMB-FIVE (2026-05-19): Bruno Fazzolari Five bare alias "five" added to
+_BLOCKED_SINGLE_WORD_ALIASES. Numeric single-token alias collision confirmed via
+26 RS rows: "my stepfather came in when I was five years old", "Five summer
+colognes under 50$!", "FIVE DOLLARS at 5 below". Tests: F1-F4.
+
 Entities guarded (all confirmed false-positive via production RS inspection):
   C1   "i will"          → I Will (Femascu) — future-tense construction; 140 false mentions
   C1b  RS evidence: "In this video, I will be reviewing..."
@@ -46,6 +51,7 @@ sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent.par
 from perfume_trend_sdk.resolvers.perfume_identity.perfume_resolver import (
     PerfumeResolver,
     _AMBIGUOUS_PHRASE_GUARD,
+    _BLOCKED_SINGLE_WORD_ALIASES,
 )
 from unittest.mock import MagicMock
 
@@ -102,6 +108,10 @@ _TEST_ALIASES: Dict[str, Dict[str, Any]] = {
     "creed aventus":      _make_entity(2001, "Creed Aventus"),
     "dior sauvage":       _make_entity(2002, "Dior Sauvage"),
     "armaf club de nuit intense man": _make_entity(2003, "Armaf Club de Nuit Intense Man"),
+    # RES-AMB-FIVE: bare alias + branded alias
+    "five":                    _make_entity(4009, "Bruno Fazzolari Five"),
+    "bruno fazzolari five":    _make_entity(4009, "Bruno Fazzolari Five"),
+    "bruno fazzolari":         _make_entity(4009, "Bruno Fazzolari Five"),
     # Unrelated perfumes that contain guard words but should still resolve
     "i will" : _make_entity(4001, "I Will"),  # Must be blocked without femascu
 }
@@ -457,3 +467,49 @@ class TestGuardStructureAMB4:
         r = _resolver()
         results = r.resolve_text("day one of testing this fragrance really smells good")
         assert "Day One" not in _names(results)
+
+
+# ---------------------------------------------------------------------------
+# RES-AMB-FIVE — Bruno Fazzolari Five bare numeric alias "five" tests
+# ---------------------------------------------------------------------------
+
+class TestRESAMBFive:
+    """'five' is a single-word numeric alias — blocked unconditionally via
+    _BLOCKED_SINGLE_WORD_ALIASES.  Branded multi-token aliases are unaffected.
+
+    F1 — bare 'five' blocked in counting context
+    F2 — bare 'five' blocked in ordinal context
+    F3 — bare 'five' blocked in price context
+    F4 — branded 'bruno fazzolari five' still resolves (multi-token unaffected)
+    F5 — 'five' in _BLOCKED_SINGLE_WORD_ALIASES
+    """
+
+    def test_F1_five_blocked_counting_language(self):
+        """'five' as a counting word must NOT fire Bruno Fazzolari Five."""
+        r = _resolver()
+        results = r.resolve_text("five summer colognes under fifty dollars you need to try")
+        assert "Bruno Fazzolari Five" not in _names(results)
+
+    def test_F2_five_blocked_ordinal_context(self):
+        """'five years old' — numeric ordinal must NOT fire the entity."""
+        r = _resolver()
+        results = r.resolve_text("my stepfather came in when i was five years old")
+        assert "Bruno Fazzolari Five" not in _names(results)
+
+    def test_F3_five_blocked_price_context(self):
+        """'five dollars' — price reference must NOT fire the entity."""
+        r = _resolver()
+        results = r.resolve_text("five dollars at 5 below is an amazing deal on this fragrance")
+        assert "Bruno Fazzolari Five" not in _names(results)
+
+    def test_F4_branded_alias_still_resolves(self):
+        """'bruno fazzolari five' multi-token alias is NOT in blocklist — must resolve."""
+        r = _resolver()
+        results = r.resolve_text("today i am reviewing bruno fazzolari five eau de parfum")
+        assert "Bruno Fazzolari Five" in _names(results)
+
+    def test_F5_five_in_blocked_single_word_aliases(self):
+        """'five' must be present in _BLOCKED_SINGLE_WORD_ALIASES."""
+        assert "five" in _BLOCKED_SINGLE_WORD_ALIASES, (
+            "'five' missing from _BLOCKED_SINGLE_WORD_ALIASES"
+        )

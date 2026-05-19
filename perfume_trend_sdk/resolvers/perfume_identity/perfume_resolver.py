@@ -70,6 +70,12 @@ _BLOCKED_SINGLE_WORD_ALIASES: frozenset[str] = frozenset({
                    # Type C ordinary-word collision; RS evidence: "Fresh Cucumber Revolution?" title,
                    # Alkemia prose. Branded aliases ("cire trudon revolution", "cire trudon
                    # revolution eau de parfum") remain active and resolve correctly.
+    # RES-AMB-FIVE (2026-05-19) — numeric single-token alias collision
+    "five",        # Bruno Fazzolari Five Eau de Parfum — bare alias "five" matched generic counting
+                   # language: "my stepfather came in when I was five years old" (wedding Reddit),
+                   # "Five summer colognes under 50$!" (counting), "FIVE DOLLARS at 5 below" (price).
+                   # 26 false RS rows; 26 entity_mentions; Class 1 False Identity / numeric collision.
+                   # Branded alias "bruno fazzolari five" resolves correctly (multi-token, unaffected).
 })
 
 # ---------------------------------------------------------------------------
