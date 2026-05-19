@@ -2274,6 +2274,86 @@ Entities requiring further RS inspection before decision:
 
 ---
 
+## SIG-QA1-BATCH2 — 12 False-Positive Entity Guards + Full-History Repair
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-19)**
+**Commits: d6dde32 (guards + tests + repair script) · e82a59b (Demeter brand_name fallback fix) · d58eada (Demeter brand cleanup script)**
+**No migration required.**
+
+**12 confirmed false-positive entities — full RS inspection 2026-05-19; all 0% brand context rate:**
+
+| Entity | Brand | Type | Guard mechanism |
+|--------|-------|------|----------------|
+| White Musk | W.Dressroom | B — note/ingredient collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"dressroom"}` in ±10 token window |
+| Black Pepper | Demeter | B — note/ingredient collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"demeter"}` in ±10 token window |
+| Apple Blossom | Auric Blends | B — note/ingredient collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"auric"}` in ±10 token window |
+| Bitter Orange | Zara | B — note/ingredient collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"zara"}` in ±10 token window |
+| Earl Grey | Teone Reinthal Natural Perfume | B — note/ingredient (tea type) | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"teone", "reinthal"}` in ±10 token window |
+| Earl Grey Tea | Demeter | B — note/ingredient (tea type) | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"demeter"}` in ±10 token window |
+| Black Jeans | Versace | C — ordinary noun collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"versace"}` in ±10 token window |
+| Black Suit | Ramon Monegal | C — ordinary noun collision | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"monegal"}` in ±10 token window |
+| Green Tea | Coty | D — generic descriptor | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"coty"}` in ±10 token window |
+| Hair Perfume | Balmain | D — generic descriptor (category) | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"balmain"}` in ±10 token window |
+| Bath & Body | Marbert | D — generic descriptor (category) | `_AMBIGUOUS_PHRASE_GUARD`: `"bath body"` + `"bath and body"` → requires `{"marbert"}` in ±10 token window |
+| Be Cool | Avon | D — generic descriptor | `_AMBIGUOUS_PHRASE_GUARD`: requires `{"avon"}` in ±10 token window |
+
+**Normalization note:** `normalize_text("Bath & Body")` → `"bath body"` (ampersand stripped to space, whitespace collapsed). Both `"bath body"` and `"bath and body"` are guarded (13 entries total for 12 entities).
+
+**Demeter brand_name note (important for future lookups):**
+`entity_market` stores Demeter as `"Demeter Fragrance Library / The Library Of Fragrance"` — not `"Demeter"`. Both `_fetch_entity_id()` (repair script) and `demeter_brand_cleanup.py` use fuzzy `ILIKE '%demeter%'` to find the entity. The exact brand_name in DB: `Demeter Fragrance Library / The Library Of Fragrance` (entity_id prefix: `fe4a07a1`). Demeter has 58 tracked perfumes including Black Pepper and Earl Grey Tea.
+
+**Repair counts (applied 2026-05-19):**
+
+| Layer | Rows |
+|-------|------|
+| RS rows updated (resolved_entities_json stripped) | 132 |
+| entity_mentions deleted | 133 |
+| entity_timeseries_daily deleted (perfume) | 305 |
+| signals deleted (perfume) | 37 |
+| signal_intelligence_snapshots deleted | 2 |
+| Brand ts deleted (10 brands via repair script) | 284 |
+| Brand signals deleted (10 brands via repair script) | 27 |
+| Demeter brand ts deleted (separate cleanup) | 53 |
+| Demeter brand signals deleted (separate cleanup) | 13 |
+| **Brand totals** | **ts=337, signals=40** |
+
+**Brand cleanup note (OPS-EE1):**
+All 11 brand entities had ts/signals deleted; pipeline recomputes from legitimate remaining perfumes. Large brands with many other tracked perfumes (Versace ~66 legitimate ts, Zara ~54, Balmain ~47, Avon, Coty, Demeter with 58 perfumes) will have historical brand score dates (before this repair) missing until a targeted date-range aggregation recompute is run. The pipeline will recompute forward from today automatically.
+
+| Brand | entity_id (prefix) | ts deleted | sigs deleted | Note |
+|-------|-------------------|-----------|-------------|------|
+| W.Dressroom | — | via script | via script | Only 1 FP was only tracked perf? Pipeline recomputes |
+| Demeter | fe4a07a1 | 53 | 13 | 58 other tracked perfumes remain |
+| Auric Blends | — | via script | via script | Pipeline recomputes |
+| Zara | — | via script | via script | Many other tracked perfumes remain |
+| Teone Reinthal Natural Perfume | — | via script | via script | Pipeline recomputes |
+| Versace | — | via script | via script | Many other tracked perfumes remain |
+| Ramon Monegal | — | via script | via script | Pipeline recomputes |
+| Coty | — | via script | via script | Many other tracked perfumes remain |
+| Balmain | — | via script | via script | Many other tracked perfumes remain |
+| Marbert | — | via script | via script | Pipeline recomputes |
+| Avon | — | via script | via script | Many other tracked perfumes remain |
+
+**Production verification (2026-05-19) — ALL PASS:**
+- White Musk: RS=0, m=0, ts=0, sigs=0 ✓
+- Black Pepper: RS=0, m=0, ts=0, sigs=0 ✓
+- Apple Blossom: RS=0, m=0, ts=0, sigs=0 ✓
+- Bitter Orange: RS=0, m=0, ts=0, sigs=0 ✓
+- Earl Grey: RS=0, m=0, ts=0, sigs=0 ✓
+- Earl Grey Tea: RS=0, m=0, ts=0, sigs=0 ✓
+- Black Jeans: RS=0, m=0, ts=0, sigs=0 ✓
+- Black Suit: RS=0, m=0, ts=0, sigs=0 ✓
+- Green Tea: RS=0, m=0, ts=0, sigs=0 ✓
+- Hair Perfume: RS=0, m=0, ts=0, sigs=0 ✓
+- Bath & Body: RS=0, m=0, ts=0, sigs=0 ✓
+- Be Cool: RS=0, m=0, ts=0, sigs=0 ✓
+- All 11 brand entities: ts=0, signals=0 ✓
+
+**Tests:** `tests/unit/test_sig_qa1_batch2_guards.py` — 49/49 pass (N1-N12 negative, P1-P12 positive, R1-R5 regression, G1-G3 guard structure). Prior guard suite: all pass (no regressions).
+
+**Production verification mode: IMMEDIATE — VERIFIED**
+
+---
+
 ## SIG-ID1 — Cross-Brand Attribution Correction
 **STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-18)**
 **Commits: c777b73 (implementation) · 08048af (frontend route fix)**
@@ -3709,6 +3789,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | SIG-QA1 — Signal Evidence Integrity Audit & Policy Design | COMPLETE — AUDIT / POLICY DESIGN VERIFIED | 2026-05-17 |
 | SIG-QA1-REPAIR — Source-evidence pollution cleanup (5 entities: Wolken ×3, Angela Flanders, Cire Trudon) | IMPLEMENTED — AWAITING UI VERIFICATION (PV-006) | 2026-05-17 |
 | SIG-QA1-TYPE-D — Deferred Type D generic-phrase repair (Feel Good/Come Together/Bride To Be/Day to Day) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
+| SIG-QA1-BATCH2 — 12 false-positive guards + repair (note/ingredient B×6, ordinary noun C×2, generic descriptor D×4) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | SIG-ID1 — Cross-Brand Attribution Correction (bare-alias suppression + unresolved_signal_candidates + harvest script + admin UI) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-ID1A — Signal Candidate Queue Quality Calibration (5 harvest filters + Dossier fix + pagination + phrase search) | COMPLETE — PRODUCTION VERIFIED | 2026-05-18 |
 | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) | IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008) | 2026-05-18 |
