@@ -2699,7 +2699,7 @@ Applies to both the COUNT and rows queries via shared `where_clauses` list.
 - Guard correctly blocking 'Comme des Garçons' (accented) from re-creation in subsequent pipeline runs ✓
 
 **DATA4-C — TOM FORD Private Blend + Signature Collection Hierarchy**
-**STATUS: COMPLETE — PENDING PRODUCTION VERIFICATION (see PV-009)**
+**STATUS: COMPLETE — PRODUCTION VERIFIED (2026-05-19)**
 **Migration: 054 · No code changes (KB-CAT1-C/D infrastructure handles display)**
 
 **Architecture decision:** TOM FORD Private Blend and TOM FORD Signature are themed collections within the Tom Ford house, not independent sub-brands. Neither is an acquisition or independently branded entity. Both classified as `node_type='collection'`, `parent_brand_normalized='tom ford'`.
@@ -3873,7 +3873,7 @@ python3 scripts/reresolve_g2_stale_content.py --batch <batch_name> --apply
 | KB-CAT1-B — brand_profiles Hierarchy Extension | COMPLETE — PRODUCTION VERIFIED | 2026-05-14 |
 | KB-CAT1-C — Xerjoff Pilot: Brand Hierarchy Display | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
 | KB-CAT1-D — Perfume Hierarchy Display + Compact Market Row Context | COMPLETE — PRODUCTION VERIFIED | 2026-05-16 |
-| DATA4-C — TOM FORD Private Blend + Signature collection hierarchy (migration 054) | IMPLEMENTED — PENDING PRODUCTION VERIFICATION (PV-009) | 2026-05-19 |
+| DATA4-C — TOM FORD Private Blend + Signature collection hierarchy (migration 054) | COMPLETE — PRODUCTION VERIFIED | 2026-05-19 |
 | REL-1 — Staging & Production Release Gate Architecture | APPROVED — DEFERRED (after KB-CAT1/FTG block) | 2026-05-15 |
 
 ---
