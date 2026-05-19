@@ -569,20 +569,111 @@ Entities with concentration-suffix canonical names ("Creed Aventus Eau de Parfum
 This is a v1 known limitation. Active-mode activation should account for this — concentration variants require special handling or a minimum pass score.
 `Creed Aventus Eau de Parfum` appeared: score=0.29 (2 rows), 0.34 (2 rows). All would_suppress=True.
 
+---
+
+### PV-008 Supplemental: 2026-05-18 Evening Pipeline Failure Audit
+
+**Audit date:** 2026-05-19 · **Verdict: REPAIR-COMPLETE**
+
+**Root cause of evening failure:**
+1. Migration 052 defined `weak_evidence_log.content_item_id` as UUID type.
+2. All `resolved_signals.content_item_id` values are YouTube video IDs (11-char strings, e.g. "kh8zbwoRHN0") — not UUIDs.
+3. On 2026-05-18 evening, `_write_mentions()` called `_upsert_weak_evidence_log()` → INSERT hit `InvalidTextRepresentation` error.
+4. Without SAVEPOINT isolation (fix not yet deployed), psycopg2 connection entered `InFailedSqlTransaction` state.
+5. All subsequent EntityMention INSERTs in the session aborted — 0 entity_mentions written by the evening pipeline.
+6. No entity_timeseries_daily rows written for 2026-05-18 by the evening pipeline.
+7. Pipeline health check either not reached or failed to persist (lingering failed transaction state); no `run_label='evening'` row in `pipeline_health_log` for 2026-05-18.
+
+**Repair path:**
+- 2026-05-19: Migration 053 applied (UUID→TEXT), SAVEPOINT fix (`2203d61`) deployed, score-before-dedup reorder (`fa50e55`) deployed.
+- Manual aggregation rerun for 2026-05-18 — all data layers written correctly.
+- Signal detection ran on next pipeline cycle — signals for 2026-05-18 written.
+
+**SQL-backed verification table (all queried 2026-05-19 from production):**
+
+| Layer | Value | Status |
+|-------|-------|--------|
+| Content ingested — YouTube | 694 items | ✓ |
+| Content ingested — Reddit | 194 items | ✓ |
+| RS rows for 2026-05-18 content | 888 rows | ✓ |
+| entity_mentions (occurred_at=2026-05-18, perfume) | 183 rows | ✓ written by manual rerun |
+| entity_timeseries_daily (2026-05-18, perfume active>0) | 137 rows | ✓ |
+| entity_timeseries_daily (2026-05-18, brand active>0) | 98 rows | ✓ |
+| signals (2026-05-18) | 4 (breakout:2, acceleration_spike:2) | ✓ |
+| weak_evidence_log (first clean snapshot) | 182 rows, 70.9% would_suppress | ✓ |
+| pipeline_health_log (evening, 2026-05-18) | ABSENT | ops log gap only — not a data gap |
+
+**Ops log gap (pipeline_health_log evening entry):** This is the only missing artifact. No entity scores, timeseries, signals, or public API output is affected. The morning entry exists (`run_label='morning', level='CRITICAL', em=7, reddit=0, 2026-05-18 11:24 UTC`). The missing evening entry is an observability gap only — does not affect any downstream data or user-facing output.
+
+**VERDICT: REPAIR-COMPLETE — 2026-05-18 evening failure left no remaining data/reporting gap.**
+
+---
+
+### PV-008-B1 — Concentration-Suffix False Suppression Risk (Active-Mode Blocker)
+
+**Status: OPEN — blocks active-mode activation**
+
+**Problem:** Entities with a concentration suffix in their canonical name (e.g. "Creed Aventus Eau de Parfum", "Cool Water Parfum") are systematically false-suppressed by the evidence gate in shadow mode. If the gate were activated, these resolutions would be suppressed despite being legitimate product mentions.
+
+**Root cause (technical):**
+- All production `resolved_signals` rows have `alias_used=""` (empty string) — the resolver does not write the matched alias back to RS JSON.
+- The D4 corrective patch (`2181ff5`) sets `alias_norm_for_d4 = _normalize(alias_used)` → empty string → D4=0.0.
+- For position finding (D1/D2/D3), the fallback `position_alias_norm = _normalize(alias_used or canonical_name)` resolves to the full canonical name with suffix, e.g. `"creed aventus eau de parfum"`.
+- `_find_alias_position()` searches for this full phrase in source `matched_from` text (e.g. `"creed aventus review"`). The suffix is absent in the source text → `match_pos=None`.
+- With `match_pos=None`: D1=0.0 (no brand proximity window to evaluate), D2 scores the whole text but often finds 0 fragrance tokens in a short `matched_from` field, score ≈ D5 contribution only = 0.29.
+
+**Observed instances in run 1 (2026-05-18 data):**
+| Entity | Rows | Score range | would_suppress |
+|--------|------|-------------|----------------|
+| Creed Aventus Eau de Parfum | 4 | 0.29–0.34 | True (all 4) |
+| Cool Water Parfum | 1 | 0.29 | True |
+
+**Why this blocks active activation:** Activating the gate at current threshold=0.5 would suppress legitimate mentions for Creed Aventus Eau de Parfum and other EDP/Extrait variants in every pipeline run. These are unambiguously real product resolutions; suppressing them would cause systematic under-counting of mention-volume entities with concentration-specific tracking.
+
+**Three repair directions (design note — no code):**
+
+**Direction 1 — Suffix-strip fallback in `_find_alias_position()` (recommended first step)**
+After the primary lookup fails, attempt a second lookup using `_base_name(canonical_name)` (strip concentration suffixes identically to how aggregation normalizes entity names). If the stripped form is found, use that position for D1/D2/D3 window calculation.
+- Risk: low — invoked only when primary fails; uses existing suffix-list already in `aggregate_daily_market_metrics.py`
+- Accuracy: D1/D2/D3 would score against "creed aventus" position → brand token "creed" within window → D1≈0.8
+- Preserves D4=0 (no alias credit) — still conservative on alias quality
+- No RS format change required; no migration
+
+**Direction 2 — Populate `alias_used` in resolver output (correct long-term fix)**
+The resolver has the matched alias at resolution time (it's in `_resolve_phrase()`). Pass the matched alias through to `resolved_signals.resolved_entities_json` as the `alias_used` field. This would fix both D4 and position finding for all entities, not just concentration variants.
+- Risk: medium — requires resolver output format change + re-resolving historical RS rows (or accepting blank D4 for historical rows)
+- Accuracy: best-quality fix, eliminates all alias_used=None false suppression systematically
+- Requires RS JSON schema addition + resolver change + downstream consumers updated
+
+**Direction 3 — Base-name lookup in entity_mentions dedup check (targeted hedge)**
+When `_find_alias_position()` returns None and the canonical name contains a suffix, try resolving the position using the base-name form. If successful, mark the entity as `evidence_confidence='medium'` (new tier between high/low) and exempt from suppression.
+- Risk: low — purely additive; introduces a third evidence tier
+- Accuracy: conservative — doesn't inflate score, just prevents false suppression for a specific failure mode
+- Requires schema change: add `'medium'` as a valid `evidence_confidence` value; update aggregation logic
+
+**Required before active-mode activation: Direction 1 must be implemented and verified in shadow mode.**
+
+---
+
 **Three prerequisites for active-mode activation (ALL must be complete first):**
 
-1. **Men's Cologne guard + repair** (separate task — RES-AMB5 / SIG-QA1-REPAIR-2):
+1. **PV-008-B1 resolved — Concentration-Suffix False Suppression** (see above):
+   - Direction 1 (suffix-strip fallback) implemented and verified in shadow mode
+   - Creed Aventus Eau de Parfum and Cool Water Parfum must show `would_suppress=False` post-fix
+   - **Gate must not activate before this is resolved.**
+
+2. **Men's Cologne guard + repair** (separate task — RES-AMB5 / SIG-QA1-REPAIR-2):
    - Entity: Men's Cologne (Coty) — entity_id prefix `c6b0eee2` — Type G category descriptor
    - Confirmed: 17 mentions, 41 ts rows, 9 signals; 0% RS brand context
    - Required: add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}` proximity; full-history RS strip; delete entity_mentions/ts/signals
    - **Do NOT activate gate before this repair is complete.** The gate would write evidence_confidence=low for Men's Cologne mentions but they would still be written in shadow mode. Once active, they'd be suppressed — but Men's Cologne existing data in entity_mentions would remain until repair runs.
 
-2. **Shadow observation (≥7 pipeline runs)**:
+3. **Shadow observation (≥7 pipeline runs)**:
    - Monitor `weak_evidence_log` distribution: would_suppress rate by entity, brand, score band
    - Specifically monitor: Cool Water (Davidoff) — standalone fragrance that may score below threshold if "davidoff" is absent in review text. Legitimate passes are expected; consistent fails require guard tuning.
    - Check: no well-established entities (≥50 mentions, score ≥60 on dashboard) consistently scoring below 0.5 without brand context
 
-3. **Founder review and explicit active-mode approval**:
+4. **Founder review and explicit active-mode approval**:
    - Review shadow log report (to be produced by Claude after ≥7 runs)
    - Confirm threshold calibration acceptable
    - Explicit approval via session instruction
@@ -649,4 +740,4 @@ GROUP BY band ORDER BY band;
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
-| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | ≥7 pipeline runs + shadow review + Men's Cologne repair + founder approval. First snapshot: 182 rows, 70.9% suppress rate, 2026-05-19. |
+| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | ≥7 pipeline runs + shadow review + PV-008-B1 (concentration-suffix fix) + Men's Cologne repair + founder approval. First snapshot: 182 rows, 70.9% suppress rate, 2026-05-19. 2026-05-18 pipeline failure: REPAIR-COMPLETE (manual rerun 2026-05-19). |
