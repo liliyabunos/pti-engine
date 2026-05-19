@@ -1,15 +1,16 @@
 """SIG-QA2 — Evidence-Aware Mention Promotion Gate v1: Unit Tests
 
 Test suites:
-  CAL  — Calibration: confirmed FP entities must score below threshold
-  GOOD — Known-good entities must score above threshold
-  D1   — Brand Token Proximity feature
-  D2   — Fragrance Context Signal feature
-  D3   — Note Context Anti-Signal feature (inverted)
-  D4   — Full-Name Match feature
-  D5   — Source Entity Density feature (inverted)
-  COMP — Composite score properties
-  GATE — Shadow / active mode gate behavior
+  CAL   — Calibration: confirmed FP entities must score below threshold
+  GOOD  — Known-good entities must score above threshold
+  D1    — Brand Token Proximity feature
+  D2    — Fragrance Context Signal feature
+  D3    — Note Context Anti-Signal feature (inverted)
+  D4    — Full-Name Match feature
+  D5    — Source Entity Density feature (inverted)
+  COMP  — Composite score properties
+  GATE  — Shadow / active mode gate behavior
+  B1FIX — PV-008-B1-FIX1: concentration-suffix fallback in _find_alias_position
   LOG  — weak_evidence_log idempotency and schema
   WATCH — Known-good standalone watchlist cases (false-suppression risk)
 
@@ -844,3 +845,155 @@ class TestHelpers:
         tokens = _extract_brand_tokens("Maison Francis Kurkdjian")
         assert "maison" in tokens
         assert "kurkdjian" in tokens
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PV-008-B1-FIX1 — Concentration-suffix fallback tests
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestB1Fix:
+    """Tests for PV-008-B1-FIX1: concentration-suffix fallback in _find_alias_position.
+
+    Cases:
+      S1 — Fallback fires when full suffix phrase absent; base form found
+      S2 — No fallback for alias_norm without a concentration suffix
+      S3 — Double-suffix stripped in two passes
+      S4 — Fallback returns None when even stripped form not found
+      S5 — Empty alias_norm returns None (unchanged behaviour)
+      I1 — score_mention for Creed Aventus EDP clears threshold post-fix
+      I2 — score_mention for concentration variant with brand in text clears threshold
+    """
+
+    # ── S1: single-suffix stripped; base form found ──────────────────────────
+
+    def test_s1_single_suffix_fallback_fires(self):
+        """Full EDP phrase absent → strip suffix → base form found."""
+        tokens = _tokenize("creed aventus review")
+        # Primary: "creed aventus eau de parfum" (5 tokens) — not found
+        # Fallback: "creed aventus" (2 tokens) — found at position 0
+        pos = _find_alias_position(tokens, "creed aventus eau de parfum")
+        assert pos == 0, f"Expected position 0 after suffix-strip fallback, got {pos}"
+
+    def test_s1_edp_suffix_variant(self):
+        """Eau de Toilette suffix stripped correctly."""
+        tokens = _tokenize("dior sauvage intense fragrance review")
+        pos = _find_alias_position(tokens, "dior sauvage eau de toilette")
+        assert pos == 0
+
+    def test_s1_parfum_suffix_stripped(self):
+        """Bare 'Parfum' suffix stripped ('Cool Water Parfum' → 'cool water')."""
+        tokens = _tokenize("davidoff cool water review")
+        pos = _find_alias_position(tokens, "cool water parfum")
+        assert pos == 1, f"Expected 'cool water' at position 1, got {pos}"
+
+    # ── S2: no suffix → fallback never fires ────────────────────────────────
+
+    def test_s2_no_suffix_no_fallback(self):
+        """alias_norm without concentration suffix: no fallback, still returns None."""
+        tokens = _tokenize("lavender vanilla and orange blossom notes")
+        pos = _find_alias_position(tokens, "orange blossom")
+        # "orange blossom" IS found in these tokens at position 3
+        assert pos == 3
+        # But for a phrase genuinely absent:
+        tokens2 = _tokenize("some unrelated text here")
+        pos2 = _find_alias_position(tokens2, "pure luxury")
+        assert pos2 is None
+
+    def test_s2_fp_calibration_set_unaffected(self):
+        """Confirmed FP entities (no suffix) still return None when phrase absent."""
+        cases = [
+            ("orange blossom", "I like woods incense and sandalwood"),
+            ("pure luxury", "these five fragrances smell amazing"),
+            ("enjoy the day", "i know it is stressful but life goes on"),
+        ]
+        for alias, text in cases:
+            tokens = _tokenize(text)
+            assert _find_alias_position(tokens, alias) is None, (
+                f"'{alias}' should return None in text that does not contain it"
+            )
+
+    # ── S3: double-suffix stripped iteratively ───────────────────────────────
+
+    def test_s3_double_suffix_two_passes(self):
+        """Double-suffix name stripped in two passes."""
+        # "baccarat rouge 540 extrait extrait de parfum"
+        # Pass 1: strip "extrait de parfum" → "baccarat rouge 540 extrait"
+        # Pass 2: strip "extrait" → "baccarat rouge 540"
+        tokens = _tokenize("baccarat rouge 540 is iconic in niche perfumery")
+        pos = _find_alias_position(
+            tokens, "baccarat rouge 540 extrait extrait de parfum"
+        )
+        assert pos == 0
+
+    # ── S4: stripped form also not found → None ──────────────────────────────
+
+    def test_s4_stripped_also_not_found(self):
+        """Even after stripping suffix the base form is absent → None."""
+        tokens = _tokenize("completely unrelated text about shoes")
+        pos = _find_alias_position(tokens, "creed aventus eau de parfum")
+        assert pos is None
+
+    # ── S5: empty alias_norm → None (unchanged) ──────────────────────────────
+
+    def test_s5_empty_alias_none(self):
+        tokens = _tokenize("creed aventus review")
+        assert _find_alias_position(tokens, "") is None
+
+    # ── I1: integration — Creed Aventus EDP clears threshold post-fix ────────
+
+    def test_i1_creed_aventus_edp_passes_threshold(self):
+        """Creed Aventus Eau de Parfum with realistic matched_from clears 0.5."""
+        # Simulates a production RS row:
+        #   canonical_name = "Creed Aventus Eau de Parfum"
+        #   brand_name     = "Creed"
+        #   alias_used     = ""  (production RS rows have no alias_used)
+        #   matched_from   = "creed aventus review" (typical YouTube title)
+        result = score_mention(
+            matched_from="creed aventus review",
+            brand_name="Creed",
+            canonical_name="Creed Aventus Eau de Parfum",
+            alias_used="",
+            source_entity_count=2,
+        )
+        assert result.would_suppress is False, (
+            f"Creed Aventus Eau de Parfum must pass threshold after B1-FIX1; "
+            f"score={result.score}, features={result.features}"
+        )
+        assert result.score >= 0.5
+        # D1 should now be non-zero (brand "creed" found near base-form position)
+        assert result.features["d1"] > 0.0, (
+            f"D1 must be > 0 after suffix-strip fallback; got {result.features['d1']}"
+        )
+
+    def test_i1_creed_aventus_edp_no_fragrance_context(self):
+        """Creed Aventus EDP with minimal matched_from (no fragrance tokens) still passes."""
+        # Worst-case production text: just the base entity name
+        result = score_mention(
+            matched_from="creed aventus",
+            brand_name="Creed",
+            canonical_name="Creed Aventus Eau de Parfum",
+            alias_used="",
+            source_entity_count=2,
+        )
+        # D1=1.0 (creed in ±15 window), D2=0.0, D3=0.20, D5=0.09 → score=0.64
+        assert result.would_suppress is False
+        assert result.score >= 0.5
+        assert result.features["d1"] == 1.0
+
+    # ── I2: integration — concentration variant with brand token in text ──────
+
+    def test_i2_concentration_variant_with_brand_passes(self):
+        """A concentration variant where brand appears in source text passes threshold."""
+        result = score_mention(
+            matched_from="davidoff cool water parfum review",
+            brand_name="Davidoff",
+            canonical_name="Cool Water Parfum",
+            alias_used="",
+            source_entity_count=2,
+        )
+        assert result.would_suppress is False, (
+            f"Cool Water Parfum with 'davidoff' in text must pass; "
+            f"score={result.score}, features={result.features}"
+        )
+        assert result.score >= 0.5
+        assert result.features["d1"] > 0.0

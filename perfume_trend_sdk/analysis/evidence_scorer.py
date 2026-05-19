@@ -35,11 +35,12 @@ Threshold calibration (2026-05-18, production RS snippets):
   Vision (Jaguar)                    Type A  score≈0.94  PASS ✓
   Creed Aventus                      Type A  score≈0.91  PASS ✓
 
-Known false-suppression risk (shadow watchlist):
-  Cool Water (Davidoff) — well-known standalone fragrance. "davidoff" may
-  not appear near "cool water" in all review content. Must be monitored
-  during shadow observation before active-mode activation. See shadow
-  review coverage notes in CLAUDE.md SIG-QA2 section.
+Shadow watchlist (open PV-008 items):
+  Cool Water / Cool Water Parfum (Davidoff) — well-known standalone
+  fragrance. "davidoff" may not appear near "cool water" in all review
+  content. PV-008-B1-FIX1 recovers position for concentration variants
+  when the base form is found; brand-sparse cases remain a separate
+  open evaluation item.  Must be reviewed after ≥7 clean shadow runs.
 """
 
 from __future__ import annotations
@@ -53,6 +54,32 @@ from typing import Dict, List, Optional, Tuple
 # ─────────────────────────────────────────────────────────────────────────────
 
 SUPPRESS_THRESHOLD: float = 0.5
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PV-008-B1-FIX1 — Concentration suffix stripping for position recovery
+# ─────────────────────────────────────────────────────────────────────────────
+# Local copy of aggregator.py's _CONC_SUFFIX_RE.  Intentionally not imported
+# from that module to avoid a cross-module dependency in the wrong direction
+# (evidence_scorer is a pure analysis utility; it must not depend on job code).
+# The suffix vocabulary is stable; duplication is correct here.
+#
+# Used only inside _find_alias_position() for the suffix-strip fallback:
+# when the full canonical phrase ("creed aventus eau de parfum") is not found
+# in the matched_from text, strip the concentration suffix and retry with
+# the base form ("creed aventus").  This restores D1/D2/D3 window accuracy
+# for concentration-variant entities where alias_used="" in RS data.
+_CONC_SUFFIX_RE = re.compile(
+    r"\s+(?:"
+    r"Extrait\s+de\s+Parfum"
+    r"|Eau\s+de\s+Parfum"
+    r"|Eau\s+de\s+Toilette"
+    r"|Eau\s+de\s+Cologne"
+    r"|Eau\s+Fraiche"
+    r"|Extrait"
+    r"|Parfum"
+    r")\s*$",
+    re.IGNORECASE,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Feature constants
@@ -376,13 +403,45 @@ def _find_alias_position(tokens: List[str], alias_norm: str) -> Optional[int]:
     Searches for the first occurrence of the alias token sequence. Returns
     None if the alias is not found (e.g. matched_from is truncated or the
     alias was matched against title rather than body).
+
+    PV-008-B1-FIX1 — Concentration-suffix fallback:
+    When the primary search fails AND alias_norm ends with a concentration
+    suffix, strip the suffix and retry (up to 2 passes to handle double-
+    suffixed names like "Baccarat Rouge 540 Extrait Extrait de Parfum").
+    This recovers D1/D2/D3 window accuracy for entities whose canonical_name
+    carries a suffix ("Creed Aventus Eau de Parfum") while source text
+    uses the bare base form ("creed aventus review").
+
+    Safety: the fallback fires ONLY when the full form is not found AND
+    stripping produces a shorter, strictly-different phrase.  Entities
+    without concentration suffixes (Orange Blossom, Pure Luxury, etc.)
+    are unaffected — _CONC_SUFFIX_RE will not match them.
     """
-    alias_tokens = alias_norm.split()
-    if not alias_tokens:
+    def _search(tok_seq: List[str]) -> Optional[int]:
+        m = len(tok_seq)
+        if not m:
+            return None
+        for i in range(len(tokens) - m + 1):
+            if tokens[i : i + m] == tok_seq:
+                return i
         return None
-    n = len(tokens)
-    m = len(alias_tokens)
-    for i in range(n - m + 1):
-        if tokens[i : i + m] == alias_tokens:
-            return i
+
+    # Primary search
+    alias_tokens = alias_norm.split()
+    pos = _search(alias_tokens)
+    if pos is not None:
+        return pos
+
+    # Suffix-strip fallback (max 2 passes for double-suffixed names)
+    current = alias_norm
+    for _ in range(2):
+        stripped = _CONC_SUFFIX_RE.sub("", current).strip()
+        if not stripped or stripped == current:
+            break  # no suffix matched or already minimal
+        stripped_tokens = stripped.split()
+        pos = _search(stripped_tokens)
+        if pos is not None:
+            return pos
+        current = stripped
+
     return None
