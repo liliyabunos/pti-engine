@@ -294,6 +294,12 @@ _AMBIGUOUS_PHRASE_GUARD: Dict[str, List[frozenset]] = {
     #   ts/signals deleted (OPS-EE1: 5 other legitimate tracked perfumes; pipeline recomputes).
     "men cologne":               [frozenset({"coty"})],
     "men s cologne":             [frozenset({"coty"})],
+    # SIG-QA1-TYPE-D — confirmed Type D generic-phrase false positives (2026-05-19)
+    # All 4 have 0% brand context across all RS rows; confirmed by full RS inspection.
+    "feel good":                 [frozenset({"esprit"})],
+    "come together":             [frozenset({"vintner"})],
+    "bride to be":               [frozenset({"primark"})],
+    "day to day":                [frozenset({"primark"})],
 }
 
 
