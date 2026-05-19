@@ -2044,12 +2044,13 @@ RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it 
 
 ### SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (Shadow Mode)
 **STATUS: IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION (PV-008)**
-**Migration: 052 · Commit: 35120fa (2026-05-18) · Corrective patch: 2181ff5 (2026-05-19)**
+**Migrations: 052 (schema) · 053 (content_item_id UUID→TEXT fix) · Commits: 35120fa · 2181ff5 · 2203d61 · fa50e55**
 
 **Gate is shadow-only.** `SIG_QA2_GATE_ACTIVE=false` is the ONLY deployed mode. Gate scores every perfume entity mention, writes evidence scores to `weak_evidence_log`, and stamps `evidence_confidence` on each new `entity_mention` row. No suppression occurs until active mode is explicitly activated.
 
 **What was implemented:**
 - Migration 052: `evidence_confidence VARCHAR(32) NOT NULL DEFAULT 'legacy_unscored'` on `entity_mentions`; `weak_evidence_log` table (UNIQUE on `content_item_id, entity_canonical_name, pipeline_run_date`; ON CONFLICT DO UPDATE for idempotent reruns)
+- Migration 053 (2026-05-19): `content_item_id` column changed UUID→TEXT. Root cause: all `resolved_signals.content_item_id` values are YouTube video IDs (e.g. "kh8zbwoRHN0"), not UUIDs. Migration 052's UUID type caused every INSERT to fail with `InvalidTextRepresentation`. Zero rows were ever written under migration 052 alone.
 - `perfume_trend_sdk/analysis/evidence_scorer.py` — `score_mention()` with 5 feature dimensions:
   - D1 Brand Token Proximity (weight 0.35) — brand token in ±15 tokens=1.0, ±30=0.5, absent=0.0
   - D2 Fragrance Context Signal (weight 0.25) — fragrance keywords in ±20 tokens (capped 5 hits=1.0)
@@ -2060,14 +2061,43 @@ RES-AMB-GLOBAL should NOT be extended to cover SIG-QA evidence integrity — it 
 - `aggregate_daily_market_metrics.py` — shadow gate integration in `_write_mentions()`:
   - `gate_active = os.getenv("SIG_QA2_GATE_ACTIVE", "false").lower() == "true"`
   - Brand mentions bypass gate (`evidence_confidence = "legacy_unscored"`)
-  - Per-entity score computed; `_upsert_weak_evidence_log()` called; `evidence_confidence = "high"/"low"` written
+  - Per-entity score computed BEFORE dedup check — `_upsert_weak_evidence_log()` always called even on idempotent reruns (commit `fa50e55`)
+  - SAVEPOINT pattern: upsert wrapped in `SAVEPOINT weak_log_sp` so any INSERT failure does not abort outer transaction (commit `2203d61`)
+  - `evidence_confidence = "high"/"low"` written on entity_mention rows
   - In shadow mode: all mentions written regardless of score
   - In active mode (not deployed): `would_suppress=True` → skip entity_mention write
 - `tests/unit/test_sig_qa2_evidence_gate.py` — 63/63 pass (56 original + 7 alias integrity tests)
 
-**Clean shadow observation window starts: 2026-05-19 08:09:50 UTC (corrective patch deploy SUCCESS)**
-- `weak_evidence_log` was empty (0 rows) when corrective patch deployed — no pre-patch contamination.
-- All rows written after `2026-05-19 08:09:50 UTC` are valid for PV-008 evaluation.
+**First clean PV-008 snapshot — 2026-05-19 (data from 2026-05-18 pipeline):**
+```
+Total weak_evidence_log rows: 182
+  would_suppress=False (pass):  53  (29.1%)
+  would_suppress=True (suppress): 129 (70.9%)
+Score dist: ≥0.8:1  0.6-0.8:43  0.5-0.6:9  0.3-0.5:62  <0.3:67
+avg=0.4172  min=0.04  max=0.84
+
+True positive suppressions (note/ingredient names — correct):
+  Egyptian Musk (Kuumba Made)      score=0.04  d3_raw=0.8
+  Black Tea (Demeter)              score=0.04  d3_raw=0.8
+  Cotton Flower (Giardino B.)      score=0.04  d3_raw=0.8
+  Frankincense & Myrrh             score=0.13  d3_raw=0.8
+  Black Pepper (Demeter)           score=0.20
+
+Passing entities (correct):
+  Jo Malone                        score=0.84
+  Killer Queen (Katy Perry)        score=0.74
+  Rasasi Hawas (Rasasi)            score=0.74
+```
+
+**Cool Water watchlist (run 1):** `Cool Water Parfum` scored 0.29 → would_suppress=True.
+`Cool Water` (main entity) not in 2026-05-18 content. `Cool Water Parfum` false suppression due to concentration-suffix position lookup failure — see below.
+
+**Known v1 limitation — concentration-suffix canonical names:**
+Entities with EDP/EDP suffix in canonical name where alias_used="" (all production RS rows):
+- `_find_alias_position` looks for full suffix phrase (e.g. "creed aventus eau de parfum") but source text says "Creed Aventus"
+- match_pos=None → D1=0.0, D2 scans whole text, often finds no fragrance tokens → score=0.29 (baseline)
+- Affects: `Creed Aventus Eau de Parfum` (4 rows, score 0.29–0.34), `Cool Water Parfum` (1 row, score=0.29)
+- Gate is shadow-only — no actual suppression. Must account for this before active-mode activation.
 
 **Threshold calibration (2026-05-18, production RS snippets):**
 ```
@@ -2082,17 +2112,13 @@ Vision (Jaguar)                    A     ≈0.94   PASS ✓
 Creed Aventus                      A     ≈0.91   PASS ✓
 ```
 All 6 confirmed FP entities score below SUPPRESS_THRESHOLD=0.5. Both known-good entities score above.
-Calibration remains valid with alias_used="" (D4=0.0): confirmed by TestAliasUsedIntegrity suite.
-
-**Shadow watchlist (monitor during shadow observation):**
-- Cool Water (Davidoff) — standalone well-known fragrance. "davidoff" may not appear near "cool water" in all review content (reviewers often say just "Cool Water" without the brand). Must be monitored during shadow observation before active-mode activation. Risk: false suppression if brand absent in review text. Documented in WATCH suite of test_sig_qa2_evidence_gate.py.
 
 **Prerequisites for active-mode activation (ALL required before `SIG_QA2_GATE_ACTIVE=true`):**
 1. **Men's Cologne guard + repair** (separate task — confirm Type G, add `"men s cologne"` to `_AMBIGUOUS_PHRASE_GUARD` requiring `{"coty"}`, strip all RS rows, delete entity_mentions/ts/signals for entity c6b0eee2)
-2. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL); only rows after 2026-05-19 08:09:50 UTC count
-3. **Founder review and explicit active-mode approval**
+2. **Shadow observation ≥7 pipeline runs** — review `weak_evidence_log` distribution (see PV-008 for SQL)
+3. **Founder review and explicit active-mode approval** (including concentration-suffix false suppression review)
 
-**Migration 052 status:** APPLIED — production at migration 052 (applied 2026-05-18)
+**Migration 052 + 053 status:** APPLIED — production at migration 053 (applied 2026-05-19)
 
 ### Seed Cases Requiring Repair
 
@@ -3688,7 +3714,7 @@ This policy only protects source intake and Creator Leaderboard semantics after 
 
 ## Alembic Migrations
 
-Current production: **migration 052** (SIG-QA2 — evidence_confidence + weak_evidence_log; applied 2026-05-18)
+Current production: **migration 053** (SIG-QA2 fix — weak_evidence_log.content_item_id UUID→TEXT; applied 2026-05-19)
 
 | Migration | What |
 |-----------|------|
@@ -3720,7 +3746,8 @@ Current production: **migration 052** (SIG-QA2 — evidence_confidence + weak_ev
 | 049 | FTG-4 / RI1-E1B — Data-only: 1 relationship row (Lattafa Asad → dupe_of → Sauvage Elixir, confidence=0.850, is_public=TRUE, operator_reviewed=TRUE) + 1 dupe_map_seed evidence row. No schema changes. |
 | 050 | FTG-5 / SN1-A — `signal_intelligence_snapshots` table: immutable first-capture intelligence snapshot per (entity_id, entity_type, signal_type, detected_at); market metrics NUMERIC(10,4), signal_metadata JSONB, signal_threshold_version + snapshot_schema_version=1, first_captured_at TIMESTAMPTZ; 5 indexes + UNIQUE constraint. |
 | 051 | SIG-ID1 — `unresolved_signal_candidates` table: surfaces brand-qualified unresolved phrases from `unresolved_mentions_json`; columns: id UUID PK, phrase TEXT, brand_token TEXT, brand_canonical_name TEXT, occurrence_count INT, source_count INT, first_seen DATE, last_seen DATE, candidate_status VARCHAR(32) DEFAULT 'pending' (no CHECK; values: pending/dismissed/added_to_catalog), dismissed_at TIMESTAMPTZ, dismissed_by TEXT, updated_at TIMESTAMPTZ; UNIQUE on (phrase, brand_token). |
-| 052 | SIG-QA2 — `evidence_confidence VARCHAR(32) NOT NULL DEFAULT 'legacy_unscored'` on `entity_mentions` (values: legacy_unscored / high / low); `weak_evidence_log` table (content_item_id UUID, entity_canonical_name TEXT, entity_brand_name TEXT, pipeline_run_date DATE, score NUMERIC(5,4), would_suppress BOOLEAN, features_json JSONB, shadow_mode BOOLEAN DEFAULT true; UNIQUE on (content_item_id, entity_canonical_name, pipeline_run_date); 3 indexes: run_date, canonical, would_suppress). |
+| 052 | SIG-QA2 — `evidence_confidence VARCHAR(32) NOT NULL DEFAULT 'legacy_unscored'` on `entity_mentions` (values: legacy_unscored / high / low); `weak_evidence_log` table (content_item_id UUID [BROKEN — see 053], entity_canonical_name TEXT, entity_brand_name TEXT, pipeline_run_date DATE, score NUMERIC(5,4), would_suppress BOOLEAN, features_json JSONB, shadow_mode BOOLEAN DEFAULT true; UNIQUE on (content_item_id, entity_canonical_name, pipeline_run_date); 3 indexes: run_date, canonical, would_suppress). |
+| 053 | SIG-QA2 fix — `ALTER weak_evidence_log.content_item_id UUID → TEXT`. Root cause: all `resolved_signals.content_item_id` values are YouTube video IDs (11-char strings like "kh8zbwoRHN0"), not UUIDs. Migration 052's UUID type caused every INSERT to fail. Migration drops/recreates unique constraint + indexes to allow ALTER TYPE. |
 
 Earlier key migrations: 008 (Fragrantica tables), 014 (resolver_* Postgres tables), 017 (resolver_perfume_notes/accords), 018-019 (source_profiles/mention_sources), 020 (weighted_signal_score), 021 (trend_state), 022 (content_topics/entity_topic_links).
 

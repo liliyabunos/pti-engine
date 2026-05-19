@@ -502,22 +502,72 @@ This is correct behavior — the guard prevents future misattribution; historica
 |-------|-------|
 | **Verification ID** | PV-008 |
 | **Phase / task** | SIG-QA2 — Evidence-Aware Mention Promotion Gate v1 (shadow mode) |
-| **Related commits** | SIG-QA2 implementation `35120fa` (2026-05-18) · corrective patch `2181ff5` (2026-05-19) |
-| **Migration** | 052 — `evidence_confidence` on `entity_mentions` + `weak_evidence_log` table |
+| **Related commits** | `35120fa` SIG-QA2 impl · `2181ff5` alias_used fix · `2203d61` migration 053 + SAVEPOINT · `fa50e55` score-before-dedup reorder |
+| **Migrations** | 052 — `evidence_confidence` + `weak_evidence_log` (UUID type, broken); 053 — `content_item_id` UUID→TEXT (fix) |
 | **Implementation shipped** | 2026-05-18 |
 | **Corrective patch deployed** | 2026-05-19 08:09:50 UTC — Railway SUCCESS |
 | **Current status** | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` |
-| **Gate active?** | NO — `SIG_QA2_GATE_ACTIVE=false` (Railway env default). Gate is shadow-only: scores every perfume entity mention, writes to `weak_evidence_log`, writes `evidence_confidence=high/low` on `entity_mentions`, never suppresses. |
+| **Gate active?** | NO — `SIG_QA2_GATE_ACTIVE=false` (Railway env default). Shadow-only: scores, logs, stamps evidence_confidence, never suppresses. |
 | **Blocking severity** | High — gate must not be activated without completing all three prerequisites below. |
 
 **Clean observation start: 2026-05-19 08:09:50 UTC (corrective patch deploy confirmed SUCCESS)**
 
-- `alias_used` corrective patch (`2181ff5`) deployed. Pre-corrective-patch behavior inflated D4 whenever
-  a brand token appeared anywhere in source text excerpt — invalid scoring.
-- `weak_evidence_log` row count confirmed 0 at 2026-05-19 (no pipeline ran between migration 052 deploy
-  and corrective patch deploy). No pre-patch rows to discard.
-- **All `weak_evidence_log` rows written AFTER 2026-05-19 08:09:50 UTC are valid for PV-008 evaluation.**
-- Any rows written BEFORE that timestamp would be pre-patch noise — none exist.
+- `alias_used` corrective patch (`2181ff5`) deployed and active.
+- Migration 053 applied 2026-05-19 — `content_item_id` column changed UUID→TEXT. All RS rows have YouTube video IDs as content_item_id (non-UUID); migration 052 defined the column as UUID causing every INSERT to fail. Migration 053 fixes this.
+- SAVEPOINT fix (`2203d61`): `_upsert_weak_evidence_log` now uses `SAVEPOINT weak_log_sp` to isolate upsert failures from the outer transaction (prevents `InFailedSqlTransaction` on EntityMention writes).
+- Score-before-dedup reorder (`fa50e55`): evidence scoring and `_upsert_weak_evidence_log` now execute BEFORE the EntityMention dedup check (`if exists: continue`). This ensures `weak_evidence_log` is populated on every aggregation run, including idempotent reruns on dates with existing entity_mentions.
+- **All `weak_evidence_log` rows are valid for PV-008 evaluation** (0 rows existed before migration 053 was applied).
+
+**First clean PV-008 snapshot — 2026-05-19 (aggregation run for 2026-05-18 data):**
+
+```
+Total rows: 182
+would_suppress=False (pass):  53
+would_suppress=True (suppress): 129
+
+Score distribution:
+  ≥0.8:  1   (1 row: Jo Malone — highest confidence, brand+context present)
+  0.6-0.8: 43
+  0.5-0.6:  9
+  0.3-0.5: 62
+  <0.3:    67
+
+avg=0.4172  min=0.04  max=0.84
+would_suppress rate: 70.9% (129/182)
+
+Top True Positive suppressions (note/ingredient names — d3_raw=0.8, correct):
+  Black Tea (Demeter)         score=0.04  d1=0.0 d2=0.0 d3=0.8
+  Egyptian Musk (Kuumba Made) score=0.04  d1=0.0 d2=0.0 d3=0.8
+  Golden Amber (Floris)       score=0.04  d1=0.0 d2=0.0 d3=0.8
+  Cotton Flower (Giardino B.) score=0.04  d1=0.0 d2=0.0 d3=0.8
+  Dark Patchouli (Scent BTHS) score=0.09  d1=0.0 d2=0.2 d3=0.8
+  Frankincense & Myrrh        score=0.13  d1=0.0 d2=0.0 d3=0.8
+  Black Pepper (Demeter)      score=0.20  d1=0.0 d2=0.0 d3=0.0
+  Earl Grey (Teone Reinthal)  score=0.20  d1=0.0 d2=0.0 d3=0.0
+
+Top passing entities:
+  Jo Malone (Jo Malone)       score=0.84  (brand in alias + fragrance context)
+  Killer Queen (Katy Perry)   score=0.74
+  Rasasi Hawas (Rasasi)       score=0.74
+  Paco Rabanne 1 Million      score=0.70
+```
+
+**Cool Water watchlist observation (run 1):**
+- `Cool Water Parfum` (not `Cool Water` the main entity) scored 0.29 → would_suppress=True
+- `Cool Water` (Davidoff main entity) not present in this run's data — no RS rows for that entity in 2026-05-18 content
+- Note: concentration variant "Cool Water Parfum" has empty alias_used + position lookup fails (canonical phrase not found in matched_from text) → D1=0, D2=0, score=0.29. Expected behavior for concentration variants without explicit alias.
+
+**False suppression pattern identified (document for shadow review):**
+
+Entities with concentration-suffix canonical names ("Creed Aventus Eau de Parfum", "Cool Water Parfum") where:
+- `alias_used` is empty in RS data (D4=0.0)
+- `position_alias_norm` = full canonical name with suffix
+- `_find_alias_position` fails because source text says "Creed Aventus" not "Creed Aventus Eau de Parfum"
+- With match_pos=None: D1=0.0, D2 scans whole text but scores 0 if no fragrance tokens present
+- Result: score=0.29 (baseline: D3=0 contribution + D5 minimal penalty only)
+
+This is a v1 known limitation. Active-mode activation should account for this — concentration variants require special handling or a minimum pass score.
+`Creed Aventus Eau de Parfum` appeared: score=0.29 (2 rows), 0.34 (2 rows). All would_suppress=True.
 
 **Three prerequisites for active-mode activation (ALL must be complete first):**
 
@@ -599,4 +649,4 @@ GROUP BY band ORDER BY band;
 | PV-005 | RES-AMB4 brand recompute — 5 mixed brands | `IMPLEMENTED — AWAITING PIPELINE VERIFICATION` | Next morning/evening pipeline run |
 | PV-006 | SIG-QA1-REPAIR UI/API verification — 5 FP entities + brand cleanup | `IMPLEMENTED — AWAITING UI VERIFICATION` | Railway deploy of `b765377` + operator UI smoke test |
 | PV-007 | SIG-ID1 production deploy — migration 051, Amber Elixir repair, harvest backfill | `COMPLETE — PRODUCTION VERIFIED (2026-05-18)` | CLOSED |
-| PV-008 | SIG-QA2 shadow mode observation — migration 052, evidence_scorer, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | ≥7 pipeline runs + shadow review + Men's Cologne repair + founder approval |
+| PV-008 | SIG-QA2 shadow mode observation — migrations 052+053, evidence gate, weak_evidence_log | `IMPLEMENTED — SHADOW MODE PENDING PRODUCTION OBSERVATION` | ≥7 pipeline runs + shadow review + Men's Cologne repair + founder approval. First snapshot: 182 rows, 70.9% suppress rate, 2026-05-19. |
