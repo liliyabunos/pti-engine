@@ -1009,27 +1009,11 @@ def _write_mentions(
             # so the check never matched and every re-run inserted duplicates.
             source_url_resolved = _resolve_source_url(item, cid)
 
-            exists = (
-                db.query(EntityMention)
-                .filter_by(entity_id=entity_uuid, source_url=source_url_resolved)
-                .first()
-            )
-            if exists:
-                continue
-
-            # Parse occurred_at from published_at
-            raw_date = (item.get("published_at") or "")[:10]
-            try:
-                occurred_at = datetime.fromisoformat(raw_date).replace(tzinfo=timezone.utc)
-            except ValueError:
-                occurred_at = _now()
-
-            # SIG-QA2 — evidence gate (shadow mode)
-            # Score every perfume entity mention for evidence quality.
-            # In shadow mode: always write EntityMention (never suppressed).
-            # In active mode: skip EntityMention when would_suppress=True.
-            # Brand-level entity_type='brand' mentions are not scored (gate
-            # targets false product attribution, not brand-level roll-ups).
+            # SIG-QA2 — evidence gate (shadow mode).
+            # Score BEFORE the dedup check so that weak_evidence_log is always
+            # populated on every aggregation run, even for previously-seen mentions.
+            # The log uses ON CONFLICT DO UPDATE, so re-scoring is idempotent.
+            # Brand-level entity_type='brand' mentions bypass the gate.
             if entity_type == "perfume":
                 brand_name_for_gate = entity_brand_map.get(_base_name(canonical), "")
                 ev = score_mention(
@@ -1051,12 +1035,27 @@ def _write_mentions(
                     target_date, ev, shadow_mode,
                 )
                 evidence_confidence = "high" if not ev.would_suppress else "low"
-                # In active mode, suppress weak mentions
+                # In active mode, suppress weak mentions before writing EntityMention
                 if gate_active and ev.would_suppress:
                     continue
             else:
                 # Brand roll-up mentions bypass gate; carry legacy_unscored default
                 evidence_confidence = "legacy_unscored"
+
+            exists = (
+                db.query(EntityMention)
+                .filter_by(entity_id=entity_uuid, source_url=source_url_resolved)
+                .first()
+            )
+            if exists:
+                continue
+
+            # Parse occurred_at from published_at
+            raw_date = (item.get("published_at") or "")[:10]
+            try:
+                occurred_at = datetime.fromisoformat(raw_date).replace(tzinfo=timezone.utc)
+            except ValueError:
+                occurred_at = _now()
 
             mention = EntityMention(
                 entity_id=entity_uuid,
