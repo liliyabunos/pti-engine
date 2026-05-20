@@ -1498,7 +1498,7 @@ Root cause: manual aggregation at 09:02 UTC pre-created all WEL rows and entity_
 
 ### OPS-DB-BACKUP-EMERGENCY-01 — First Emergency Off-Railway Production DB Backup
 
-**STATUS: COMPLETE — VERIFIED OFF-RAILWAY BACKUP CREATED (2026-05-20)**
+**STATUS: COMPLETE — emergency off-Railway logical export created and verified; full pg_dump-grade production backup remains pending PostgreSQL 18 client tooling**
 
 **Trigger:** Post-Railway-outage (OPS-CRON-01 scheduling gap 2026-05-17 through 2026-05-20). No verified off-Railway backup existed before this task.
 
@@ -1534,10 +1534,20 @@ Root cause: manual aggregation at 09:02 UTC pre-created all WEL rows and entity_
 - Total rows: 1,537,401 (matches live pipeline dump log)
 - Footer line confirmed: `-- Dump complete: 2026-05-20T15:55:13.598753Z`
 
+**Restore fidelity classification: B (partial — schema+data without DDL-complete reconstruction)**
+
+Present in dump: CREATE TABLE (column types + defaults), PRIMARY KEY, UNIQUE, FOREIGN KEY, CHECK constraints, non-constraint indexes (CREATE INDEX), SELECT setval (sequence current values), COPY data blocks.
+
+Absent from dump (not captured by psycopg2 COPY approach): CREATE EXTENSION, CREATE SEQUENCE definitions, CREATE TYPE / enum types, CREATE VIEW (including compliance views: public_safe_entity_snapshots, public_safe_signals, public_safe_content_items from migration 032), CREATE FUNCTION, CREATE TRIGGER, GRANT / role permissions.
+
+Snapshot consistency: NOT guaranteed. `autocommit=True` means each COPY statement is a separate transaction — no cross-table consistency. A pipeline run overlapping the backup window could produce FK-inconsistent data across tables.
+
+Recovery path: restore dump tables/data → run `alembic upgrade head` to recreate sequences, views, extensions. Not standalone-restorable without Alembic.
+
 **Post-task notes:**
 - This closes the immediate post-outage emergency backup need.
 - The permanent **OPS-DB-BACKUP** recurring policy remains pending — to be designed and implemented after SIG-QA2 observation window closes (PV-008).
-- Next follow-up: design recurring post-pipeline backup automation, stored outside Railway (S3/Backblaze/Hetzner or equivalent). Will use PostgreSQL 18 client tools (Homebrew `libpq` install or container-based approach).
+- Next follow-up: full pg_dump-grade backup requires PostgreSQL 18 client tools (Homebrew `libpq` or container-based approach). pg_dump 13.4 (machine-local) hard-blocked by PG18.3 server.
 - No secrets appear in this ledger entry. Connection string used only in-memory during dump execution.
 
 ---
@@ -1558,4 +1568,4 @@ Root cause: manual aggregation at 09:02 UTC pre-created all WEL rows and entity_
 | SCOPE-ATR1 | After the Rain (Declaration Grooming) out-of-scope repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — non-perfume grooming scent (shaving soap + aftershave). Guard added + RS stripped + downstream deleted. 12/12 tests. |
 | SIG-QA1-BATCH2 | 12 false-positive guards + repair (Type B×6, C×2, D×4) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — verified immediately via direct DB; ALL PASS. Commits: d6dde32 + e82a59b + d58eada. 49/49 tests pass. |
 | PV-009 | DATA4-C — TOM FORD collection hierarchy (migration 054) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — API confirmed node_type=collection + parent=tom ford for both TF collections. Founder confirmed Collections section on Tom Ford parent page + Neroli Portofino breadcrumb. |
-| OPS-DB-BACKUP-EMERGENCY-01 | First emergency off-Railway production DB backup | `COMPLETE — VERIFIED OFF-RAILWAY BACKUP CREATED (2026-05-20)` | CLOSED — 63 tables, 1,537,401 rows, 36 MB, gzip PASS. pg_dump 13.4 blocked by PG18.3; psycopg2 plain SQL dump used. Stored in `~/fragranceindex_backups/`. Recurring backup policy pending separately. |
+| OPS-DB-BACKUP-EMERGENCY-01 | First emergency off-Railway production DB backup | `COMPLETE — logical export created; full pg_dump-grade backup pending PG18 client tooling` | CLOSED (B-class) — 63 tables, 1,537,401 rows, 36 MB, gzip PASS. Tables/data/constraints/indexes present; views/sequences/enums/functions absent; no cross-table snapshot guarantee. pg_dump 13.4 blocked by PG18.3; psycopg2 plain SQL dump used. Stored in `~/fragranceindex_backups/`. Full-fidelity backup requires PG18 client (Homebrew libpq or container). Recurring backup policy pending separately. |
