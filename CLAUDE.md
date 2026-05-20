@@ -2943,7 +2943,7 @@ Evidence: deploy at 23:05 UTC on May 17 killed the evening pipeline 5 minutes in
 | 2026-05-18 | brand=100, perf=1157 | 199 | 117 |
 | 2026-05-19 | partial (eve run pending) | 10 | 1 |
 
-**PV-008 impact:** All backfill runs are manual (not scheduled) — they do NOT count toward the 7-run shadow observation counter. Counter remains 0/7. First qualifying scheduled run is tonight's evening pipeline (23:00 UTC) or 2026-05-20 morning pipeline.
+**PV-008 impact:** All backfill runs are manual (not scheduled) — they do NOT count toward the shadow observation counter. Counter remains 0/5 minimum floor. First qualifying scheduled run: 2026-05-20 evening pipeline (23:00 UTC). See `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md` → PV-008 for full activation playbook and completion criteria.
 
 **Cron blackout policy (binding — added 2026-05-19):**
 Do NOT push to `main` during:
@@ -2951,6 +2951,35 @@ Do NOT push to `main` during:
 - `22:30–23:30 UTC` (evening pipeline cron window)
 
 A `git push` during these windows will kill the active pipeline process. No Railway-side protection exists (Railway kills all service containers on new deploy). This is the same risk that caused the May 16, 2026 collapse (see previous OPS INCIDENT entry).
+
+**Railway Watch Paths — VERIFIED IN PRODUCTION (2026-05-20 · commit c3087ce):**
+- `railway.pipeline.toml` and `railway.pipeline-evening.toml` now carry `watchPatterns` under `[build]` (correct key/section).
+- First attempt (commit b861f8d) used `watchPaths` under `[deploy]` — Railway silently ignores unknown TOML keys; `serviceManifest.watchPatterns` remained `[]`.
+- Fix verified via Railway live manifest (GraphQL): both services show `serviceManifest.build.watchPatterns` = 10-item array.
+- Effect: code pushes that touch only API/frontend/docs/admin/non-pipeline files will NOT trigger pipeline service rebuilds or container kills.
+- pipeline-evening: deployment STATUS=SUCCESS. pipeline-daily: STATUS=FAILED (build-only, TOML-only commit doesn't match watchPatterns — correct behavior, config applied).
+
+**PV-008 observation window — freeze policy (binding during observation):**
+
+Files frozen (any commit touching these resets PV-008 counter to 0):
+- `perfume_trend_sdk/analysis/evidence_scorer.py`
+- `perfume_trend_sdk/jobs/aggregate_daily_market_metrics.py` (mention-write / WEL integration paths)
+- `perfume_trend_sdk/resolvers/perfume_identity/` (any resolver behavior change)
+- `perfume_trend_sdk/ingest/` (any ingestion behavior or content mix change)
+- `scripts/ingest_*.py`
+- `start_pipeline.sh` / `start_pipeline_evening.sh` (step sequence)
+
+Safe work (may continue outside blackout windows without affecting counter):
+- FastAPI routes, Pydantic schemas, admin endpoints
+- Frontend (Next.js pages, components, API proxies)
+- Docs, CLAUDE.md, ledger updates
+- Admin tooling (non-pipeline scripts, harvest scripts, repair scripts)
+- New migrations that do not touch mention-write or aggregation paths
+
+**YouTube ~500 channel candidates — PV-008 staging policy:**
+- Safe: review, filter, dedup, tag, prepare intake lists, run admin tooling in `source_intake_candidates` staging layer.
+- Deferred: activating candidates into `youtube_channels` (live ingestion source) until PV-008 reaches Founder Review readiness.
+- Rationale: adding channels changes the content mix during the observation window; evidence score distributions must be stable before activation.
 
 **Long-term fix:** REL-1 staging gate (see below) — pushes to staging never trigger production cron containers.
 
