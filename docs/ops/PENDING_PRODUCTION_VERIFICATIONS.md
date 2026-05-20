@@ -1498,7 +1498,7 @@ Root cause: manual aggregation at 09:02 UTC pre-created all WEL rows and entity_
 
 ### OPS-DB-BACKUP-EMERGENCY-01 — First Emergency Off-Railway Production DB Backup
 
-**STATUS: COMPLETE — emergency off-Railway logical export created and verified; full pg_dump-grade production backup remains pending PostgreSQL 18 client tooling**
+**STATUS: COMPLETE — emergency off-Railway logical export created and verified; B-class Alembic-assisted restore artifact. Full pg_dump-grade PostgreSQL backup remains pending PostgreSQL 18 client tooling.**
 
 **Trigger:** Post-Railway-outage (OPS-CRON-01 scheduling gap 2026-05-17 through 2026-05-20). No verified off-Railway backup existed before this task.
 
@@ -1544,11 +1544,45 @@ Snapshot consistency: NOT guaranteed. `autocommit=True` means each COPY statemen
 
 Recovery path: restore dump tables/data → run `alembic upgrade head` to recreate sequences, views, extensions. Not standalone-restorable without Alembic.
 
+**What is now complete:**
+- First off-Railway emergency DB export exists locally at `/Users/liliyabunos/fragranceindex_backups/fragranceindex_prod_2026-05-20T154602Z.sql.gz`.
+- Integrity verified (`gunzip -t` PASS, row count confirmed, footer line confirmed).
+- Restore path: `gunzip -c <file> | psql <target>` then `alembic upgrade head` to recreate missing schema components (views, sequences, extensions, enums).
+
+**What remains pending (OPS-DB-BACKUP-PGDUMP-01):**
+True pg_dump-grade full-fidelity backup using `pg_dump -Fc`, verified with `pg_restore --list`. Requires PostgreSQL 18 client tools. pg_dump 13.4 (local machine) hard-blocked by Railway PG 18.3 server version check. Resolution path: install Homebrew `libpq` (provides `pg_dump`/`pg_restore` at PG18) or use a container-based approach.
+
 **Post-task notes:**
-- This closes the immediate post-outage emergency backup need.
-- The permanent **OPS-DB-BACKUP** recurring policy remains pending — to be designed and implemented after SIG-QA2 observation window closes (PV-008).
-- Next follow-up: full pg_dump-grade backup requires PostgreSQL 18 client tools (Homebrew `libpq` or container-based approach). pg_dump 13.4 (machine-local) hard-blocked by PG18.3 server.
+- The permanent **OPS-DB-BACKUP** recurring policy (automated post-pipeline backup to S3/Backblaze/Hetzner) remains pending — design and implementation deferred until SIG-QA2 observation window closes (PV-008).
 - No secrets appear in this ledger entry. Connection string used only in-memory during dump execution.
+
+---
+
+### OPS-DB-BACKUP-PGDUMP-01 — Full pg_dump -Fc Production Backup
+
+**STATUS: PENDING — requires PostgreSQL 18 client tooling**
+
+**Trigger:** OPS-DB-BACKUP-EMERGENCY-01 classified as B-class. Full-fidelity pg_dump-grade backup outstanding.
+
+**What this task will deliver:**
+- `pg_dump -Fc` custom-format dump of Railway production PostgreSQL
+- `pg_restore --list` verification pass confirming all object types present: tables, sequences, extensions, enums, views (including `public_safe_*` compliance views), functions, triggers, grants
+- MD5 + file size documented
+- Stored off-Railway (local operator workspace; long-term: S3/Backblaze/Hetzner)
+
+**Blocker:** `pg_dump` 13.4 (only pg_dump on local machine, bundled with DaVinci Resolve) hard-refuses connection to Railway PostgreSQL 18.3 — server version check fails at pre-flight, no override flag.
+
+**Resolution paths (in order of preference):**
+1. `brew install libpq` → adds `/opt/homebrew/opt/libpq/bin/pg_dump` at PG18 version (no full PostgreSQL server install needed)
+2. `docker run --rm postgres:18 pg_dump ...` if Docker is available
+
+**When to execute:** After PV-008 closes (SIG-QA2 active mode approved). Recurring backup policy design deferred to same window.
+
+**Acceptance criteria:**
+- `pg_restore --list` output includes: VIEW, SEQUENCE, EXTENSION, FUNCTION, TRIGGER sections
+- `gunzip -t` PASS (for plain-format gzip) or `pg_restore --list` PASS (for custom-format)
+- File MD5 + size documented in this ledger entry
+- Status updated to: `COMPLETE — PRODUCTION VERIFIED`
 
 ---
 
@@ -1568,4 +1602,5 @@ Recovery path: restore dump tables/data → run `alembic upgrade head` to recrea
 | SCOPE-ATR1 | After the Rain (Declaration Grooming) out-of-scope repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — non-perfume grooming scent (shaving soap + aftershave). Guard added + RS stripped + downstream deleted. 12/12 tests. |
 | SIG-QA1-BATCH2 | 12 false-positive guards + repair (Type B×6, C×2, D×4) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — verified immediately via direct DB; ALL PASS. Commits: d6dde32 + e82a59b + d58eada. 49/49 tests pass. |
 | PV-009 | DATA4-C — TOM FORD collection hierarchy (migration 054) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — API confirmed node_type=collection + parent=tom ford for both TF collections. Founder confirmed Collections section on Tom Ford parent page + Neroli Portofino breadcrumb. |
-| OPS-DB-BACKUP-EMERGENCY-01 | First emergency off-Railway production DB backup | `COMPLETE — logical export created; full pg_dump-grade backup pending PG18 client tooling` | CLOSED (B-class) — 63 tables, 1,537,401 rows, 36 MB, gzip PASS. Tables/data/constraints/indexes present; views/sequences/enums/functions absent; no cross-table snapshot guarantee. pg_dump 13.4 blocked by PG18.3; psycopg2 plain SQL dump used. Stored in `~/fragranceindex_backups/`. Full-fidelity backup requires PG18 client (Homebrew libpq or container). Recurring backup policy pending separately. |
+| OPS-DB-BACKUP-EMERGENCY-01 | First emergency off-Railway production DB backup | `COMPLETE — B-class logical export created and verified; Alembic-assisted restore artifact. Full pg_dump-grade backup pending PG18 client tooling.` | CLOSED (B-class) — 63 tables, 1,537,401 rows, 36 MB, gzip PASS. Tables/data/constraints/indexes present; views/sequences/enums/functions absent; no cross-table snapshot guarantee. pg_dump 13.4 blocked by PG18.3; psycopg2 plain SQL dump used. Stored in `~/fragranceindex_backups/`. Full-fidelity backup requires PG18 client (Homebrew libpq or container). |
+| OPS-DB-BACKUP-PGDUMP-01 | Full pg_dump -Fc production backup with pg_restore --list verification | `PENDING — requires PostgreSQL 18 client tooling` | OPEN — pg_dump 13.4 hard-blocked by Railway PG 18.3. Resolution: install Homebrew libpq or use container-based pg_dump. Produces full-fidelity custom-format backup including extensions, sequence defs, enums, views, functions, grants. |

@@ -2985,6 +2985,25 @@ Safe work (may continue outside blackout windows without affecting counter):
 
 ---
 
+## OPS-DB-BACKUP — Production Database Backup Status
+**Last updated: 2026-05-20**
+
+### Emergency export (OPS-DB-BACKUP-EMERGENCY-01) — EXISTS — B-class
+- **File:** `/Users/liliyabunos/fragranceindex_backups/fragranceindex_prod_2026-05-20T154602Z.sql.gz`
+- **Size:** 36 MB compressed · **Rows:** 1,537,401 · **Tables:** 63 · **MD5:** c329a565810c813f70621f1e6578557c
+- **Classification:** B-class — Alembic-assisted restore artifact. NOT standalone pg_dump-grade backup.
+- **Included:** table structures, all data, constraints (PK/UK/FK/CHECK), indexes, setval for sequences
+- **Missing:** CREATE EXTENSION, CREATE SEQUENCE defs, enum types, views (incl. `public_safe_*` compliance views from migration 032), functions, triggers, grants
+- **Restore path:** `gunzip -c <file> | psql <target_db>` → `alembic upgrade head`
+
+### Full pg_dump-grade backup (OPS-DB-BACKUP-PGDUMP-01) — PENDING
+- **Blocker:** pg_dump 13.4 (local machine) hard-blocked by Railway PostgreSQL 18.3 version check
+- **Resolution:** `brew install libpq` (adds PG18 pg_dump/pg_restore) or Docker-based approach
+- **When:** After PV-008 closes (SIG-QA2 active mode approved)
+- **Ledger:** `docs/ops/PENDING_PRODUCTION_VERIFICATIONS.md` → OPS-DB-BACKUP-PGDUMP-01
+
+---
+
 ## REL-1 — Staging & Production Release Gate Architecture
 **STATUS: APPROVED — DEFERRED (2026-05-15)**
 **Assessment completed: 2026-05-15 · Implementation deferred until KB-CAT1/FTG block is complete**
