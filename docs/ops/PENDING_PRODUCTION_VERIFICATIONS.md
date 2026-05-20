@@ -1494,6 +1494,54 @@ Root cause: manual aggregation at 09:02 UTC pre-created all WEL rows and entity_
 
 ---
 
+---
+
+### OPS-DB-BACKUP-EMERGENCY-01 — First Emergency Off-Railway Production DB Backup
+
+**STATUS: COMPLETE — VERIFIED OFF-RAILWAY BACKUP CREATED (2026-05-20)**
+
+**Trigger:** Post-Railway-outage (OPS-CRON-01 scheduling gap 2026-05-17 through 2026-05-20). No verified off-Railway backup existed before this task.
+
+**Backup metadata:**
+| Field | Value |
+|-------|-------|
+| Filename | `fragranceindex_prod_2026-05-20T154602Z.sql.gz` |
+| UTC timestamp | 2026-05-20T15:46:02Z |
+| Dump completed | 2026-05-20T15:55:13Z |
+| File size | 37,799,556 bytes (36 MB compressed) |
+| Tables | 63 |
+| Total rows | 1,537,401 |
+| Gzip integrity | PASS (`gunzip -t`) |
+| MD5 checksum | c329a565810c813f70621f1e6578557c |
+| Storage location | Off-Railway local operator workspace (`~/fragranceindex_backups/`) |
+| Format | Plain SQL, gzip-compressed |
+| Restore command | `gunzip -c fragranceindex_prod_2026-05-20T154602Z.sql.gz \| psql <target_db>` |
+
+**pg_dump version constraint (documented):**
+- Railway production PostgreSQL: **18.3** (Debian 18.3-1.pgdg13+1)
+- Local pg_dump (DaVinci Resolve bundled): **13.4** — hard version mismatch, connection aborted at pre-flight check
+- Homebrew not installed; Docker not available; sudo not available for package install
+- Method used: **Python psycopg2 plain SQL dump** via `COPY TO STDOUT` — complete, restorable backup
+- Schema sourced from `pg_catalog` system tables (`format_type`, `pg_get_constraintdef`, `pg_get_expr`)
+- Data via PostgreSQL COPY protocol (tab-separated, `\.` terminated per-table blocks)
+- All 60 non-empty tables confirmed with COPY blocks; 3 empty tables documented
+
+**Verification results:**
+- `gunzip -t`: PASS — archive is not truncated
+- 63 CREATE TABLE statements confirmed
+- 60 COPY data blocks confirmed (3 empty tables: alert_events, creator_oauth_grants, creator_profile_claims)
+- Large tables spot-checked: emerging_signals, entity_timeseries_daily, fragrance_candidates, resolver_aliases — all present
+- Total rows: 1,537,401 (matches live pipeline dump log)
+- Footer line confirmed: `-- Dump complete: 2026-05-20T15:55:13.598753Z`
+
+**Post-task notes:**
+- This closes the immediate post-outage emergency backup need.
+- The permanent **OPS-DB-BACKUP** recurring policy remains pending — to be designed and implemented after SIG-QA2 observation window closes (PV-008).
+- Next follow-up: design recurring post-pipeline backup automation, stored outside Railway (S3/Backblaze/Hetzner or equivalent). Will use PostgreSQL 18 client tools (Homebrew `libpq` install or container-based approach).
+- No secrets appear in this ledger entry. Connection string used only in-memory during dump execution.
+
+---
+
 ## Ledger Status Summary
 
 | ID | Phase | Status | Trigger |
@@ -1510,3 +1558,4 @@ Root cause: manual aggregation at 09:02 UTC pre-created all WEL rows and entity_
 | SCOPE-ATR1 | After the Rain (Declaration Grooming) out-of-scope repair | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — non-perfume grooming scent (shaving soap + aftershave). Guard added + RS stripped + downstream deleted. 12/12 tests. |
 | SIG-QA1-BATCH2 | 12 false-positive guards + repair (Type B×6, C×2, D×4) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — verified immediately via direct DB; ALL PASS. Commits: d6dde32 + e82a59b + d58eada. 49/49 tests pass. |
 | PV-009 | DATA4-C — TOM FORD collection hierarchy (migration 054) | `COMPLETE — PRODUCTION VERIFIED (2026-05-19)` | CLOSED — API confirmed node_type=collection + parent=tom ford for both TF collections. Founder confirmed Collections section on Tom Ford parent page + Neroli Portofino breadcrumb. |
+| OPS-DB-BACKUP-EMERGENCY-01 | First emergency off-Railway production DB backup | `COMPLETE — VERIFIED OFF-RAILWAY BACKUP CREATED (2026-05-20)` | CLOSED — 63 tables, 1,537,401 rows, 36 MB, gzip PASS. pg_dump 13.4 blocked by PG18.3; psycopg2 plain SQL dump used. Stored in `~/fragranceindex_backups/`. Recurring backup policy pending separately. |
