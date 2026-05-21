@@ -590,7 +590,9 @@ class PerfumeResolver:
                     key = (result["perfume_id"], result["canonical_name"])
                     if key not in seen:
                         seen.add(key)
-                        matches.append(result)
+                        # Include the matched alias phrase so the evidence gate
+                        # can score D4 and D6 correctly (SIG-QA2-STANDALONE-BRAND-REPAIR).
+                        matches.append({**result, "alias_used": phrase})
                         # Log alias matches — especially short-form single-token hits
                         canonical = result["canonical_name"]
                         if phrase != normalize_text(canonical):
@@ -726,6 +728,7 @@ class PerfumeResolver:
                 "matched_from": text,
                 "confidence": match["confidence"],
                 "match_type": match["match_type"],
+                "alias_used": match.get("alias_used", ""),
             })
             # Track the normalised alias phrase so candidates don't re-emit it.
             resolved_phrases.add(normalize_text(match["canonical_name"]))

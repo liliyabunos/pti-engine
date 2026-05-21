@@ -8,6 +8,7 @@ Test suites:
   D3    — Note Context Anti-Signal feature (inverted)
   D4    — Full-Name Match feature
   D5    — Source Entity Density feature (inverted)
+  D6    — High-Recognition Standalone Alias (SIG-QA2-STANDALONE-BRAND-REPAIR)
   COMP  — Composite score properties
   GATE  — Shadow / active mode gate behavior
   B1FIX — PV-008-B1-FIX1: concentration-suffix fallback in _find_alias_position
@@ -48,6 +49,7 @@ sys.path.insert(
 from perfume_trend_sdk.analysis.evidence_scorer import (
     SUPPRESS_THRESHOLD,
     EvidenceResult,
+    _HIGH_RECOGNITION_STANDALONE_ALIASES,
     _extract_brand_tokens,
     _find_alias_position,
     _normalize,
@@ -56,6 +58,7 @@ from perfume_trend_sdk.analysis.evidence_scorer import (
     _score_d3_note_antisignal,
     _score_d4_full_name_match,
     _score_d5_source_density,
+    _score_d6_alias_recognition,
     _tokenize,
     score_mention,
 )
@@ -471,7 +474,7 @@ class TestCompositeProperties:
             alias_used="creed aventus",
             source_entity_count=1,
         )
-        assert set(result.features.keys()) == {"d1", "d2", "d3_raw", "d4", "d5_density"}
+        assert set(result.features.keys()) == {"d1", "d2", "d3_raw", "d4", "d5_density", "d6_alias_recognition"}
 
     def test_would_suppress_matches_threshold(self):
         result = score_mention(
@@ -675,6 +678,320 @@ class TestShadowWatchlist:
         assert "d3_raw" in result.features
         assert "d4" in result.features
         assert "d5_density" in result.features
+        assert "d6_alias_recognition" in result.features
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# D6 — High-Recognition Standalone Alias (SIG-QA2-STANDALONE-BRAND-REPAIR)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestD6AliasRecognition:
+    """
+    D6 — High-Recognition Standalone Alias modifier.
+
+    Positive: known high-recognition aliases must score 1.0 from _score_d6,
+    exempt from B2-FIX1 cap, and pass the gate in product-level context.
+
+    Negative: aliases NOT in the high-recognition set must score 0.0 from
+    _score_d6, and B2-FIX1 cap must still apply when D1=0 and D4=0.
+
+    Regression: B1 (suffix recovery) and B2 (Ultimate Man cap) must be
+    unaffected by the D6 change.
+    """
+
+    # ── _score_d6_alias_recognition unit tests ──────────────────────────────
+
+    def test_d6_aventus_is_recognised(self):
+        assert _score_d6_alias_recognition("aventus") == 1.0
+
+    def test_d6_aventus_for_her_is_recognised(self):
+        assert _score_d6_alias_recognition("aventus for her") == 1.0
+
+    def test_d6_br540_shorthand_is_recognised(self):
+        assert _score_d6_alias_recognition("br540") == 1.0
+
+    def test_d6_br_540_space_is_recognised(self):
+        assert _score_d6_alias_recognition("br 540") == 1.0
+
+    def test_d6_baccarat_rouge_540_is_recognised(self):
+        assert _score_d6_alias_recognition("baccarat rouge 540") == 1.0
+
+    def test_d6_baccarat_rouge_no_number_is_recognised(self):
+        assert _score_d6_alias_recognition("baccarat rouge") == 1.0
+
+    def test_d6_cdnim_shorthand_is_recognised(self):
+        assert _score_d6_alias_recognition("cdnim") == 1.0
+
+    def test_d6_cdni_shorthand_is_recognised(self):
+        assert _score_d6_alias_recognition("cdni") == 1.0
+
+    def test_d6_club_de_nuit_intense_man_is_recognised(self):
+        assert _score_d6_alias_recognition("club de nuit intense man") == 1.0
+
+    def test_d6_club_de_nuit_intense_is_recognised(self):
+        assert _score_d6_alias_recognition("club de nuit intense") == 1.0
+
+    def test_d6_sauvage_elixir_is_recognised(self):
+        assert _score_d6_alias_recognition("sauvage elixir") == 1.0
+
+    def test_d6_sauvage_parfum_is_recognised(self):
+        assert _score_d6_alias_recognition("sauvage parfum") == 1.0
+
+    def test_d6_lattafa_asad_is_recognised(self):
+        assert _score_d6_alias_recognition("lattafa asad") == 1.0
+
+    def test_d6_asad_shorthand_is_recognised(self):
+        assert _score_d6_alias_recognition("asad") == 1.0
+
+    def test_d6_bare_sauvage_is_NOT_recognised(self):
+        """Bare 'sauvage' excluded — French adjective, high collision risk."""
+        assert _score_d6_alias_recognition("sauvage") == 0.0
+
+    def test_d6_orange_blossom_is_NOT_recognised(self):
+        """Type B note collision — must NOT be in D6 list."""
+        assert _score_d6_alias_recognition("orange blossom") == 0.0
+
+    def test_d6_feel_good_is_NOT_recognised(self):
+        """Type D generic descriptor — must NOT be in D6 list."""
+        assert _score_d6_alias_recognition("feel good") == 0.0
+
+    def test_d6_cool_water_is_NOT_recognised(self):
+        """Cool Water — standalone but brand token typically present; not curated."""
+        assert _score_d6_alias_recognition("cool water") == 0.0
+
+    def test_d6_ultimate_man_is_NOT_recognised(self):
+        """Ultimate Man (Korloff) — must NOT bypass B2-FIX1 cap."""
+        assert _score_d6_alias_recognition("ultimate man") == 0.0
+
+    def test_d6_set_contains_expected_entries(self):
+        """Structural: curated frozenset must contain the 14 approved aliases."""
+        expected = {
+            "baccarat rouge 540", "baccarat rouge", "br540", "br 540",
+            "club de nuit intense man", "club de nuit intense", "cdnim", "cdni",
+            "aventus", "aventus for her",
+            "sauvage elixir", "sauvage parfum",
+            "lattafa asad", "asad",
+        }
+        assert expected.issubset(_HIGH_RECOGNITION_STANDALONE_ALIASES), (
+            f"Missing entries: {expected - _HIGH_RECOGNITION_STANDALONE_ALIASES}"
+        )
+
+    def test_d6_set_excludes_bare_sauvage(self):
+        assert "sauvage" not in _HIGH_RECOGNITION_STANDALONE_ALIASES
+
+    # ── Full gate pass tests for high-recognition aliases ───────────────────
+
+    def test_d6_aventus_passes_gate_product_context(self):
+        """Aventus in product-level context must pass gate even without 'Creed' nearby."""
+        result = score_mention(
+            matched_from=(
+                "Aventus is still the king. Best performance and longevity "
+                "I have ever experienced. Incredible projection and sillage."
+            ),
+            brand_name="Creed",
+            canonical_name="Creed Aventus",
+            alias_used="aventus",
+            source_entity_count=3,
+        )
+        assert result.would_suppress is False, (
+            f"Aventus in product context should pass gate; score={result.score}"
+        )
+        assert result.features.get("d6_alias_recognition") == 1.0
+
+    def test_d6_br540_passes_gate_product_context(self):
+        """BR540 in product-level context must pass gate without brand tokens."""
+        result = score_mention(
+            matched_from=(
+                "BR540 is everywhere in 2024. Every fragrance review mentions it. "
+                "Amazing longevity and the projection is insane."
+            ),
+            brand_name="Maison Francis Kurkdjian",
+            canonical_name="Maison Francis Kurkdjian Baccarat Rouge 540",
+            alias_used="br540",
+            source_entity_count=4,
+        )
+        assert result.would_suppress is False, (
+            f"BR540 in product context should pass gate; score={result.score}"
+        )
+        assert result.features.get("d6_alias_recognition") == 1.0
+
+    def test_d6_baccarat_rouge_540_passes_gate(self):
+        """Full alias 'baccarat rouge 540' must pass gate in review context."""
+        result = score_mention(
+            matched_from=(
+                "Baccarat Rouge 540 is my signature scent. Incredible sillage and "
+                "longevity — I always get compliments wearing this fragrance. "
+                "The projection is unmatched. Best perfume I own."
+            ),
+            brand_name="Maison Francis Kurkdjian",
+            canonical_name="Maison Francis Kurkdjian Baccarat Rouge 540",
+            alias_used="baccarat rouge 540",
+            source_entity_count=2,
+        )
+        assert result.would_suppress is False, (
+            f"Baccarat Rouge 540 in review context should pass gate; score={result.score}"
+        )
+
+    def test_d6_cdnim_passes_gate_product_context(self):
+        """CDNIM abbreviation in community context must pass gate."""
+        result = score_mention(
+            matched_from=(
+                "CDNIM is my favourite fragrance cologne with incredible sillage, "
+                "projection and longevity. Smells similar to Aventus at a fraction "
+                "of the price. Best perfume for the money."
+            ),
+            brand_name="Armaf",
+            canonical_name="Armaf Club de Nuit Intense Man",
+            alias_used="cdnim",
+            source_entity_count=3,
+        )
+        assert result.would_suppress is False, (
+            f"CDNIM in product context should pass gate; score={result.score}"
+        )
+        assert result.features.get("d6_alias_recognition") == 1.0
+
+    def test_d6_sauvage_elixir_passes_gate(self):
+        """Sauvage Elixir (concentration-qualified) must pass gate."""
+        result = score_mention(
+            matched_from=(
+                "Sauvage Elixir is the best concentration. The sillage and longevity "
+                "are incredible. This cologne is my favourite fragrance for winter — "
+                "great projection and scent performance."
+            ),
+            brand_name="Dior",
+            canonical_name="Sauvage Elixir",
+            alias_used="sauvage elixir",
+            source_entity_count=2,
+        )
+        assert result.would_suppress is False, (
+            f"Sauvage Elixir should pass gate; score={result.score}"
+        )
+        assert result.features.get("d6_alias_recognition") == 1.0
+
+    # ── D6 exemption from B2-FIX1 cap ───────────────────────────────────────
+
+    def test_d6_exempts_from_b2_cap_when_d1_and_d4_zero(self):
+        """When D1=0 and D4=0 but D6=1.0, B2-FIX1 cap must NOT apply."""
+        # Use bare 'aventus' alias: D1=0 (no "creed" nearby), D4=0 (brand absent
+        # from alias), but D6=1.0 → cap skipped → score may exceed 0.45
+        result = score_mention(
+            matched_from=(
+                "Aventus is incredible. Best performance fragrance I own. "
+                "The longevity and projection are unmatched. Highly recommend."
+            ),
+            brand_name="Creed",
+            canonical_name="Creed Aventus",
+            alias_used="aventus",
+            source_entity_count=2,
+        )
+        assert result.features.get("d6_alias_recognition") == 1.0
+        # Score must NOT be capped at 0.45 — D6 exemption means composite
+        # can exceed 0.45 and reach threshold.
+        assert result.score > 0.45, (
+            f"D6-exempt entity must not be capped at 0.45; score={result.score}"
+        )
+
+    # ── D6 does NOT rescue note-context collisions ───────────────────────────
+
+    def test_d6_aventus_suppressed_in_note_list_context(self):
+        """Even high-recognition alias must be suppressed when D3 fires (note list).
+
+        'aventus' appearing in a note-description sentence is a note-collision
+        risk, not a product mention. D3 should dominate.
+        """
+        result = score_mention(
+            matched_from=(
+                "The top notes include aventus bergamot, blackcurrant and apple accord. "
+                "Heart notes are birch, jasmine, rose."
+            ),
+            brand_name="Creed",
+            canonical_name="Creed Aventus",
+            alias_used="aventus",
+            source_entity_count=2,
+        )
+        # D3 should fire (note list indicators "top notes", "heart notes")
+        # driving the score below threshold even with D6 boost.
+        assert result.score < SUPPRESS_THRESHOLD, (
+            f"Aventus in note-list context should be suppressed; score={result.score}"
+        )
+
+    def test_d6_baccarat_rouge_suppressed_in_note_list_context(self):
+        """Baccarat Rouge in a note-profile sentence must still be suppressed."""
+        result = score_mention(
+            matched_from=(
+                "Top notes: saffron, jasmine. Base notes: baccarat rouge amber, fir resin. "
+                "Heart notes include cedar."
+            ),
+            brand_name="Maison Francis Kurkdjian",
+            canonical_name="Maison Francis Kurkdjian Baccarat Rouge 540",
+            alias_used="baccarat rouge",
+            source_entity_count=8,
+        )
+        assert result.score < SUPPRESS_THRESHOLD, (
+            f"Baccarat Rouge in note-list should be suppressed; score={result.score}"
+        )
+
+    # ── B2-FIX1 regression: non-D6 aliases still capped ────────────────────
+
+    def test_d6_b2_cap_still_fires_for_ultimate_man(self):
+        """B2-FIX1 cap must still fire for non-D6 aliases (Ultimate Man / Korloff).
+
+        Ultimate Man has strong fragrance context (D2 high) but no brand token
+        (D1=0), no brand-in-alias (D4=0), and D6=0.
+        Cap must keep score ≤ 0.45 → suppressed.
+        """
+        result = score_mention(
+            matched_from=(
+                "Ultimate Man is an incredible fragrance with outstanding longevity "
+                "and projection. The scent performance on skin is unmatched."
+            ),
+            brand_name="Korloff",
+            canonical_name="Ultimate Man",
+            alias_used="ultimate man",
+            source_entity_count=2,
+        )
+        assert result.features.get("d6_alias_recognition") == 0.0
+        assert result.score <= 0.45, (
+            f"Ultimate Man must be capped by B2-FIX1; score={result.score}"
+        )
+        assert result.would_suppress is True
+
+    def test_d6_b2_cap_still_fires_for_generic_descriptor(self):
+        """B2-FIX1 cap must fire for Type D generic descriptors with no D6."""
+        result = score_mention(
+            matched_from=(
+                "Feel good fragrance that is perfect for everyday wear. "
+                "Great projection and longevity in this scent."
+            ),
+            brand_name="Esprit",
+            canonical_name="Feel Good",
+            alias_used="feel good",
+            source_entity_count=2,
+        )
+        assert result.features.get("d6_alias_recognition") == 0.0
+        assert result.score <= 0.45
+        assert result.would_suppress is True
+
+    # ── B1-FIX regression: suffix recovery still works ──────────────────────
+
+    def test_d6_b1_suffix_recovery_unaffected(self):
+        """B1-FIX1 concentration-suffix recovery must still work after D6 change."""
+        result = score_mention(
+            matched_from=(
+                "Creed Aventus Eau de Parfum has incredible performance. "
+                "The Creed house really outdid themselves with this one."
+            ),
+            brand_name="Creed",
+            canonical_name="Creed Aventus Eau de Parfum",
+            alias_used="creed aventus eau de parfum",
+            source_entity_count=2,
+        )
+        # D1 must be 1.0 (suffix stripped → "creed aventus" found → "creed" in
+        # brand tokens within window)
+        assert result.features.get("d1") == 1.0, (
+            f"B1 suffix recovery must still work; D1={result.features.get('d1')}"
+        )
+        assert result.would_suppress is False
 
 
 # ─────────────────────────────────────────────────────────────────────────────

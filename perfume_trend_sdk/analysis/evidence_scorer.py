@@ -4,7 +4,7 @@ Evaluates the quality of evidence behind a resolved entity mention, scoring
 whether the source text genuinely references the specific perfume product
 rather than a note name, generic descriptor, or category phrase.
 
-Five feature dimensions (D1–D5) composited into a single score [0.0–1.0].
+Six feature dimensions (D1–D6) composited into a single score [0.0–1.0].
 A score below SUPPRESS_THRESHOLD indicates the evidence is too weak to
 support a market mention.
 
@@ -74,6 +74,17 @@ Shadow watchlist (open PV-008 items):
   Conservative behavior; documented trade-off.
   Heures d'Absence — brand_name=NULL in entity_market (data gap); D1=0
   always regardless of source quality. Requires brand_name data repair.
+
+SIG-QA2-STANDALONE-BRAND-REPAIR (2026-05-21):
+  D6 — High-Recognition Standalone Alias dimension added.
+  Problem: Famous fragrance aliases (BR540, CDNIM, aventus, sauvage elixir)
+  appear in discourse WITHOUT nearby brand tokens — this is normal for
+  well-established fragrance names. The B2-FIX1 cap (D1=0, D4=0 → 0.45)
+  correctly blocks generic phrases but over-suppressed these high-recognition
+  product identifiers. Fix: D6=1.0 for curated standalone aliases exempts
+  them from the B2-FIX1 cap and adds a +0.10 score boost. D2/D3 context
+  still governs passage — note-list context (D3_raw≥0.9) still suppresses
+  even D6-eligible entities.  Ultimate Man-style cases unchanged (D6=0).
 """
 
 from __future__ import annotations
@@ -169,6 +180,41 @@ _D3_INGREDIENT_WINDOW: int = 8
 _D5_HIGH_DENSITY_CUTOFF: int = 15   # >15 entities → maximum penalty
 _D5_LOW_DENSITY_CUTOFF: int = 3     # <=3 entities → minimal penalty
 
+# D6 — High-recognition standalone alias allowlist (SIG-QA2-STANDALONE-BRAND-REPAIR).
+# Aliases in this set are curated unambiguous product identifiers that routinely
+# appear in fragrance discourse WITHOUT the brand name in adjacent text.
+# Requirements for inclusion:
+#   (a) community-established standalone identifier (not a note, not a phrase)
+#   (b) NOT in _AMBIGUOUS_PHRASE_GUARD (resolver already trusts it as unambiguous)
+#   (c) NOT a single generic word; product-specific multi-token or well-known acronym
+# D6=1.0 → B2-FIX1 cap does not apply + +0.10 score boost.
+# D2/D3 context still governs passage — note-list context still suppresses.
+_HIGH_RECOGNITION_STANDALONE_ALIASES: frozenset = frozenset({
+    # MFK Baccarat Rouge 540
+    "baccarat rouge 540",
+    "baccarat rouge",
+    "br540",
+    "br 540",
+    # Armaf Club de Nuit Intense Man / CDNI
+    "club de nuit intense man",
+    "club de nuit intense",
+    "cdnim",
+    "cdni",
+    # Creed Aventus
+    "aventus",
+    "aventus for her",
+    # Dior Sauvage product-specific concentrations
+    # (bare "sauvage" excluded — French adjective, collision risk)
+    "sauvage elixir",
+    "sauvage parfum",
+    # Lattafa Asad (community-recognized Sauvage Elixir dupe)
+    "lattafa asad",
+    "asad",
+})
+
+# D6 score boost applied when alias is in _HIGH_RECOGNITION_STANDALONE_ALIASES
+_D6_SCORE_BOOST: float = 0.10
+
 # Proximity windows (token counts)
 _D1_BRAND_WINDOW_NEAR: int = 15    # within ±15 tokens → full credit
 _D1_BRAND_WINDOW_FAR: int = 30     # within ±30 tokens → half credit
@@ -234,6 +280,7 @@ def score_mention(
     d3_raw = _score_d3_note_antisignal(text, tokens, match_pos)
     d4 = _score_d4_full_name_match(alias_norm_for_d4, brand_tokens)
     d5_density = _score_d5_source_density(source_entity_count)
+    d6 = _score_d6_alias_recognition(alias_norm_for_d4)
 
     # D3 and D5 are inverted: high raw score → low contribution
     d3_contribution = (1.0 - d3_raw) * 0.20
@@ -247,13 +294,22 @@ def score_mention(
         + d5_contribution
     )
 
+    # D6 additive boost — high-recognition standalone aliases.
+    # Applied after base formula so D2/D3 still govern passage normally.
+    # D3 note-list context (D3_raw≥0.9) will still suppress even with boost.
+    if d6 == 1.0:
+        score = min(score + _D6_SCORE_BOOST, 1.0)
+
     # PV-008-B2-FIX1 — Brand-evidence minimum requirement cap.
     # When D1=0 (brand absent / unanchored in source) AND D4=0 (alias carries
     # no brand token), no source-grounded brand evidence exists.  Cap to 0.45
     # so that high-fragrance-context sources cannot produce a false pass on
     # brand-identity-less mentions.  Any entity with genuine brand presence in
     # source would have recovered D1 via _find_alias_position() pass 3 above.
-    if d1 == 0.0 and d4 == 0.0:
+    # SIG-QA2-STANDALONE-BRAND-REPAIR: D6=1.0 exempts from cap — these aliases
+    # are curated unambiguous product identifiers where brand-token absence in
+    # adjacent text is expected and not evidence of wrong attribution.
+    if d1 == 0.0 and d4 == 0.0 and d6 == 0.0:
         score = min(score, 0.45)
 
     score = round(min(max(score, 0.0), 1.0), 4)
@@ -267,6 +323,7 @@ def score_mention(
             "d3_raw": round(d3_raw, 4),
             "d4": round(d4, 4),
             "d5_density": round(d5_density, 4),
+            "d6_alias_recognition": round(d6, 4),
         },
     )
 
@@ -406,6 +463,22 @@ def _score_d5_source_density(source_entity_count: int) -> float:
         return 0.1
     span = _D5_HIGH_DENSITY_CUTOFF - _D5_LOW_DENSITY_CUTOFF
     return 0.1 + 0.9 * (source_entity_count - _D5_LOW_DENSITY_CUTOFF) / span
+
+
+def _score_d6_alias_recognition(alias_norm: str) -> float:
+    """D6 — High-Recognition Standalone Alias (SIG-QA2-STANDALONE-BRAND-REPAIR).
+
+    Returns 1.0 if the matched alias is in the curated set of unambiguous
+    standalone product identifiers that routinely appear in fragrance discourse
+    without the brand name in adjacent text (e.g. "aventus", "br540", "cdnim").
+
+    Returns 0.0 for all other aliases — B2-FIX1 cap applies normally.
+
+    This dimension does NOT override D3 note-list protection: a high-recognition
+    alias appearing in a note-list context (D3_raw≥0.9) will still score below
+    threshold after the +D6_SCORE_BOOST is applied.
+    """
+    return 1.0 if alias_norm in _HIGH_RECOGNITION_STANDALONE_ALIASES else 0.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
